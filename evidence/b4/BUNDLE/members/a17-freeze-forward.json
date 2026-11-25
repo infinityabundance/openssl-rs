@@ -1,0 +1,162 @@
+{
+  "candidate": {
+    "baseCommit": "731b066e261ebc64cf8acb909df18d23b9b11883",
+    "baseCommitShort": "731b066e2",
+    "branch": "staging",
+    "recordedAt": "2026-11-24"
+  },
+  "digest": "c0efae5886746d3a42300fb5ad9c532b1215993fd87f2168ac0256cb1ca3ceb8",
+  "frozenAt": "2026-11-24T00:20:00Z",
+  "id": "forward-open-freeze",
+  "kind": "freeze",
+  "memberCount": 20,
+  "members": [
+    {
+      "id": "a18-receipt",
+      "path": "evidence/a18/RECEIPT.md",
+      "phase": "A18",
+      "predicate": "a receipt records the item's result, gates and NOT_RUN obligations",
+      "required": true
+    },
+    {
+      "id": "a19-receipt",
+      "path": "evidence/a19/RECEIPT.md",
+      "phase": "A19",
+      "predicate": "a receipt records the item's result, gates and NOT_RUN obligations",
+      "required": true
+    },
+    {
+      "id": "a20-receipt",
+      "path": "evidence/a20/RECEIPT.md",
+      "phase": "A20",
+      "predicate": "a receipt records the item's result, gates and NOT_RUN obligations",
+      "required": true
+    },
+    {
+      "id": "a21-receipt",
+      "path": "evidence/a21/RECEIPT.md",
+      "phase": "A21",
+      "predicate": "a receipt records the item's result, gates and NOT_RUN obligations",
+      "required": true
+    },
+    {
+      "id": "a22-receipt",
+      "path": "evidence/a22/RECEIPT.md",
+      "phase": "A22",
+      "predicate": "a receipt records the item's result, gates and NOT_RUN obligations",
+      "required": true
+    },
+    {
+      "id": "a23-receipt",
+      "path": "evidence/a23/RECEIPT.md",
+      "phase": "A23",
+      "predicate": "a receipt records the item's result, gates and NOT_RUN obligations",
+      "required": true
+    },
+    {
+      "id": "a24-receipt",
+      "path": "evidence/a24/RECEIPT.md",
+      "phase": "A24",
+      "predicate": "a receipt records the item's result, gates and NOT_RUN obligations",
+      "required": true
+    },
+    {
+      "id": "a25-receipt",
+      "path": "evidence/a25/RECEIPT.md",
+      "phase": "A25",
+      "predicate": "a receipt records the item's result, gates and NOT_RUN obligations",
+      "required": true
+    },
+    {
+      "id": "a26-receipt",
+      "path": "evidence/a26/RECEIPT.md",
+      "phase": "A26",
+      "predicate": "a receipt records the item's result, gates and NOT_RUN obligations",
+      "required": true
+    },
+    {
+      "id": "a27-receipt",
+      "path": "evidence/a27/RECEIPT.md",
+      "phase": "A27",
+      "predicate": "a receipt records the item's result, gates and NOT_RUN obligations",
+      "required": true
+    },
+    {
+      "id": "b0-registry",
+      "path": "evidence/b0/REGISTRY.json",
+      "phase": "B0",
+      "predicate": "a tracked registry names each admitted version, digest and unsupported feature",
+      "required": true
+    },
+    {
+      "id": "b0-service-configuration",
+      "path": "evidence/b0/SERVICE-CONFIGURATION.json",
+      "phase": "B0",
+      "predicate": "the recorded service-configuration finding",
+      "required": true
+    },
+    {
+      "id": "b1-receipt",
+      "path": "evidence/b1/RECEIPT.md",
+      "phase": "B1",
+      "predicate": "a receipt records the frozen statement, inclusion and checkpoint evidence",
+      "required": true
+    },
+    {
+      "id": "b2-receipt",
+      "path": "evidence/b2/RECEIPT.md",
+      "phase": "B2",
+      "predicate": "a receipt records the RFC 3161 timestamp evidence and offline verification",
+      "required": true
+    },
+    {
+      "id": "b3-receipt",
+      "path": "evidence/b3/RECEIPT.md",
+      "phase": "B3",
+      "predicate": "a receipt records the campaign opening, amendments and omission-sensitive closure",
+      "required": true
+    },
+    {
+      "id": "b4-receipt",
+      "path": "evidence/b4/RECEIPT.md",
+      "phase": "B4",
+      "predicate": "a receipt records the publication profile and independent verification",
+      "required": true
+    },
+    {
+      "id": "b5-receipt",
+      "path": "evidence/b5/RECEIPT.md",
+      "phase": "B5",
+      "predicate": "a receipt records checkpoints, consistency, monitoring and witnesses",
+      "required": true
+    },
+    {
+      "id": "b6-receipt",
+      "path": "evidence/b6/RECEIPT.md",
+      "phase": "B6",
+      "predicate": "a receipt records archival, revocation and anti-rollback controls",
+      "required": true
+    },
+    {
+      "id": "b7-receipt",
+      "path": "evidence/b7/RECEIPT.md",
+      "phase": "B7",
+      "predicate": "a receipt records the model, assumptions and refinement gap",
+      "required": true
+    },
+    {
+      "id": "b8-receipt",
+      "path": "evidence/b8/RECEIPT.md",
+      "phase": "B8",
+      "predicate": "a receipt records the enforced integration and its non-claims",
+      "required": true
+    }
+  ],
+  "producedBy": {
+    "path": "forensics/tools/omission.py",
+    "sha256": "05ce4754d088f14ae13e0bbfc04973fd6fe564807b63d73c247fb9271b20cfd8"
+  },
+  "recordedAt": "2026-11-24T00:20:00Z",
+  "schema": "openssl-rs/a17/freeze/1",
+  "state": "OPEN"
+}

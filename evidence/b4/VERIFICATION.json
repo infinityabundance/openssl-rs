@@ -1,0 +1,52 @@
+{
+  "audit": {
+    "detector": "socket- and http-level audit events plus the socket, ssl, http, ftplib and telnetlib modules; urllib.parse is not counted because pathlib imports it in the standard library",
+    "networkEvents": 0,
+    "networkModules": [],
+    "outsideReads": 0,
+    "outsideWrites": 0,
+    "secondRun": {
+      "networkEvents": 0,
+      "outsideReads": 0,
+      "outsideWrites": 0
+    }
+  },
+  "bundle": "evidence/b4/BUNDLE",
+  "exit": 0,
+  "external": "NOT_RUN",
+  "externalVerification": "PENDING",
+  "freshDirectory": "a fresh temporary directory outside the project tree; the bundle is copied into it and the verifier runs there",
+  "item": "B4",
+  "manifestDigest": "fd46c75910d0a7b03b2b459894457813b204b037ca54d7d6a7777adb501ba24a",
+  "members": 8,
+  "note": "this is a run in the producing venue, not an external one. No party outside this project has run the verifier, so public publication and independent verification remain NOT_RUN and PENDING",
+  "outcome": "PUBLIC_BUNDLE_VERIFIED_IN_VENUE",
+  "runStability": {
+    "exit": true,
+    "outsideReads": true,
+    "stdout": true
+  },
+  "runs": 2,
+  "schema": "openssl-rs/b4/venue-verification/1",
+  "stdout": "{\"code\": \"PB_OK\", \"external\": \"NOT_RUN\", \"manifestDigest\": \"fd46c75910d0a7b03b2b459894457813b204b037ca54d7d6a7777adb501ba24a\", \"members\": 8, \"outcome\": \"PUBLIC_BUNDLE_VERIFIED\", \"releaseCritical\": 4, \"venue\": \"local\"}",
+  "strippedEnvironment": {
+    "inheritedVariables": false,
+    "isolationFlags": [
+      "-I",
+      "-S",
+      "-B"
+    ],
+    "pathEntries": 1,
+    "pythonpath": null,
+    "variables": [
+      "HOME",
+      "LANG",
+      "LC_ALL",
+      "PATH",
+      "TMPDIR"
+    ]
+  },
+  "tempRootOutsideProject": true,
+  "venue": "in-venue",
+  "verified": true
+}

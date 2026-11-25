@@ -1,0 +1,166 @@
+{
+  "canary": {
+    "accepted": true,
+    "controlOnly": true,
+    "id": "control-valid-bundle",
+    "input": "the same synthetic bundle with no mutation",
+    "observed": "PB_OK"
+  },
+  "controls": [
+    {
+      "canary": "control-valid-bundle",
+      "code": "PB_REFUSED_UNCLASSIFIED",
+      "controlOnly": true,
+      "fired": true,
+      "id": "unclassified-member",
+      "input": "a bundle source no policy rule classifies (mini/unknown.json)",
+      "observed": "PB_REFUSED_UNCLASSIFIED",
+      "wroteNothing": true
+    },
+    {
+      "canary": "control-valid-bundle",
+      "code": "PB_REFUSED_PRIVATE_MATERIAL",
+      "controlOnly": true,
+      "fired": true,
+      "id": "private-member",
+      "input": "a bundle source matching a private pattern (mini/sensitive.secret)",
+      "observed": "PB_REFUSED_PRIVATE_MATERIAL",
+      "wroteNothing": true
+    },
+    {
+      "canary": "control-valid-bundle",
+      "code": "PB_REFUSED_INTERNAL_MATERIAL",
+      "controlOnly": true,
+      "fired": true,
+      "id": "internal-member",
+      "input": "a bundle source classified INTERNAL_NOT_PUBLISHED (mini/internal.json)",
+      "observed": "PB_REFUSED_INTERNAL_MATERIAL",
+      "wroteNothing": true
+    },
+    {
+      "canary": "control-valid-bundle",
+      "code": "PB_REFUSED_PRIVATE_REFERENCE",
+      "controlOnly": true,
+      "fired": true,
+      "id": "private-reference",
+      "input": "a member whose text contains a court scratch path",
+      "observed": "PB_REFUSED_PRIVATE_REFERENCE",
+      "wroteNothing": true
+    },
+    {
+      "canary": "control-valid-bundle",
+      "code": "PB_REFUSED_ABSOLUTE_PATH",
+      "controlOnly": true,
+      "fired": true,
+      "id": "absolute-path",
+      "input": "a member whose JSON carries an absolute path value",
+      "observed": "PB_REFUSED_ABSOLUTE_PATH",
+      "wroteNothing": true
+    },
+    {
+      "canary": "control-valid-bundle",
+      "code": "PB_REFUSED_UNBOUND_MEMBER",
+      "controlOnly": true,
+      "fired": true,
+      "id": "unbound-member",
+      "input": "a file present in the bundle but absent from the manifest",
+      "observed": "PB_REFUSED_UNBOUND_MEMBER"
+    },
+    {
+      "canary": "control-valid-bundle",
+      "code": "PB_REFUSED_UNBOUND_MEMBER",
+      "controlOnly": true,
+      "fired": true,
+      "id": "digest-mismatch",
+      "input": "a member whose bytes do not match the digest the manifest records",
+      "observed": "PB_REFUSED_UNBOUND_MEMBER"
+    },
+    {
+      "canary": "control-valid-bundle",
+      "code": "PB_REFUSED_RELEASE_MEMBER_MISSING",
+      "controlOnly": true,
+      "fired": true,
+      "id": "release-member-missing",
+      "input": "a bundle whose source set omits the policy's release-critical member",
+      "observed": "PB_REFUSED_RELEASE_MEMBER_MISSING",
+      "wroteNothing": true
+    },
+    {
+      "canary": "control-valid-bundle",
+      "code": "PB_REFUSED_CLASSIFICATION_MISMATCH",
+      "controlOnly": true,
+      "fired": true,
+      "id": "classification-mismatch",
+      "input": "a manifest that calls release-critical material supporting",
+      "observed": "PB_REFUSED_CLASSIFICATION_MISMATCH"
+    },
+    {
+      "canary": "control-valid-bundle",
+      "code": "PB_REFUSED_NO_PUBLIC_SERVICE",
+      "controlOnly": true,
+      "fired": true,
+      "id": "publication-without-service",
+      "input": "a publication claim with no admitted public endpoint",
+      "observed": "PB_REFUSED_NO_PUBLIC_SERVICE"
+    },
+    {
+      "canary": "control-valid-bundle",
+      "code": "PB_REFUSED_EXTERNAL_NOT_RUN",
+      "controlOnly": true,
+      "fired": true,
+      "id": "external-verification-claimed",
+      "input": "an independent-verification claim with no external party",
+      "observed": "PB_REFUSED_EXTERNAL_NOT_RUN"
+    },
+    {
+      "canary": "control-valid-bundle",
+      "code": "PB_REFUSED_MANIFEST_INVALID",
+      "controlOnly": true,
+      "fired": true,
+      "id": "manifest-invalid",
+      "input": "a manifest that does not parse",
+      "observed": "PB_REFUSED_MANIFEST_INVALID"
+    },
+    {
+      "canary": "control-valid-bundle",
+      "code": "PB_REFUSED_IO",
+      "controlOnly": true,
+      "fired": true,
+      "id": "missing-bundle",
+      "input": "a bundle directory that does not exist",
+      "observed": "PB_REFUSED_IO"
+    },
+    {
+      "canary": "control-valid-bundle",
+      "code": "PB_REFUSED_USAGE",
+      "controlOnly": true,
+      "fired": true,
+      "id": "usage-error",
+      "input": "the command line with no subcommand",
+      "observed": "PB_REFUSED_USAGE"
+    }
+  ],
+  "counts": {
+    "codesCovered": [
+      "PB_REFUSED_ABSOLUTE_PATH",
+      "PB_REFUSED_CLASSIFICATION_MISMATCH",
+      "PB_REFUSED_EXTERNAL_NOT_RUN",
+      "PB_REFUSED_INTERNAL_MATERIAL",
+      "PB_REFUSED_IO",
+      "PB_REFUSED_MANIFEST_INVALID",
+      "PB_REFUSED_NO_PUBLIC_SERVICE",
+      "PB_REFUSED_PRIVATE_MATERIAL",
+      "PB_REFUSED_PRIVATE_REFERENCE",
+      "PB_REFUSED_RELEASE_MEMBER_MISSING",
+      "PB_REFUSED_UNBOUND_MEMBER",
+      "PB_REFUSED_UNCLASSIFIED",
+      "PB_REFUSED_USAGE"
+    ],
+    "controls": 14,
+    "fired": 14
+  },
+  "coversEveryCode": true,
+  "item": "B4",
+  "note": "every control is a test-only fixture; a control that fires proves the refusal works, not that the substituted form occurs in the tree",
+  "schema": "openssl-rs/b4/controls/1"
+}

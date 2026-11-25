@@ -1,0 +1,108 @@
+{
+  "admittedService": false,
+  "baseCommit": "dc5855733d6c98095425b4f1a36655afaec866ce",
+  "baseCommitShort": "dc5855733",
+  "endpoint": null,
+  "externalVerification": "PENDING",
+  "item": "B4",
+  "nonClaims": [
+    "a publishable bundle is not a published one",
+    "a public transparency log records that a claim was made, not that it is true",
+    "the fixture log FIXTURE-1 is not a Rekor log and its key is test-only",
+    "no external party has run the verifier; external verification is PENDING"
+  ],
+  "note": "this record states what would be published and to which profile; it asserts no publication, because no admitted endpoint exists",
+  "profile": {
+    "admitted": false,
+    "checkpoint": "three-line note body and a signed checkpoint",
+    "entryKind": "hashedrekord",
+    "leafHash": "RFC 6962 SHA-256 with 0x00/0x01 domain separation",
+    "log": "sigstore/rekor-tiles v2.4.2",
+    "name": "public-good Rekor v2 profile (rekor-tiles)",
+    "notAdmittedBecause": [
+      "no public endpoint is configured (B0 CLM-01, CLM-07)",
+      "no rekor-server, rekor-cli or rekor-tiles binary is installed (CLM-02)",
+      "no admitted log key exists (CLM-03); 0 transparency logs and 0 log keys",
+      "no checkpoint cosignature can be produced or verified (CLM-04)",
+      "no independent witness set exists (CLM-05)",
+      "the network is unavailable in this venue"
+    ],
+    "pinnedDigest": "sha256:3af252cd59adea029eea7ff325dee8adb65074e45d0c03aaa6c083eb2461e8a6",
+    "pinnedDigestScope": "the linux/amd64 rekor-server-aws release asset, not the POSIX-backend server the profile would need",
+    "source": [
+      "evidence/b0/REGISTRY.json",
+      "docs/PROTOCOL-AUDIT.md",
+      "docs/ETP-ADDENDUM-B.md sections B.3.2, B.3.3 and B.30"
+    ]
+  },
+  "published": 0,
+  "recordedAt": "2026-11-24",
+  "refusals": {
+    "externalVerificationClaim": "PB_REFUSED_EXTERNAL_NOT_RUN",
+    "internalMember": "PB_REFUSED_INTERNAL_MATERIAL",
+    "privateMember": "PB_REFUSED_PRIVATE_MATERIAL",
+    "publicationClaim": "PB_REFUSED_NO_PUBLIC_SERVICE",
+    "unclassifiedMember": "PB_REFUSED_UNCLASSIFIED"
+  },
+  "schema": "openssl-rs/b4/publication/1",
+  "wouldPublish": {
+    "bundle": "evidence/b4/BUNDLE",
+    "manifestDigest": "fd46c75910d0a7b03b2b459894457813b204b037ca54d7d6a7777adb501ba24a",
+    "members": [
+      {
+        "classification": "PUBLIC_SUPPORTING",
+        "path": "README.md",
+        "sha256": "451d454e9414a4a76d6267154f6686e78f17ea46dcdffe57bd5113c918750e23",
+        "sourcePath": null
+      },
+      {
+        "classification": "PUBLIC_SUPPORTING",
+        "path": "members/a10-envelope-a8-shard-000.json",
+        "sha256": "5bf418cc5b014d985199ce9e17cde859647303327f6bbd111279d3ed299503a9",
+        "sourcePath": "evidence/a10/ENVELOPES/a8-shard-000.json"
+      },
+      {
+        "classification": "PUBLIC_RELEASE_CRITICAL",
+        "path": "members/a17-freeze-forward.json",
+        "sha256": "19b3bd00bcadd8a52332fdc944895edec8f25abd23e796c3aa4cd4d938a9e4f0",
+        "sourcePath": "evidence/a17/FREEZE-forward.json"
+      },
+      {
+        "classification": "PUBLIC_RELEASE_CRITICAL",
+        "path": "members/a5-admission.json",
+        "sha256": "d4871ec97ae3a27b8ec820896e292429e44b4db4d11d2671a69b9dc0230ddc0a",
+        "sourcePath": "evidence/a5/ADMISSION.json"
+      },
+      {
+        "classification": "PUBLIC_RELEASE_CRITICAL",
+        "path": "members/a9-statement-a8-shard-000.json",
+        "sha256": "ea67963abf16e9b1e33a86d0eec5e35354f3a890497055867e942eac41d22582",
+        "sourcePath": "evidence/a9/STATEMENTS/a8-shard-000.json"
+      },
+      {
+        "classification": "PUBLIC_RELEASE_CRITICAL",
+        "path": "members/b1-publication.json",
+        "sha256": "765fcdf5a1db612ab43e2d56294ddc48528d0e0e4eabc85ff07244f2d77ab6b9",
+        "sourcePath": "evidence/b1/PUBLICATION.json"
+      },
+      {
+        "classification": "PUBLIC_SUPPORTING",
+        "path": "verify.py",
+        "sha256": "11d74675d00515b1d0a84e383d95346a587210848b31e79373306d2fcf763a36",
+        "sourcePath": null
+      },
+      {
+        "classification": "PUBLIC_SUPPORTING",
+        "path": "verify.sh",
+        "sha256": "3bf63f990b974a30315c3260388286eacdca5abd16eba4792f09727043935937",
+        "sourcePath": null
+      }
+    ],
+    "releaseCritical": [
+      "members/a17-freeze-forward.json",
+      "members/a5-admission.json",
+      "members/a9-statement-a8-shard-000.json",
+      "members/b1-publication.json"
+    ]
+  }
+}

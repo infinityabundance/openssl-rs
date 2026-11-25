@@ -1,0 +1,776 @@
+{
+  "bundleId": "b4-public-bundle-1",
+  "declarations": {
+    "absolutePaths": false,
+    "network": false,
+    "privateState": "none",
+    "unclassifiedMembers": 0
+  },
+  "entryPoint": "verify.py",
+  "entryShell": "verify.sh",
+  "exactCommands": [
+    "python3 verify.py",
+    "sh verify.sh"
+  ],
+  "manifestDigest": "fd46c75910d0a7b03b2b459894457813b204b037ca54d7d6a7777adb501ba24a",
+  "members": [
+    {
+      "bytes": 2753,
+      "classification": "PUBLIC_SUPPORTING",
+      "path": "README.md",
+      "role": "bundle description, member table and non-claims",
+      "sha256": "451d454e9414a4a76d6267154f6686e78f17ea46dcdffe57bd5113c918750e23",
+      "sourcePath": null
+    },
+    {
+      "bytes": 1130,
+      "classification": "PUBLIC_SUPPORTING",
+      "path": "members/a10-envelope-a8-shard-000.json",
+      "role": "DSSE envelope (A10) over the A8 shard statement; test-only signature",
+      "sha256": "5bf418cc5b014d985199ce9e17cde859647303327f6bbd111279d3ed299503a9",
+      "sourcePath": "evidence/a10/ENVELOPES/a8-shard-000.json"
+    },
+    {
+      "bytes": 4948,
+      "classification": "PUBLIC_RELEASE_CRITICAL",
+      "path": "members/a17-freeze-forward.json",
+      "role": "A17 forward-freeze record (OPEN); a forward commitment, not a closure",
+      "sha256": "19b3bd00bcadd8a52332fdc944895edec8f25abd23e796c3aa4cd4d938a9e4f0",
+      "sourcePath": "evidence/a17/FREEZE-forward.json"
+    },
+    {
+      "bytes": 5120,
+      "classification": "PUBLIC_RELEASE_CRITICAL",
+      "path": "members/a5-admission.json",
+      "role": "A5 admission record: the state each declared population is admitted at",
+      "sha256": "d4871ec97ae3a27b8ec820896e292429e44b4db4d11d2671a69b9dc0230ddc0a",
+      "sourcePath": "evidence/a5/ADMISSION.json"
+    },
+    {
+      "bytes": 714,
+      "classification": "PUBLIC_RELEASE_CRITICAL",
+      "path": "members/a9-statement-a8-shard-000.json",
+      "role": "in-toto statement (A9) for the A8 shard",
+      "sha256": "ea67963abf16e9b1e33a86d0eec5e35354f3a890497055867e942eac41d22582",
+      "sourcePath": "evidence/a9/STATEMENTS/a8-shard-000.json"
+    },
+    {
+      "bytes": 3729,
+      "classification": "PUBLIC_RELEASE_CRITICAL",
+      "path": "members/b1-publication.json",
+      "role": "B1 fixture publication record, identity FIXTURE-1",
+      "sha256": "765fcdf5a1db612ab43e2d56294ddc48528d0e0e4eabc85ff07244f2d77ab6b9",
+      "sourcePath": "evidence/b1/PUBLICATION.json"
+    },
+    {
+      "bytes": 10378,
+      "classification": "PUBLIC_SUPPORTING",
+      "path": "verify.py",
+      "role": "independently executable verifier",
+      "sha256": "11d74675d00515b1d0a84e383d95346a587210848b31e79373306d2fcf763a36",
+      "sourcePath": null
+    },
+    {
+      "bytes": 299,
+      "classification": "PUBLIC_SUPPORTING",
+      "path": "verify.sh",
+      "role": "shell convenience form of the verifier",
+      "sha256": "3bf63f990b974a30315c3260388286eacdca5abd16eba4792f09727043935937",
+      "sourcePath": null
+    }
+  ],
+  "minimumInterpreter": "3.8",
+  "outcomes": [
+    "PUBLIC_BUNDLE_VERIFIED",
+    "BUNDLE_INVALID",
+    "SCAN_COMPLETE",
+    "BUILD_COMPLETE",
+    "CLAIM_REFUSED"
+  ],
+  "policy": {
+    "classes": {
+      "INTERNAL_NOT_PUBLISHED": {
+        "definition": "a tracked record that is not a candidate for publication. The default for an evidence record is internal, not public",
+        "publicationRule": "never published; a bundle that contains it is refused rather than redacted"
+      },
+      "PRIVATE_NEVER_PUBLISHED": {
+        "definition": "secret-bearing material: keys, credentials, tokens, secret diagnostics, unredacted personal information or embargoed detail",
+        "publicationRule": "never published and never copied into a bundle; a private pattern outranks every other rule"
+      },
+      "PUBLIC_RELEASE_CRITICAL": {
+        "definition": "material a reader needs to check the release claim itself: the statement, its authentication envelope, the admission record and the forward commitment",
+        "publicationRule": "published; a bundle that omits a declared member is refused"
+      },
+      "PUBLIC_SUPPORTING": {
+        "definition": "material that explains or authenticates release-critical material but does not by itself carry the claim: envelopes, the bundle description and the verifier",
+        "publicationRule": "published alongside the release-critical set"
+      }
+    },
+    "default": "UNCLASSIFIED",
+    "policyDigest": "c2d91666a1823fe6424600380dbefc072d5b93bdcf8c84a999200029855acebd",
+    "policyId": "b4-public-transparency",
+    "privatePatterns": [
+      {
+        "id": "private-pem",
+        "pattern": "*.pem",
+        "reason": "key or certificate material is never published"
+      },
+      {
+        "id": "private-key",
+        "pattern": "*.key",
+        "reason": "key material is never published"
+      },
+      {
+        "id": "private-pkcs12",
+        "pattern": "*.p12",
+        "reason": "a keystore archive is never published"
+      },
+      {
+        "id": "private-secret-record",
+        "pattern": "SECRETS-RAW.json",
+        "reason": "a raw secret record is never published"
+      },
+      {
+        "id": "private-secret-suffix",
+        "pattern": "*.secret",
+        "reason": "a file marked as a secret is never published"
+      }
+    ],
+    "releaseCritical": [
+      {
+        "class": "PUBLIC_RELEASE_CRITICAL",
+        "reason": "in-toto statement (A9) for the A8 shard",
+        "sourcePath": "evidence/a9/STATEMENTS/a8-shard-000.json"
+      },
+      {
+        "class": "PUBLIC_RELEASE_CRITICAL",
+        "reason": "B1 fixture publication record, identity FIXTURE-1",
+        "sourcePath": "evidence/b1/PUBLICATION.json"
+      },
+      {
+        "class": "PUBLIC_RELEASE_CRITICAL",
+        "reason": "A5 admission record: the state each declared population is admitted at",
+        "sourcePath": "evidence/a5/ADMISSION.json"
+      },
+      {
+        "class": "PUBLIC_RELEASE_CRITICAL",
+        "reason": "A17 forward-freeze record (OPEN); a forward commitment, not a closure",
+        "sourcePath": "evidence/a17/FREEZE-forward.json"
+      }
+    ],
+    "rules": [
+      {
+        "class": "PUBLIC_RELEASE_CRITICAL",
+        "id": "publish-evidence-a9-STATEMENTS-a8-shard-000-json",
+        "kind": "exact",
+        "path": "evidence/a9/STATEMENTS/a8-shard-000.json",
+        "reason": "in-toto statement (A9) for the A8 shard"
+      },
+      {
+        "class": "PUBLIC_SUPPORTING",
+        "id": "publish-evidence-a10-ENVELOPES-a8-shard-000-json",
+        "kind": "exact",
+        "path": "evidence/a10/ENVELOPES/a8-shard-000.json",
+        "reason": "DSSE envelope (A10) over the A8 shard statement; test-only signature"
+      },
+      {
+        "class": "PUBLIC_RELEASE_CRITICAL",
+        "id": "publish-evidence-b1-PUBLICATION-json",
+        "kind": "exact",
+        "path": "evidence/b1/PUBLICATION.json",
+        "reason": "B1 fixture publication record, identity FIXTURE-1"
+      },
+      {
+        "class": "PUBLIC_RELEASE_CRITICAL",
+        "id": "publish-evidence-a5-ADMISSION-json",
+        "kind": "exact",
+        "path": "evidence/a5/ADMISSION.json",
+        "reason": "A5 admission record: the state each declared population is admitted at"
+      },
+      {
+        "class": "PUBLIC_RELEASE_CRITICAL",
+        "id": "publish-evidence-a17-FREEZE-forward-json",
+        "kind": "exact",
+        "path": "evidence/a17/FREEZE-forward.json",
+        "reason": "A17 forward-freeze record (OPEN); a forward commitment, not a closure"
+      },
+      {
+        "class": "PUBLIC_RELEASE_CRITICAL",
+        "id": "bundle-member-members-a9-statement-a8-shard-000-json",
+        "kind": "exact",
+        "path": "evidence/b4/BUNDLE/members/a9-statement-a8-shard-000.json",
+        "reason": "a byte-identical bundle copy of evidence/a9/STATEMENTS/a8-shard-000.json"
+      },
+      {
+        "class": "PUBLIC_SUPPORTING",
+        "id": "bundle-member-members-a10-envelope-a8-shard-000-json",
+        "kind": "exact",
+        "path": "evidence/b4/BUNDLE/members/a10-envelope-a8-shard-000.json",
+        "reason": "a byte-identical bundle copy of evidence/a10/ENVELOPES/a8-shard-000.json"
+      },
+      {
+        "class": "PUBLIC_RELEASE_CRITICAL",
+        "id": "bundle-member-members-b1-publication-json",
+        "kind": "exact",
+        "path": "evidence/b4/BUNDLE/members/b1-publication.json",
+        "reason": "a byte-identical bundle copy of evidence/b1/PUBLICATION.json"
+      },
+      {
+        "class": "PUBLIC_RELEASE_CRITICAL",
+        "id": "bundle-member-members-a5-admission-json",
+        "kind": "exact",
+        "path": "evidence/b4/BUNDLE/members/a5-admission.json",
+        "reason": "a byte-identical bundle copy of evidence/a5/ADMISSION.json"
+      },
+      {
+        "class": "PUBLIC_RELEASE_CRITICAL",
+        "id": "bundle-member-members-a17-freeze-forward-json",
+        "kind": "exact",
+        "path": "evidence/b4/BUNDLE/members/a17-freeze-forward.json",
+        "reason": "a byte-identical bundle copy of evidence/a17/FREEZE-forward.json"
+      },
+      {
+        "class": "PUBLIC_SUPPORTING",
+        "id": "bundle-infrastructure-MANIFEST-json",
+        "kind": "exact",
+        "path": "evidence/b4/BUNDLE/MANIFEST.json",
+        "reason": "the bundle's manifest, description or verifier"
+      },
+      {
+        "class": "PUBLIC_SUPPORTING",
+        "id": "bundle-infrastructure-README-md",
+        "kind": "exact",
+        "path": "evidence/b4/BUNDLE/README.md",
+        "reason": "the bundle's manifest, description or verifier"
+      },
+      {
+        "class": "PUBLIC_SUPPORTING",
+        "id": "bundle-infrastructure-verify-py",
+        "kind": "exact",
+        "path": "evidence/b4/BUNDLE/verify.py",
+        "reason": "the bundle's manifest, description or verifier"
+      },
+      {
+        "class": "PUBLIC_SUPPORTING",
+        "id": "bundle-infrastructure-verify-sh",
+        "kind": "exact",
+        "path": "evidence/b4/BUNDLE/verify.sh",
+        "reason": "the bundle's manifest, description or verifier"
+      },
+      {
+        "class": "INTERNAL_NOT_PUBLISHED",
+        "id": "b4-record-CLASSIFICATION-json",
+        "kind": "exact",
+        "path": "evidence/b4/CLASSIFICATION.json",
+        "reason": "the item's own record, policy or receipt; not a publication"
+      },
+      {
+        "class": "INTERNAL_NOT_PUBLISHED",
+        "id": "b4-record-PUBLICATION-json",
+        "kind": "exact",
+        "path": "evidence/b4/PUBLICATION.json",
+        "reason": "the item's own record, policy or receipt; not a publication"
+      },
+      {
+        "class": "INTERNAL_NOT_PUBLISHED",
+        "id": "b4-record-CONTROLS-json",
+        "kind": "exact",
+        "path": "evidence/b4/CONTROLS.json",
+        "reason": "the item's own record, policy or receipt; not a publication"
+      },
+      {
+        "class": "INTERNAL_NOT_PUBLISHED",
+        "id": "b4-record-VERIFICATION-json",
+        "kind": "exact",
+        "path": "evidence/b4/VERIFICATION.json",
+        "reason": "the item's own record, policy or receipt; not a publication"
+      },
+      {
+        "class": "INTERNAL_NOT_PUBLISHED",
+        "id": "b4-record-build-evidence-py",
+        "kind": "exact",
+        "path": "evidence/b4/build_evidence.py",
+        "reason": "the item's own record, policy or receipt; not a publication"
+      },
+      {
+        "class": "INTERNAL_NOT_PUBLISHED",
+        "id": "b4-record-RECEIPT-md",
+        "kind": "exact",
+        "path": "evidence/b4/RECEIPT.md",
+        "reason": "the item's own record, policy or receipt; not a publication"
+      },
+      {
+        "class": "PUBLIC_SUPPORTING",
+        "id": "scope-b4-bundle",
+        "kind": "under",
+        "path": "evidence/b4/BUNDLE/",
+        "reason": "bundle material that no exact rule promotes"
+      },
+      {
+        "class": "INTERNAL_NOT_PUBLISHED",
+        "id": "scope-a0",
+        "kind": "under",
+        "path": "evidence/a0/",
+        "reason": "the scope is a tracked evidence directory; a record inside it is not a publication candidate unless an exact rule promotes it, and the default is not to publish"
+      },
+      {
+        "class": "INTERNAL_NOT_PUBLISHED",
+        "id": "scope-a1",
+        "kind": "under",
+        "path": "evidence/a1/",
+        "reason": "the scope is a tracked evidence directory; a record inside it is not a publication candidate unless an exact rule promotes it, and the default is not to publish"
+      },
+      {
+        "class": "INTERNAL_NOT_PUBLISHED",
+        "id": "scope-a10",
+        "kind": "under",
+        "path": "evidence/a10/",
+        "reason": "the scope is a tracked evidence directory; a record inside it is not a publication candidate unless an exact rule promotes it, and the default is not to publish"
+      },
+      {
+        "class": "INTERNAL_NOT_PUBLISHED",
+        "id": "scope-a11",
+        "kind": "under",
+        "path": "evidence/a11/",
+        "reason": "the scope is a tracked evidence directory; a record inside it is not a publication candidate unless an exact rule promotes it, and the default is not to publish"
+      },
+      {
+        "class": "INTERNAL_NOT_PUBLISHED",
+        "id": "scope-a12",
+        "kind": "under",
+        "path": "evidence/a12/",
+        "reason": "the scope is a tracked evidence directory; a record inside it is not a publication candidate unless an exact rule promotes it, and the default is not to publish"
+      },
+      {
+        "class": "INTERNAL_NOT_PUBLISHED",
+        "id": "scope-a13",
+        "kind": "under",
+        "path": "evidence/a13/",
+        "reason": "the scope is a tracked evidence directory; a record inside it is not a publication candidate unless an exact rule promotes it, and the default is not to publish"
+      },
+      {
+        "class": "INTERNAL_NOT_PUBLISHED",
+        "id": "scope-a14",
+        "kind": "under",
+        "path": "evidence/a14/",
+        "reason": "the scope is a tracked evidence directory; a record inside it is not a publication candidate unless an exact rule promotes it, and the default is not to publish"
+      },
+      {
+        "class": "INTERNAL_NOT_PUBLISHED",
+        "id": "scope-a15",
+        "kind": "under",
+        "path": "evidence/a15/",
+        "reason": "the scope is a tracked evidence directory; a record inside it is not a publication candidate unless an exact rule promotes it, and the default is not to publish"
+      },
+      {
+        "class": "INTERNAL_NOT_PUBLISHED",
+        "id": "scope-a16",
+        "kind": "under",
+        "path": "evidence/a16/",
+        "reason": "the scope is a tracked evidence directory; a record inside it is not a publication candidate unless an exact rule promotes it, and the default is not to publish"
+      },
+      {
+        "class": "INTERNAL_NOT_PUBLISHED",
+        "id": "scope-a17",
+        "kind": "under",
+        "path": "evidence/a17/",
+        "reason": "the scope is a tracked evidence directory; a record inside it is not a publication candidate unless an exact rule promotes it, and the default is not to publish"
+      },
+      {
+        "class": "INTERNAL_NOT_PUBLISHED",
+        "id": "scope-a18",
+        "kind": "under",
+        "path": "evidence/a18/",
+        "reason": "the scope is a tracked evidence directory; a record inside it is not a publication candidate unless an exact rule promotes it, and the default is not to publish"
+      },
+      {
+        "class": "INTERNAL_NOT_PUBLISHED",
+        "id": "scope-a19",
+        "kind": "under",
+        "path": "evidence/a19/",
+        "reason": "the scope is a tracked evidence directory; a record inside it is not a publication candidate unless an exact rule promotes it, and the default is not to publish"
+      },
+      {
+        "class": "INTERNAL_NOT_PUBLISHED",
+        "id": "scope-a2",
+        "kind": "under",
+        "path": "evidence/a2/",
+        "reason": "the scope is a tracked evidence directory; a record inside it is not a publication candidate unless an exact rule promotes it, and the default is not to publish"
+      },
+      {
+        "class": "INTERNAL_NOT_PUBLISHED",
+        "id": "scope-a20",
+        "kind": "under",
+        "path": "evidence/a20/",
+        "reason": "the scope is a tracked evidence directory; a record inside it is not a publication candidate unless an exact rule promotes it, and the default is not to publish"
+      },
+      {
+        "class": "INTERNAL_NOT_PUBLISHED",
+        "id": "scope-a21",
+        "kind": "under",
+        "path": "evidence/a21/",
+        "reason": "the scope is a tracked evidence directory; a record inside it is not a publication candidate unless an exact rule promotes it, and the default is not to publish"
+      },
+      {
+        "class": "INTERNAL_NOT_PUBLISHED",
+        "id": "scope-a22",
+        "kind": "under",
+        "path": "evidence/a22/",
+        "reason": "the scope is a tracked evidence directory; a record inside it is not a publication candidate unless an exact rule promotes it, and the default is not to publish"
+      },
+      {
+        "class": "INTERNAL_NOT_PUBLISHED",
+        "id": "scope-a23",
+        "kind": "under",
+        "path": "evidence/a23/",
+        "reason": "the scope is a tracked evidence directory; a record inside it is not a publication candidate unless an exact rule promotes it, and the default is not to publish"
+      },
+      {
+        "class": "INTERNAL_NOT_PUBLISHED",
+        "id": "scope-a24",
+        "kind": "under",
+        "path": "evidence/a24/",
+        "reason": "the scope is a tracked evidence directory; a record inside it is not a publication candidate unless an exact rule promotes it, and the default is not to publish"
+      },
+      {
+        "class": "INTERNAL_NOT_PUBLISHED",
+        "id": "scope-a25",
+        "kind": "under",
+        "path": "evidence/a25/",
+        "reason": "the scope is a tracked evidence directory; a record inside it is not a publication candidate unless an exact rule promotes it, and the default is not to publish"
+      },
+      {
+        "class": "INTERNAL_NOT_PUBLISHED",
+        "id": "scope-a26",
+        "kind": "under",
+        "path": "evidence/a26/",
+        "reason": "the scope is a tracked evidence directory; a record inside it is not a publication candidate unless an exact rule promotes it, and the default is not to publish"
+      },
+      {
+        "class": "INTERNAL_NOT_PUBLISHED",
+        "id": "scope-a27",
+        "kind": "under",
+        "path": "evidence/a27/",
+        "reason": "the scope is a tracked evidence directory; a record inside it is not a publication candidate unless an exact rule promotes it, and the default is not to publish"
+      },
+      {
+        "class": "INTERNAL_NOT_PUBLISHED",
+        "id": "scope-a3",
+        "kind": "under",
+        "path": "evidence/a3/",
+        "reason": "the scope is a tracked evidence directory; a record inside it is not a publication candidate unless an exact rule promotes it, and the default is not to publish"
+      },
+      {
+        "class": "INTERNAL_NOT_PUBLISHED",
+        "id": "scope-a4",
+        "kind": "under",
+        "path": "evidence/a4/",
+        "reason": "the scope is a tracked evidence directory; a record inside it is not a publication candidate unless an exact rule promotes it, and the default is not to publish"
+      },
+      {
+        "class": "INTERNAL_NOT_PUBLISHED",
+        "id": "scope-a5",
+        "kind": "under",
+        "path": "evidence/a5/",
+        "reason": "the scope is a tracked evidence directory; a record inside it is not a publication candidate unless an exact rule promotes it, and the default is not to publish"
+      },
+      {
+        "class": "INTERNAL_NOT_PUBLISHED",
+        "id": "scope-a6",
+        "kind": "under",
+        "path": "evidence/a6/",
+        "reason": "the scope is a tracked evidence directory; a record inside it is not a publication candidate unless an exact rule promotes it, and the default is not to publish"
+      },
+      {
+        "class": "INTERNAL_NOT_PUBLISHED",
+        "id": "scope-a7",
+        "kind": "under",
+        "path": "evidence/a7/",
+        "reason": "the scope is a tracked evidence directory; a record inside it is not a publication candidate unless an exact rule promotes it, and the default is not to publish"
+      },
+      {
+        "class": "INTERNAL_NOT_PUBLISHED",
+        "id": "scope-a8",
+        "kind": "under",
+        "path": "evidence/a8/",
+        "reason": "the scope is a tracked evidence directory; a record inside it is not a publication candidate unless an exact rule promotes it, and the default is not to publish"
+      },
+      {
+        "class": "INTERNAL_NOT_PUBLISHED",
+        "id": "scope-a9",
+        "kind": "under",
+        "path": "evidence/a9/",
+        "reason": "the scope is a tracked evidence directory; a record inside it is not a publication candidate unless an exact rule promotes it, and the default is not to publish"
+      },
+      {
+        "class": "INTERNAL_NOT_PUBLISHED",
+        "id": "scope-b0",
+        "kind": "under",
+        "path": "evidence/b0/",
+        "reason": "the scope is a tracked evidence directory; a record inside it is not a publication candidate unless an exact rule promotes it, and the default is not to publish"
+      },
+      {
+        "class": "INTERNAL_NOT_PUBLISHED",
+        "id": "scope-b1",
+        "kind": "under",
+        "path": "evidence/b1/",
+        "reason": "the scope is a tracked evidence directory; a record inside it is not a publication candidate unless an exact rule promotes it, and the default is not to publish"
+      },
+      {
+        "class": "INTERNAL_NOT_PUBLISHED",
+        "id": "scope-b2",
+        "kind": "under",
+        "path": "evidence/b2/",
+        "reason": "the scope is a tracked evidence directory; a record inside it is not a publication candidate unless an exact rule promotes it, and the default is not to publish"
+      },
+      {
+        "class": "INTERNAL_NOT_PUBLISHED",
+        "id": "scope-b3",
+        "kind": "under",
+        "path": "evidence/b3/",
+        "reason": "the scope is a tracked evidence directory; a record inside it is not a publication candidate unless an exact rule promotes it, and the default is not to publish"
+      },
+      {
+        "class": "INTERNAL_NOT_PUBLISHED",
+        "id": "scope-defects",
+        "kind": "under",
+        "path": "evidence/defects/",
+        "reason": "the scope is a tracked evidence directory; a record inside it is not a publication candidate unless an exact rule promotes it, and the default is not to publish"
+      },
+      {
+        "class": "INTERNAL_NOT_PUBLISHED",
+        "id": "scope-etp",
+        "kind": "under",
+        "path": "evidence/etp/",
+        "reason": "the scope is a tracked evidence directory; a record inside it is not a publication candidate unless an exact rule promotes it, and the default is not to publish"
+      },
+      {
+        "class": "INTERNAL_NOT_PUBLISHED",
+        "id": "scope-etp-controls",
+        "kind": "under",
+        "path": "evidence/etp-controls/",
+        "reason": "the scope is a tracked evidence directory; a record inside it is not a publication candidate unless an exact rule promotes it, and the default is not to publish"
+      },
+      {
+        "class": "INTERNAL_NOT_PUBLISHED",
+        "id": "scope-etp-t1",
+        "kind": "under",
+        "path": "evidence/etp-t1/",
+        "reason": "the scope is a tracked evidence directory; a record inside it is not a publication candidate unless an exact rule promotes it, and the default is not to publish"
+      },
+      {
+        "class": "INTERNAL_NOT_PUBLISHED",
+        "id": "scope-etp-t10",
+        "kind": "under",
+        "path": "evidence/etp-t10/",
+        "reason": "the scope is a tracked evidence directory; a record inside it is not a publication candidate unless an exact rule promotes it, and the default is not to publish"
+      },
+      {
+        "class": "INTERNAL_NOT_PUBLISHED",
+        "id": "scope-etp-t11",
+        "kind": "under",
+        "path": "evidence/etp-t11/",
+        "reason": "the scope is a tracked evidence directory; a record inside it is not a publication candidate unless an exact rule promotes it, and the default is not to publish"
+      },
+      {
+        "class": "INTERNAL_NOT_PUBLISHED",
+        "id": "scope-etp-t12",
+        "kind": "under",
+        "path": "evidence/etp-t12/",
+        "reason": "the scope is a tracked evidence directory; a record inside it is not a publication candidate unless an exact rule promotes it, and the default is not to publish"
+      },
+      {
+        "class": "INTERNAL_NOT_PUBLISHED",
+        "id": "scope-etp-t13",
+        "kind": "under",
+        "path": "evidence/etp-t13/",
+        "reason": "the scope is a tracked evidence directory; a record inside it is not a publication candidate unless an exact rule promotes it, and the default is not to publish"
+      },
+      {
+        "class": "INTERNAL_NOT_PUBLISHED",
+        "id": "scope-etp-t14",
+        "kind": "under",
+        "path": "evidence/etp-t14/",
+        "reason": "the scope is a tracked evidence directory; a record inside it is not a publication candidate unless an exact rule promotes it, and the default is not to publish"
+      },
+      {
+        "class": "INTERNAL_NOT_PUBLISHED",
+        "id": "scope-etp-t15",
+        "kind": "under",
+        "path": "evidence/etp-t15/",
+        "reason": "the scope is a tracked evidence directory; a record inside it is not a publication candidate unless an exact rule promotes it, and the default is not to publish"
+      },
+      {
+        "class": "INTERNAL_NOT_PUBLISHED",
+        "id": "scope-etp-t2",
+        "kind": "under",
+        "path": "evidence/etp-t2/",
+        "reason": "the scope is a tracked evidence directory; a record inside it is not a publication candidate unless an exact rule promotes it, and the default is not to publish"
+      },
+      {
+        "class": "INTERNAL_NOT_PUBLISHED",
+        "id": "scope-etp-t3",
+        "kind": "under",
+        "path": "evidence/etp-t3/",
+        "reason": "the scope is a tracked evidence directory; a record inside it is not a publication candidate unless an exact rule promotes it, and the default is not to publish"
+      },
+      {
+        "class": "INTERNAL_NOT_PUBLISHED",
+        "id": "scope-etp-t4",
+        "kind": "under",
+        "path": "evidence/etp-t4/",
+        "reason": "the scope is a tracked evidence directory; a record inside it is not a publication candidate unless an exact rule promotes it, and the default is not to publish"
+      },
+      {
+        "class": "INTERNAL_NOT_PUBLISHED",
+        "id": "scope-etp-t5",
+        "kind": "under",
+        "path": "evidence/etp-t5/",
+        "reason": "the scope is a tracked evidence directory; a record inside it is not a publication candidate unless an exact rule promotes it, and the default is not to publish"
+      },
+      {
+        "class": "INTERNAL_NOT_PUBLISHED",
+        "id": "scope-etp-t6",
+        "kind": "under",
+        "path": "evidence/etp-t6/",
+        "reason": "the scope is a tracked evidence directory; a record inside it is not a publication candidate unless an exact rule promotes it, and the default is not to publish"
+      },
+      {
+        "class": "INTERNAL_NOT_PUBLISHED",
+        "id": "scope-etp-t7",
+        "kind": "under",
+        "path": "evidence/etp-t7/",
+        "reason": "the scope is a tracked evidence directory; a record inside it is not a publication candidate unless an exact rule promotes it, and the default is not to publish"
+      },
+      {
+        "class": "INTERNAL_NOT_PUBLISHED",
+        "id": "scope-etp-t8",
+        "kind": "under",
+        "path": "evidence/etp-t8/",
+        "reason": "the scope is a tracked evidence directory; a record inside it is not a publication candidate unless an exact rule promotes it, and the default is not to publish"
+      },
+      {
+        "class": "INTERNAL_NOT_PUBLISHED",
+        "id": "scope-etp-t9",
+        "kind": "under",
+        "path": "evidence/etp-t9/",
+        "reason": "the scope is a tracked evidence directory; a record inside it is not a publication candidate unless an exact rule promotes it, and the default is not to publish"
+      },
+      {
+        "class": "INTERNAL_NOT_PUBLISHED",
+        "id": "scope-etp0",
+        "kind": "under",
+        "path": "evidence/etp0/",
+        "reason": "the scope is a tracked evidence directory; a record inside it is not a publication candidate unless an exact rule promotes it, and the default is not to publish"
+      },
+      {
+        "class": "INTERNAL_NOT_PUBLISHED",
+        "id": "scope-etp2",
+        "kind": "under",
+        "path": "evidence/etp2/",
+        "reason": "the scope is a tracked evidence directory; a record inside it is not a publication candidate unless an exact rule promotes it, and the default is not to publish"
+      },
+      {
+        "class": "INTERNAL_NOT_PUBLISHED",
+        "id": "scope-etp3",
+        "kind": "under",
+        "path": "evidence/etp3/",
+        "reason": "the scope is a tracked evidence directory; a record inside it is not a publication candidate unless an exact rule promotes it, and the default is not to publish"
+      },
+      {
+        "class": "INTERNAL_NOT_PUBLISHED",
+        "id": "scope-etp4",
+        "kind": "under",
+        "path": "evidence/etp4/",
+        "reason": "the scope is a tracked evidence directory; a record inside it is not a publication candidate unless an exact rule promotes it, and the default is not to publish"
+      },
+      {
+        "class": "INTERNAL_NOT_PUBLISHED",
+        "id": "scope-etp5",
+        "kind": "under",
+        "path": "evidence/etp5/",
+        "reason": "the scope is a tracked evidence directory; a record inside it is not a publication candidate unless an exact rule promotes it, and the default is not to publish"
+      },
+      {
+        "class": "INTERNAL_NOT_PUBLISHED",
+        "id": "scope-etp6",
+        "kind": "under",
+        "path": "evidence/etp6/",
+        "reason": "the scope is a tracked evidence directory; a record inside it is not a publication candidate unless an exact rule promotes it, and the default is not to publish"
+      },
+      {
+        "class": "INTERNAL_NOT_PUBLISHED",
+        "id": "scope-etp7",
+        "kind": "under",
+        "path": "evidence/etp7/",
+        "reason": "the scope is a tracked evidence directory; a record inside it is not a publication candidate unless an exact rule promotes it, and the default is not to publish"
+      },
+      {
+        "class": "INTERNAL_NOT_PUBLISHED",
+        "id": "scope-gate-reliability",
+        "kind": "under",
+        "path": "evidence/gate-reliability/",
+        "reason": "the scope is a tracked evidence directory; a record inside it is not a publication candidate unless an exact rule promotes it, and the default is not to publish"
+      },
+      {
+        "class": "INTERNAL_NOT_PUBLISHED",
+        "id": "scope-haz-15",
+        "kind": "under",
+        "path": "evidence/haz-15/",
+        "reason": "the scope is a tracked evidence directory; a record inside it is not a publication candidate unless an exact rule promotes it, and the default is not to publish"
+      },
+      {
+        "class": "INTERNAL_NOT_PUBLISHED",
+        "id": "scope-haz-16",
+        "kind": "under",
+        "path": "evidence/haz-16/",
+        "reason": "the scope is a tracked evidence directory; a record inside it is not a publication candidate unless an exact rule promotes it, and the default is not to publish"
+      },
+      {
+        "class": "INTERNAL_NOT_PUBLISHED",
+        "id": "scope-performance-frontier",
+        "kind": "under",
+        "path": "evidence/performance-frontier/",
+        "reason": "the scope is a tracked evidence directory; a record inside it is not a publication candidate unless an exact rule promotes it, and the default is not to publish"
+      },
+      {
+        "class": "INTERNAL_NOT_PUBLISHED",
+        "depth": 2,
+        "id": "scope-evidence-top-level",
+        "kind": "depth",
+        "reason": "a tracked evidence record at the top level; not a publication candidate",
+        "root": "evidence"
+      }
+    ]
+  },
+  "refusalCodes": [
+    "PB_REFUSED_ABSOLUTE_PATH",
+    "PB_REFUSED_CLASSIFICATION_MISMATCH",
+    "PB_REFUSED_EXTERNAL_NOT_RUN",
+    "PB_REFUSED_INTERNAL_MATERIAL",
+    "PB_REFUSED_IO",
+    "PB_REFUSED_MANIFEST_INVALID",
+    "PB_REFUSED_NO_PUBLIC_SERVICE",
+    "PB_REFUSED_PRIVATE_MATERIAL",
+    "PB_REFUSED_PRIVATE_REFERENCE",
+    "PB_REFUSED_RELEASE_MEMBER_MISSING",
+    "PB_REFUSED_UNBOUND_MEMBER",
+    "PB_REFUSED_UNCLASSIFIED",
+    "PB_REFUSED_USAGE"
+  ],
+  "releaseCriticalMembers": [
+    "members/a17-freeze-forward.json",
+    "members/a5-admission.json",
+    "members/a9-statement-a8-shard-000.json",
+    "members/b1-publication.json"
+  ],
+  "schema": "openssl-rs/b4/bundle-manifest/1",
+  "subjectLabels": {
+    "members/a10-envelope-a8-shard-000.json": [
+      "application/vnd.in-toto+json"
+    ],
+    "members/b1-publication.json": [
+      "FIXTURE-1"
+    ]
+  }
+}
