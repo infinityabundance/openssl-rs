@@ -397,3 +397,39 @@ which remains `OPEN`; `produced=14 / missing=6` is unchanged. A17's own records
 still name the pre-rewrite id `731b066e2` for the same freeze: A17 regenerates
 byte-identically and is outside this batch's write scope, so the two ids are the
 same tree under two commit objects. That is recorded as a residual, not masked.
+
+## 12. Correction (2026-11-25): re-bind the A22 closure evidence after C13
+
+**Cause.** A22's records were regenerated at `2476a6ceafb4` (C13) inside A22's
+declared venue. The A22 closure's `outcomes[*].evidence` binds the digest of
+`evidence/a22/RESULTS.json`, so the eight bindings moved from the pre-C13 record
+to the current one. The record was re-derived by `evidence/b3/build_evidence.py`
+at C14 with its default flags (the declared base and `asOfCommit` are unchanged,
+because the producer's own contract says a later evidence commit does not move
+the base the record is *about*), not hand-edited.
+
+**Old and new.**
+
+| field | old | new |
+|---|---|---|
+| `campaigns[a22].closure.outcomes[0..7].evidence` digest | `976ecee77d13e5ab11ae78426c0cff3835a5de4bc25d2dcbbc2a035ca768ddde` | `db49003319376aa633aea9898fb9599097ae6f496ec5f6ff661cb547dfba7a1c` |
+| `CAMPAIGNS.json` | `544ba83f4d00f7677907020b51ec34521808fff8f6f0a9f3dec775667c7d2b92` | `763ec8471daa48e72e1058ae410397eb7798064bc8329e838dc80373df877fba` |
+| `RECONCILIATION.json` | `a44cb3921ce6a884a0e94679925685413d83a3bed55b6069c11aab5e602ed933` | byte-identical |
+| `CONTROLS.json` | `6cd1efb5ae5f0c08dbd83364545026a7aa6982689b5f12f1a5a2c5cbb03493dd` | byte-identical |
+
+**Outcome unchanged.** Both campaigns validate to the states they claimed:
+`etp-programme` stays `OPEN` with 86 planned rows and 16 amendments; the A22
+campaign stays `CLOSED_CLEAN` with `planned=8`, `pass=8`, `fail=0`, `skip=0`,
+`notRun=0`. The reconciliations are unchanged (`produced=14 / missing=6` for the
+programme, `produced=8 / missing=0` for A22); neither narrows or omits its plan.
+Only the eight digest bindings moved. The earlier closure (`6 qualified / 1 defect
+/ 1 partial`) and the first-record digest `4509870…` remain preserved in
+`closureHistory` and in each outcome's `history`, exactly as before.
+
+**History.** The pre-C13 A22 digest `976ecee7…` is recorded above rather than
+erased; the record's per-outcome `history` continues to preserve the earlier
+observation. Nothing about a campaign's plan, state or counts changed.
+
+**Gates.** `python3 evidence/b3/build_evidence.py` reproduces the committed bytes
+and prints `campaign=a22-adversarial-qualification state=CLOSED_CLEAN planned=8
+pass=8`; `--check` reports `AC_OK`; `test_campaign` is 79/79 OK.
