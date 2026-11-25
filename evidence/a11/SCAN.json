@@ -11,8 +11,8 @@
       "evidence/a11/"
     ],
     "excludedReason": "the records this item emits are excluded so the scan cannot depend on its own bytes",
-    "files": 513,
-    "frozenAtCandidate": "3ee456d4f8e6e0a62cb96e4c0a31ea0f0ec50db5",
+    "files": 519,
+    "frozenAtCandidate": "9ed7a58b423e4ec7df072f5a6f1634682420d238",
     "glob": "evidence/*.json",
     "globSemantics": "tracked files matched with fnmatch.fnmatchcase; '*' matches across '/'",
     "growthPolicy": "a later verification re-hashes every member and reports a glob match that is not a member as NEW_SINCE_RECORD, counted separately; growth never changes this count, and a removed or changed member is refused with PH_REFUSED_POPULATION_DRIFT",
@@ -150,17 +150,17 @@
       {
         "bytes": 152186,
         "path": "evidence/a16/CONTROLS.json",
-        "sha256": "c1d6d0d2e461fff97238ead2af4425bdd19fbe6a3afe8ae3bb633e3463c661ed"
+        "sha256": "7995285550c72609272e65599ddf9845dd5b04d75b1690d1bbac63911e1af11e"
       },
       {
-        "bytes": 103083,
+        "bytes": 105318,
         "path": "evidence/a16/INVENTORY.json",
-        "sha256": "1084ed2e39b06cff048ac595d09cfb101c1e9d102be0362e1019daa4085d7f90"
+        "sha256": "1c39ebdc5c7fc716b961a46c9d179cb7938bc40dfdf0dc26391109b38fa5bca2"
       },
       {
         "bytes": 7391,
         "path": "evidence/a16/PROFILE.json",
-        "sha256": "8c85f85bf04ae0db8cc0967c325d7f21a1e70ed8c24d25963d830ecf559d1792"
+        "sha256": "ad315d59f75b59ee21eff9ada6cff40c08a7180e8a84c7582ba559ad910f260f"
       },
       {
         "bytes": 7359,
@@ -2303,9 +2303,34 @@
         "sha256": "4a14da856982c261be0a1749cf8e738b2f149bf1dbc8255e8086d3a2d8171836"
       },
       {
-        "bytes": 7436,
+        "bytes": 12705,
         "path": "evidence/performance-frontier/admission/ARMS.json",
-        "sha256": "18d29f8ebaaaa5db76372e79f4103c506abaa8d814184404e2c1989f9c5f3c92"
+        "sha256": "f4803073ed5ff3378d294a109a056c12fa1a62f77e68f089a9d8b618471a396d"
+      },
+      {
+        "bytes": 47910,
+        "path": "evidence/performance-frontier/campaigns/PFP-0-refreeze-2e9c4c5cf/build-identity.json",
+        "sha256": "faadbd65bb69691b1864ab748a83a7d1a94492e03cba8f1620ff05dda2faa8a6"
+      },
+      {
+        "bytes": 1641,
+        "path": "evidence/performance-frontier/campaigns/PFP-0-refreeze-2e9c4c5cf/fixtures/dh-fixtures.json",
+        "sha256": "ad58f88d53ab76b608a6db95e938a6065af4b2f1c2ee287006fdd30a5abed2b2"
+      },
+      {
+        "bytes": 1093,
+        "path": "evidence/performance-frontier/campaigns/PFP-0-refreeze-2e9c4c5cf/preregistration.json",
+        "sha256": "19a97cb76640bc77ca6547a5ad7b7555128860e890ffdf695a0c65f2cc7eb93a"
+      },
+      {
+        "bytes": 701,
+        "path": "evidence/performance-frontier/campaigns/PFP-0-refreeze-2e9c4c5cf/raw/shell-generation.json",
+        "sha256": "a0dbb78ca4a238359417f57f2b66f77a85553e8067c78a846c8012f5df3e5fae"
+      },
+      {
+        "bytes": 84977,
+        "path": "evidence/performance-frontier/campaigns/PFP-0-refreeze-2e9c4c5cf/results.json",
+        "sha256": "e112e0217421985c031c6d4572c0543e9e8764ebc910cdb11bb72a37eebdbfad"
       },
       {
         "bytes": 7107,
@@ -2356,6 +2381,11 @@
         "bytes": 8814,
         "path": "evidence/performance-frontier/campaigns/PFP-1/performance/results.json",
         "sha256": "969ffad3dffccfcae6e1bf35a46f7a54f70959d11fb0ff231bb742cedd9ce3cb"
+      },
+      {
+        "bytes": 14618,
+        "path": "evidence/performance-frontier/claims/PFP-0-refreeze-2e9c4c5cf.claim.json",
+        "sha256": "a52c7b5703e773034fa997799f1ae0b70607b911bb29e08d36e294808b761f80"
       },
       {
         "bytes": 10902,
@@ -2797,15 +2827,15 @@
       "code": "PH_OK",
       "path": "evidence/a16/CONTROLS.json",
       "result": "STRICT_OK",
-      "sha256": "c1d6d0d2e461fff97238ead2af4425bdd19fbe6a3afe8ae3bb633e3463c661ed",
+      "sha256": "7995285550c72609272e65599ddf9845dd5b04d75b1690d1bbac63911e1af11e",
       "type": "object"
     },
     {
-      "bytes": 103083,
+      "bytes": 105318,
       "code": "PH_OK",
       "path": "evidence/a16/INVENTORY.json",
       "result": "STRICT_OK",
-      "sha256": "1084ed2e39b06cff048ac595d09cfb101c1e9d102be0362e1019daa4085d7f90",
+      "sha256": "1c39ebdc5c7fc716b961a46c9d179cb7938bc40dfdf0dc26391109b38fa5bca2",
       "type": "object"
     },
     {
@@ -2813,7 +2843,7 @@
       "code": "PH_OK",
       "path": "evidence/a16/PROFILE.json",
       "result": "STRICT_OK",
-      "sha256": "8c85f85bf04ae0db8cc0967c325d7f21a1e70ed8c24d25963d830ecf559d1792",
+      "sha256": "ad315d59f75b59ee21eff9ada6cff40c08a7180e8a84c7582ba559ad910f260f",
       "type": "object"
     },
     {
@@ -6086,11 +6116,51 @@
       "type": "object"
     },
     {
-      "bytes": 7436,
+      "bytes": 12705,
       "code": "PH_OK",
       "path": "evidence/performance-frontier/admission/ARMS.json",
       "result": "STRICT_OK",
-      "sha256": "18d29f8ebaaaa5db76372e79f4103c506abaa8d814184404e2c1989f9c5f3c92",
+      "sha256": "f4803073ed5ff3378d294a109a056c12fa1a62f77e68f089a9d8b618471a396d",
+      "type": "object"
+    },
+    {
+      "bytes": 47910,
+      "code": "PH_OK",
+      "path": "evidence/performance-frontier/campaigns/PFP-0-refreeze-2e9c4c5cf/build-identity.json",
+      "result": "STRICT_OK",
+      "sha256": "faadbd65bb69691b1864ab748a83a7d1a94492e03cba8f1620ff05dda2faa8a6",
+      "type": "object"
+    },
+    {
+      "bytes": 1641,
+      "code": "PH_OK",
+      "path": "evidence/performance-frontier/campaigns/PFP-0-refreeze-2e9c4c5cf/fixtures/dh-fixtures.json",
+      "result": "STRICT_OK",
+      "sha256": "ad58f88d53ab76b608a6db95e938a6065af4b2f1c2ee287006fdd30a5abed2b2",
+      "type": "object"
+    },
+    {
+      "bytes": 1093,
+      "code": "PH_OK",
+      "path": "evidence/performance-frontier/campaigns/PFP-0-refreeze-2e9c4c5cf/preregistration.json",
+      "result": "STRICT_OK",
+      "sha256": "19a97cb76640bc77ca6547a5ad7b7555128860e890ffdf695a0c65f2cc7eb93a",
+      "type": "object"
+    },
+    {
+      "bytes": 701,
+      "code": "PH_OK",
+      "path": "evidence/performance-frontier/campaigns/PFP-0-refreeze-2e9c4c5cf/raw/shell-generation.json",
+      "result": "STRICT_OK",
+      "sha256": "a0dbb78ca4a238359417f57f2b66f77a85553e8067c78a846c8012f5df3e5fae",
+      "type": "object"
+    },
+    {
+      "bytes": 84977,
+      "code": "PH_OK",
+      "path": "evidence/performance-frontier/campaigns/PFP-0-refreeze-2e9c4c5cf/results.json",
+      "result": "STRICT_OK",
+      "sha256": "e112e0217421985c031c6d4572c0543e9e8764ebc910cdb11bb72a37eebdbfad",
       "type": "object"
     },
     {
@@ -6171,6 +6241,14 @@
       "path": "evidence/performance-frontier/campaigns/PFP-1/performance/results.json",
       "result": "STRICT_OK",
       "sha256": "969ffad3dffccfcae6e1bf35a46f7a54f70959d11fb0ff231bb742cedd9ce3cb",
+      "type": "object"
+    },
+    {
+      "bytes": 14618,
+      "code": "PH_OK",
+      "path": "evidence/performance-frontier/claims/PFP-0-refreeze-2e9c4c5cf.claim.json",
+      "result": "STRICT_OK",
+      "sha256": "a52c7b5703e773034fa997799f1ae0b70607b911bb29e08d36e294808b761f80",
       "type": "object"
     },
     {
@@ -6517,7 +6595,7 @@
   ],
   "schema": "openssl-rs/a11/scan/2",
   "sourceIdentity": {
-    "baseCommit": "3ee456d4f8e6e0a62cb96e4c0a31ea0f0ec50db5",
+    "baseCommit": "9ed7a58b423e4ec7df072f5a6f1634682420d238",
     "tool": {
       "bytes": 54477,
       "path": "forensics/tools/harden.py",
@@ -6525,11 +6603,11 @@
     }
   },
   "summary": {
-    "examined": 338,
-    "files": 513,
+    "examined": 344,
+    "files": 519,
     "refused": 0,
     "skippedOther": 0,
     "skippedSize": 175,
-    "strictOk": 338
+    "strictOk": 344
   }
 }
