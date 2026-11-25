@@ -433,3 +433,39 @@ observation. Nothing about a campaign's plan, state or counts changed.
 **Gates.** `python3 evidence/b3/build_evidence.py` reproduces the committed bytes
 and prints `campaign=a22-adversarial-qualification state=CLOSED_CLEAN planned=8
 pass=8`; `--check` reports `AC_OK`; `test_campaign` is 79/79 OK.
+
+## 13. Correction (2026-11-25): re-bind the A22 closure evidence after C25
+
+**Cause.** A22 was regenerated in its declared venue at `efb456776` (C25) after
+the A20 candidate moved, which changed `evidence/a22/RESULTS.json` from
+`db490033…` to `07d5fecd…` (A22's own `RECEIPT.md` §13 records the
+re-measurement). The A22 closure's `outcomes[*].evidence` binds that digest, so
+the eight bindings moved. The record was re-derived by
+`evidence/b3/build_evidence.py` at C25 with its default flags (the declared base
+and `asOfCommit` are unchanged, because the producer's contract says a later
+evidence commit does not move the base the record is about), not hand-edited.
+
+**Old and new.**
+
+| field | old | new |
+|---|---|---|
+| `campaigns[a22].closure.outcomes[0..7].evidence` digest | `db49003319376aa633aea9898fb9599097ae6f496ec5f6ff661cb547dfba7a1c` | `07d5fecd617fd88bb4a60c785a9f33432beed34a1cb899ade89ac9b224a5e46e` |
+| `CAMPAIGNS.json` | `763ec8471daa48e72e1058ae410397eb7798064bc8329e838dc80373df877fba` | `5ecc7a04ddd3f54629254d4db9d504b036b90c33524da3d4662dcc2d34feaab5` |
+| `RECONCILIATION.json` | `a44cb3921ce6a884a0e94679925685413d83a3bed55b6069c11aab5e602ed933` | byte-identical |
+| `CONTROLS.json` | `6cd1efb5ae5f0c08dbd83364545026a7aa6982689b5f12f1a5a2c5cbb03493dd` | byte-identical |
+
+**Outcome unchanged.** Both campaigns validate to the states they claimed:
+`etp-programme` stays `OPEN` with 86 planned rows and 16 amendments; the A22
+campaign stays `CLOSED_CLEAN` with `planned=8`, `pass=8`, `fail=0`, `skip=0`,
+`notRun=0`. The reconciliations are unchanged (`produced=14 / missing=6` for the
+programme, `produced=8 / missing=0` for A22); neither narrows or omits its plan.
+Only the eight digest bindings moved. The earlier closure and first-record digest
+`4509870…` remain preserved in `closureHistory` and in each outcome's `history`.
+
+**History.** The pre-C25 A22 digest `db490033…` is recorded above rather than
+erased; the record's per-outcome `history` continues to preserve the earliest
+observation.
+
+**Gates.** `python3 evidence/b3/build_evidence.py` reproduces the committed bytes
+and prints `campaign=a22-adversarial-qualification state=CLOSED_CLEAN planned=8
+pass=8`; `--check` reports `AC_OK`; `test_campaign` is 79/79 OK.
