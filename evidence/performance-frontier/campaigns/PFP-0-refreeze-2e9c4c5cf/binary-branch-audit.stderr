@@ -1,0 +1,2 @@
+REFUSED target="Constant-time ladder core" symbol="mod_exp_core_consttime_from_parts" reason=missing
+binary_branch_audit: FAIL-CLOSED: 1 of 7 expected targets were refused; this report is not a gate result.

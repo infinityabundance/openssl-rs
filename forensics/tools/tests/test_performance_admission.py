@@ -62,14 +62,27 @@ class CommittedRegister(unittest.TestCase):
 
     def test_the_measured_arm_is_an_experiment_not_a_candidate(self) -> None:
         register = load(REGISTER)
-        self.assertEqual(len(register["arms"]), 1)
-        arm = register["arms"][0]
-        self.assertEqual(arm["arm_id"], "PFP-1")
+        arms = {arm["arm_id"]: arm for arm in register["arms"]}
+        self.assertIn("PFP-1", arms)
+        arm = arms["PFP-1"]
         self.assertEqual(arm["status"], "EXPERIMENT")
         self.assertIsNone(arm["differential_courts"])
         self.assertEqual(arm["constant_time_audit"]["kind"], "CTGRIND")
         self.assertNotIn(
             arm["constant_time_audit"]["kind"], pa.CT_KINDS_ACCEPTED_FOR_CANDIDATE
+        )
+
+    def test_the_refreeze_arm_is_an_experiment_with_no_candidate_conjunct(self) -> None:
+        register = load(REGISTER)
+        arms = {arm["arm_id"]: arm for arm in register["arms"]}
+        arm = arms["PFP-0-refreeze-2e9c4c5cf"]
+        self.assertEqual(arm["status"], "EXPERIMENT")
+        self.assertIsNone(arm["differential_courts"])
+        self.assertNotIn(
+            arm["constant_time_audit"]["kind"], pa.CT_KINDS_ACCEPTED_FOR_CANDIDATE
+        )
+        self.assertEqual(
+            arm["measurement"]["candidate_sha256"], arm["candidate"]["artefact"]["sha256"]
         )
 
     def test_promoting_the_experiment_to_candidate_is_refused(self) -> None:

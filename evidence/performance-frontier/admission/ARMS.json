@@ -157,6 +157,106 @@
       },
       "shortcuts": [],
       "reuse": null
+    },
+    {
+      "arm_id": "PFP-0-refreeze-2e9c4c5cf",
+      "queue_item": "PFP-0",
+      "description": "the unchanged PFP-0 harness re-executed at staging HEAD 2e9c4c5cf against the same OpenSSL 3.6.4 authority DSO; a new measurement basis for the queue, not a comparison with the c9a0fdd5 or 91ac573c figures",
+      "status": "EXPERIMENT",
+      "candidate": {
+        "source_commit": "2e9c4c5cff6c431cc44352a475b011fd92df5b93",
+        "artefact": {
+          "label": "distribution-shaped libcrypto.so.3 built from staging HEAD 2e9c4c5cf into a fresh CARGO_TARGET_DIR",
+          "sha256": "6d7e282d091aedb783d0e55874ed2ce4dab8eaf219f9f5c32653ad4630953b9c"
+        },
+        "build_profile": "release, x86_64-unknown-linux-gnu, rustc 1.98.1; the tree is committed and clean for build-relevant paths, so the candidate is reproducible from the commit"
+      },
+      "measurement": {
+        "record": {
+          "path": "evidence/performance-frontier/claims/PFP-0-refreeze-2e9c4c5cf.claim.json",
+          "sha256": "a52c7b5703e773034fa997799f1ae0b70607b911bb29e08d36e294808b761f80",
+          "present": true
+        },
+        "classification": "SCOPED_OBSERVATION",
+        "candidate_sha256": "6d7e282d091aedb783d0e55874ed2ce4dab8eaf219f9f5c32653ad4630953b9c",
+        "population": {
+          "digest": "40d1537b1a86851a17c49636cd5620704c4836bf6153074fd964f1c3a4fe691e",
+          "frozen_at": "c9a0fdd58429ef13ca9b25ddccbc84a832787277",
+          "frozen_before_execution": true
+        },
+        "identity": {
+          "source": "2e9c4c5cff6c431cc44352a475b011fd92df5b93",
+          "tool": "courts/phase18/timing/bench_api.c, alloc_probe.c and analyse_bench_api.py at the digests recorded in the claim record",
+          "instrument": "cross-library single-operation latency, 15 paired processes pinned to one CPU, median of paired ratios with a percentile bootstrap",
+          "target": "x86_64-unknown-linux-gnu release",
+          "population": "40d1537b1a86851a17c49636cd5620704c4836bf6153074fd964f1c3a4fe691e"
+        }
+      },
+      "differential_courts": null,
+      "constant_time_audit": {
+        "kind": "BINARY_BRANCH_AUDIT_ATTEMPT",
+        "instrument": "courts/phase18/timing/binary_branch_audit.py against the built distribution DSO",
+        "reference": {
+          "path": "evidence/performance-frontier/campaigns/PFP-0-refreeze-2e9c4c5cf/binary-branch-audit.md",
+          "sha256": "5fbe3c9cc39bde644a3a4e25a1104b99c03c2e6a0f4eda45e4fc2e1e1e80531d",
+          "present": true
+        },
+        "candidate_sha256": "6d7e282d091aedb783d0e55874ed2ce4dab8eaf219f9f5c32653ad4630953b9c",
+        "result": "exit 1, fail-closed: 1 of 7 inventory targets refused; mod_exp_core_consttime_from_parts is missing from this DSO (inlined into mod_exp_core_consttime_from_parts_prepared), so the report is not a gate result",
+        "note": "an attempted audit is not an audit result and is not in the candidate-constant-time vocabulary; no constant-time conclusion follows"
+      },
+      "timing_obligations": {
+        "open": [
+          {
+            "id": "T23",
+            "description": "Secret ownership does not propagate through the arithmetic itself; the transfer window and 17 inversion intermediates at secret-dependent width remain open.",
+            "discharged": false
+          },
+          {
+            "id": "T24",
+            "description": "The constant-time inversion's scratch storage and the operands' normalised limb-count metadata remain the recorded residual.",
+            "discharged": false
+          },
+          {
+            "id": "T29",
+            "description": "The ECDSA per-signature allocation blow-up and the related fixed-width workspace residual remain open; this campaign measures 273.4 candidate allocations per signature against 29 for the authority.",
+            "discharged": false
+          },
+          {
+            "id": "REFREEZE-NO-PMU",
+            "description": "The venue exposes no PMU and has no frequency, turbo, SMT or isolation control.",
+            "discharged": false
+          },
+          {
+            "id": "REFREEZE-NO-DIFFERENTIAL-COURT",
+            "description": "No differential court was run at DSO 6d7e282d in this campaign.",
+            "discharged": false
+          },
+          {
+            "id": "REFREEZE-BRANCH-AUDIT-INCOMPLETE",
+            "description": "The binary branch audit was attempted at this digest and refused 1 of 7 inventory targets; there is no binary constant-time audit result.",
+            "discharged": false
+          },
+          {
+            "id": "REFREEZE-UNMEASURED-COMPARATORS",
+            "description": "AWS-LC, BoringSSL, rustls and wolfSSL were not executed; their rows are UNAVAILABLE or NOT_APPLICABLE, never losses.",
+            "discharged": false
+          },
+          {
+            "id": "REFREEZE-CANDIDATE-BYTES",
+            "description": "The benchmarked DSO is not committed; the digest, build-id and rebuild recipe are.",
+            "discharged": false
+          }
+        ],
+        "attempted_discharge": [],
+        "none_open_because": null
+      },
+      "assurance": {
+        "safe_compatible": false,
+        "semantic_assurance": false
+      },
+      "shortcuts": [],
+      "reuse": null
     }
   ]
 }

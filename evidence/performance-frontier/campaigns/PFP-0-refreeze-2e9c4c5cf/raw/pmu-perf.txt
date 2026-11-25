@@ -1,0 +1,27 @@
+cpu_event_source=absent
+perf_event_paranoid=2
+event_sources=breakpoint kprobe msr power software tracepoint uprobe 
+--- perf stat -e cycles true ---
+
+ Performance counter stats for 'true':
+
+   <not supported>      cycles                                                      
+
+       0.001207814 seconds time elapsed
+
+       0.000616000 seconds user
+       0.000000000 seconds sys
+
+
+--- perf stat -e task-clock true ---
+
+ Performance counter stats for 'true':
+
+              0.43 msec task-clock                       #    0.773 CPUs utilized          
+
+       0.000550339 seconds time elapsed
+
+       0.000697000 seconds user
+       0.000000000 seconds sys
+
+

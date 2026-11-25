@@ -1,0 +1,11 @@
+cpuid.0 max_leaf=32 vendor=GenuineIntel
+cpuid.1 hypervisor_present=1
+cpuid.1 eax=0x000b0671 ebx=0x0d200800 ecx=0xfffa3223 edx=0x1f8bfbff
+cpuid.0A.0 eax=0x00000000 ebx=0x00000000 ecx=0x00000000 edx=0x00000000
+cpuid.0A.version=0 num_general_counters=0 counter_bit_width=0
+cpuid.0A.1 eax=0x00000000 ebx=0x00000000 ecx=0x00000000 edx=0x00000000
+cpuid.0A.2 eax=0x00000000 ebx=0x00000000 ecx=0x00000000 edx=0x00000000
+cpuid.80000000 max_ext_leaf=0x80000008
+cpuid.80000001 PerfCtrExtCore_edx_bit22=0
+cpuid.80000001 eax=0x000b0671 ebx=0x00000000 ecx=0x00000121 edx=0x2c100800
+cpuid.80000022 unavailable (max_ext=0x80000008)

@@ -1,0 +1,296 @@
+{
+  "schema": "openssl-rs/performance/claim-record/v1",
+  "record_id": "PFP-CLAIM-PFP0-REFREEZE-2E9C4C5CF",
+  "queue_item": "PFP-0",
+  "author": {
+    "identity": "openssl-rs performance programme (staging session, 2026-11-25)",
+    "role": "producer"
+  },
+  "campaign": {
+    "id": "PFP-0-refreeze-2e9c4c5cf",
+    "results": {
+      "path": "evidence/performance-frontier/campaigns/PFP-0-refreeze-2e9c4c5cf/results.json",
+      "sha256": "e112e0217421985c031c6d4572c0543e9e8764ebc910cdb11bb72a37eebdbfad",
+      "present": true
+    },
+    "venue_has_pmu": false,
+    "protocol": "the unchanged courts/phase18/timing/run_bench_api.sh protocol, re-executed at a new candidate; the campaign id is new because the candidate identity is new, not because the instrument changed",
+    "not_comparable_to": [
+      "PFP-0 (candidate c9a0fdd58429ef13ca9b25ddccbc84a832787277, distribution DSO 139966033ac9e935efc76290a9df9e91441aa2ea9f183a00089eb95e32093c0c)",
+      "PFP-1 (candidate 91ac573c0a8e1bc11371718e5f2a6022c55c9535 plus a patch, distribution DSO 596f4833e35932da7efff936185dee17dcb56f3b6363f4682300afb741d3c5b9)"
+    ]
+  },
+  "classification": "SCOPED_OBSERVATION",
+  "producer": {
+    "name": "performance_classification.py",
+    "version": "1",
+    "tool_path": "forensics/tools/performance_classification.py",
+    "tool_sha256": "9ad9b402103c6d1eb6580d458dd4144cc26f9346d6d23936c92c1576dd7d2605",
+    "limits": [
+      "This record binds the classification and declared identity of one measurement campaign; it executes nothing.",
+      "It does not establish that the cited campaign occurred as described; the campaign receipt is the record of that.",
+      "It does not turn a virtualised-court ratio into a frontier result, and it measures no constant-time property.",
+      "A green validation is a statement about claim form, not about the truth of the measurement.",
+      "The ratios are bound to this candidate's DSO digest and are not comparable to any figure published at another digest, including PFP-0 and PFP-1."
+    ],
+    "inputs": [
+      {
+        "path": "evidence/performance-frontier/campaigns/PFP-0-refreeze-2e9c4c5cf/results.json",
+        "sha256": "e112e0217421985c031c6d4572c0543e9e8764ebc910cdb11bb72a37eebdbfad",
+        "present": true
+      },
+      {
+        "path": "evidence/performance-frontier/campaigns/PFP-0-refreeze-2e9c4c5cf/build-identity.json",
+        "sha256": "faadbd65bb69691b1864ab748a83a7d1a94492e03cba8f1620ff05dda2faa8a6",
+        "present": true
+      },
+      {
+        "path": "evidence/performance-frontier/campaigns/PFP-0-refreeze-2e9c4c5cf/preregistration.json",
+        "sha256": "19a97cb76640bc77ca6547a5ad7b7555128860e890ffdf695a0c65f2cc7eb93a",
+        "present": true
+      },
+      {
+        "path": "forensics/performance/WORKLOADS.json",
+        "sha256": "1d33143a7ee97208c25da95dadd0c7eafcce300794f71a78e6f6b3da60d7fa88",
+        "present": true
+      },
+      {
+        "path": "forensics/performance/AUTHORITIES.json",
+        "sha256": "04171d2b56b385f53992b6b167e6e262905f81eece498d0472f9dc982d4cd31b",
+        "present": true
+      },
+      {
+        "path": "docs/PERFORMANCE-METHODOLOGY.md",
+        "sha256": "7a7e33ae3f42d73331b022954b0ca9d0f078c3de85cbd326cbd5d6d1663b3993",
+        "present": true
+      }
+    ]
+  },
+  "candidate": {
+    "source_commit": "2e9c4c5cff6c431cc44352a475b011fd92df5b93",
+    "binding": "exact",
+    "artefact": {
+      "label": "distribution-shaped libcrypto.so.3 built from staging HEAD 2e9c4c5cf into a fresh CARGO_TARGET_DIR",
+      "sha256": "6d7e282d091aedb783d0e55874ed2ce4dab8eaf219f9f5c32653ad4630953b9c",
+      "build_id": "2f9022bfe7da74152eb4af47bf93a7e6c38d3708",
+      "location": "campaign workspace court/tmp/pfp0-refreeze-build/distribution/libcrypto.so.3",
+      "present_in_repository": false,
+      "obligation": "The benchmarked DSO was built in the campaign workspace and is not committed; its digest and build-id are tracked, the bytes are not."
+    },
+    "build": {
+      "profile": "release",
+      "target": "x86_64-unknown-linux-gnu",
+      "toolchain": "rustc 1.98.1 (48a229cea 2026-09-01), cargo 1.98.1",
+      "recipe": "cargo build --release --lib --offline with CARGO_BUILD_JOBS=4 into a fresh CARGO_TARGET_DIR, then the distribution link recorded in build-identity.json"
+    }
+  },
+  "authority": {
+    "id": "openssl-3.6.4-production",
+    "version": "3.6.4",
+    "sha256": "611e511db4273c4b6b522031fd171efce71b80661bb8310c2a21dfd18ec0efd2",
+    "build_id": "5b4871ce9d78edeafc96f143d7d6697d943ad804",
+    "verified_at_recorded_digest": true,
+    "verification": "the authority DSO at forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3 hashed to the 611e511d... digest recorded in the PFP-0 receipt before the run; no substitute comparator was used"
+  },
+  "comparators": [
+    {
+      "id": "openssl-3.6.4-production",
+      "role": "compatibility_authority",
+      "status": "MEASURED",
+      "identity": "sha256:611e511db4273c4b6b522031fd171efce71b80661bb8310c2a21dfd18ec0efd2"
+    },
+    {
+      "id": "aws-lc",
+      "role": "performance_authority",
+      "status": "UNAVAILABLE",
+      "reason": "not built or executed in this environment; AUTHORITIES.json records UNAVAILABLE and the receipt records no row"
+    },
+    {
+      "id": "boringssl",
+      "role": "performance_authority",
+      "status": "UNAVAILABLE",
+      "reason": "not built or executed in this environment; AUTHORITIES.json records UNAVAILABLE and the receipt records no row"
+    },
+    {
+      "id": "rustls",
+      "role": "performance_authority",
+      "status": "NOT_APPLICABLE",
+      "reason": "not a C-API library for this harness; AUTHORITIES.json records NOT_APPLICABLE_FOR_C_API_HARNESS"
+    },
+    {
+      "id": "wolfssl",
+      "role": "performance_authority",
+      "status": "UNAVAILABLE",
+      "reason": "not built or executed in this environment; AUTHORITIES.json records UNAVAILABLE and the receipt records no row"
+    },
+    {
+      "id": "research-frontier-kernel",
+      "role": "research_frontier",
+      "status": "NOT_APPLICABLE",
+      "reason": "no admitted research-frontier build exists for this harness; AUTHORITIES.json records NOT_APPLICABLE_FOR_C_API_HARNESS"
+    }
+  ],
+  "instrument": {
+    "name": "bench_api.c with alloc_probe.c and analyse_bench_api.py",
+    "identity": {
+      "harness_sha256": "e1add483b9bee3158e93e2f7d84296441bb2fc5d715cbf27cfd13f80cfde263f",
+      "alloc_probe_sha256": "76b432fd428322e75f068c2d70569a281671207469348628012a389bdae1f446",
+      "runner_sha256": "653994bf2e8eba9b39bdd64c73b518a8d86aca048e2ddea2c47b69c5924ebf44",
+      "analyser_sha256": "5182354dfa750d8d0e8949790163f6a02f1f8aad7a6276765d8f1fce5d1d9ab7",
+      "extract_dh_fixtures_sha256": "bbff92ec3d06e948434a8ffa871d60fef43cdc7b8abb5b61bf02490e6413384b",
+      "build_identity_sha256": "86dc69de2159521e46736c436fd0e54b6e2790141478306963463de505af5e41",
+      "emit_shell_sha256": "5290bc716600f2ec95d3975437023b370997d43188fb98edb21fb05cb2b5a7d4",
+      "analyser_note": "the analyser at this head differs from the PFP-0 revision (ea71850f...) only by added population, ordering and identity refusals; bootstrap_median_ci and sign_test_p are byte-identical to the PFP-0 revision, so the statistic is unchanged while the instrument identity is not"
+    },
+    "measures": [
+      "single-operation latency, median of five timed batch means per process",
+      "allocation entry points per operation through one LD_PRELOAD probe applied to both subjects",
+      "cross-library ECDSA correctness in both directions"
+    ],
+    "unit": "microseconds per call",
+    "procedure": "docs/PERFORMANCE-METHODOLOGY.md",
+    "repetition_count": 15,
+    "statistic": "median of paired per-repetition ratios candidate_us/authority_us, with a 20000-resample percentile bootstrap (seed 0x50465030) and Holm-Bonferroni over two-sided sign tests",
+    "samples": {
+      "location": "evidence/performance-frontier/campaigns/PFP-0-refreeze-2e9c4c5cf/raw/ (146 files; per-process .out, run-order.tsv, identity-check.tsv, run-log.tsv, checks diffs), hashed in the cited SAMPLES.sha256 listing",
+      "path": "evidence/performance-frontier/campaigns/PFP-0-refreeze-2e9c4c5cf/raw/SAMPLES.sha256",
+      "sha256": "ef97dedb541b5b89891824fdf3031d2308d6f3c38df4382c8ad712ca8b8d1261",
+      "present_in_repository": true,
+      "repetitions": 15,
+      "unit_of_replication": "one process per subject per repetition",
+      "statistic": "median of paired per-repetition ratios candidate_us/authority_us"
+    },
+    "preregistration": {
+      "path": "evidence/performance-frontier/campaigns/PFP-0-refreeze-2e9c4c5cf/preregistration.json",
+      "sha256": "19a97cb76640bc77ca6547a5ad7b7555128860e890ffdf695a0c65f2cc7eb93a",
+      "present": true
+    }
+  },
+  "population": {
+    "frozen_at": "c9a0fdd58429ef13ca9b25ddccbc84a832787277",
+    "expected": [
+      "dh-ffdhe2048",
+      "dh-ffdhe3072",
+      "dh-modp2048",
+      "dh-synth2048",
+      "dh-synth3072",
+      "ecdsa256",
+      "modexp2048",
+      "modexp8192",
+      "rsa2048"
+    ],
+    "realised": [
+      "dh-ffdhe2048",
+      "dh-ffdhe3072",
+      "dh-modp2048",
+      "dh-synth2048",
+      "dh-synth3072",
+      "ecdsa256",
+      "modexp2048",
+      "modexp8192",
+      "rsa2048"
+    ],
+    "missing": [],
+    "duplicate": [],
+    "undeclared": [],
+    "completeness_rule": "A process is complete only when its RESULT and ALLOC lines match the exact identifier set in forensics/performance/WORKLOADS.json, once each; equal line counts are not a completeness test.",
+    "identical_to_pfp0_population": true
+  },
+  "scope": {
+    "level": "L3",
+    "workloads": [
+      "dh-ffdhe2048",
+      "dh-ffdhe3072",
+      "dh-modp2048",
+      "dh-synth2048",
+      "dh-synth3072",
+      "ecdsa256",
+      "modexp2048",
+      "modexp8192",
+      "rsa2048"
+    ],
+    "security_profile": "OpenSSL 3.6.4 production build as authority (linux-x86_64, assembly enabled, legacy provider enabled, no tests) against the candidate distribution-shaped libcrypto.so.3 built at staging 2e9c4c5cf; default provider paths for the measured rows",
+    "exclusions": [
+      "L1 and L2 arithmetic kernels are not measured separately",
+      "L4 protocol and L5 downstream workloads are not measured",
+      "throughput, tail latency, parallel scaling, peak RSS, energy, startup, cache and branch behaviour are not measured",
+      "constant-time behaviour is not measured; the threat model records an obligation, not a result",
+      "no differential court and no binary branch audit result exist at this candidate digest in this campaign",
+      "AWS-LC, BoringSSL, rustls and wolfSSL are not executed and give no comparison row",
+      "no ratio in this record is compared with, or composed with, the PFP-0 or PFP-1 figures measured at other candidate digests"
+    ]
+  },
+  "threat_model": {
+    "secret_classification": ["SECRET_DATA", "PUBLIC_DATA"],
+    "tags": [
+      "SECRET_DATA",
+      "CONSTANT_TIME_REQUIRED",
+      "PUBLIC_MODULUS"
+    ],
+    "statement": "Private exponents, RSA private operands and ECDSA nonces and keys are SECRET_DATA; moduli and bases are public. The measured operations must not branch, address or exit early on secret values. This record binds the measurement; the timing obligations T23, T24 and T29 remain open and nothing here discharges them.",
+    "constant_time_required": true,
+    "observation_model": "wall-clock latency on a virtualised host; no PMU, no cache or branch counters, no frequency, turbo or SMT control"
+  },
+  "venue": {
+    "class": "VIRTUALISED_COURT",
+    "description": "virtualised court container openssl-rs-court-tools:1 on a 13th Gen Intel Core i9-13900K, kernel 7.3.5-2-cachyos, pinned to CPU 1 with taskset; the PMU probe records hypervisor_present=1, cpuid.0A num_general_counters=0, cpu_event_source=absent and perf stat -e cycles '<not supported>'",
+    "pmu_exposed": false,
+    "controls": {
+      "frequency_pinned": false,
+      "turbo_disabled": false,
+      "smt_disabled": false,
+      "core_isolation": false
+    }
+  },
+  "obligations": {
+    "open": [
+      {
+        "id": "T23",
+        "description": "Secret ownership does not propagate through the arithmetic itself; the transfer window and 17 inversion intermediates at secret-dependent width remain open.",
+        "discharged": false
+      },
+      {
+        "id": "T24",
+        "description": "The constant-time inversion's scratch storage and the operands' normalised limb-count metadata remain the recorded residual.",
+        "discharged": false
+      },
+      {
+        "id": "T29",
+        "description": "The ECDSA per-signature allocation blow-up and the related fixed-width workspace residual remain open.",
+        "discharged": false
+      },
+      {
+        "id": "REFREEZE-NO-PMU",
+        "description": "The venue exposes no PMU and has no frequency, turbo, SMT or isolation control; every row is a SCOPED_OBSERVATION and no frontier, lead or competitive claim is made.",
+        "discharged": false
+      },
+      {
+        "id": "REFREEZE-NO-DIFFERENTIAL-COURT",
+        "description": "No differential court was run at candidate DSO 6d7e282d... in this campaign; the harness itself compares CHECK lines and cross-signs in both directions, which is correctness evidence inside one instrument, not the programme's differential court.",
+        "discharged": false
+      },
+      {
+        "id": "REFREEZE-BRANCH-AUDIT-INCOMPLETE",
+        "description": "binary_branch_audit.py was attempted at this digest and exited 1: the inventory target mod_exp_core_consttime_from_parts is absent from the built DSO (it is inlined into mod_exp_core_consttime_from_parts_prepared), so 1 of 7 targets was refused and the report is not a gate result.",
+        "discharged": false
+      },
+      {
+        "id": "REFREEZE-UNMEASURED-COMPARATORS",
+        "description": "AWS-LC, BoringSSL, rustls and wolfSSL were not executed; their rows are UNAVAILABLE or NOT_APPLICABLE, never losses.",
+        "discharged": false
+      },
+      {
+        "id": "REFREEZE-SCOPE",
+        "description": "Throughput, tail latency, parallel scaling, memory, energy, startup and L1/L2/L4/L5 behaviour are outside this record.",
+        "discharged": false
+      },
+      {
+        "id": "REFREEZE-CANDIDATE-BYTES",
+        "description": "The benchmarked distribution DSO is not committed; the digest and build-id are tracked and the bytes must be rebuilt from 2e9c4c5cf by the recorded recipe.",
+        "discharged": false
+      }
+    ],
+    "attempted_discharge": [],
+    "none_open_because": null
+  }
+}
