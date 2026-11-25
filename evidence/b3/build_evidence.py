@@ -17,8 +17,13 @@ clock and never from a result this producer invents:
   * ``RECONCILIATION.json`` -- each campaign against its independent plan: the
     programme campaign against ``evidence/a17/FREEZE-forward.json`` and A22
     against the eight experiment ids in ``evidence/a22/EXPERIMENTS.json``.  The
-    produced/missing sets are a **live observation at the recorded base**, not a
-    closure of the A17 freeze; the freeze stays ``OPEN``.
+    produced/missing sets are resolved from the tree of a **declared commit**
+    (``asOfCommit``), never from the working tree, so a later item that adds a
+    member does not move the record.  The declared commit defaults to the one
+    already recorded and is changed only with ``--as-of <commit>``.  A live
+    view is a separate command (``campaign.py reconcile --live``) and is never
+    written as a record.  The record is still not a closure of the A17 freeze;
+    the freeze stays ``OPEN``.
   * ``CONTROLS.json`` -- one ``control-only`` fixture per refusal code, built by
     ``campaign.build_controls()``.
 
@@ -27,7 +32,7 @@ closure instants are literals taken from the records named beside them, so two
 runs are byte-identical.
 
 Usage:
-    python3 evidence/b3/build_evidence.py [--out DIR] [--check]
+    python3 evidence/b3/build_evidence.py [--out DIR] [--as-of COMMIT] [--check]
 
 ``--check`` recomputes the records in memory and compares them with the
 committed bytes instead of writing.
@@ -408,7 +413,28 @@ def build_campaigns() -> dict[str, object]:
     }
 
 
-def build_reconciliations() -> dict[str, object]:
+def recorded_as_of(out: Path) -> str | None:
+    """The declared commit of an existing record, if one is present.
+
+    The old form (``asOf``) is accepted so the first run after the correction
+    keeps the commit the record was already about.
+    """
+    path = out / "RECONCILIATION.json"
+    if not path.is_file():
+        return None
+    try:
+        document = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    if isinstance(document, dict):
+        for key in ("asOfCommit", "asOf"):
+            value = document.get(key)
+            if isinstance(value, str) and value.strip():
+                return value
+    return None
+
+
+def build_reconciliations(as_of: str, tree: set[str]) -> dict[str, object]:
     freeze = json.loads(
         (REPO_ROOT / "evidence/a17/FREEZE-forward.json").read_text(encoding="utf-8")
     )
@@ -427,18 +453,19 @@ def build_reconciliations() -> dict[str, object]:
         "schema": ac.RECONCILIATION_SCHEMA,
         "model": ac.MODEL_ID,
         "baseCommit": BASE_COMMIT,
-        "asOf": BASE_COMMIT,
+        "asOfCommit": as_of,
+        "resolvedFrom": "git ls-tree -r --name-only",
         "records": [
-            ac.reconcile(programme_campaign(), freeze, root=REPO_ROOT, live=True),
-            ac.reconcile(a22_campaign(), independent_a22, root=REPO_ROOT, live=False),
+            ac.reconcile(programme_campaign(), freeze, as_of=as_of, tree=tree),
+            ac.reconcile(a22_campaign(), independent_a22, as_of=as_of, tree=tree),
         ],
-        "note": "The programme campaign is OPEN and has no closure. Its produced/missing counts are a live observation at the recorded base, not a closure of the A17 forward freeze; that freeze remains OPEN and unclosed.",
+        "note": "Each record is frozen at asOfCommit and is not a closure of the A17 forward freeze, which remains OPEN. Later members are not reflected because the record is frozen, not because they are missing. A live view is campaign.py reconcile --live.",
     }
 
 
-def build() -> dict[str, object]:
+def build(as_of: str, tree: set[str]) -> dict[str, object]:
     campaigns = build_campaigns()
-    reconciliations = build_reconciliations()
+    reconciliations = build_reconciliations(as_of, tree)
     controls = ac.build_controls()
 
     if not controls["coversEveryCode"]:
@@ -477,11 +504,26 @@ def build() -> dict[str, object]:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="produce the B3 records")
     parser.add_argument("--out", default=str(DEFAULT_OUT))
+    parser.add_argument("--as-of", default=None)
     parser.add_argument("--check", action="store_true")
     args = parser.parse_args(sys.argv[1:] if argv is None else argv)
 
     out = Path(args.out)
-    records = {name: serialise(document) for name, document in build().items()}
+    recorded = recorded_as_of(out)
+    as_of_ref = args.as_of or recorded or BASE_COMMIT
+    source = "--as-of" if args.as_of else ("record" if recorded else "default")
+    try:
+        as_of = ac.resolve_commit(as_of_ref, REPO_ROOT)
+        tree = ac.commit_paths(as_of, REPO_ROOT)
+    except ValueError as exc:
+        print(f"code={ac.AC_USAGE}")
+        print(f"b3: {exc}", file=sys.stderr)
+        return ac.EXIT_USAGE
+
+    records = {
+        name: serialise(document)
+        for name, document in build(as_of, tree).items()
+    }
 
     if args.check:
         stale = []
@@ -503,7 +545,10 @@ def main(argv: list[str] | None = None) -> int:
     campaigns = json.loads(records["CAMPAIGNS.json"])
     controls = json.loads(records["CONTROLS.json"])
     reconciliations = json.loads(records["RECONCILIATION.json"])
-    print(f"code={ac.AC_OK} b3: base={BASE_COMMIT} campaigns={len(campaigns['campaigns'])}")
+    print(
+        f"code={ac.AC_OK} b3: base={BASE_COMMIT} "
+        f"asOfCommit={as_of} (from {source}) campaigns={len(campaigns['campaigns'])}"
+    )
     for campaign in campaigns["campaigns"]:
         report = ac.validate(campaign)
         counts = report.get("outcomes", {})

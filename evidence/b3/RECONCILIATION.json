@@ -1,10 +1,11 @@
 {
-  "asOf": "1155843e6",
+  "asOfCommit": "1155843e6fca64704183f6b7d71b2df5b60652ff",
   "baseCommit": "1155843e6",
   "model": "b3/v1",
-  "note": "The programme campaign is OPEN and has no closure. Its produced/missing counts are a live observation at the recorded base, not a closure of the A17 forward freeze; that freeze remains OPEN and unclosed.",
+  "note": "Each record is frozen at asOfCommit and is not a closure of the A17 forward freeze, which remains OPEN. Later members are not reflected because the record is frozen, not because they are missing. A live view is campaign.py reconcile --live.",
   "records": [
     {
+      "asOfCommit": "1155843e6fca64704183f6b7d71b2df5b60652ff",
       "campaignId": "etp-programme",
       "campaignOnly": [
         "A0",
@@ -88,8 +89,9 @@
         "required": 20,
         "state": "OPEN"
       },
-      "liveView": true,
+      "liveView": false,
       "missing": [
+        "b3-receipt",
         "b4-receipt",
         "b5-receipt",
         "b6-receipt",
@@ -113,13 +115,13 @@
         "b0-registry",
         "b0-service-configuration",
         "b1-receipt",
-        "b2-receipt",
-        "b3-receipt"
+        "b2-receipt"
       ],
-      "record": "live observation, not a closure of the independent plan",
+      "record": "frozen at asOfCommit: declared paths are read from that commit's tree, so later members are not in this view and their absence is not a finding that they are missing",
       "schema": "openssl-rs/b3/reconciliation/1"
     },
     {
+      "asOfCommit": "1155843e6fca64704183f6b7d71b2df5b60652ff",
       "campaignId": "a22-adversarial-qualification",
       "campaignOnly": [],
       "campaignPlan": {
@@ -150,9 +152,10 @@
         "E7",
         "E8"
       ],
-      "record": "live observation, not a closure of the independent plan",
+      "record": "frozen: produced/missing come from the campaign's recorded outcomes, so later activity does not change this record",
       "schema": "openssl-rs/b3/reconciliation/1"
     }
   ],
+  "resolvedFrom": "git ls-tree -r --name-only",
   "schema": "openssl-rs/b3/reconciliation/1"
 }

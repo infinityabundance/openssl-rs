@@ -880,6 +880,6 @@
   "schema": "openssl-rs/b3/campaigns/1",
   "tool": {
     "path": "forensics/tools/campaign.py",
-    "sha256": "4625974490170c12b080ec5395b4419e72752f52947fadf8285e6fad8949d364"
+    "sha256": "b236c9c698f61604103ccfaca2067aaf7fb3f3e03398816897cae74777ba23de"
   }
 }

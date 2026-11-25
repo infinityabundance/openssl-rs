@@ -26,12 +26,16 @@ What this module does
   the wrong conclusion it prevents.
 * `state(campaign)` / `evaluate(campaign)` report one of `OPEN`,
   `CLOSED_CLEAN`, `CLOSED_WITH_FAILURES`, `ABANDONED` or `INVALID`.
-* `reconcile(campaign, independent, root=...)` compares the campaign's effective
-  plan with an independent plan (the A17 forward freeze, or a registry such as
-  A22's eight experiments) and refuses a campaign that narrowed its plan.  It
-  also reports the produced and missing members of the independent plan; for an
-  open campaign that is a live observation, never a closure of the independent
-  freeze.
+* `reconcile(campaign, independent, root=..., as_of=..., tree=...)` compares the
+  campaign's effective plan with an independent plan (the A17 forward freeze, or
+  a registry such as A22's eight experiments) and refuses a campaign that
+  narrowed its plan.  It also reports the produced and missing members of the
+  independent plan.  A **record** is bound to a declared commit (``as_of``): the
+  members are resolved from that commit's tree, not from the working tree, so a
+  later item that adds a member cannot change the record.  The working tree is
+  read only when the caller asks for a **live view** (``as_of=None``); a live
+  view is labelled as such, is never written as a record, and is never a closure
+  of the independent freeze.
 * `build_controls()` builds one in-memory `control-only` fixture per refusal
   code.  A control that fires proves the refusal works; it is not a defect
   report and not evidence that the substituted form occurs in the tree.
@@ -50,7 +54,8 @@ Usage
     python3 forensics/tools/campaign.py amend --campaign FILE --amendment FILE
     python3 forensics/tools/campaign.py close --campaign FILE --closure FILE
     python3 forensics/tools/campaign.py abandon --campaign FILE --abandonment FILE
-    python3 forensics/tools/campaign.py reconcile --campaign FILE --plan FILE [--root DIR]
+    python3 forensics/tools/campaign.py reconcile --campaign FILE --plan FILE --as-of COMMIT [--root DIR] [--out FILE]
+    python3 forensics/tools/campaign.py reconcile --campaign FILE --plan FILE --live [--root DIR]
     python3 forensics/tools/campaign.py status [--campaign FILE | --campaigns FILE]
 
 Exit status: 0 for a valid record or report, 1 for a refusal, 2 for a usage or
@@ -65,6 +70,7 @@ import argparse
 import copy
 import hashlib
 import json
+import subprocess
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -200,6 +206,65 @@ def sha256_bytes(data: bytes) -> str:
 
 def sha256_file(path: Path | str) -> str:
     return sha256_bytes(Path(path).read_bytes())
+
+
+# --------------------------------------------------------------------------
+# Declared trees.  A reconciliation record is bound to a commit, so the paths it
+# reports are read from that commit's tree; the working tree is a separate view.
+# --------------------------------------------------------------------------
+
+
+def resolve_commit(ref: str, root: Path | str = REPO_ROOT) -> str:
+    """Resolve ``ref`` to the full commit id, or raise ``ValueError``.
+
+    A short or symbolic ref must never be recorded as if it were an identity,
+    and an unresolvable ref must never fall back to the working tree.
+    """
+    completed = subprocess.run(
+        [
+            "git",
+            "-c",
+            "safe.directory=*",
+            "-C",
+            str(root),
+            "rev-parse",
+            "--verify",
+            f"{ref}^{{commit}}",
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if completed.returncode != 0:
+        raise ValueError(
+            f"cannot resolve {ref!r} to a commit: {completed.stderr.strip()}"
+        )
+    return completed.stdout.strip()
+
+
+def commit_paths(commit: str, root: Path | str = REPO_ROOT) -> set[str]:
+    """The repo-relative paths of ``commit``'s tree, from `git ls-tree`."""
+    completed = subprocess.run(
+        [
+            "git",
+            "-c",
+            "safe.directory=*",
+            "-C",
+            str(root),
+            "ls-tree",
+            "-r",
+            "--name-only",
+            commit,
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if completed.returncode != 0:
+        raise ValueError(
+            f"cannot read the tree of {commit!r}: {completed.stderr.strip()}"
+        )
+    return {line.strip() for line in completed.stdout.splitlines() if line.strip()}
 
 
 def tool_identity() -> dict[str, str]:
@@ -971,19 +1036,31 @@ def reconcile(
     campaign: Any,
     independent: Any,
     root: Path | str = REPO_ROOT,
-    live: bool = True,
+    as_of: str | None = None,
+    tree: Sequence[str] | None = None,
 ) -> dict[str, Any]:
     """Compare the effective plan with an independent plan.
 
     Raises `AC_REFUSED_PLAN_NARROWED` when a required independent check has no
-    entry in the campaign's effective plan.  Produced/missing are a live
-    observation of the independent plan's declared paths (or, for a plan with
-    no path, of the campaign's recorded PASS outcomes); they are not a closure
-    of the independent plan.
+    entry in the campaign's effective plan.
+
+    ``as_of`` is the commit the record is about.  When it is given, ``tree``
+    must be that commit's path set (see `commit_paths`), and produced/missing are
+    resolved from **that tree**: a later commit, or the working tree, cannot move
+    the record.  When ``as_of`` is None the view is **live** -- resolved from
+    ``root`` and marked ``liveView: true`` -- and is reported, never committed as
+    a record.
     """
+    if as_of is not None and tree is None:
+        raise ValueError(
+            "a frozen reconciliation requires the declared commit's tree"
+        )
+    if as_of is None and tree is not None:
+        raise ValueError("a path set without as_of is not a declared view")
     report = validate(campaign)
     root = Path(root)
     external = _independent_plan(independent)
+    declared = set(tree) if tree is not None else None
 
     plan_report = effective_plan(campaign)
     campaign_ids = {entry["checkId"] for entry in plan_report}
@@ -1015,7 +1092,11 @@ def reconcile(
         label = entry["memberId"] or check_id
         path = entry.get("path")
         if path:
-            if (root / path).is_file():
+            if declared is not None:
+                present = path in declared
+            else:
+                present = (root / path).is_file()
+            if present:
                 produced.append(label)
             else:
                 missing.append(label)
@@ -1053,9 +1134,30 @@ def reconcile(
         "produced": sorted(produced),
         "missing": sorted(missing),
         "notPassed": sorted(not_passed),
-        "liveView": bool(live),
-        "record": "live observation, not a closure of the independent plan",
+        "asOfCommit": as_of,
+        "liveView": as_of is None,
+        "record": _record_description(as_of, external),
     }
+
+
+def _record_description(
+    as_of: str | None, external: Sequence[Mapping[str, Any]]
+) -> str:
+    if as_of is None:
+        return (
+            "live working-tree view, not a record and not a closure of the "
+            "independent plan"
+        )
+    if any(entry.get("path") for entry in external):
+        return (
+            "frozen at asOfCommit: declared paths are read from that commit's "
+            "tree, so later members are not in this view and their absence is "
+            "not a finding that they are missing"
+        )
+    return (
+        "frozen: produced/missing come from the campaign's recorded outcomes, "
+        "so later activity does not change this record"
+    )
 
 
 # --------------------------------------------------------------------------
@@ -1589,16 +1691,60 @@ def _command_abandon(args: argparse.Namespace) -> int:
 
 
 def _command_reconcile(args: argparse.Namespace) -> int:
+    if args.live and args.as_of:
+        print(f"code={AC_USAGE}", file=sys.stdout)
+        print(
+            "ac: --live and --as-of are different views; choose one",
+            file=sys.stderr,
+        )
+        return EXIT_USAGE
+    if not args.live and not args.as_of:
+        print(f"code={AC_USAGE}", file=sys.stdout)
+        print(
+            "ac: reconcile requires --as-of COMMIT (a frozen record) or "
+            "--live (the working tree); a live view is never written as a record",
+            file=sys.stderr,
+        )
+        return EXIT_USAGE
+    if args.live and args.out:
+        print(f"code={AC_USAGE}", file=sys.stdout)
+        print(
+            "ac: --live writes nothing; --out is only for a frozen view",
+            file=sys.stderr,
+        )
+        return EXIT_USAGE
     campaign = _load_campaign(args.campaign)
     independent = _read_json(args.plan)
-    report = reconcile(campaign, independent, root=args.root)
-    if args.out:
-        _write_json(args.out, report)
-    print(
-        f"code={AC_OK} campaign={report['campaignId']} state={report['campaignState']} "
-        f"narrowed={str(report['narrowed']).lower()} produced={len(report['produced'])} "
-        f"missing={len(report['missing'])} omitted={len(report['omitted'])}"
-    )
+    if args.live:
+        report = reconcile(campaign, independent, root=args.root)
+        print(
+            f"code={AC_OK} campaign={report['campaignId']} state=LIVE "
+            f"campaignState={report['campaignState']} view=working-tree "
+            f"narrowed={str(report['narrowed']).lower()} "
+            f"produced={len(report['produced'])} missing={len(report['missing'])} "
+            f"omitted={len(report['omitted'])}"
+        )
+    else:
+        try:
+            as_of = resolve_commit(args.as_of, REPO_ROOT)
+            tree = commit_paths(as_of, REPO_ROOT)
+        except ValueError as exc:
+            print(f"code={AC_USAGE}", file=sys.stdout)
+            print(f"ac: {exc}", file=sys.stderr)
+            return EXIT_USAGE
+        report = reconcile(
+            campaign, independent, root=args.root, as_of=as_of, tree=tree
+        )
+        if args.out:
+            _write_json(args.out, report)
+        print(
+            f"code={AC_OK} campaign={report['campaignId']} "
+            f"state={report['campaignState']} view=frozen "
+            f"asOf={report['asOfCommit']} "
+            f"narrowed={str(report['narrowed']).lower()} "
+            f"produced={len(report['produced'])} missing={len(report['missing'])} "
+            f"omitted={len(report['omitted'])}"
+        )
     if report["missing"]:
         print("missing=" + ",".join(report["missing"]))
     if report["notPassed"]:
@@ -1681,6 +1827,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     reconcile_parser.add_argument("--campaign", required=True)
     reconcile_parser.add_argument("--plan", required=True)
     reconcile_parser.add_argument("--root", default=str(REPO_ROOT))
+    reconcile_parser.add_argument("--as-of", default=None)
+    reconcile_parser.add_argument("--live", action="store_true")
     reconcile_parser.add_argument("--out", default=None)
     reconcile_parser.set_defaults(func=_command_reconcile)
 

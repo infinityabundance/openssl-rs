@@ -548,6 +548,47 @@ class ReconciliationRules(unittest.TestCase):
         self.assertEqual(report["produced"], ["C1"])
         self.assertEqual(report["missing"], ["C2"])
         self.assertFalse(report["narrowed"])
+        self.assertTrue(report["liveView"])
+        self.assertIsNone(report["asOfCommit"])
+
+    def test_a_frozen_view_reads_the_declared_tree_not_the_working_tree(self) -> None:
+        campaign = base_campaign()
+        campaign["opening"]["plan"] = copy.deepcopy(ac.BASE_PLAN[:2])
+        campaign["closure"] = closure(
+            [("C1", ac.R_PASS), ("C2", ac.R_PASS)], claims_success=True
+        )
+        external = [
+            {"checkId": "C1", "path": "present.json", "required": True},
+            {"checkId": "C2", "path": "absent.json", "required": True},
+        ]
+        commit = "not-a-real-commit"
+        with tempfile.TemporaryDirectory() as directory:
+            # The working tree has only present.json; the declared tree only absent.json.
+            (Path(directory) / "present.json").write_text("{}", encoding="utf-8")
+            live = ac.reconcile(campaign, external, root=directory)
+            frozen = ac.reconcile(
+                campaign, external, root=directory, as_of=commit, tree={"absent.json"}
+            )
+        self.assertTrue(live["liveView"])
+        self.assertEqual(live["produced"], ["C1"])
+        self.assertEqual(live["missing"], ["C2"])
+        self.assertFalse(frozen["liveView"])
+        self.assertEqual(frozen["asOfCommit"], commit)
+        self.assertEqual(frozen["produced"], ["C2"])
+        self.assertEqual(frozen["missing"], ["C1"])
+        self.assertIn("frozen at asOfCommit", frozen["record"])
+
+    def test_a_frozen_view_without_a_tree_is_not_a_view(self) -> None:
+        with self.assertRaises(ValueError):
+            ac.reconcile(
+                base_campaign(), copy.deepcopy(ac.BASE_PLAN), as_of="f" * 40
+            )
+
+    def test_a_tree_without_a_commit_is_not_a_declared_view(self) -> None:
+        with self.assertRaises(ValueError):
+            ac.reconcile(
+                base_campaign(), copy.deepcopy(ac.BASE_PLAN), tree={"present.json"}
+            )
 
     def test_a_closed_campaign_reports_checks_it_did_not_pass(self) -> None:
         campaign = base_campaign()
@@ -558,6 +599,93 @@ class ReconciliationRules(unittest.TestCase):
         report = ac.reconcile(campaign, copy.deepcopy(ac.BASE_PLAN))
         self.assertEqual(report["notPassed"], ["C2"])
         self.assertFalse(report["narrowed"])
+
+
+class ReconciliationFreeze(unittest.TestCase):
+    """A record is about a commit; a later member must not move it."""
+
+    def _programme(self) -> tuple[dict, dict]:
+        campaign = load_real_campaigns()["etp-programme"]
+        freeze = json.loads(
+            (REPO_ROOT / "evidence/a17/FREEZE-forward.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        return campaign, freeze
+
+    def test_the_committed_record_is_unchanged_when_a_later_member_lands(self) -> None:
+        reconciliation = json.loads(RECONCILIATION.read_text(encoding="utf-8"))
+        as_of = reconciliation["asOfCommit"]
+        committed = next(
+            record
+            for record in reconciliation["records"]
+            if record["campaignId"] == "etp-programme"
+        )
+        self.assertFalse(committed["liveView"])
+        self.assertEqual(committed["asOfCommit"], as_of)
+        campaign, freeze = self._programme()
+        tree = ac.commit_paths(as_of)
+        before = RECONCILIATION.read_bytes()
+
+        with tempfile.TemporaryDirectory() as mirror:
+            for member in freeze["members"]:
+                target = Path(mirror) / member["path"]
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_text("", encoding="utf-8")
+            synthetic = Path(mirror) / "evidence/zz/RECEIPT.md"
+            synthetic.parent.mkdir(parents=True, exist_ok=True)
+            synthetic.write_text("", encoding="utf-8")
+
+            grew = copy.deepcopy(freeze)
+            grew["members"].append(
+                {
+                    "id": "zz-later",
+                    "path": "evidence/zz/RECEIPT.md",
+                    "phase": "ZZ",
+                    "predicate": "test-only synthetic member",
+                    # Not required: this control exercises the binding, not a
+                    # narrowed plan (which must still be refused).
+                    "required": False,
+                }
+            )
+            recomputed = ac.reconcile(
+                campaign, freeze, root=mirror, as_of=as_of, tree=tree
+            )
+            frozen = ac.reconcile(
+                campaign, grew, root=mirror, as_of=as_of, tree=tree
+            )
+            live = ac.reconcile(campaign, grew, root=mirror)
+
+        # The frozen view reproduces the committed record exactly.
+        self.assertEqual(recomputed, committed)
+        # The later member is absent from the declared tree, so the record says
+        # missing -- not produced, and not that the committed record drifted.
+        self.assertEqual(frozen["produced"], committed["produced"])
+        self.assertEqual(
+            frozen["missing"], sorted(committed["missing"] + ["zz-later"])
+        )
+        # The live view sees the member the working tree now carries.
+        self.assertTrue(live["liveView"])
+        self.assertIn("zz-later", live["produced"])
+        self.assertEqual(RECONCILIATION.read_bytes(), before)
+
+    def test_a_later_commit_tree_reports_members_the_record_does_not(self) -> None:
+        reconciliation = json.loads(RECONCILIATION.read_text(encoding="utf-8"))
+        as_of = reconciliation["asOfCommit"]
+        campaign, freeze = self._programme()
+        recorded_tree = ac.commit_paths(as_of)
+        later = ac.resolve_commit("HEAD")
+        later_tree = ac.commit_paths(later)
+        self.assertIn("evidence/b4/RECEIPT.md", later_tree)
+        self.assertNotIn("evidence/b4/RECEIPT.md", recorded_tree)
+        recorded = ac.reconcile(
+            campaign, freeze, as_of=as_of, tree=recorded_tree
+        )
+        advanced = ac.reconcile(
+            campaign, freeze, as_of=later, tree=later_tree
+        )
+        self.assertNotIn("b4-receipt", recorded["produced"])
+        self.assertIn("b4-receipt", advanced["produced"])
 
 
 class RealCampaigns(unittest.TestCase):
@@ -675,6 +803,60 @@ class Determinism(unittest.TestCase):
         self.assertEqual(completed.returncode, 0, completed.stdout + completed.stderr)
         self.assertIn("code=AC_OK", completed.stdout)
 
+    def test_the_recorded_as_of_reproduces_the_committed_bytes(self) -> None:
+        reconciliation = json.loads(RECONCILIATION.read_text(encoding="utf-8"))
+        with tempfile.TemporaryDirectory() as directory:
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    str(PRODUCER),
+                    "--out",
+                    directory,
+                    "--as-of",
+                    reconciliation["asOfCommit"],
+                ],
+                capture_output=True,
+                text=True,
+                check=False,
+                cwd=str(REPO_ROOT),
+            )
+            self.assertEqual(completed.returncode, 0, completed.stdout + completed.stderr)
+            self.assertEqual(
+                (Path(directory) / "RECONCILIATION.json").read_bytes(),
+                RECONCILIATION.read_bytes(),
+            )
+
+    def test_a_later_as_of_moves_the_temporary_view_not_the_record(self) -> None:
+        committed = RECONCILIATION.read_bytes()
+        recorded = json.loads(committed)["asOfCommit"]
+        with tempfile.TemporaryDirectory() as directory:
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    str(PRODUCER),
+                    "--out",
+                    directory,
+                    "--as-of",
+                    "HEAD",
+                ],
+                capture_output=True,
+                text=True,
+                check=False,
+                cwd=str(REPO_ROOT),
+            )
+            self.assertEqual(completed.returncode, 0, completed.stdout + completed.stderr)
+            later = json.loads(
+                (Path(directory) / "RECONCILIATION.json").read_text(encoding="utf-8")
+            )
+        self.assertNotEqual(later["asOfCommit"], recorded)
+        programme = next(
+            record
+            for record in later["records"]
+            if record["campaignId"] == "etp-programme"
+        )
+        self.assertIn("b4-receipt", programme["produced"])
+        self.assertEqual(RECONCILIATION.read_bytes(), committed)
+
     def test_neither_producer_reads_a_clock(self) -> None:
         for path in (PRODUCER, TOOL):
             text = path.read_text(encoding="utf-8")
@@ -727,12 +909,97 @@ class CommandLine(unittest.TestCase):
                 str(plan_path),
                 "--root",
                 directory,
+                "--live",
             )
         self.assertEqual(completed.returncode, 1)
         self.assertIn(f"code={ac.R_PLAN_NARROWED}", completed.stdout)
 
     def test_a_usage_error_exits_two_with_the_code(self) -> None:
         completed = run_tool("status", "--no-such-flag")
+        self.assertEqual(completed.returncode, 2)
+        self.assertIn(f"code={ac.AC_USAGE}", completed.stdout)
+
+    def test_live_reconcile_reports_state_live_and_writes_nothing(self) -> None:
+        plan = str(REPO_ROOT / "evidence/a17/FREEZE-forward.json")
+        campaign = load_real_campaigns()["etp-programme"]
+        with tempfile.TemporaryDirectory() as directory:
+            campaign_path = Path(directory) / "campaign.json"
+            campaign_path.write_text(json.dumps(campaign), encoding="utf-8")
+            completed = run_tool(
+                "reconcile",
+                "--campaign",
+                str(campaign_path),
+                "--plan",
+                plan,
+                "--live",
+            )
+            entries = sorted(path.name for path in Path(directory).iterdir())
+            refused = run_tool(
+                "reconcile",
+                "--campaign",
+                str(campaign_path),
+                "--plan",
+                plan,
+                "--live",
+                "--out",
+                str(Path(directory) / "out.json"),
+            )
+            wrote = (Path(directory) / "out.json").exists()
+        self.assertEqual(completed.returncode, 0, completed.stdout + completed.stderr)
+        self.assertIn("state=LIVE", completed.stdout)
+        self.assertIn("campaignState=OPEN", completed.stdout)
+        self.assertIn("view=working-tree", completed.stdout)
+        self.assertNotIn("missing=b4-receipt", completed.stdout)
+        self.assertEqual(entries, ["campaign.json"])
+        self.assertEqual(refused.returncode, 2)
+        self.assertIn(f"code={ac.AC_USAGE}", refused.stdout)
+        self.assertFalse(wrote)
+
+    def test_a_frozen_reconcile_records_its_commit(self) -> None:
+        reconciliation = json.loads(RECONCILIATION.read_text(encoding="utf-8"))
+        campaign = load_real_campaigns()["etp-programme"]
+        plan = str(REPO_ROOT / "evidence/a17/FREEZE-forward.json")
+        with tempfile.TemporaryDirectory() as directory:
+            campaign_path = Path(directory) / "campaign.json"
+            out_path = Path(directory) / "record.json"
+            campaign_path.write_text(json.dumps(campaign), encoding="utf-8")
+            completed = run_tool(
+                "reconcile",
+                "--campaign",
+                str(campaign_path),
+                "--plan",
+                plan,
+                "--as-of",
+                reconciliation["asOfCommit"],
+                "--out",
+                str(out_path),
+            )
+            written = json.loads(out_path.read_text(encoding="utf-8"))
+        self.assertEqual(completed.returncode, 0, completed.stdout + completed.stderr)
+        self.assertIn("view=frozen", completed.stdout)
+        self.assertFalse(written["liveView"])
+        self.assertEqual(written["asOfCommit"], reconciliation["asOfCommit"])
+        self.assertEqual(
+            written["produced"],
+            next(
+                record["produced"]
+                for record in reconciliation["records"]
+                if record["campaignId"] == "etp-programme"
+            ),
+        )
+
+    def test_reconcile_without_a_declared_view_is_a_usage_error(self) -> None:
+        campaign = load_real_campaigns()["etp-programme"]
+        with tempfile.TemporaryDirectory() as directory:
+            campaign_path = Path(directory) / "campaign.json"
+            campaign_path.write_text(json.dumps(campaign), encoding="utf-8")
+            completed = run_tool(
+                "reconcile",
+                "--campaign",
+                str(campaign_path),
+                "--plan",
+                str(REPO_ROOT / "evidence/a17/FREEZE-forward.json"),
+            )
         self.assertEqual(completed.returncode, 2)
         self.assertIn(f"code={ac.AC_USAGE}", completed.stdout)
 
@@ -794,6 +1061,9 @@ class EvidenceRecords(unittest.TestCase):
         self.assertEqual(campaigns["schema"], ac.CAMPAIGNS_SCHEMA)
         self.assertEqual(controls["schema"], ac.CONTROLS_SCHEMA)
         self.assertEqual(reconciliation["schema"], ac.RECONCILIATION_SCHEMA)
+        self.assertIn("asOfCommit", reconciliation)
+        self.assertNotIn("asOf", reconciliation)
+        self.assertEqual(reconciliation["resolvedFrom"], "git ls-tree -r --name-only")
         self.assertEqual(len(campaigns["campaigns"]), 2)
         self.assertEqual(len(reconciliation["records"]), 2)
         self.assertTrue(controls["coversEveryCode"])
@@ -810,11 +1080,15 @@ class EvidenceRecords(unittest.TestCase):
         programme = by_id["etp-programme"]
         self.assertFalse(programme["narrowed"])
         self.assertEqual(programme["omitted"], [])
-        self.assertTrue(programme["liveView"])
-        self.assertIn("b3-receipt", programme["produced"])
+        self.assertFalse(programme["liveView"])
+        self.assertEqual(programme["asOfCommit"], reconciliation["asOfCommit"])
+        self.assertEqual(
+            len(programme["produced"]) + len(programme["missing"]), 20
+        )
         self.assertEqual(programme["campaignState"], ac.S_OPEN)
         a22 = by_id["a22-adversarial-qualification"]
         self.assertFalse(a22["narrowed"])
+        self.assertFalse(a22["liveView"])
         self.assertEqual(a22["omitted"], [])
         self.assertEqual(a22["missing"], [])
         self.assertEqual(len(a22["produced"]), 8)

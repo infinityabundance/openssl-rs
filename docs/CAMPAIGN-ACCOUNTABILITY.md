@@ -188,9 +188,10 @@ visible. Each final outcome may also carry a `history` of its earlier results.
 
 ## 6. Reconciliation against an independent plan
 
-`reconcile(campaign, independent)` compares the campaign's **effective plan**
-(the opening after every amendment) with a plan the campaign does not own: the
-A17 forward freeze, or a registry such as A22's eight experiments.
+`reconcile(campaign, independent, as_of=..., tree=...)` compares the campaign's
+**effective plan** (the opening after every amendment) with a plan the campaign
+does not own: the A17 forward freeze, or a registry such as A22's eight
+experiments.
 
 - A required independent check that the campaign plan does not contain means the
   plan was narrowed. Reconcile refuses it
@@ -200,9 +201,15 @@ A17 forward freeze, or a registry such as A22's eight experiments.
 - `produced` and `missing` are read from the independent plan's declared paths,
   or — for a plan with no path — from the campaign's recorded `PASS` outcomes.
   A produced member is not a pass: it is bytes at a path, or a recorded result.
-- For an **open** campaign, produced/missing is explicitly a **live
-  observation** (`liveView: true`), not a closure of the independent plan. The
-  A17 forward freeze remains `OPEN`; nothing in this item closes it.
+- A **record** is bound to a declared commit (`asOfCommit`): the paths are
+  resolved from that commit's tree (`git ls-tree -r --name-only`), never from
+  the working tree, so a later item that adds a member cannot move the record
+  (`liveView: false`). The commit defaults to the one the record already names
+  and is changed only with `--as-of <commit>`.
+- A **live view** is a separate command, `campaign.py reconcile --live`: it
+  reads the working tree, prints `state=LIVE`, and writes nothing. A live view
+  is never a record and never a closure of the independent plan. The A17
+  forward freeze remains `OPEN`; nothing in this item closes it.
 - A closed campaign also reports `notPassed`: the independent checks whose
   recorded outcome is not `PASS`. A recorded failure is reported, not refused.
   Reconciliation refuses a **narrowed plan**, not a recorded failure.
@@ -228,10 +235,13 @@ The **programme campaign** is the ETP programme itself.
 
 The campaign has **not closed**. The record says so, the CLI says so
 (`code=AC_OPEN`), and the reconciliation does not close the A17 freeze either.
-The produced/missing sets are a live observation at the recorded base: at the
-time this record was produced, the forward freeze's A18–A27 receipts, B0's two
-members and B1–B3 receipts were present, and B4–B8 were not. Those counts move
-when a later item lands; the freeze's `STATUS.json` keeps its freeze-time facts.
+The produced/missing sets are frozen at the recorded `asOfCommit` (`1155843e6`):
+at that commit the forward freeze's A18–A27 receipts, B0's two members and the
+B1–B2 receipts were present, and B3–B8 were not. B3's own receipt and B4's and
+B5's were committed later; they are absent from this record because the record
+is **frozen** at `asOfCommit`, not because they are missing. A live view
+(`reconcile --live`, which prints `state=LIVE`) reports the current set and is
+written nowhere. The freeze's `STATUS.json` keeps its freeze-time facts.
 
 ### 7.2 `a22-adversarial-qualification` — `CLOSED_CLEAN`
 
@@ -355,6 +365,7 @@ prefix.
 | a plan may not be narrowed silently | `plan-narrowed`, `test_a_narrowed_plan_is_refused` |
 | the two real campaigns are the states they claim | `RealCampaigns`, `EvidenceRecords` |
 | the records are reproducible | `Determinism` (two runs byte-identical, `--check` accepted) |
+| a record is bound to a declared commit, and a live view is separate | `ReconciliationFreeze`, `test_a_later_as_of_moves_the_temporary_view_not_the_record` |
 | the document and the tool agree | `Documentation` (every code, both campaigns, the non-claims) |
 | `AC_` and `CA_` do not collide | `test_the_two_modules_do_not_share_a_code` |
 
@@ -366,8 +377,9 @@ prefix.
   it is not a DSSE-authenticated preregistration, and no transparency-log
   inclusion exists for it.
 - **A closure of the A17 forward freeze.** It remains `OPEN` with no
-  reconciliation. B3 reports a live produced/missing view; it does not close the
-  freeze and does not replace `evidence/a17/RECONCILIATION-*`.
+  reconciliation. B3 reports a produced/missing view frozen at a declared
+  commit; it does not close the freeze and does not replace
+  `evidence/a17/RECONCILIATION-*`.
 - **A trust root, a witness or a timestamp.** None exists here; the records are
   bookkeeping, not authenticated publication.
 - **Independent review, a BOUNDARY audit and a SEAL.** None ran for this item.

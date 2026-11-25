@@ -227,3 +227,120 @@ Worktree after this batch: `M docs/ETP-TODO.md`; `?? docs/CAMPAIGN-ACCOUNTABILIT
 `?? evidence/b3/`; `?? forensics/tools/campaign.py`;
 `?? forensics/tools/tests/test_campaign.py`. Nothing else. This subagent did not
 commit and did not push.
+
+## 10. Correction (2026-11-24, found by B5): the reconciliation is frozen at a declared commit
+
+**Found by B5.** B5 ran the whole tools suite and reported `Ran 2308 tests` /
+`FAILED (failures=2)`, both in `test_campaign.Determinism`:
+
+* `test_the_committed_records_equal_a_fresh_run` — the fresh run listed
+  `b4-receipt` and `b5-receipt` as missing where the committed record did not,
+  so `RECONCILIATION.json` differed;
+* `test_the_producer_check_mode_accepts_the_committed_bytes` —
+  `code=AC_REFUSED_MANIFEST_INVALID` / `b3: stale record(s): RECONCILIATION.json`.
+
+**Cause.** The old `reconcile()` resolved every declared path against the
+**working tree** and the producer passed `live=True` for the programme campaign.
+The record therefore held a live set captured at production time while claiming
+`asOf: 1155843e6`: it listed `b4-receipt` as missing although
+`evidence/b4/RECEIPT.md` is tracked. Once B4 and B5 landed, the set changed and
+the committed bytes stopped reproducing. This is the fifth instance of a
+recorded live measurement (A7's live `HEAD`, A11's and A16's live globs, A17's
+live count, now B3's live set). The record had a hidden live input, which §0
+forbids; the defect was the binding, not the counts.
+
+**Old record.** `RECONCILIATION.json` sha256
+`c11893c3799534167bc2fc7227b27202124fe853e55eb48248ca78b1f269b26b`: top-level
+`asOf` and `baseCommit` both `1155843e6`, `liveView: true` for the programme
+record, **15 produced / 5 missing**. The 15th produced member, `b3-receipt`, was
+present only because the working tree already contained this receipt, which the
+commit `1155843e6` does not.
+
+**New contract.**
+
+1. A record is bound to a **declared commit**. `reconcile(..., as_of=...,
+   tree=...)` resolves each declared **path** from `tree`, which the producer
+   obtains with `git ls-tree -r --name-only <asOfCommit>` (a plan member with no
+   path is still read from the campaign's recorded outcomes); the working tree is
+   not an input. `asOfCommit` is recorded as the resolved full commit id.
+2. The declared commit is an explicit input. `build_evidence.py --as-of <commit>`
+   changes it; without the flag the producer reuses the commit already recorded
+   (`asOfCommit`, or the old `asOf` on the first run), else `1155843e6`. A later
+   evidence commit therefore cannot move the record.
+3. A live view is a **separate command**: `campaign.py reconcile --live` reports
+   the working-tree set, prints `state=LIVE`, and refuses `--out`; it writes
+   nothing. A reconcile with neither `--as-of` nor `--live` is a usage error, so
+   a live-looking record cannot be produced by accident.
+
+**New fields.** Top level: `asOfCommit` (full commit id) replaces `asOf`, and
+`resolvedFrom: "git ls-tree -r --name-only"` names the mechanism. Each record:
+`asOfCommit`, `liveView: false`, and a `record` string that says the view is
+frozen -- naming the commit tree for a path-based plan and the recorded outcomes
+for an outcome-based one -- and that absence of a later member is not a finding
+that it is missing.
+
+**New record.** `RECONCILIATION.json` sha256
+`547f3403d63662e5030e54d8de8aa5eeff70e29ae0a68743096f3b1a9c632821`:
+**14 produced / 6 missing** at `asOfCommit`
+`1155843e6fca64704183f6b7d71b2df5b60652ff` — A18–A27 receipts, B0's two members,
+B1 and B2. The six missing are `b3-receipt`–`b8-receipt`. `evidence/b3/RECEIPT.md`
+was committed at `dc5855733`, `evidence/b4/RECEIPT.md` at `24ac742f5`, and
+`evidence/b5/RECEIPT.md` at `28ae5ff59`; they are absent from the record because
+it is frozen at `1155843e6`, **not** because they are missing. The programme
+campaign remains `OPEN` with no terminator, the A17 forward freeze remains
+`OPEN`, and the record is not a closure of it. `reconcile --live` on the current
+working tree reports 17 produced / 3 missing (`b6`–`b8`) and `state=LIVE`.
+
+**Growth control.** `test_the_committed_record_is_unchanged_when_a_later_member_lands`
+mirrors the declared members into a temporary directory, appends a synthetic
+`zz-later` member to both the plan and the mirror, and asserts that the frozen
+report still reproduces the committed record and lists `zz-later` as missing,
+while the live view produces it; `RECONCILIATION.json` is byte-unchanged after
+the run. `test_a_later_commit_tree_reports_members_the_record_does_not` uses a
+later commit's real tree: `evidence/b4/RECEIPT.md` is in `HEAD`'s tree and not in
+`1155843e6`'s, and the later view produces `b4-receipt` where the record does
+not. `test_a_later_as_of_moves_the_temporary_view_not_the_record` runs the
+producer with `--as-of HEAD` into a temporary directory and confirms the
+committed bytes do not move.
+
+**Document correction.** `docs/CAMPAIGN-ACCOUNTABILITY.md` §6, §7.1 and
+`NOT_RUN` described produced/missing as a live observation with
+`liveView: true`. Those sentences now state that the record is frozen at
+`asOfCommit`, that a later member is absent because the record is frozen rather
+than missing, and that the live view is a separate, unwritten command. The
+enforcement map gains the `ReconciliationFreeze` row.
+
+**Preserved.** No `AC_REFUSED_*` code, state, refusal, control or campaign
+outcome was changed or relaxed; only the binding moved. `CONTROLS.json` is
+byte-identical, which is the check that no control was weakened.
+`CAMPAIGNS.json` changed only in `tool.sha256`, because `campaign.py` changed.
+The programme campaign is still `OPEN` and the A22 closure still records
+8 `PASS` with its earlier 6/1/1 in `closureHistory`.
+
+**Gates re-run for this correction** (all in the reused 6 GiB
+`openssl-rs-court`, one command at a time; host `free -g` reported available
+**7 GiB** and swap `45/45`, so no build ran):
+
+| gate | command | result |
+|---|---|---|
+| unit controls | `python3 -m unittest forensics/tools/tests/test_campaign.py` | `Ran 79 tests`; `OK` (69 before, 10 added) |
+| whole discovery | `python3 -m unittest discover -s forensics/tools/tests` | `Ran 2318 tests in 458.492s`; `OK`; `closure discipline self-test: 7 control groups passed`. The 2,308 parent tests are present (2,308 + 10 = 2,318), none removed, none ignored |
+| producer, twice | `build_evidence.py --out /tmp/b3a` and `--out /tmp/b3b --as-of <full>` | both exit 0; `code=AC_OK b3: base=1155843e6 asOfCommit=1155843e6fca64704183f6b7d71b2df5b60652ff (from default)`; `identical CAMPAIGNS.json`; `identical RECONCILIATION.json`; `identical CONTROLS.json`; each also `committed-identical` |
+| producer check | `build_evidence.py --check` | `code=AC_OK b3: check ok records=3` |
+| frozen vs live | `campaign.py reconcile … --as-of <full>` / `… --live` | frozen: `state=OPEN view=frozen asOf=1155843e6… produced=14 missing=6 omitted=0`, `missing=b3-receipt,…`; live: `state=LIVE campaignState=OPEN view=working-tree produced=17 missing=3`, `missing=b6-receipt,b7-receipt,b8-receipt`; neither flag: `code=AC_USAGE`, exit 2 |
+| growth control | mirrored tree plus a synthetic `zz-later` member | `committed record unchanged: True`; `frozen … produced=14 missing=7 zz in missing=True`; `live … produced=21 missing=0 zz in produced=True liveView=True` |
+| documentation | `python3 forensics/tools/docs_consistency.py` | `[docs-consistency] ok: 20 hand-written claim(s) agree with their generated sources; the earned-trust constitution is wired`; exit 0 |
+| specification guard | `python3 forensics/tools/spec_guard.py check` | `10 registered specification(s), 5 recorded known nonconformance(s), 6 level(s); 0 unclassified, 0 unjustified exemptions`; exit 0 |
+| JSON well-formedness | `python3 -m json.tool` on each record | `json.tool ok` for `CAMPAIGNS.json`, `RECONCILIATION.json`, `CONTROLS.json` |
+
+**Digests.**
+
+| file | old sha256 | new sha256 |
+|---|---|---|
+| `RECONCILIATION.json` | `c11893c3799534167bc2fc7227b27202124fe853e55eb48248ca78b1f269b26b` | `547f3403d63662e5030e54d8de8aa5eeff70e29ae0a68743096f3b1a9c632821` |
+| `CAMPAIGNS.json` | `540ffddadbde9a4b36409707ac2f82c46f76771922d0511b8956c0e65a4ffe2e` | `e6d3dd5dffbd73367e96313253932d688894ad949ade21cf86bb21da330d2fd8` |
+| `CONTROLS.json` | `6cd1efb5ae5f0c08dbd83364545026a7aa6982689b5f12f1a5a2c5cbb03493dd` | `6cd1efb5ae5f0c08dbd83364545026a7aa6982689b5f12f1a5a2c5cbb03493dd` (unchanged) |
+
+**Retained.** The correction establishes that the record is reproducible from its
+declared commit; it does not authenticate that commit, close the A17 freeze, or
+make the opening a preregistration. `PARTIAL` is unchanged.
