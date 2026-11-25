@@ -1,7 +1,7 @@
 # Sigstore bundles — A16
 
 Status: normative. Delivered by item A16 of `docs/ETP-TODO.md`, re-frozen at
-candidate `e03653ddb913ab84a573800776901b6164487c74` (`staging`). The implementation is
+candidate `9193603682cf77aab52247155ec8650963bb3af3` (`staging`). The implementation is
 `forensics/tools/sigstore_bundle.py`; the records are
 `evidence/a16/INVENTORY.json`, `evidence/a16/PROFILE.json` and
 `evidence/a16/CONTROLS.json`; the deterministic producer is
@@ -214,11 +214,14 @@ The population is a **frozen member list**, not a live glob:
 existed at the declared candidate, each bound to its `sha256` read from that
 candidate's blobs (never the working tree), and `populationFiles` is the list's
 length. The record is frozen at
-`e03653ddb913ab84a573800776901b6164487c74` (**503** members). This item's three own
+`9193603682cf77aab52247155ec8650963bb3af3` (**503** members). This item's three own
 records are not members: the record declares them separately as
-`identityExcluded`, outside the declared cut. The freeze the record supersedes
-(`b26552e21a7465405ad542edeaef7b9104c0298d`, 505 members) is preserved inside it
-with that freeze's record digests, rather than overwritten.
+`identityExcluded`, outside the declared cut. Two prior freezes are preserved
+inside it with their record digests, rather than overwritten: the immediately
+preceding freeze at `e03653ddb913ab84a573800776901b6164487c74` (503 members,
+whose records are those committed at `e94c7fdf127d2f2290f7f7c248924a4d6755add6`)
+and the earlier freeze at `b26552e21a7465405ad542edeaef7b9104c0298d` (505
+members), so the superseded history accumulates rather than replacing.
 
 This item's three records — `INVENTORY.json`, `PROFILE.json` and
 `CONTROLS.json` — are outside the population **by identity**: each embeds
