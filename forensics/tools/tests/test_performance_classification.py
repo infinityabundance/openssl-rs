@@ -73,7 +73,7 @@ class CommittedRecords(unittest.TestCase):
             text=True,
         )
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        self.assertIn("3 record(s) accepted, 0 refused", result.stdout)
+        self.assertIn("4 record(s) accepted, 0 refused", result.stdout)
 
     def test_pfp0_record_matches_its_campaign_files(self) -> None:
         record = load(PFP0)

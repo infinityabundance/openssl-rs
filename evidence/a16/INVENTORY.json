@@ -17,7 +17,7 @@
     "basis": "the explicit member list below, declared at the candidate; not a live glob",
     "binding": "FROZEN",
     "files": 0,
-    "frozenAtCandidate": "c047cd6ca49782d939c7790a24c1cc6d50e678c0",
+    "frozenAtCandidate": "34754764fd2cae3117535b741263c48e3df6cf37",
     "glob": [
       "evidence/*.pem",
       "evidence/*.crt",
@@ -43,8 +43,8 @@
       "reason": "mutual digest binding: A11's scan population is every tracked evidence JSON and therefore contains this item's records, so this population cannot also contain A11's three records without a digest cycle. A11 absorbs this item's records; these three are declared excluded here and are reported NEW_SINCE_RECORD by growth_report, never absorbed into the frozen count.",
       "result": "NEW_SINCE_RECORD"
     },
-    "files": 516,
-    "frozenAtCandidate": "c047cd6ca49782d939c7790a24c1cc6d50e678c0",
+    "files": 526,
+    "frozenAtCandidate": "34754764fd2cae3117535b741263c48e3df6cf37",
     "glob": "evidence/*.json",
     "globSemantics": "tracked files matched with fnmatch.fnmatchcase; '*' matches across '/', so this covers evidence/**/*.json",
     "growthPolicy": "a verification re-hashes every member and reports a glob match that is not a member as NEW_SINCE_RECORD, counted separately; growth never changes this count, and a removed or changed member is refused with PH_REFUSED_POPULATION_DRIFT",
@@ -2328,9 +2328,9 @@
         "sha256": "4a14da856982c261be0a1749cf8e738b2f149bf1dbc8255e8086d3a2d8171836"
       },
       {
-        "bytes": 12705,
+        "bytes": 19762,
         "path": "evidence/performance-frontier/admission/ARMS.json",
-        "sha256": "f4803073ed5ff3378d294a109a056c12fa1a62f77e68f089a9d8b618471a396d"
+        "sha256": "bb4e517a3683d701c9d162876570c0b84e93e69e14efc6c27c7b41c00959e67c"
       },
       {
         "bytes": 47910,
@@ -2408,6 +2408,46 @@
         "sha256": "969ffad3dffccfcae6e1bf35a46f7a54f70959d11fb0ff231bb742cedd9ce3cb"
       },
       {
+        "bytes": 48342,
+        "path": "evidence/performance-frontier/campaigns/PFP-2/authority/build-identity.json",
+        "sha256": "3348cdc4db1033a3a161a185de5a2bec6242d314002c68b1922515afe475894c"
+      },
+      {
+        "bytes": 1641,
+        "path": "evidence/performance-frontier/campaigns/PFP-2/authority/fixtures/dh-fixtures.json",
+        "sha256": "ad58f88d53ab76b608a6db95e938a6065af4b2f1c2ee287006fdd30a5abed2b2"
+      },
+      {
+        "bytes": 1093,
+        "path": "evidence/performance-frontier/campaigns/PFP-2/authority/preregistration.json",
+        "sha256": "19a97cb76640bc77ca6547a5ad7b7555128860e890ffdf695a0c65f2cc7eb93a"
+      },
+      {
+        "bytes": 694,
+        "path": "evidence/performance-frontier/campaigns/PFP-2/authority/raw/shell-generation.json",
+        "sha256": "e6910a7cfbad4e00feebb9598cd7ea6f7481731e316ba5eeb4662780fc5f4ebb"
+      },
+      {
+        "bytes": 85459,
+        "path": "evidence/performance-frontier/campaigns/PFP-2/authority/results.json",
+        "sha256": "b8934a99ff80ca2285995df2fd25749e6165f2a15834697076590855565cd675"
+      },
+      {
+        "bytes": 1463,
+        "path": "evidence/performance-frontier/campaigns/PFP-2/ctgrind/summary.json",
+        "sha256": "ee43e469eec3efc6f4463f89c7000ac2b80de07e15eb3cc60fcd5a33c170b106"
+      },
+      {
+        "bytes": 1757,
+        "path": "evidence/performance-frontier/campaigns/PFP-2/differential.json",
+        "sha256": "9e6b1eb1f439e5dea96ee89af3b3c984cfefe114f9a3f8d77c20d60cac1ca556"
+      },
+      {
+        "bytes": 4374,
+        "path": "evidence/performance-frontier/campaigns/PFP-2/kernels/summary.json",
+        "sha256": "d70322ae8638b1f69b9a01ecede82b17f8ee55d53e0244d6eac2a8e324b0ea0c"
+      },
+      {
         "bytes": 14618,
         "path": "evidence/performance-frontier/claims/PFP-0-refreeze-2e9c4c5cf.claim.json",
         "sha256": "a52c7b5703e773034fa997799f1ae0b70607b911bb29e08d36e294808b761f80"
@@ -2426,6 +2466,16 @@
         "bytes": 26373,
         "path": "evidence/performance-frontier/claims/PFP-1.raw-manifest.json",
         "sha256": "12229dee8ff447adc3e2de404ef4ea8b260f9136a948696a4ae21ac501e3258e"
+      },
+      {
+        "bytes": 13115,
+        "path": "evidence/performance-frontier/claims/PFP-2.claim.json",
+        "sha256": "31ac1ad13801be211e05147c7bae03e51ba844bd5e504f6d37a1efea18dc2576"
+      },
+      {
+        "bytes": 35767,
+        "path": "evidence/performance-frontier/claims/PFP-2.raw-manifest.json",
+        "sha256": "4a03086c3dde3016446b685655e9d5aa2b070b0890d85d0bca5fa753834065c6"
       },
       {
         "bytes": 11228163,
@@ -2798,18 +2848,38 @@
             "sha256": "c1d6d0d2e461fff97238ead2af4425bdd19fbe6a3afe8ae3bb633e3463c661ed"
           }
         ]
+      },
+      {
+        "files": 516,
+        "frozenAtCandidate": "c047cd6ca49782d939c7790a24c1cc6d50e678c0",
+        "memberCount": 516,
+        "reason": "an explicit re-freeze replaced the prior population at a new candidate; the prior freeze, member count and record digests are preserved here rather than silently overwritten.",
+        "recordDigests": [
+          {
+            "path": "evidence/a16/INVENTORY.json",
+            "sha256": "1c39ebdc5c7fc716b961a46c9d179cb7938bc40dfdf0dc26391109b38fa5bca2"
+          },
+          {
+            "path": "evidence/a16/PROFILE.json",
+            "sha256": "ad315d59f75b59ee21eff9ada6cff40c08a7180e8a84c7582ba559ad910f260f"
+          },
+          {
+            "path": "evidence/a16/CONTROLS.json",
+            "sha256": "7995285550c72609272e65599ddf9845dd5b04d75b1690d1bbac63911e1af11e"
+          }
+        ]
       }
     ]
   },
-  "populationFiles": 516,
+  "populationFiles": 526,
   "populationGlob": [
     "evidence/**/*.json"
   ],
   "schema": "openssl-rs/a16/bundle-inventory/2",
   "sourceIdentity": {
     "asOf": "2026-11-24",
-    "baseCommit": "c047cd6ca49782d939c7790a24c1cc6d50e678c0",
-    "baseCommitShort": "c047cd6ca",
+    "baseCommit": "34754764fd2cae3117535b741263c48e3df6cf37",
+    "baseCommitShort": "34754764f",
     "delegatedTools": [
       {
         "path": "forensics/tools/harden.py",

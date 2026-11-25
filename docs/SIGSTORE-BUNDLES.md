@@ -1,7 +1,7 @@
 # Sigstore bundles — A16
 
 Status: normative. Delivered by item A16 of `docs/ETP-TODO.md`, re-frozen at
-candidate `c047cd6ca49782d939c7790a24c1cc6d50e678c0` (`staging`). The implementation is
+candidate `34754764fd2cae3117535b741263c48e3df6cf37` (`staging`). The implementation is
 `forensics/tools/sigstore_bundle.py`; the records are
 `evidence/a16/INVENTORY.json`, `evidence/a16/PROFILE.json` and
 `evidence/a16/CONTROLS.json`; the deterministic producer is
@@ -214,15 +214,16 @@ The population is a **frozen member list**, not a live glob:
 existed at the declared candidate, each bound to its `sha256` read from that
 candidate's blobs (never the working tree), and `populationFiles` is the list's
 length. The record is frozen at
-`c047cd6ca49782d939c7790a24c1cc6d50e678c0` (**516** members; the performance
-baseline campaign at C28 added six JSON records — five under
-`evidence/performance-frontier/campaigns/PFP-0-refreeze-2e9c4c5cf/` and its
-`claims/PFP-0-refreeze-2e9c4c5cf.claim.json` — and edited
+`34754764fd2cae3117535b741263c48e3df6cf37` (**526** members; the PFP-2 engine
+and campaign at C31 added ten JSON records under
+`evidence/performance-frontier/campaigns/PFP-2/` and
+`claims/PFP-2.{claim,raw-manifest}.json`, and edited
 `performance-frontier/admission/ARMS.json`). This item's three own
 records are not members: the record declares them separately as
-`identityExcluded`, outside the declared cut. Eight prior freezes are preserved
+`identityExcluded`, outside the declared cut. Nine prior freezes are preserved
 inside it with their record digests, rather than overwritten: the immediately
-preceding freeze at `38f179275913adbb320eeba698759f8086a95d36` (510 members),
+preceding freeze at `c047cd6ca49782d939c7790a24c1cc6d50e678c0` (516 members),
+then the freeze at `38f179275913adbb320eeba698759f8086a95d36` (510 members),
 then the freeze at `2dc0b37da07c661597d28199f550a38b4e1a03c7` (510 members),
 then the freeze at `cd371ec9624d0633d21ce8944d14923baf87b14d` (503 members),
 then the freeze at `2476a6ceafb4ad7cc9c95e44d9132f5052864a5f` (503 members),
