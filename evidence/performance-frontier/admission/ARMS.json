@@ -1,0 +1,162 @@
+{
+  "schema": "openssl-rs/performance/arm-register/v1",
+  "author": {
+    "identity": "openssl-rs performance programme (staging session, 2026-11-25)",
+    "role": "producer"
+  },
+  "producer": {
+    "name": "performance_admission.py",
+    "version": "1",
+    "tool_path": "forensics/tools/performance_admission.py",
+    "tool_sha256": "19c0f9d768f17deaf98ccb06dee8008e8729640329fb37db4fdb5f7c161695d0",
+    "limits": [
+      "This register binds the admission state of the arms named here; it runs no court, audit or benchmark.",
+      "It does not establish that a cited court passed, that a cited audit is sensitive to its defect class, or that a measurement is correct.",
+      "An EXPERIMENT arm is not a failure: it records that the candidate conjunction is incomplete and names the missing evidence.",
+      "A green validation is a statement about record form, not about the truth of the cited evidence."
+    ],
+    "inputs": [
+      {
+        "path": "evidence/performance-frontier/claims/PFP-1.claim.json",
+        "sha256": "a1ec33a5bf97badf71a2019f73c7fc33a8fbd15d30569827b458b71895310357",
+        "present": true
+      },
+      {
+        "path": "evidence/performance-frontier/campaigns/PFP-1/performance/results.json",
+        "sha256": "969ffad3dffccfcae6e1bf35a46f7a54f70959d11fb0ff231bb742cedd9ce3cb",
+        "present": true
+      },
+      {
+        "path": "evidence/performance-frontier/campaigns/PFP-1/performance/build-identity.json",
+        "sha256": "3915a91023ddbef50ebfa69275500c9e65510a32a7fc9e6d4f470ebbd6d6e37c",
+        "present": true
+      },
+      {
+        "path": "evidence/performance-frontier/campaigns/PFP-1/ctgrind/summary.json",
+        "sha256": "fd452168f7885e81aa4e5311ead8c7847afaaaabdf111b1de6da693814e072a9",
+        "present": true
+      },
+      {
+        "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/identity-verify.tsv",
+        "sha256": "2bc6d2365aef96800dbe2ddee7c46ab0d0f2574f19a95f39d49b3e0b4d2e0015",
+        "present": true
+      },
+      {
+        "path": "forensics/performance/WORKLOADS.json",
+        "sha256": "1d33143a7ee97208c25da95dadd0c7eafcce300794f71a78e6f6b3da60d7fa88",
+        "present": true
+      },
+      {
+        "path": "docs/PERFORMANCE-METHODOLOGY.md",
+        "sha256": "7a7e33ae3f42d73331b022954b0ca9d0f078c3de85cbd326cbd5d6d1663b3993",
+        "present": true
+      }
+    ]
+  },
+  "arms": [
+    {
+      "arm_id": "PFP-1",
+      "queue_item": "PFP-1",
+      "description": "prepared Montgomery domains: setup-inclusive versus prepared latency within the candidate",
+      "status": "EXPERIMENT",
+      "candidate": {
+        "source_commit": "91ac573c0a8e1bc11371718e5f2a6022c55c9535",
+        "artefact": {
+          "label": "distribution-shaped libcrypto.so.3 from HEAD 91ac573c0 with the PFP-1 patch applied",
+          "sha256": "596f4833e35932da7efff936185dee17dcb56f3b6363f4682300afb741d3c5b9"
+        },
+        "build_profile": "release, x86_64-unknown-linux-gnu, rustc 1.98.1; patch ddd4e0e01cf467880aaf5a6e44762bd19b9efa015df3944fcfa8f217dfdb2c82"
+      },
+      "measurement": {
+        "record": {
+          "path": "evidence/performance-frontier/claims/PFP-1.claim.json",
+          "sha256": "a1ec33a5bf97badf71a2019f73c7fc33a8fbd15d30569827b458b71895310357",
+          "present": true
+        },
+        "classification": "SCOPED_OBSERVATION",
+        "candidate_sha256": "596f4833e35932da7efff936185dee17dcb56f3b6363f4682300afb741d3c5b9",
+        "population": {
+          "digest": "40d1537b1a86851a17c49636cd5620704c4836bf6153074fd964f1c3a4fe691e",
+          "frozen_at": "c9a0fdd58429ef13ca9b25ddccbc84a832787277",
+          "frozen_before_execution": true
+        },
+        "identity": {
+          "source": "91ac573c0a8e1bc11371718e5f2a6022c55c9535 with patch ddd4e0e01cf467880aaf5a6e44762bd19b9efa015df3944fcfa8f217dfdb2c82",
+          "tool": "bench_pfp1.c and analyse_pfp1.py",
+          "instrument": "within-candidate setup-inclusive versus prepared single-operation latency",
+          "target": "x86_64-unknown-linux-gnu release",
+          "population": "40d1537b1a86851a17c49636cd5620704c4836bf6153074fd964f1c3a4fe691e"
+        }
+      },
+      "differential_courts": null,
+      "constant_time_audit": {
+        "kind": "CTGRIND",
+        "instrument": "valgrind 3.19.0 memcheck with VALGRIND_MAKE_MEM_UNDEFINED (ctgrind technique)",
+        "reference": {
+          "path": "evidence/performance-frontier/campaigns/PFP-1/ctgrind/summary.json",
+          "sha256": "fd452168f7885e81aa4e5311ead8c7847afaaaabdf111b1de6da693814e072a9",
+          "present": true
+        },
+        "candidate_sha256": "596f4833e35932da7efff936185dee17dcb56f3b6363f4682300afb741d3c5b9",
+        "taint": [
+          "rsa->p and rsa->q limb contents",
+          "private scalar and per-signature nonce"
+        ],
+        "result": "recorded at the same digest; the counts are inside the instrument's recorded variance and are not a constant-time proof",
+        "note": "ctgrind is a taint run, not the binary branch audit the candidate predicate requires; the harness binary digest is not recorded in this register"
+      },
+      "timing_obligations": {
+        "open": [
+          {
+            "id": "T23",
+            "description": "Secret ownership does not propagate through the arithmetic itself; PFP-1 changes the prepared-domain ownership but does not close the transfer window.",
+            "discharged": false
+          },
+          {
+            "id": "T24",
+            "description": "The constant-time inversion's scratch storage and the operands' normalised limb-count metadata remain the recorded residual.",
+            "discharged": false
+          },
+          {
+            "id": "T29",
+            "description": "The ECDSA per-signature allocation blow-up is unchanged by PFP-1 and remains open.",
+            "discharged": false
+          },
+          {
+            "id": "PFP1-DIFFERENTIAL-COURTS",
+            "description": "The programme's differential courts were not recorded at digest 596f4833; the receipt records in-crate differential tests, which are a different instrument.",
+            "discharged": false
+          },
+          {
+            "id": "PFP1-BINARY-BRANCH-AUDIT",
+            "description": "No binary branch audit at digest 596f4833 is recorded in this register; ctgrind alone does not satisfy the candidate predicate.",
+            "discharged": false
+          },
+          {
+            "id": "PFP1-DIRTY-CANDIDATE",
+            "description": "The candidate was built from an uncommitted patch at 91ac573c0; the patch digest is recorded but the candidate is not reproducible from a commit.",
+            "discharged": false
+          },
+          {
+            "id": "PFP1-WITHIN-CANDIDATE",
+            "description": "The comparison is setup-inclusive versus prepared within the candidate; no external comparator was executed.",
+            "discharged": false
+          },
+          {
+            "id": "PFP1-NO-PMU",
+            "description": "The venue exposes no PMU and has no frequency, turbo, SMT or isolation control; the measurement is SCOPED_OBSERVATION.",
+            "discharged": false
+          }
+        ],
+        "attempted_discharge": [],
+        "none_open_because": null
+      },
+      "assurance": {
+        "safe_compatible": false,
+        "semantic_assurance": false
+      },
+      "shortcuts": [],
+      "reuse": null
+    }
+  ]
+}

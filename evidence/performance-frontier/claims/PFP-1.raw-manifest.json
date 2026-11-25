@@ -1,0 +1,597 @@
+{
+  "campaign": "PFP-1",
+  "directory": "evidence/performance-frontier/campaigns/PFP-1/performance/raw",
+  "files": [
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/analysis.stdout",
+      "sha256": "969ffad3dffccfcae6e1bf35a46f7a54f70959d11fb0ff231bb742cedd9ce3cb",
+      "size_bytes": 8814
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/candidate-dso.sha256",
+      "sha256": "e5d7f0e7514214463e0124be7e87a73fa8c7dc64dd4eabc9e152bff585357221",
+      "size_bytes": 121
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/harness.sha256",
+      "sha256": "3e71cdd7c0a035604c860348ff86098d34c9320ace57d262e0b82aa9de2640fc",
+      "size_bytes": 104
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/identity-check.tsv",
+      "sha256": "75307c8f7c5df3fdf3e834deccd2ed0b0acbfd0b344b91ff0cb2ff6766701ff3",
+      "size_bytes": 6225
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/identity-verify.tsv",
+      "sha256": "2bc6d2365aef96800dbe2ddee7c46ab0d0f2574f19a95f39d49b3e0b4d2e0015",
+      "size_bytes": 700
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/patch-files.sha256",
+      "sha256": "fdb41c357f6ca7e566295d9b57b249ca42f155f7880c4e95b11f7de3622f4181",
+      "size_bytes": 502
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/population-rep-00-prepared.diff",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/population-rep-00-setup.diff",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/population-rep-01-prepared.diff",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/population-rep-01-setup.diff",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/population-rep-02-prepared.diff",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/population-rep-02-setup.diff",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/population-rep-03-prepared.diff",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/population-rep-03-setup.diff",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/population-rep-04-prepared.diff",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/population-rep-04-setup.diff",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/population-rep-05-prepared.diff",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/population-rep-05-setup.diff",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/population-rep-06-prepared.diff",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/population-rep-06-setup.diff",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/population-rep-07-prepared.diff",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/population-rep-07-setup.diff",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/population-rep-08-prepared.diff",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/population-rep-08-setup.diff",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/population-rep-09-prepared.diff",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/population-rep-09-setup.diff",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/population-rep-10-prepared.diff",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/population-rep-10-setup.diff",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/population-rep-11-prepared.diff",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/population-rep-11-setup.diff",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/population-rep-12-prepared.diff",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/population-rep-12-setup.diff",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/population-rep-13-prepared.diff",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/population-rep-13-setup.diff",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/population-rep-14-prepared.diff",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/population-rep-14-setup.diff",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/population-warmup-prepared.diff",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/population-warmup-setup.diff",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/rep-00-checks.diff",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/rep-00-prepared.check",
+      "sha256": "cdd7915ad68da41be5f0d81712eae99eb891ec1406fef040c181febfa7af4c57",
+      "size_bytes": 6430
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/rep-00-prepared.out",
+      "sha256": "6e8f449b791d86f872861b408e8faa44d462f292d2bc8193c5df6cf0f4764215",
+      "size_bytes": 7717
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/rep-00-setup.check",
+      "sha256": "cdd7915ad68da41be5f0d81712eae99eb891ec1406fef040c181febfa7af4c57",
+      "size_bytes": 6430
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/rep-00-setup.out",
+      "sha256": "f31e73063df2c73b46f9a1c7e4d8d7f86e496a4623c1725dec6727093bb0e806",
+      "size_bytes": 7684
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/rep-01-checks.diff",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/rep-01-prepared.check",
+      "sha256": "cdd7915ad68da41be5f0d81712eae99eb891ec1406fef040c181febfa7af4c57",
+      "size_bytes": 6430
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/rep-01-prepared.out",
+      "sha256": "f63c13084b39482d78ca5b8df5109cb73203bf100ef70075003d278cdf0c0843",
+      "size_bytes": 7717
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/rep-01-setup.check",
+      "sha256": "cdd7915ad68da41be5f0d81712eae99eb891ec1406fef040c181febfa7af4c57",
+      "size_bytes": 6430
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/rep-01-setup.out",
+      "sha256": "3cb6747fda241e8f79270c88a6a5aaf0bb337a3e6e6335a22ccb04ef122e8df4",
+      "size_bytes": 7684
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/rep-02-checks.diff",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/rep-02-prepared.check",
+      "sha256": "cdd7915ad68da41be5f0d81712eae99eb891ec1406fef040c181febfa7af4c57",
+      "size_bytes": 6430
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/rep-02-prepared.out",
+      "sha256": "3781dd1390e4618c17c881e1bbcbaf5a965a1acb8b8abd3360331680f99e77d7",
+      "size_bytes": 7717
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/rep-02-setup.check",
+      "sha256": "cdd7915ad68da41be5f0d81712eae99eb891ec1406fef040c181febfa7af4c57",
+      "size_bytes": 6430
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/rep-02-setup.out",
+      "sha256": "ed5e9af640ba198f62d13cc0c5b532db747755dc8b5dc79e8219d6dbe60f6882",
+      "size_bytes": 7684
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/rep-03-checks.diff",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/rep-03-prepared.check",
+      "sha256": "cdd7915ad68da41be5f0d81712eae99eb891ec1406fef040c181febfa7af4c57",
+      "size_bytes": 6430
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/rep-03-prepared.out",
+      "sha256": "eafe42ae64307248a9e278e612c30833d2a3a890b2f62db689779a9de341b722",
+      "size_bytes": 7717
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/rep-03-setup.check",
+      "sha256": "cdd7915ad68da41be5f0d81712eae99eb891ec1406fef040c181febfa7af4c57",
+      "size_bytes": 6430
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/rep-03-setup.out",
+      "sha256": "5ec372984c3c1718e27ca6c50d3af9c8490832868783b36c0d611d93bc30133b",
+      "size_bytes": 7684
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/rep-04-checks.diff",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/rep-04-prepared.check",
+      "sha256": "cdd7915ad68da41be5f0d81712eae99eb891ec1406fef040c181febfa7af4c57",
+      "size_bytes": 6430
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/rep-04-prepared.out",
+      "sha256": "2e013631e56197cab7ffd0fd0a19e925422fe9b02b75425a8cb06ddf4f8ed197",
+      "size_bytes": 7717
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/rep-04-setup.check",
+      "sha256": "cdd7915ad68da41be5f0d81712eae99eb891ec1406fef040c181febfa7af4c57",
+      "size_bytes": 6430
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/rep-04-setup.out",
+      "sha256": "0a6cf01e7f9e873243ea5b8c56a03bfe1acc85183ce4623b0e37b77458a3b517",
+      "size_bytes": 7684
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/rep-05-checks.diff",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/rep-05-prepared.check",
+      "sha256": "cdd7915ad68da41be5f0d81712eae99eb891ec1406fef040c181febfa7af4c57",
+      "size_bytes": 6430
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/rep-05-prepared.out",
+      "sha256": "7e27771a81de0baa97fd1100ba4c874fde95bb13057c49ccc2992a062b0d02f3",
+      "size_bytes": 7717
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/rep-05-setup.check",
+      "sha256": "cdd7915ad68da41be5f0d81712eae99eb891ec1406fef040c181febfa7af4c57",
+      "size_bytes": 6430
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/rep-05-setup.out",
+      "sha256": "3ed69348053f4f9806f49e0c3ccfdb674cda6ba15526ca468851d7572cc8824b",
+      "size_bytes": 7684
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/rep-06-checks.diff",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/rep-06-prepared.check",
+      "sha256": "cdd7915ad68da41be5f0d81712eae99eb891ec1406fef040c181febfa7af4c57",
+      "size_bytes": 6430
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/rep-06-prepared.out",
+      "sha256": "aa7239f3b935c16f25344f9224d95035bf575becc85fb8a13f6bc8c88c3eef4a",
+      "size_bytes": 7717
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/rep-06-setup.check",
+      "sha256": "cdd7915ad68da41be5f0d81712eae99eb891ec1406fef040c181febfa7af4c57",
+      "size_bytes": 6430
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/rep-06-setup.out",
+      "sha256": "c2854a795f95185fc4875a6a1f7746063571953c50e249a5c58174649ee41848",
+      "size_bytes": 7684
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/rep-07-checks.diff",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/rep-07-prepared.check",
+      "sha256": "cdd7915ad68da41be5f0d81712eae99eb891ec1406fef040c181febfa7af4c57",
+      "size_bytes": 6430
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/rep-07-prepared.out",
+      "sha256": "3729d28b75993a8665f5dfd791a0437537da2465636ddf625ec2063e09931cbb",
+      "size_bytes": 7717
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/rep-07-setup.check",
+      "sha256": "cdd7915ad68da41be5f0d81712eae99eb891ec1406fef040c181febfa7af4c57",
+      "size_bytes": 6430
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/rep-07-setup.out",
+      "sha256": "56feb9a08992465bb2bf7c79f5fc617e5aeeba266d682d1a6a6e3d17e8409005",
+      "size_bytes": 7684
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/rep-08-checks.diff",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/rep-08-prepared.check",
+      "sha256": "cdd7915ad68da41be5f0d81712eae99eb891ec1406fef040c181febfa7af4c57",
+      "size_bytes": 6430
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/rep-08-prepared.out",
+      "sha256": "c1239dfca9fb67102907120d874dbf0afb77ab3fb689c562b56cb7f81541e3c2",
+      "size_bytes": 7717
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/rep-08-setup.check",
+      "sha256": "cdd7915ad68da41be5f0d81712eae99eb891ec1406fef040c181febfa7af4c57",
+      "size_bytes": 6430
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/rep-08-setup.out",
+      "sha256": "b5c4220ba97230f9219ca70be2f3f28bd9ecec9c47196f567eef6b90c7bbdd18",
+      "size_bytes": 7684
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/rep-09-checks.diff",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/rep-09-prepared.check",
+      "sha256": "cdd7915ad68da41be5f0d81712eae99eb891ec1406fef040c181febfa7af4c57",
+      "size_bytes": 6430
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/rep-09-prepared.out",
+      "sha256": "01ffeceb5afd35c0c587b9eb2c124fcf97261c6809ab75f65703c1ccea1f1437",
+      "size_bytes": 7717
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/rep-09-setup.check",
+      "sha256": "cdd7915ad68da41be5f0d81712eae99eb891ec1406fef040c181febfa7af4c57",
+      "size_bytes": 6430
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/rep-09-setup.out",
+      "sha256": "6df62cf66fbfbb85b24aa5245b8e55d4a028f2f199801e724ea9adcbfc90215a",
+      "size_bytes": 7684
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/rep-10-checks.diff",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/rep-10-prepared.check",
+      "sha256": "cdd7915ad68da41be5f0d81712eae99eb891ec1406fef040c181febfa7af4c57",
+      "size_bytes": 6430
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/rep-10-prepared.out",
+      "sha256": "ed9937a2aa148cb37571d7919b768912ac505b8fa1a203275d61e594d222dd34",
+      "size_bytes": 7717
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/rep-10-setup.check",
+      "sha256": "cdd7915ad68da41be5f0d81712eae99eb891ec1406fef040c181febfa7af4c57",
+      "size_bytes": 6430
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/rep-10-setup.out",
+      "sha256": "c50f08b2fea6a96e142361a8d1279969cb39d40e2c4ab937e60e6e76429677f4",
+      "size_bytes": 7684
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/rep-11-checks.diff",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/rep-11-prepared.check",
+      "sha256": "cdd7915ad68da41be5f0d81712eae99eb891ec1406fef040c181febfa7af4c57",
+      "size_bytes": 6430
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/rep-11-prepared.out",
+      "sha256": "ac036b92bbb90f81b8d856ec9bca703aa56fafc3f1200dd280e2e55049ef4854",
+      "size_bytes": 7717
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/rep-11-setup.check",
+      "sha256": "cdd7915ad68da41be5f0d81712eae99eb891ec1406fef040c181febfa7af4c57",
+      "size_bytes": 6430
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/rep-11-setup.out",
+      "sha256": "3271c3e55c0093f4eafe18ef1a7284019cc8903db243b141c4f4db6d001f31b2",
+      "size_bytes": 7684
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/rep-12-checks.diff",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/rep-12-prepared.check",
+      "sha256": "cdd7915ad68da41be5f0d81712eae99eb891ec1406fef040c181febfa7af4c57",
+      "size_bytes": 6430
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/rep-12-prepared.out",
+      "sha256": "a3bf8876b47f9b44b2d82644b4d8833048a1e4e4ed69f41be0c669f293b9a8e1",
+      "size_bytes": 7717
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/rep-12-setup.check",
+      "sha256": "cdd7915ad68da41be5f0d81712eae99eb891ec1406fef040c181febfa7af4c57",
+      "size_bytes": 6430
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/rep-12-setup.out",
+      "sha256": "1524bf5298d67be30696273f605f63d10a05897f1c46d7077eabe638edfcca25",
+      "size_bytes": 7684
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/rep-13-checks.diff",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/rep-13-prepared.check",
+      "sha256": "cdd7915ad68da41be5f0d81712eae99eb891ec1406fef040c181febfa7af4c57",
+      "size_bytes": 6430
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/rep-13-prepared.out",
+      "sha256": "a2605c3c400372abae293c459fd6f4b94c32a1e7d4d7f40087984c40fa140fda",
+      "size_bytes": 7717
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/rep-13-setup.check",
+      "sha256": "cdd7915ad68da41be5f0d81712eae99eb891ec1406fef040c181febfa7af4c57",
+      "size_bytes": 6430
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/rep-13-setup.out",
+      "sha256": "89ec65b870df145f0b2c5118a1bca2dc8d259160c4fad6a8b9c8fb30a605d6a6",
+      "size_bytes": 7684
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/rep-14-checks.diff",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/rep-14-prepared.check",
+      "sha256": "cdd7915ad68da41be5f0d81712eae99eb891ec1406fef040c181febfa7af4c57",
+      "size_bytes": 6430
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/rep-14-prepared.out",
+      "sha256": "54c161328a6ce7a43190f82f23ec9eadb71080a3518a21ea6b65fb4af2f26c2e",
+      "size_bytes": 7717
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/rep-14-setup.check",
+      "sha256": "cdd7915ad68da41be5f0d81712eae99eb891ec1406fef040c181febfa7af4c57",
+      "size_bytes": 6430
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/rep-14-setup.out",
+      "sha256": "163a278b90ddda50d74ceff93c40c687af8792bc173f54577bf74dd4bda420ab",
+      "size_bytes": 7684
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/run-order.tsv",
+      "sha256": "ca93e19b7413804bcedfe982a1a2b6dd56516a86159ad422caf372291d1bbb50",
+      "size_bytes": 270
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/source-head.txt",
+      "sha256": "60d3371ea823cc30cd3d93d25ed52eeacde1dd924a3a14adbfd34f1256eba7f8",
+      "size_bytes": 41
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/warmup-prepared.out",
+      "sha256": "321fe08e601b963770b22564c5a4ae7f982eadd6b5e0353939662fe3ec9fd498",
+      "size_bytes": 7717
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/warmup-setup.out",
+      "sha256": "0646f1ead63ae810e3e3c4f826bc416a845db10084ff4d9d7d23f556f244e5be",
+      "size_bytes": 7684
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/worktree-status.txt",
+      "sha256": "78697caf96d4a00c4a894bb7dc99399323f93dd73d7bd7167183bead33aaefcf",
+      "size_bytes": 143
+    }
+  ],
+  "schema": "openssl-rs/performance/raw-manifest/1"
+}

@@ -1,0 +1,237 @@
+{
+  "schema": "openssl-rs/performance/claim-record/v1",
+  "record_id": "PFP-CLAIM-PFP1",
+  "queue_item": "PFP-1",
+  "author": {
+    "identity": "openssl-rs performance programme (staging session, 2026-11-25)",
+    "role": "producer"
+  },
+  "campaign": {
+    "id": "PFP-1",
+    "results": {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/results.json",
+      "sha256": "969ffad3dffccfcae6e1bf35a46f7a54f70959d11fb0ff231bb742cedd9ce3cb",
+      "present": true
+    },
+    "venue_has_pmu": false
+  },
+  "classification": "SCOPED_OBSERVATION",
+  "producer": {
+    "name": "performance_classification.py",
+    "version": "1",
+    "tool_path": "forensics/tools/performance_classification.py",
+    "tool_sha256": "9ad9b402103c6d1eb6580d458dd4144cc26f9346d6d23936c92c1576dd7d2605",
+    "limits": [
+      "This record binds the PFP-1 classification and its declared identity; it executes nothing.",
+      "It does not establish that the cited campaign occurred as described; the PFP-1 receipt is the record of that.",
+      "The PFP-1 comparison is within-candidate (setup versus prepared); it is not a comparison against an external library.",
+      "A green validation is a statement about claim form, not about the truth of the measurement."
+    ],
+    "inputs": [
+      {
+        "path": "evidence/performance-frontier/campaigns/PFP-1/performance/results.json",
+        "sha256": "969ffad3dffccfcae6e1bf35a46f7a54f70959d11fb0ff231bb742cedd9ce3cb",
+        "present": true
+      },
+      {
+        "path": "evidence/performance-frontier/campaigns/PFP-1/performance/build-identity.json",
+        "sha256": "3915a91023ddbef50ebfa69275500c9e65510a32a7fc9e6d4f470ebbd6d6e37c",
+        "present": true
+      },
+      {
+        "path": "evidence/performance-frontier/claims/PFP-1.raw-manifest.json",
+        "sha256": "12229dee8ff447adc3e2de404ef4ea8b260f9136a948696a4ae21ac501e3258e",
+        "present": true
+      },
+      {
+        "path": "forensics/performance/WORKLOADS.json",
+        "sha256": "1d33143a7ee97208c25da95dadd0c7eafcce300794f71a78e6f6b3da60d7fa88",
+        "present": true
+      },
+      {
+        "path": "forensics/performance/AUTHORITIES.json",
+        "sha256": "04171d2b56b385f53992b6b167e6e262905f81eece498d0472f9dc982d4cd31b",
+        "present": true
+      },
+      {
+        "path": "docs/PERFORMANCE-METHODOLOGY.md",
+        "sha256": "7a7e33ae3f42d73331b022954b0ca9d0f078c3de85cbd326cbd5d6d1663b3993",
+        "present": true
+      }
+    ]
+  },
+  "candidate": {
+    "source_commit": "91ac573c0a8e1bc11371718e5f2a6022c55c9535",
+    "binding": "exact",
+    "artefact": {
+      "label": "distribution-shaped libcrypto.so.3 from HEAD 91ac573c0 with the PFP-1 patch applied",
+      "sha256": "596f4833e35932da7efff936185dee17dcb56f3b6363f4682300afb741d3c5b9",
+      "location": "campaign workspace court/tmp/pfp1-build",
+      "present_in_repository": false,
+      "obligation": "The benchmarked DSO was built in the campaign workspace from an uncommitted patch and is not committed; its digest, patch digest and build identity are tracked, the bytes are not."
+    },
+    "build": {
+      "profile": "release",
+      "target": "x86_64-unknown-linux-gnu",
+      "toolchain": "rustc 1.98.1",
+      "patch_sha256": "ddd4e0e01cf467880aaf5a6e44762bd19b9efa015df3944fcfa8f217dfdb2c82"
+    }
+  },
+  "authority": {
+    "id": "openssl-3.6.4-production",
+    "version": "3.6.4",
+    "sha256": "611e511db4273c4b6b522031fd171efce71b80661bb8310c2a21dfd18ec0efd2",
+    "build_id": "5b4871ce9d78edeafc96f143d7d6697d943ad804"
+  },
+  "comparators": [
+    {
+      "id": "pfp1-before-control",
+      "role": "before_control",
+      "status": "MEASURED",
+      "identity": "sha256:139966033ac9e935efc76290a9df9e91441aa2ea9f183a00089eb95e32093c0c"
+    },
+    {
+      "id": "openssl-3.6.4-production",
+      "role": "compatibility_authority",
+      "status": "UNAVAILABLE",
+      "reason": "not measured in PFP-1; the campaign compares the prepared path with its own setup-inclusive arm"
+    }
+  ],
+  "instrument": {
+    "name": "bench_pfp1.c with analyse_pfp1.py",
+    "identity": {
+      "harness_sha256": "481950340cbce3a0450606ec19440bc6649d7d8fd2fc677e10285c6c84f144b8",
+      "analyser_sha256": "d6e5e871eec2628e368ea5d5d665a7892210747186ecd85dbb5c0b10fc895a1d",
+      "runner_sha256": "e51e0500a0e2cf28bd171d60eb0b07da07d726936500ac312a080e9c1b7f7d25"
+    },
+    "measures": [
+      "within-candidate single-operation latency, setup-inclusive versus prepared context",
+      "paired per-repetition ratios of setup to prepared medians"
+    ],
+    "unit": "microseconds per call",
+    "procedure": "docs/PERFORMANCE-METHODOLOGY.md §6 applied within-candidate",
+    "samples": {
+      "location": "evidence/performance-frontier/campaigns/PFP-1/performance/raw, enumerated by the bound manifest",
+      "present_in_repository": true,
+      "path": "evidence/performance-frontier/claims/PFP-1.raw-manifest.json",
+      "sha256": "12229dee8ff447adc3e2de404ef4ea8b260f9136a948696a4ae21ac501e3258e",
+      "repetitions": 15,
+      "unit_of_replication": "one process per mode per repetition",
+      "statistic": "median over repetitions of setup_us / prepared_us"
+    },
+    "preregistration": {
+      "path": "docs/PERFORMANCE-METHODOLOGY.md",
+      "sha256": "7a7e33ae3f42d73331b022954b0ca9d0f078c3de85cbd326cbd5d6d1663b3993",
+      "present": true
+    }
+  },
+  "population": {
+    "frozen_at": "c9a0fdd58429ef13ca9b25ddccbc84a832787277",
+    "expected": [
+      "dh-ffdhe2048",
+      "dh-ffdhe3072",
+      "dh-modp2048",
+      "dh-synth2048",
+      "dh-synth3072",
+      "ecdsa256",
+      "modexp2048",
+      "modexp8192",
+      "rsa2048"
+    ],
+    "realised": [
+      "dh-ffdhe2048",
+      "dh-ffdhe3072",
+      "dh-modp2048",
+      "dh-synth2048",
+      "dh-synth3072",
+      "ecdsa256",
+      "modexp2048",
+      "modexp8192",
+      "rsa2048"
+    ],
+    "missing": [],
+    "duplicate": [],
+    "undeclared": [],
+    "completeness_rule": "The realised identifier set equals the frozen WORKLOADS identifier set; the results file records the same nine-element family."
+  },
+  "scope": {
+    "level": "L3",
+    "workloads": [
+      "dh-ffdhe2048",
+      "dh-ffdhe3072",
+      "dh-modp2048",
+      "dh-synth2048",
+      "dh-synth3072",
+      "ecdsa256",
+      "modexp2048",
+      "modexp8192",
+      "rsa2048"
+    ],
+    "security_profile": "candidate distribution-shaped libcrypto.so.3 at digest 596f4833 against the same source HEAD without the patch; within-candidate comparison, no external arm",
+    "exclusions": [
+      "no external comparator is measured in PFP-1",
+      "EC is reported as unchanged because PFP-1 gives it no second mode",
+      "L1 and L2 arithmetic kernels are not measured separately",
+      "L4 protocol and L5 downstream workloads are not measured",
+      "constant-time behaviour is recorded by ctgrind at the same digest but is not proved by this record"
+    ]
+  },
+  "threat_model": {
+    "secret_classification": ["SECRET_DATA", "PUBLIC_DATA"],
+    "tags": [
+      "SECRET_DATA",
+      "CONSTANT_TIME_REQUIRED",
+      "PUBLIC_MODULUS"
+    ],
+    "statement": "Private exponents, RSA private operands and ECDSA nonces and keys are SECRET_DATA; moduli and group orders are public. PFP-1 adds no secret-dependent branch by design, and the receipt records ctgrind at the same digest; that is bounded evidence, not a constant-time proof.",
+    "constant_time_required": true,
+    "observation_model": "wall-clock latency on a virtualised host; no PMU, no cache or branch counters, no frequency, turbo or SMT control"
+  },
+  "venue": {
+    "class": "VIRTUALISED_COURT",
+    "description": "existing court container, 6g/6g cap, pinned CPU 1; the results file records venue_has_pmu=false",
+    "pmu_exposed": false,
+    "controls": {
+      "frequency_pinned": false,
+      "turbo_disabled": false,
+      "smt_disabled": false,
+      "core_isolation": false
+    }
+  },
+  "obligations": {
+    "open": [
+      {
+        "id": "T23",
+        "description": "Secret ownership does not propagate through the arithmetic itself; PFP-1 changes the prepared-domain ownership but does not close the transfer window.",
+        "discharged": false
+      },
+      {
+        "id": "T24",
+        "description": "The constant-time inversion's scratch storage and the operands' normalised limb-count metadata remain the recorded residual.",
+        "discharged": false
+      },
+      {
+        "id": "T29",
+        "description": "The ECDSA per-signature allocation blow-up is unchanged by PFP-1 and remains open.",
+        "discharged": false
+      },
+      {
+        "id": "PFP1-WITHIN-CANDIDATE",
+        "description": "The measured comparison is setup-inclusive versus prepared within the candidate; no external comparator was executed.",
+        "discharged": false
+      },
+      {
+        "id": "PFP1-DIRTY-CANDIDATE",
+        "description": "The candidate was built from an uncommitted patch at 91ac573c0; the patch digest is recorded but the candidate is not reproducible from a commit.",
+        "discharged": false
+      },
+      {
+        "id": "PFP1-NO-PMU",
+        "description": "The venue exposes no PMU and has no frequency, turbo, SMT or isolation control; every row is SCOPED_OBSERVATION.",
+        "discharged": false
+      }
+    ],
+    "attempted_discharge": [],
+    "none_open_because": null
+  }
+}

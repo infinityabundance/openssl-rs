@@ -2,7 +2,7 @@
 
 **PFP · cumulative with the timing-safety queue and the Earned Trust Protocol**
 
-Queue: `docs/PERFORMANCE-FRONTIER-TODO.md` (items `PFP-0` … `PFP-17`).
+Queue: `docs/PERFORMANCE-FRONTIER-TODO.md` (items `PFP-0` … `PFP-19`).
 Evidence roots: `evidence/performance-frontier/`, `forensics/performance/`,
 `courts/performance-frontier/`.
 
@@ -551,7 +551,7 @@ Reconciled with the existing tree; nothing here duplicates Phase 19.
 
 ```
 docs/PERFORMANCE-FRONTIER.md          this document
-docs/PERFORMANCE-FRONTIER-TODO.md     the queue (PFP-0 … PFP-17)
+docs/PERFORMANCE-FRONTIER-TODO.md     the queue (PFP-0 … PFP-19)
 docs/PERFORMANCE-METHODOLOGY.md       PFP-0 output: the measurement protocol
 docs/KERNEL-VERIFICATION.md           PFP-9 output: kernels, proofs, obligations
 
@@ -561,9 +561,161 @@ courts/performance-frontier/
 forensics/performance/
   AUTHORITIES.json   TARGETS.json   WORKLOADS.json   KERNELS.json   OBLIGATIONS.json
 
+forensics/tools/
+  performance_classification.py   PFP-18: classification binding and refusal
+  performance_admission.py        PFP-19: arm admission and evidence reuse
+
 evidence/performance-frontier/
   campaigns/  raw-results/  comparisons/  receipts/  attestations/
+  claims/                        PFP-18: one bound claim record per campaign
+  admission/                     PFP-19: the arm register
 ```
 
 Product code stays inside the existing first-party implementation crate. No new
 cryptographic backend dependency is introduced by this architecture.
+
+---
+
+## 15. Classification binding and refusal (PFP-18)
+
+Status: normative. §10 names the seven classifications; this section makes the
+binding that supports them mechanical. A record that states a classification is
+a **claim record** of type `openssl-rs/performance/claim-record/v1`. It is not a
+benchmark and it is not a receipt: it binds a claimed classification to the
+identity, instrument, population, scope, security model, venue, comparator set
+and obligations that support it.
+
+`forensics/tools/performance_classification.py` validates the record. The
+refusal is denial by default: a field the record needs and does not carry is a
+refusal, not a default.
+
+### 15.1 Required bindings
+
+| binding | what the record must carry | refusal |
+|---|---|---|
+| candidate identity | source commit, artefact label and full SHA-256, build profile and target; several candidates only with a stated relationship | `PF_CANDIDATE_IDENTITY_ABSENT`, `PF_CANDIDATE_IDENTITY_MULTIPLE` |
+| instrument identity | instrument name, identity values, the measures, the unit, the procedure and the sample location, repetition count, unit of replication and statistic | `PF_INSTRUMENT_IDENTITY_ABSENT`, `PF_INSTRUMENT_SAMPLES_ABSENT` |
+| population | a frozen identifier set, the realised identifier set, the completeness rule, and the derived missing, duplicate and undeclared lists | `PF_POPULATION_ABSENT`, `PF_POPULATION_INCOMPLETE`, `PF_POPULATION_DECLARATION_MISMATCH` |
+| scope | level (L1–L5), workloads inside the population, security profile and an explicit exclusion list | `PF_SCOPE_ABSENT` |
+| threat / leakage model | secret classification, statement, constant-time requirement and observation model | `PF_THREAT_MODEL_ABSENT` |
+| venue | venue class, description, PMU statement and the four controls, plus a per-platform record for a frontier claim | `PF_VENUE_ABSENT`, `PF_BARE_METAL_CONTROLS_ABSENT` |
+| authority and comparators | the compatibility authority identity and every comparator with its status; a measured comparator names its identity | `PF_AUTHORITY_ABSENT`, `PF_COMPARATOR_POPULATION_ABSENT`, `PF_COMPARATOR_IDENTITY_ABSENT` |
+| obligations | the open obligations, each explicitly undischarged, and an explicit attempted-discharge list | `PF_OBLIGATIONS_ABSENT`, `PF_TIMING_OBLIGATION_DISCHARGED_BY_PERFORMANCE` |
+| producer | the producing tool, its digest, what it does not establish, and the digests of its inputs | `PF_PRODUCER_ABSENT`, `PF_PRODUCER_LIMITS_ABSENT`, `PF_PRODUCER_UNBOUND` |
+
+An artefact or sample that is declared absent needs a named obligation; otherwise
+`PF_ABSENCE_UNRECORDED`. A cited reference is re-derived: a missing path is
+`PF_REFERENCE_ABSENT`, a digest mismatch is `PF_REFERENCE_DIGEST_MISMATCH`, and a
+reference with no path or digest is `PF_REFERENCE_UNRESOLVED`.
+
+### 15.2 The venue ceiling
+
+A `VIRTUALISED_COURT` supports `SCOPED_OBSERVATION`, `MEASURED`, `COMPETITIVE`
+and `PARITY_ESTABLISHED`. It does not support `AHEAD`, `FRONTIER_LEADING` or
+`INDEPENDENTLY_REPRODUCED_FRONTIER`: `PF_VENUE_CLASS_INSUFFICIENT`. §9.5 makes a
+frontier claim require bare metal, a pinned frequency, turbo and SMT disabled,
+core isolation, and the microcode and kernel recorded on **every platform the
+claim covers**. This section applies the same requirement to `AHEAD`, because a
+lead measured without those controls cannot be distinguished from venue noise.
+That is a deliberate, recorded narrowing of what the court may support, not an
+inference from a measurement.
+
+A frontier claim additionally needs a frozen qualified population in which
+**every** comparator was measured; an unmeasured comparator in that population is
+`PF_COMPARATOR_NOT_QUALIFIED`. An advantage claim needs a preregistered margin
+(`PF_PREREGISTRATION_ABSENT`) and a confidence interval stated to exclude it
+(`PF_STATISTICAL_SUPPORT_ABSENT`). An independently reproduced frontier needs an
+external receipt at the same candidate digest from a party other than the
+record's author (`PF_INDEPENDENT_RECEIPT_ABSENT`, `PF_INDEPENDENCE_SELF_ASSERTED`).
+
+A record may not also carry `safe_compatible`, `safety_discharged`,
+`semantic_assurance`, a verdict or a graduation: the performance classifications
+are disjoint from `SAFE_COMPATIBLE` and from semantic assurance, and a shared
+record is refused as `PF_CLASSIFICATION_CONFLATES_ASSURANCE` wherever the key
+appears.
+
+### 15.3 Non-vacuity
+
+The rule set must be able to accept a complete record, not only refuse an
+incomplete one. `forensics/tools/performance_classification.py self-test` carries
+three positive controls — a frontier-leading fixture with bare-metal controls on
+both the main venue and a second platform, a scoped-observation fixture, and an
+independently reproduced fixture with an external receipt — and one negative
+control for every refusal code. The committed records at
+`evidence/performance-frontier/claims/` are accepted at their recorded state.
+
+### 15.4 What this section does not establish
+
+A validated record is a well-bound claim, not a true measurement. The validator
+does not execute a benchmark, does not decide whether a cited experiment
+occurred, and does not turn a virtualised-court ratio into a frontier result. It
+does not make a classification safety evidence, and it does not discharge a
+timing obligation; every record names the obligations it leaves open. The
+campaign-specific cross-binding (a record's candidate digest, population and
+venue class against the campaign files) is checked in the test module, because
+the campaign shapes are not a general schema.
+
+---
+
+## 16. Arm admission and evidence reuse (PFP-19)
+
+Status: normative. §0 states the binding rule and §11 the admission conjunction.
+This section makes three distinctions executable and one of them impossible:
+
+1. a **measurement** is a number with an identity;
+2. an **experiment** is an arm that is measured or not, but whose candidate
+   conjunction is incomplete;
+3. a **candidate** is the conjunction, at one candidate digest, of a bound
+   measurement, a passing differential court, a binary constant-time audit, a
+   population frozen before execution, an empty timing-discharge set, a false
+   safety/compatibility declaration and no refused shortcut.
+
+An arm may therefore be measured and still be an `EXPERIMENT`;
+`PA_UNMEASURED_ARM_CALLED_CANDIDATE`, `PA_CANDIDATE_WITHOUT_COURTS` and
+`PA_CANDIDATE_WITHOUT_CONSTANT_TIME_AUDIT` name the missing conjuncts. A taint
+run such as ctgrind is recorded as `CTGRIND` and does **not** satisfy the binary
+audit requirement on its own: the accepted kinds are `BINARY_BRANCH_AUDIT` and
+`CTGRIND_PLUS_BRANCH_AUDIT`. A court or audit bound to another digest is
+`PA_EVIDENCE_NOT_AT_SAME_DIGEST`; a measurement whose benchmarked artefact is not
+the arm's candidate is `PA_STALE_BINARY`.
+
+### 16.1 Reuse and population
+
+A measurement is reusable only at its full applicability identity — source, tool,
+instrument, target and population. An incomplete reused identity is
+`PA_REUSE_IDENTITY_INCOMPLETE`; a different one is
+`PA_REUSE_IDENTITY_MISMATCH`. A measurement whose population was not frozen before
+execution, or whose frozen population is not the one the reused identity names,
+is `PA_POPULATION_CHANGED_AFTER_EXECUTION`. The identity is five named values,
+not a label: a label would let a changed population reuse a result by silence.
+
+### 16.2 Timing obligations and refused shortcuts
+
+A performance arm never discharges a timing obligation. The
+`timing_obligations.attempted_discharge` list must be present and empty, and no
+open obligation may be marked discharged; either is
+`PA_TIMING_OBLIGATION_DISCHARGED_BY_PERFORMANCE`. An arm that records any entry
+from the §11 refused-shortcut table — disabling blinding, a secret-indexed
+lookup, removing cleansing, skipping validation, reducing key sizes, reusing stale
+Montgomery parameters, ignoring a custom method or callback, benchmarking a stale
+binary, changing the population silently, comparing against a slowed competitor,
+or publishing only winning cases — is `PA_SHORTCUT_TAKEN` regardless of speed. An
+arm that records a safety or compatibility conclusion is
+`PA_ASSURANCE_CONFLATED`.
+
+### 16.3 Non-vacuity and limits
+
+The register at `evidence/performance-frontier/admission/ARMS.json` is validated
+by `forensics/tools/performance_admission.py`; its self-test carries a complete
+synthetic candidate and an incomplete experiment as positive controls and one
+negative control per refusal code. The one measured arm in the repository,
+`PFP-1`, is recorded as an `EXPERIMENT`: its differential courts and binary
+branch audit are not recorded at digest `596f4833`, and the register names both
+gaps. Its code, tests and `DONE` queue status are unaffected; what is not claimed
+is that the arm is a *performance candidate* under this programme.
+
+Passing is a well-bound admission record, not an admission. The validator does
+not run the courts, the audit or the benchmark; it does not certify that a cited
+court is sensitive to its defect class, and it does not convert a `SCOPED_OBSERVATION`
+into a candidate. Only evidence bound at the same digest can do that, and the
+register's open obligations name what is missing.

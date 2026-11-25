@@ -1,0 +1,266 @@
+{
+  "schema": "openssl-rs/performance/claim-record/v1",
+  "record_id": "PFP-CLAIM-PFP0",
+  "queue_item": "PFP-0",
+  "author": {
+    "identity": "openssl-rs performance programme (staging session, 2026-11-25)",
+    "role": "producer"
+  },
+  "campaign": {
+    "id": "PFP-0",
+    "results": {
+      "path": "evidence/performance-frontier/campaigns/PFP-0/results.json",
+      "sha256": "0fc0114746bb6c8d3e456d9ea69d335a849e6a107d3252a7c74264b669eccf56",
+      "present": true
+    },
+    "venue_has_pmu": false
+  },
+  "classification": "SCOPED_OBSERVATION",
+  "producer": {
+    "name": "performance_classification.py",
+    "version": "1",
+    "tool_path": "forensics/tools/performance_classification.py",
+    "tool_sha256": "9ad9b402103c6d1eb6580d458dd4144cc26f9346d6d23936c92c1576dd7d2605",
+    "limits": [
+      "This record binds the PFP-0 classification and its declared identity; it executes nothing.",
+      "It does not establish that the cited campaign occurred as described; the campaign receipt is the record of that.",
+      "It does not turn a virtualised-court ratio into a frontier result, and it does not measure constant time.",
+      "A green validation is a statement about claim form, not about the truth of the measurement."
+    ],
+    "inputs": [
+      {
+        "path": "evidence/performance-frontier/campaigns/PFP-0/results.json",
+        "sha256": "0fc0114746bb6c8d3e456d9ea69d335a849e6a107d3252a7c74264b669eccf56",
+        "present": true
+      },
+      {
+        "path": "evidence/performance-frontier/campaigns/PFP-0/build-identity.json",
+        "sha256": "e8f614debfc88095c2e30b7a7ff5cc2c76376676b5b33b018669b0342a3e96f4",
+        "present": true
+      },
+      {
+        "path": "evidence/performance-frontier/campaigns/PFP-0/preregistration.json",
+        "sha256": "19a97cb76640bc77ca6547a5ad7b7555128860e890ffdf695a0c65f2cc7eb93a",
+        "present": true
+      },
+      {
+        "path": "forensics/performance/WORKLOADS.json",
+        "sha256": "1d33143a7ee97208c25da95dadd0c7eafcce300794f71a78e6f6b3da60d7fa88",
+        "present": true
+      },
+      {
+        "path": "forensics/performance/AUTHORITIES.json",
+        "sha256": "04171d2b56b385f53992b6b167e6e262905f81eece498d0472f9dc982d4cd31b",
+        "present": true
+      },
+      {
+        "path": "docs/PERFORMANCE-METHODOLOGY.md",
+        "sha256": "7a7e33ae3f42d73331b022954b0ca9d0f078c3de85cbd326cbd5d6d1663b3993",
+        "present": true
+      }
+    ]
+  },
+  "candidate": {
+    "source_commit": "c9a0fdd58429ef13ca9b25ddccbc84a832787277",
+    "binding": "exact",
+    "artefact": {
+      "label": "distribution-shaped libcrypto.so.3 built from the frozen tree",
+      "sha256": "139966033ac9e935efc76290a9df9e91441aa2ea9f183a00089eb95e32093c0c",
+      "location": "campaign workspace court/tmp/pfp0-build/distribution/libcrypto.so.3",
+      "present_in_repository": false,
+      "obligation": "The benchmarked DSO was built in the campaign workspace and is not committed; its digest and build-id are tracked, the bytes are not."
+    },
+    "build": {
+      "profile": "release",
+      "target": "x86_64-unknown-linux-gnu",
+      "toolchain": "rustc 1.98.1 (48a229cea 2026-09-01), cargo 1.98.1"
+    }
+  },
+  "authority": {
+    "id": "openssl-3.6.4-production",
+    "version": "3.6.4",
+    "sha256": "611e511db4273c4b6b522031fd171efce71b80661bb8310c2a21dfd18ec0efd2",
+    "build_id": "5b4871ce9d78edeafc96f143d7d6697d943ad804"
+  },
+  "comparators": [
+    {
+      "id": "openssl-3.6.4-production",
+      "role": "compatibility_authority",
+      "status": "MEASURED",
+      "identity": "sha256:611e511db4273c4b6b522031fd171efce71b80661bb8310c2a21dfd18ec0efd2"
+    },
+    {
+      "id": "aws-lc",
+      "role": "performance_authority",
+      "status": "UNAVAILABLE",
+      "reason": "not built or executed in this environment; AUTHORITIES.json records UNAVAILABLE and the receipt records no row"
+    },
+    {
+      "id": "boringssl",
+      "role": "performance_authority",
+      "status": "UNAVAILABLE",
+      "reason": "not built or executed in this environment; AUTHORITIES.json records UNAVAILABLE and the receipt records no row"
+    },
+    {
+      "id": "rustls",
+      "role": "performance_authority",
+      "status": "NOT_APPLICABLE",
+      "reason": "not a C-API library for this harness; AUTHORITIES.json records NOT_APPLICABLE_FOR_C_API_HARNESS"
+    },
+    {
+      "id": "wolfssl",
+      "role": "performance_authority",
+      "status": "UNAVAILABLE",
+      "reason": "not built or executed in this environment; AUTHORITIES.json records UNAVAILABLE and the receipt records no row"
+    },
+    {
+      "id": "research-frontier-kernel",
+      "role": "research_frontier",
+      "status": "NOT_APPLICABLE",
+      "reason": "no admitted research-frontier build exists for this harness; AUTHORITIES.json records NOT_APPLICABLE_FOR_C_API_HARNESS"
+    }
+  ],
+  "instrument": {
+    "name": "bench_api.c with alloc_probe.c and analyse_bench_api.py",
+    "identity": {
+      "harness_sha256": "e1add483b9bee3158e93e2f7d84296441bb2fc5d715cbf27cfd13f80cfde263f",
+      "alloc_probe_sha256": "76b432fd428322e75f068c2d70569a281671207469348628012a389bdae1f446",
+      "runner_sha256": "653994bf2e8eba9b39bdd64c73b518a8d86aca048e2ddea2c47b69c5924ebf44",
+      "analyser_sha256": "ea71850f5f2b56211f7407371467cafc7d8a7b9299a49a669d5a7e9d11ef7859"
+    },
+    "measures": [
+      "single-operation latency, median of five timed batch means per process",
+      "allocation entry points per operation through one LD_PRELOAD probe applied to both subjects",
+      "cross-library ECDSA correctness in both directions"
+    ],
+    "unit": "microseconds per call",
+    "procedure": "docs/PERFORMANCE-METHODOLOGY.md",
+    "samples": {
+      "location": "the campaign workspace raw/ directory (rep-*.out, run-order.tsv, identity checks); not committed",
+      "present_in_repository": false,
+      "obligation": "The raw process outputs were retained in the campaign workspace, not committed to the repository; only the analysed result, receipt and cross-verification table are tracked.",
+      "repetitions": 15,
+      "unit_of_replication": "one process per subject per repetition",
+      "statistic": "median of paired per-repetition ratios candidate_us/authority_us"
+    },
+    "preregistration": {
+      "path": "evidence/performance-frontier/campaigns/PFP-0/preregistration.json",
+      "sha256": "19a97cb76640bc77ca6547a5ad7b7555128860e890ffdf695a0c65f2cc7eb93a",
+      "present": true
+    }
+  },
+  "population": {
+    "frozen_at": "c9a0fdd58429ef13ca9b25ddccbc84a832787277",
+    "expected": [
+      "dh-ffdhe2048",
+      "dh-ffdhe3072",
+      "dh-modp2048",
+      "dh-synth2048",
+      "dh-synth3072",
+      "ecdsa256",
+      "modexp2048",
+      "modexp8192",
+      "rsa2048"
+    ],
+    "realised": [
+      "dh-ffdhe2048",
+      "dh-ffdhe3072",
+      "dh-modp2048",
+      "dh-synth2048",
+      "dh-synth3072",
+      "ecdsa256",
+      "modexp2048",
+      "modexp8192",
+      "rsa2048"
+    ],
+    "missing": [],
+    "duplicate": [],
+    "undeclared": [],
+    "completeness_rule": "A process is complete only when its RESULT and ALLOC lines match the exact frozen identifier set, once each; equal line counts are not a completeness test."
+  },
+  "scope": {
+    "level": "L3",
+    "workloads": [
+      "dh-ffdhe2048",
+      "dh-ffdhe3072",
+      "dh-modp2048",
+      "dh-synth2048",
+      "dh-synth3072",
+      "ecdsa256",
+      "modexp2048",
+      "modexp8192",
+      "rsa2048"
+    ],
+    "security_profile": "OpenSSL 3.6.4 production build as authority (linux-x86_64, assembly enabled, legacy provider enabled, no tests) against the candidate distribution-shaped libcrypto.so.3; default provider paths for the measured rows",
+    "exclusions": [
+      "L1 and L2 arithmetic kernels are not measured separately",
+      "L4 protocol and L5 downstream workloads are not measured",
+      "throughput, tail latency, parallel scaling, peak RSS, energy, startup, cache and branch behaviour are not measured",
+      "constant-time behaviour is not measured; the threat model records an obligation, not a result",
+      "AWS-LC, BoringSSL, rustls and wolfSSL are not executed and give no comparison row"
+    ]
+  },
+  "threat_model": {
+    "secret_classification": ["SECRET_DATA", "PUBLIC_DATA"],
+    "tags": [
+      "SECRET_DATA",
+      "CONSTANT_TIME_REQUIRED",
+      "PUBLIC_MODULUS"
+    ],
+    "statement": "Private exponents, RSA private operands and ECDSA nonces and keys are SECRET_DATA; moduli and bases are public. The measured operations must not branch, address or exit early on secret values. This record binds the measurement; the timing obligations T23, T24 and T29 remain open.",
+    "constant_time_required": true,
+    "observation_model": "wall-clock latency on a virtualised host; no PMU, no cache or branch counters, no frequency, turbo or SMT control"
+  },
+  "venue": {
+    "class": "VIRTUALISED_COURT",
+    "description": "virtualised court container on a 13th Gen Intel Core i9-13900K, kernel 7.3.5-2-cachyos, pinned to one CPU; the PMU probe records cpu_event_source=absent",
+    "pmu_exposed": false,
+    "controls": {
+      "frequency_pinned": false,
+      "turbo_disabled": false,
+      "smt_disabled": false,
+      "core_isolation": false
+    }
+  },
+  "obligations": {
+    "open": [
+      {
+        "id": "T23",
+        "description": "Secret ownership does not propagate through the arithmetic itself; the transfer window and 17 inversion intermediates at secret-dependent width remain open.",
+        "discharged": false
+      },
+      {
+        "id": "T24",
+        "description": "The constant-time inversion's scratch storage and the operands' normalised limb-count metadata remain the recorded residual.",
+        "discharged": false
+      },
+      {
+        "id": "T29",
+        "description": "The ECDSA per-signature allocation blow-up and the related fixed-width workspace residual remain open.",
+        "discharged": false
+      },
+      {
+        "id": "PFP0-NO-PMU",
+        "description": "The venue exposes no PMU and has no frequency, turbo, SMT or isolation control; every row is SCOPED_OBSERVATION and no frontier claim is made.",
+        "discharged": false
+      },
+      {
+        "id": "PFP0-RAW-SAMPLES",
+        "description": "The raw process outputs are not committed; the record binds the analysed result and receipt only.",
+        "discharged": false
+      },
+      {
+        "id": "PFP0-UNMEASURED-COMPARATORS",
+        "description": "AWS-LC, BoringSSL, rustls and wolfSSL were not executed; their rows are UNAVAILABLE or NOT_APPLICABLE, never losses.",
+        "discharged": false
+      },
+      {
+        "id": "PFP0-SCOPE",
+        "description": "Throughput, tail latency, parallel scaling, memory, energy, startup and L1/L2/L4/L5 behaviour are outside this record.",
+        "discharged": false
+      }
+    ],
+    "attempted_discharge": [],
+    "none_open_because": null
+  }
+}
