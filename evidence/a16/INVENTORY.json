@@ -17,7 +17,7 @@
     "basis": "the explicit member list below, declared at the candidate; not a live glob",
     "binding": "FROZEN",
     "files": 0,
-    "frozenAtCandidate": "38f179275913adbb320eeba698759f8086a95d36",
+    "frozenAtCandidate": "c047cd6ca49782d939c7790a24c1cc6d50e678c0",
     "glob": [
       "evidence/*.pem",
       "evidence/*.crt",
@@ -43,8 +43,8 @@
       "reason": "mutual digest binding: A11's scan population is every tracked evidence JSON and therefore contains this item's records, so this population cannot also contain A11's three records without a digest cycle. A11 absorbs this item's records; these three are declared excluded here and are reported NEW_SINCE_RECORD by growth_report, never absorbed into the frozen count.",
       "result": "NEW_SINCE_RECORD"
     },
-    "files": 510,
-    "frozenAtCandidate": "38f179275913adbb320eeba698759f8086a95d36",
+    "files": 516,
+    "frozenAtCandidate": "c047cd6ca49782d939c7790a24c1cc6d50e678c0",
     "glob": "evidence/*.json",
     "globSemantics": "tracked files matched with fnmatch.fnmatchcase; '*' matches across '/', so this covers evidence/**/*.json",
     "growthPolicy": "a verification re-hashes every member and reports a glob match that is not a member as NEW_SINCE_RECORD, counted separately; growth never changes this count, and a removed or changed member is refused with PH_REFUSED_POPULATION_DRIFT",
@@ -2328,9 +2328,34 @@
         "sha256": "4a14da856982c261be0a1749cf8e738b2f149bf1dbc8255e8086d3a2d8171836"
       },
       {
-        "bytes": 7436,
+        "bytes": 12705,
         "path": "evidence/performance-frontier/admission/ARMS.json",
-        "sha256": "18d29f8ebaaaa5db76372e79f4103c506abaa8d814184404e2c1989f9c5f3c92"
+        "sha256": "f4803073ed5ff3378d294a109a056c12fa1a62f77e68f089a9d8b618471a396d"
+      },
+      {
+        "bytes": 47910,
+        "path": "evidence/performance-frontier/campaigns/PFP-0-refreeze-2e9c4c5cf/build-identity.json",
+        "sha256": "faadbd65bb69691b1864ab748a83a7d1a94492e03cba8f1620ff05dda2faa8a6"
+      },
+      {
+        "bytes": 1641,
+        "path": "evidence/performance-frontier/campaigns/PFP-0-refreeze-2e9c4c5cf/fixtures/dh-fixtures.json",
+        "sha256": "ad58f88d53ab76b608a6db95e938a6065af4b2f1c2ee287006fdd30a5abed2b2"
+      },
+      {
+        "bytes": 1093,
+        "path": "evidence/performance-frontier/campaigns/PFP-0-refreeze-2e9c4c5cf/preregistration.json",
+        "sha256": "19a97cb76640bc77ca6547a5ad7b7555128860e890ffdf695a0c65f2cc7eb93a"
+      },
+      {
+        "bytes": 701,
+        "path": "evidence/performance-frontier/campaigns/PFP-0-refreeze-2e9c4c5cf/raw/shell-generation.json",
+        "sha256": "a0dbb78ca4a238359417f57f2b66f77a85553e8067c78a846c8012f5df3e5fae"
+      },
+      {
+        "bytes": 84977,
+        "path": "evidence/performance-frontier/campaigns/PFP-0-refreeze-2e9c4c5cf/results.json",
+        "sha256": "e112e0217421985c031c6d4572c0543e9e8764ebc910cdb11bb72a37eebdbfad"
       },
       {
         "bytes": 7107,
@@ -2381,6 +2406,11 @@
         "bytes": 8814,
         "path": "evidence/performance-frontier/campaigns/PFP-1/performance/results.json",
         "sha256": "969ffad3dffccfcae6e1bf35a46f7a54f70959d11fb0ff231bb742cedd9ce3cb"
+      },
+      {
+        "bytes": 14618,
+        "path": "evidence/performance-frontier/claims/PFP-0-refreeze-2e9c4c5cf.claim.json",
+        "sha256": "a52c7b5703e773034fa997799f1ae0b70607b911bb29e08d36e294808b761f80"
       },
       {
         "bytes": 10902,
@@ -2748,18 +2778,38 @@
             "sha256": "ee6c1004e6a21f2cc38e2e6dd9bcef79a6c406da7bd16f5d57765a7a0c3aa49b"
           }
         ]
+      },
+      {
+        "files": 510,
+        "frozenAtCandidate": "38f179275913adbb320eeba698759f8086a95d36",
+        "memberCount": 510,
+        "reason": "an explicit re-freeze replaced the prior population at a new candidate; the prior freeze, member count and record digests are preserved here rather than silently overwritten.",
+        "recordDigests": [
+          {
+            "path": "evidence/a16/INVENTORY.json",
+            "sha256": "1084ed2e39b06cff048ac595d09cfb101c1e9d102be0362e1019daa4085d7f90"
+          },
+          {
+            "path": "evidence/a16/PROFILE.json",
+            "sha256": "8c85f85bf04ae0db8cc0967c325d7f21a1e70ed8c24d25963d830ecf559d1792"
+          },
+          {
+            "path": "evidence/a16/CONTROLS.json",
+            "sha256": "c1d6d0d2e461fff97238ead2af4425bdd19fbe6a3afe8ae3bb633e3463c661ed"
+          }
+        ]
       }
     ]
   },
-  "populationFiles": 510,
+  "populationFiles": 516,
   "populationGlob": [
     "evidence/**/*.json"
   ],
   "schema": "openssl-rs/a16/bundle-inventory/2",
   "sourceIdentity": {
     "asOf": "2026-11-24",
-    "baseCommit": "38f179275913adbb320eeba698759f8086a95d36",
-    "baseCommitShort": "38f179275",
+    "baseCommit": "c047cd6ca49782d939c7790a24c1cc6d50e678c0",
+    "baseCommitShort": "c047cd6ca",
     "delegatedTools": [
       {
         "path": "forensics/tools/harden.py",
