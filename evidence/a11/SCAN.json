@@ -12,7 +12,7 @@
     ],
     "excludedReason": "the records this item emits are excluded so the scan cannot depend on its own bytes",
     "files": 506,
-    "frozenAtCandidate": "26e98445fc031066446a3190e329dca41d0da5d8",
+    "frozenAtCandidate": "1dac1c6e6187fc79e3c9902cfbcc67819a6ba0db",
     "glob": "evidence/*.json",
     "globSemantics": "tracked files matched with fnmatch.fnmatchcase; '*' matches across '/'",
     "growthPolicy": "a later verification re-hashes every member and reports a glob match that is not a member as NEW_SINCE_RECORD, counted separately; growth never changes this count, and a removed or changed member is refused with PH_REFUSED_POPULATION_DRIFT",
@@ -150,17 +150,17 @@
       {
         "bytes": 152186,
         "path": "evidence/a16/CONTROLS.json",
-        "sha256": "3360b74bf6aeba8b9d58ed62897285e497b8ada212144bf24a43be88d3bfedd4"
+        "sha256": "16eefb89393cd7fb02efe29c165c33acc78e2c5af9255dca1fa7d5ef4160a809"
       },
       {
-        "bytes": 98288,
+        "bytes": 100016,
         "path": "evidence/a16/INVENTORY.json",
-        "sha256": "5441db5d22948df435bd39fc2d72de0919c8b6532c0a7ab09668372abe3156b3"
+        "sha256": "d16b92cd3fd944a1613d8515026703622bf096bfc1c6bbda7517cd7ef32f6e60"
       },
       {
         "bytes": 7391,
         "path": "evidence/a16/PROFILE.json",
-        "sha256": "dd1709de5216c7cc3d24acbd7e9f3b7ecf4de62933bf32be755b71b5cbdd0d1c"
+        "sha256": "ad93b34c7aa84a018d3940a793b8cab7ee6fc6cc7739960c95081e38b38a7696"
       },
       {
         "bytes": 7359,
@@ -280,17 +280,17 @@
       {
         "bytes": 13570,
         "path": "evidence/a22/CONTROLS.json",
-        "sha256": "8c9009cc09e56eb1cba1f8f7894ad955c5886091af33b29422ee2767e3f7cb2a"
+        "sha256": "40e0df959e2a08909bcfc5c3411629b6f5c494d507884ab88b957a9b155dbbf2"
       },
       {
         "bytes": 23029,
         "path": "evidence/a22/EXPERIMENTS.json",
-        "sha256": "253ffce418f6fe675cc2d89a2cce9b1b617711294fbc88de8105943a15d5bafe"
+        "sha256": "df72d2e090e76766f6aacc4c2ce0dd9b233305d2929d547b1893e04c4c863ce6"
       },
       {
         "bytes": 99096,
         "path": "evidence/a22/RESULTS.json",
-        "sha256": "976ecee77d13e5ab11ae78426c0cff3835a5de4bc25d2dcbbc2a035ca768ddde"
+        "sha256": "db49003319376aa633aea9898fb9599097ae6f496ec5f6ff661cb547dfba7a1c"
       },
       {
         "bytes": 3158,
@@ -605,7 +605,7 @@
       {
         "bytes": 42921,
         "path": "evidence/b3/CAMPAIGNS.json",
-        "sha256": "544ba83f4d00f7677907020b51ec34521808fff8f6f0a9f3dec775667c7d2b92"
+        "sha256": "763ec8471daa48e72e1058ae410397eb7798064bc8329e838dc80373df877fba"
       },
       {
         "bytes": 7111,
@@ -2762,15 +2762,15 @@
       "code": "PH_OK",
       "path": "evidence/a16/CONTROLS.json",
       "result": "STRICT_OK",
-      "sha256": "3360b74bf6aeba8b9d58ed62897285e497b8ada212144bf24a43be88d3bfedd4",
+      "sha256": "16eefb89393cd7fb02efe29c165c33acc78e2c5af9255dca1fa7d5ef4160a809",
       "type": "object"
     },
     {
-      "bytes": 98288,
+      "bytes": 100016,
       "code": "PH_OK",
       "path": "evidence/a16/INVENTORY.json",
       "result": "STRICT_OK",
-      "sha256": "5441db5d22948df435bd39fc2d72de0919c8b6532c0a7ab09668372abe3156b3",
+      "sha256": "d16b92cd3fd944a1613d8515026703622bf096bfc1c6bbda7517cd7ef32f6e60",
       "type": "object"
     },
     {
@@ -2778,7 +2778,7 @@
       "code": "PH_OK",
       "path": "evidence/a16/PROFILE.json",
       "result": "STRICT_OK",
-      "sha256": "dd1709de5216c7cc3d24acbd7e9f3b7ecf4de62933bf32be755b71b5cbdd0d1c",
+      "sha256": "ad93b34c7aa84a018d3940a793b8cab7ee6fc6cc7739960c95081e38b38a7696",
       "type": "object"
     },
     {
@@ -2970,7 +2970,7 @@
       "code": "PH_OK",
       "path": "evidence/a22/CONTROLS.json",
       "result": "STRICT_OK",
-      "sha256": "8c9009cc09e56eb1cba1f8f7894ad955c5886091af33b29422ee2767e3f7cb2a",
+      "sha256": "40e0df959e2a08909bcfc5c3411629b6f5c494d507884ab88b957a9b155dbbf2",
       "type": "object"
     },
     {
@@ -2978,7 +2978,7 @@
       "code": "PH_OK",
       "path": "evidence/a22/EXPERIMENTS.json",
       "result": "STRICT_OK",
-      "sha256": "253ffce418f6fe675cc2d89a2cce9b1b617711294fbc88de8105943a15d5bafe",
+      "sha256": "df72d2e090e76766f6aacc4c2ce0dd9b233305d2929d547b1893e04c4c863ce6",
       "type": "object"
     },
     {
@@ -2986,7 +2986,7 @@
       "code": "PH_OK",
       "path": "evidence/a22/RESULTS.json",
       "result": "STRICT_OK",
-      "sha256": "976ecee77d13e5ab11ae78426c0cff3835a5de4bc25d2dcbbc2a035ca768ddde",
+      "sha256": "db49003319376aa633aea9898fb9599097ae6f496ec5f6ff661cb547dfba7a1c",
       "type": "object"
     },
     {
@@ -3490,7 +3490,7 @@
       "code": "PH_OK",
       "path": "evidence/b3/CAMPAIGNS.json",
       "result": "STRICT_OK",
-      "sha256": "544ba83f4d00f7677907020b51ec34521808fff8f6f0a9f3dec775667c7d2b92",
+      "sha256": "763ec8471daa48e72e1058ae410397eb7798064bc8329e838dc80373df877fba",
       "type": "object"
     },
     {
@@ -6426,7 +6426,7 @@
   ],
   "schema": "openssl-rs/a11/scan/2",
   "sourceIdentity": {
-    "baseCommit": "26e98445fc031066446a3190e329dca41d0da5d8",
+    "baseCommit": "1dac1c6e6187fc79e3c9902cfbcc67819a6ba0db",
     "tool": {
       "bytes": 54477,
       "path": "forensics/tools/harden.py",

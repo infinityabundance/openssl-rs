@@ -186,7 +186,7 @@ its result says `population: LIVE` and is not comparable to a frozen record.
 
 Every examined record parses `STRICT_OK`; no tracked evidence record is refused
 at this bound. The 175 skipped files are the large records (the population is
-about 2.16 GB, 2,157,329,863 bytes; the largest single file is 15,629,485 bytes).
+about 2.16 GB, 2,157,331,591 bytes; the largest single file is 15,629,485 bytes).
 They are reported
 `SKIPPED_SIZE` with their size and are not parsed, because reading them into a
 pure-Python parser would be the denial-of-service surface this item exists to
@@ -195,14 +195,17 @@ bound; they are streamed in 1 MiB chunks only to bind their digest.
 `STRICT_OK` or `SKIPPED_SIZE`, and the SHA-256 of every member.
 
 The count is the member list's length at the declaration
-(`26e98445fc031066446a3190e329dca41d0da5d8`, C11); it moves only through an explicit
+(`1dac1c6e6187fc79e3c9902cfbcc67819a6ba0db`, C16); it moves only through an explicit
 re-freeze (`build_evidence.py --freeze-population CANDIDATE`), never because
-another item landed. That declaration supersedes `902b4660ab1807f08a4f8f796db79ad4322b90d4`
+another item landed. That declaration supersedes `26e98445fc031066446a3190e329dca41d0da5d8`
 without changing membership or counts: the same 506 members, 331 examined, 331
-`STRICT_OK`, 175 `SKIPPED_SIZE`, 0 refused, and the same 2,157,329,863-byte
-population. Twenty-two members' content had moved in the C8–C11 repairs (the
-A16, A19, A20, A21, A27 and B6 records), so the candidate and those digests were
-re-bound. The `902b4660` declaration had itself superseded
+`STRICT_OK`, 175 `SKIPPED_SIZE`, 0 refused; the byte total moved from
+2,157,329,863 to 2,157,331,591 only because the seven re-bound records changed
+size. Seven members' content had moved since the `26e98445` declaration (the
+three A16 records, the three A22 records and `evidence/b3/CAMPAIGNS.json`), so
+the candidate and those digests were re-bound. The `26e98445` declaration had
+itself superseded `902b4660ab1807f08a4f8f796db79ad4322b90d4` with 22 members
+re-bound after the C8–C11 repairs, and `902b4660` had superseded
 `e94c7fdf127d2f2290f7f7c248924a4d6755add6` with membership unchanged (only five
 members' content moved then). The earlier freezes stay auditable in
 `evidence/a11/RECEIPT.md` §13 and in the git history; the receipt is not edited
@@ -327,8 +330,8 @@ contracts are not changed by this reader.
 ## 10. Reproducing the evidence
 
 ```
-python3 evidence/a11/build_evidence.py --source-commit 26e98445fc031066446a3190e329dca41d0da5d8
-python3 evidence/a11/build_evidence.py --freeze-population 26e98445fc031066446a3190e329dca41d0da5d8
+python3 evidence/a11/build_evidence.py --source-commit 1dac1c6e6187fc79e3c9902cfbcc67819a6ba0db
+python3 evidence/a11/build_evidence.py --freeze-population 1dac1c6e6187fc79e3c9902cfbcc67819a6ba0db
 python3 forensics/tools/harden.py scan --frozen evidence/a11/SCAN.json
 python3 forensics/tools/harden.py scan 'evidence/*.json'
 python3 forensics/tools/harden.py parse evidence/a11/CONTROLS.json

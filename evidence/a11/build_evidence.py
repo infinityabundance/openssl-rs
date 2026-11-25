@@ -37,7 +37,7 @@ sys.path.insert(0, str(TOOLS))
 
 import harden as h  # noqa: E402
 
-BASE_COMMIT = "26e98445fc031066446a3190e329dca41d0da5d8"
+BASE_COMMIT = "1dac1c6e6187fc79e3c9902cfbcc67819a6ba0db"
 EVIDENCE = REPO_ROOT / "evidence" / "a11"
 TOOL_RELATIVE = "forensics/tools/harden.py"
 
