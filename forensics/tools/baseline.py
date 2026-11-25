@@ -1518,16 +1518,20 @@ def read_haz15_members(
     return tuple(members)
 
 
-def read_haz16_members(path: Path) -> tuple[Member, ...]:
-    """The 79 classified FFI mutation entries, keyed by file and exported entry."""
+def read_haz16_members(path: Path, *, uri: str) -> tuple[Member, ...]:
+    """The 79 classified FFI mutation entries, keyed by file and exported entry.
+
+    ``uri`` is the artefact binding the exact identity names. It is a
+    repository-relative path, not an absolute checkout path: the exact identity
+    is a property of the record's bytes, so it must not move when the same tree
+    is checked out at a different mount point.
+    """
     fi = _finding_identity()
     document = _read_json(path)
     sha256 = digest_file(path)
     if sha256 is None:
         raise Refusal(R_NO_BASELINE, f"{path}: the record digest is unavailable")
-    binding = fi.Binding(
-        uri=Path(path).as_posix(), digest=sha256, digest_scope="record"
-    )
+    binding = fi.Binding(uri=uri, digest=sha256, digest_scope="record")
     members: list[Member] = []
     for index, row in enumerate(document.get("rows", [])):
         members.append(
@@ -1639,7 +1643,9 @@ def build_baselines(repo_root: Path) -> tuple[list[Baseline], list[dict[str, Any
 
     haz16_path = repo_root / "evidence" / "haz-16" / "CLASSIFICATION.json"
     haz16_document = _read_json(haz16_path)
-    haz16_members = read_haz16_members(haz16_path)
+    haz16_members = read_haz16_members(
+        haz16_path, uri="evidence/haz-16/CLASSIFICATION.json"
+    )
 
     t4_path = repo_root / "evidence" / "etp-t4" / "SAFETY-SITES.json"
     t4_document = _read_json(t4_path)

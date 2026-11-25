@@ -19,7 +19,7 @@
    "target": ".github/workflows/ci.yml"
   },
   {
-   "appliesToWorkingTree": true,
+   "appliesToWorkingTree": false,
    "checkerOutput": "docs/RELEASE_GATES.md: ET_GATE_ITEM_DRIFT the gate table lists ['gate-1', 'gate-10', 'gate-2', 'gate-2b', 'gate-3', 'gate-4', 'gate-5', 'gate-6', 'gate-7', 'gate-8', 'gate-9'] but the record registers ['gate-1', 'gate-2', 'gate-2b', 'gate-3', 'gate-4', 'gate-5', 'gate-6']",
    "id": "release-gates-section10",
    "path": "forensics/etp8/release-gates-section10-attempt.diff",
