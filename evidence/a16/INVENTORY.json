@@ -17,7 +17,7 @@
     "basis": "the explicit member list below, declared at the candidate; not a live glob",
     "binding": "FROZEN",
     "files": 0,
-    "frozenAtCandidate": "cd371ec9624d0633d21ce8944d14923baf87b14d",
+    "frozenAtCandidate": "2dc0b37da07c661597d28199f550a38b4e1a03c7",
     "glob": [
       "evidence/*.pem",
       "evidence/*.crt",
@@ -43,8 +43,8 @@
       "reason": "mutual digest binding: A11's scan population is every tracked evidence JSON and therefore contains this item's records, so this population cannot also contain A11's three records without a digest cycle. A11 absorbs this item's records; these three are declared excluded here and are reported NEW_SINCE_RECORD by growth_report, never absorbed into the frozen count.",
       "result": "NEW_SINCE_RECORD"
     },
-    "files": 503,
-    "frozenAtCandidate": "cd371ec9624d0633d21ce8944d14923baf87b14d",
+    "files": 510,
+    "frozenAtCandidate": "2dc0b37da07c661597d28199f550a38b4e1a03c7",
     "glob": "evidence/*.json",
     "globSemantics": "tracked files matched with fnmatch.fnmatchcase; '*' matches across '/', so this covers evidence/**/*.json",
     "growthPolicy": "a verification re-hashes every member and reports a glob match that is not a member as NEW_SINCE_RECORD, counted separately; growth never changes this count, and a removed or changed member is refused with PH_REFUSED_POPULATION_DRIFT",
@@ -235,22 +235,22 @@
       {
         "bytes": 6408,
         "path": "evidence/a19/CONTROLS.json",
-        "sha256": "039666052b4b8d0591f026a2836df22384d35b2bbbce71e3efb0f7fec6120f79"
+        "sha256": "3b24f73b267f2e726e40b34e8edc4447a806ac63c8a239bdbdbb7e1d96cf596c"
       },
       {
         "bytes": 807886,
         "path": "evidence/a19/EVENTS.json",
-        "sha256": "7df3ca2774ad17b823b995c6ae5ea4b79673f55b1ea4f8b73f3fe08fe305ac63"
+        "sha256": "d779168c8786ec9bd735d66a5efc804ddd0f2104937d0fd55256c357c52e479e"
       },
       {
         "bytes": 41948,
         "path": "evidence/a19/PROPAGATION.json",
-        "sha256": "892be6ef2d394e7724f29563cb993778d844f90349c6325a0f195279e5003278"
+        "sha256": "bc476f73e4d6ca9b3bd97b430c59c9dc60be973b43ed9db234060f0402de4dab"
       },
       {
         "bytes": 14269,
         "path": "evidence/a19/STATUS.json",
-        "sha256": "6c732e50b8b7cdda21477a761c1169c93280c5715c2b0015fe37cea620957a97"
+        "sha256": "033880573c9529e6ff281fe5c033a720cdb44e0c4c9de48292e4a7eb327731b9"
       },
       {
         "bytes": 49241,
@@ -270,12 +270,12 @@
       {
         "bytes": 8032,
         "path": "evidence/a20/DECISION.json",
-        "sha256": "f4aebf28f8e79f0a50704df4f39e9332d670433055d007936c4588af91b3044e"
+        "sha256": "af85267933550ffd0886f8c9c641db308a4a1d1cd1bf1dfb3cfe54ea34720e95"
       },
       {
         "bytes": 699,
         "path": "evidence/a20/POLICY-PIN.json",
-        "sha256": "a4e6e5268080ec0603a48ca777b1a5dd1261540d5a270e8d6caa72ca0fd3d58e"
+        "sha256": "54bd7da35a80b5d6ddd821b12731d362fbe779a4067fd6b19cc57e08b73b1c51"
       },
       {
         "bytes": 6868,
@@ -290,17 +290,17 @@
       {
         "bytes": 4652,
         "path": "evidence/a21/RECONSTRUCTION.json",
-        "sha256": "9b74d0bf43a8a7eeb6d4f05f587f1d1613a7fe0f2647e0a909f267760f424197"
+        "sha256": "78e972152d849658dfcea9fbef8bb35c68a054213cb55ad0c817954746a67bbf"
       },
       {
         "bytes": 4914,
         "path": "evidence/a21/SUMMARY.envelope.json",
-        "sha256": "859adf379105794b801b739f37af669f13254872b3799169659057b0c48516b7"
+        "sha256": "8e3793abdf520ad88af92c32a7c4a2514ba2d367e44ffc4d4a4f87eac8c722c0"
       },
       {
         "bytes": 3568,
         "path": "evidence/a21/SUMMARY.json",
-        "sha256": "e1d3c8a9bb490901ca85533466d73437081fbef9b7aa2194ee2f80c8229b068f"
+        "sha256": "2eeafc3582e7d5f14fd5bc636b924fa89a331ad0761e65028ad5a42c6b1bbba3"
       },
       {
         "bytes": 13570,
@@ -430,17 +430,17 @@
       {
         "bytes": 4720,
         "path": "evidence/a27/CONTROLS.json",
-        "sha256": "cb16d928b02be4c07de8b714f9198674001797a07a4c970c0adb4d8ac8e24f2e"
+        "sha256": "8690d1fe3cc47c2149a4051e19b3347e7ed38fd5882dc055a5394d9a3fe1f993"
       },
       {
         "bytes": 37935,
         "path": "evidence/a27/SLICE.json",
-        "sha256": "9494842c782d766c4c0c91039dc6553aa0c73efe02a323a7d8c65d20d91aeb5e"
+        "sha256": "68b7b6cdd560721a8555bc6b700c6d689cb91b12a0f48cc678b68acf2f1aa608"
       },
       {
         "bytes": 3526,
         "path": "evidence/a27/STOPS.json",
-        "sha256": "cf65e0f55ed53c7b1ad0f3f5f65401fbe86e34448f24c5d123735031088e465a"
+        "sha256": "b3bcafcbeea169ad35e96d3009df725e7956f57ff41b1076f0cd8ba72524c865"
       },
       {
         "bytes": 49108,
@@ -710,12 +710,12 @@
       {
         "bytes": 6182,
         "path": "evidence/b6/ARCHIVE.json",
-        "sha256": "35f34ddfd3a26c075946774b436253492c0981650271f020d7e3af7a8405eee3"
+        "sha256": "965ae5b099a7cd5c97a2aec57c9f9e80aca3fe6c989c4bf69d1ed9efee6197ef"
       },
       {
         "bytes": 2963,
         "path": "evidence/b6/ARCHIVE/MANIFEST.json",
-        "sha256": "93b7bd4d0e76d484c47327d3daadd5d0a9d7a0ebd1e02bd741494f8843c9072f"
+        "sha256": "f825bbea618d3a3873ace30815717b9c8f5394ec065b57f345680d0c1674e115"
       },
       {
         "bytes": 461,
@@ -740,12 +740,12 @@
       {
         "bytes": 5595,
         "path": "evidence/b6/ARCHIVE/members/state/current-state-21.json",
-        "sha256": "187dd9bcee6570d1fbf75f4c8f7d53c1a6eb11177bd67bfb37b90c15341920ab"
+        "sha256": "38caea3607f9151c7f533fdf039bb5b0968929c05c764681753e09fb264bc8ee"
       },
       {
         "bytes": 5829,
         "path": "evidence/b6/ARCHIVE/members/state/current-state-22.json",
-        "sha256": "dfb56e6dd992d6e0ac08fc8e821b1cb9c620c3e4875e389f707d4c8153a054da"
+        "sha256": "3d19787c1cdef88d293c6accb1ff0c5ea38d80bfc843d9fa3b267a6c5d264d21"
       },
       {
         "bytes": 714,
@@ -760,17 +760,17 @@
       {
         "bytes": 28421,
         "path": "evidence/b6/CONTROLS.json",
-        "sha256": "de074a99efda4ab42db9572cb391d8ebcac0c608fdfac420e76bafb06d837300"
+        "sha256": "153af2942fb78e5f70c1653c813f3f8962d3da45feea76fd6ece34dbcadb1177"
       },
       {
         "bytes": 5829,
         "path": "evidence/b6/CURRENT-STATE.json",
-        "sha256": "dfb56e6dd992d6e0ac08fc8e821b1cb9c620c3e4875e389f707d4c8153a054da"
+        "sha256": "3d19787c1cdef88d293c6accb1ff0c5ea38d80bfc843d9fa3b267a6c5d264d21"
       },
       {
         "bytes": 2954,
         "path": "evidence/b6/DEMONSTRATION.json",
-        "sha256": "cfce2b8e96badabab1870c8b30cf3dc542e84713af9ab65b22a0d985fbc2a6f7"
+        "sha256": "3554db0fb06ea87536d1c660018cbcf6bc211c7d5246cedf619f4814f0f9ec61"
       },
       {
         "bytes": 4241,
@@ -2088,6 +2088,21 @@
         "sha256": "d41a740f57719ab613b6a7f43cc8f566ab132ff599bb46b6c4860243bb76306d"
       },
       {
+        "bytes": 22104,
+        "path": "evidence/frc/FRONTIER-GAPS.json",
+        "sha256": "09504b236d02c83f7f37df968ab07d892bfeeecc95fe216f2b1b4d96c78ca737"
+      },
+      {
+        "bytes": 14177,
+        "path": "evidence/frc/SPECIFICATION-HIERARCHY.json",
+        "sha256": "d081562de0d8596ef6cc8e08f846b13f9b70148d03c2be78b6bcf4b1cd0ae437"
+      },
+      {
+        "bytes": 41965,
+        "path": "evidence/frc8/DO178C-MATRIX.json",
+        "sha256": "fa20aaa146a38a34a633140414e6a767bd35df95d5c71f18b040c4b9f4b59309"
+      },
+      {
         "bytes": 16320,
         "path": "evidence/haz-15/observables.json",
         "sha256": "e035ccc4381abf5c3838342ff69b95f22facdda3be1e1ccb72742772ed994b6b"
@@ -2313,6 +2328,11 @@
         "sha256": "4a14da856982c261be0a1749cf8e738b2f149bf1dbc8255e8086d3a2d8171836"
       },
       {
+        "bytes": 7436,
+        "path": "evidence/performance-frontier/admission/ARMS.json",
+        "sha256": "18d29f8ebaaaa5db76372e79f4103c506abaa8d814184404e2c1989f9c5f3c92"
+      },
+      {
         "bytes": 7107,
         "path": "evidence/performance-frontier/campaigns/PFP-0/build-identity.json",
         "sha256": "e8f614debfc88095c2e30b7a7ff5cc2c76376676b5b33b018669b0342a3e96f4"
@@ -2361,6 +2381,21 @@
         "bytes": 8814,
         "path": "evidence/performance-frontier/campaigns/PFP-1/performance/results.json",
         "sha256": "969ffad3dffccfcae6e1bf35a46f7a54f70959d11fb0ff231bb742cedd9ce3cb"
+      },
+      {
+        "bytes": 10902,
+        "path": "evidence/performance-frontier/claims/PFP-0.claim.json",
+        "sha256": "cf368d78da1a3965fce32e64a110c6964f1368ba6ead24d59eed92ab144ffc86"
+      },
+      {
+        "bytes": 9350,
+        "path": "evidence/performance-frontier/claims/PFP-1.claim.json",
+        "sha256": "a1ec33a5bf97badf71a2019f73c7fc33a8fbd15d30569827b458b71895310357"
+      },
+      {
+        "bytes": 26373,
+        "path": "evidence/performance-frontier/claims/PFP-1.raw-manifest.json",
+        "sha256": "12229dee8ff447adc3e2de404ef4ea8b260f9136a948696a4ae21ac501e3258e"
       },
       {
         "bytes": 11228163,
@@ -2673,18 +2708,38 @@
             "sha256": "992e89c16127aa2d07efe060cc41a5d8363734eccf8f4ac6282b33d17eb59830"
           }
         ]
+      },
+      {
+        "files": 503,
+        "frozenAtCandidate": "cd371ec9624d0633d21ce8944d14923baf87b14d",
+        "memberCount": 503,
+        "reason": "an explicit re-freeze replaced the prior population at a new candidate; the prior freeze, member count and record digests are preserved here rather than silently overwritten.",
+        "recordDigests": [
+          {
+            "path": "evidence/a16/INVENTORY.json",
+            "sha256": "d16b92cd3fd944a1613d8515026703622bf096bfc1c6bbda7517cd7ef32f6e60"
+          },
+          {
+            "path": "evidence/a16/PROFILE.json",
+            "sha256": "ad93b34c7aa84a018d3940a793b8cab7ee6fc6cc7739960c95081e38b38a7696"
+          },
+          {
+            "path": "evidence/a16/CONTROLS.json",
+            "sha256": "16eefb89393cd7fb02efe29c165c33acc78e2c5af9255dca1fa7d5ef4160a809"
+          }
+        ]
       }
     ]
   },
-  "populationFiles": 503,
+  "populationFiles": 510,
   "populationGlob": [
     "evidence/**/*.json"
   ],
   "schema": "openssl-rs/a16/bundle-inventory/2",
   "sourceIdentity": {
     "asOf": "2026-11-24",
-    "baseCommit": "cd371ec9624d0633d21ce8944d14923baf87b14d",
-    "baseCommitShort": "cd371ec96",
+    "baseCommit": "2dc0b37da07c661597d28199f550a38b4e1a03c7",
+    "baseCommitShort": "2dc0b37da",
     "delegatedTools": [
       {
         "path": "forensics/tools/harden.py",

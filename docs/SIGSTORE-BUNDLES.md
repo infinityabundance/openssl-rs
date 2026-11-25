@@ -1,7 +1,7 @@
 # Sigstore bundles — A16
 
 Status: normative. Delivered by item A16 of `docs/ETP-TODO.md`, re-frozen at
-candidate `cd371ec9624d0633d21ce8944d14923baf87b14d` (`staging`). The implementation is
+candidate `2dc0b37da07c661597d28199f550a38b4e1a03c7` (`staging`). The implementation is
 `forensics/tools/sigstore_bundle.py`; the records are
 `evidence/a16/INVENTORY.json`, `evidence/a16/PROFILE.json` and
 `evidence/a16/CONTROLS.json`; the deterministic producer is
@@ -214,11 +214,14 @@ The population is a **frozen member list**, not a live glob:
 existed at the declared candidate, each bound to its `sha256` read from that
 candidate's blobs (never the working tree), and `populationFiles` is the list's
 length. The record is frozen at
-`cd371ec9624d0633d21ce8944d14923baf87b14d` (**503** members). This item's three own
+`2dc0b37da07c661597d28199f550a38b4e1a03c7` (**510** members; the seven
+`evidence/frc*` and `evidence/performance-frontier` JSON records added after
+C16 are members at this candidate). This item's three own
 records are not members: the record declares them separately as
-`identityExcluded`, outside the declared cut. Five prior freezes are preserved
+`identityExcluded`, outside the declared cut. Six prior freezes are preserved
 inside it with their record digests, rather than overwritten: the immediately
-preceding freeze at `2476a6ceafb4ad7cc9c95e44d9132f5052864a5f` (503 members),
+preceding freeze at `cd371ec9624d0633d21ce8944d14923baf87b14d` (503 members),
+then the freeze at `2476a6ceafb4ad7cc9c95e44d9132f5052864a5f` (503 members),
 then the freeze at `05b88afac77bc17886f4db8b2e41606a5abd291b` (503 members),
 then the freeze at `9193603682cf77aab52247155ec8650963bb3af3` (503 members),
 then the freeze at `e03653ddb913ab84a573800776901b6164487c74` (503 members,
