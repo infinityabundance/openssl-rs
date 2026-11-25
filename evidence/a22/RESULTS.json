@@ -1,6 +1,6 @@
 {
-  "baseCommit": "e4029e0d5",
-  "baseCommitLong": "e4029e0d5c4300bb097e1241c0bab34b069c9da6",
+  "baseCommit": "11f6a06f8",
+  "baseCommitLong": "11f6a06f831451c6a9103296d263d755985e67bd",
   "canaryRule": "strict detector on the accepted input must be DEFECT, the weak detector on the same input must be QUALIFIED, and the strict detector on the detection reference must be QUALIFIED",
   "detail": "measured",
   "experiments": [
@@ -1627,7 +1627,7 @@
       "observations": [
         {
           "case": "default-allow",
-          "command": "python3 <repo>/forensics/tools/policy_engine.py evaluate --policy <tmp>/aq-policy-default-allow.json --pin <tmp>/aq-pin-default-allow.json --candidate 58aeb2ee01000638cc545e4cad7c9ec3b5ff9672",
+          "command": "python3 <repo>/forensics/tools/policy_engine.py evaluate --policy <tmp>/aq-policy-default-allow.json --pin <tmp>/aq-pin-default-allow.json --candidate f34e429f13aa3cc1566e1ecebc185a466765f321",
           "exit": 1,
           "expected": {
             "code": "PE_REFUSED_DEFAULT_ALLOW",
@@ -1650,7 +1650,7 @@
               "score_policy"
             ],
             "producedBy": "forensics/tools/adversarial_qualification.py",
-            "sha256": "8c999f39f9cd0c6f28f05498628c0d3442bfc7c75eaf763f19763d4762361ee2"
+            "sha256": "ffbbc5522cd309ce5643877b937559c444b7d83220c33fa2dd66982b418f3706"
           },
           "kind": "rejected",
           "output": "policy: id=release-policy version=1 digest=c13e701394e79d36e236d42ab16add9714768fc905b7a71796c916d1b234c9cf default=allow scores=false pin=<pin-digest>\ndecision: DENY codes=PE_REFUSED_DEFAULT_ALLOW obligations=8 required=8 met=3 unmet=5 unknown=0 notApplicable=0\n  obligation: id=A05.populations-admitted state=MET required=true record=evidence/a5/ADMISSION.json#/populations observed={\"of\":[{\"allowed\":[\"ABSENT\",\"AGGREGATE_ONLY\",\"COMPLETE\",\"DEFERRED\",\"EMPTY\",\"SAMPLED\",\"TRUNCATED_BOUNDED\",\"UNKNOWN\"],\"examples\":[],\"members\":16,\"unreadable\":0,\"violations\":0},{\"examples\":[],\"matches\":0,\"members\":16,\"unevaluable\":0,\"vacuous\":false}]} codes=NONE\n  obligation: id=A06.suppression-member-identities state=UNMET required=true record=evidence/a6/SUPPRESSIONS.json#/records observed={\"examples\":[\"t3-known-nonconformance-agents-md\",\"t4-suppressions\",\"t4-test-modules\"],\"matches\":8,\"members\":11,\"unevaluable\":0,\"vacuous\":false} codes=NONE\n  obligation: id=A07.delta-resolution-conditions state=MET required=true record=evidence/a7/DELTA.json#/deltas observed={\"of\":[{\"examples\":[],\"matches\":0,\"members\":4,\"unevaluable\":0,\"vacuous\":false},{\"examples\":[],\"matches\":0,\"members\":4,\"unevaluable\":0,\"vacuous\":false}]} codes=NONE\n  obligation: id=A12.independent-attestation state=UNMET required=true record=evidence/a12/VERIFICATION.json#/verifications observed={\"atLeast\":1,\"count\":0,\"examples\":[],\"members\":4,\"unevaluable\":0} codes=NONE\n  obligation: id=A14.release-authorised state=UNMET required=true record=evidence/a14/AUTHORISATION.json#/actions/release observed={\"expected\":\"AUTHORISED\",\"value\":\"REFUSED\"} codes=NONE\n  obligation: id=A15.release-threshold-met state=UNMET required=true record=evidence/a15/EVALUATION.json#/evaluations/release observed={\"expected\":\"MET\",\"value\":\"UNREACHABLE\"} codes=NONE\n  obligation: id=A17.forward-freeze-closed state=UNMET required=true record=evidence/a17/STATUS.json#/forwardFreeze observed={\"of\":[{\"expected\":\"CLOSED\",\"value\":\"OPEN\"},{\"expected\":true,\"value\":false}]} codes=NONE\n  obligation: id=A19.retraction-propagated state=MET required=true record=evidence/a19/PROPAGATION.json#/events observed={\"examples\":[],\"matches\":0,\"members\":11,\"unevaluable\":0,\"vacuous\":false} codes=NONE\n  refusal: code=PE_REFUSED_DEFAULT_ALLOW detail=policy: default is 'allow'; a policy must deny by default\n  unmet: A06.suppression-member-identities,A12.independent-attestation,A14.release-authorised,A15.release-threshold-met,A17.forward-freeze-closed\n  unknown: NONE\n  notApplicable: NONE\n",
@@ -1659,7 +1659,7 @@
         },
         {
           "case": "policy-with-a-score",
-          "command": "python3 <repo>/forensics/tools/policy_engine.py evaluate --policy <tmp>/aq-policy-scores.json --pin <tmp>/aq-pin-scores.json --candidate 58aeb2ee01000638cc545e4cad7c9ec3b5ff9672",
+          "command": "python3 <repo>/forensics/tools/policy_engine.py evaluate --policy <tmp>/aq-policy-scores.json --pin <tmp>/aq-pin-scores.json --candidate f34e429f13aa3cc1566e1ecebc185a466765f321",
           "exit": 1,
           "expected": {
             "code": "PE_REFUSED_SCORE",
@@ -1682,7 +1682,7 @@
               "score_policy"
             ],
             "producedBy": "forensics/tools/adversarial_qualification.py",
-            "sha256": "8c999f39f9cd0c6f28f05498628c0d3442bfc7c75eaf763f19763d4762361ee2"
+            "sha256": "ffbbc5522cd309ce5643877b937559c444b7d83220c33fa2dd66982b418f3706"
           },
           "kind": "rejected",
           "output": "policy: id=release-policy version=1 digest=3075e76ebe627fd208da6d9555a4591ce89b089cb27ad1692b56dc991f8d8296 default=deny scores=true pin=<pin-digest>\ndecision: DENY codes=PE_REFUSED_SCORE obligations=8 required=8 met=3 unmet=5 unknown=0 notApplicable=0\n  obligation: id=A05.populations-admitted state=MET required=true record=evidence/a5/ADMISSION.json#/populations observed={\"of\":[{\"allowed\":[\"ABSENT\",\"AGGREGATE_ONLY\",\"COMPLETE\",\"DEFERRED\",\"EMPTY\",\"SAMPLED\",\"TRUNCATED_BOUNDED\",\"UNKNOWN\"],\"examples\":[],\"members\":16,\"unreadable\":0,\"violations\":0},{\"examples\":[],\"matches\":0,\"members\":16,\"unevaluable\":0,\"vacuous\":false}]} codes=NONE\n  obligation: id=A06.suppression-member-identities state=UNMET required=true record=evidence/a6/SUPPRESSIONS.json#/records observed={\"examples\":[\"t3-known-nonconformance-agents-md\",\"t4-suppressions\",\"t4-test-modules\"],\"matches\":8,\"members\":11,\"unevaluable\":0,\"vacuous\":false} codes=NONE\n  obligation: id=A07.delta-resolution-conditions state=MET required=true record=evidence/a7/DELTA.json#/deltas observed={\"of\":[{\"examples\":[],\"matches\":0,\"members\":4,\"unevaluable\":0,\"vacuous\":false},{\"examples\":[],\"matches\":0,\"members\":4,\"unevaluable\":0,\"vacuous\":false}]} codes=NONE\n  obligation: id=A12.independent-attestation state=UNMET required=true record=evidence/a12/VERIFICATION.json#/verifications observed={\"atLeast\":1,\"count\":0,\"examples\":[],\"members\":4,\"unevaluable\":0} codes=NONE\n  obligation: id=A14.release-authorised state=UNMET required=true record=evidence/a14/AUTHORISATION.json#/actions/release observed={\"expected\":\"AUTHORISED\",\"value\":\"REFUSED\"} codes=NONE\n  obligation: id=A15.release-threshold-met state=UNMET required=true record=evidence/a15/EVALUATION.json#/evaluations/release observed={\"expected\":\"MET\",\"value\":\"UNREACHABLE\"} codes=NONE\n  obligation: id=A17.forward-freeze-closed state=UNMET required=true record=evidence/a17/STATUS.json#/forwardFreeze observed={\"of\":[{\"expected\":\"CLOSED\",\"value\":\"OPEN\"},{\"expected\":true,\"value\":false}]} codes=NONE\n  obligation: id=A19.retraction-propagated state=MET required=true record=evidence/a19/PROPAGATION.json#/events observed={\"examples\":[],\"matches\":0,\"members\":11,\"unevaluable\":0,\"vacuous\":false} codes=NONE\n  refusal: code=PE_REFUSED_SCORE detail=policy: scores is True, not false\n  unmet: A06.suppression-member-identities,A12.independent-attestation,A14.release-authorised,A15.release-threshold-met,A17.forward-freeze-closed\n  unknown: NONE\n  notApplicable: NONE\n",
@@ -1714,7 +1714,7 @@
               "score_policy"
             ],
             "producedBy": "forensics/tools/adversarial_qualification.py",
-            "sha256": "8c999f39f9cd0c6f28f05498628c0d3442bfc7c75eaf763f19763d4762361ee2"
+            "sha256": "ffbbc5522cd309ce5643877b937559c444b7d83220c33fa2dd66982b418f3706"
           },
           "kind": "rejected",
           "output": "omission: code=OM_REFUSED_PASS_WITH_MISSING detail=the summary passes while required member(s) ['absent'] are MISSING\n",
@@ -1746,7 +1746,7 @@
               "score_policy"
             ],
             "producedBy": "forensics/tools/adversarial_qualification.py",
-            "sha256": "8c999f39f9cd0c6f28f05498628c0d3442bfc7c75eaf763f19763d4762361ee2"
+            "sha256": "ffbbc5522cd309ce5643877b937559c444b7d83220c33fa2dd66982b418f3706"
           },
           "kind": "rejected",
           "output": "omission: code=OM_REFUSED_RECONCILIATION_MUTATED detail=the signed bytes hash to 02ff534652d359a14a79d3c233c62d69cbc91d8d612953a1e165208a300d344f, but the manifest canonicalises to 8dd59ab8dfe07b3d186dc4ed6fe7f432b2ce4bc955366c0033478df6fbdd2473; the signature is over different bytes\n",
@@ -1778,7 +1778,7 @@
               "score_policy"
             ],
             "producedBy": "forensics/tools/adversarial_qualification.py",
-            "sha256": "8c999f39f9cd0c6f28f05498628c0d3442bfc7c75eaf763f19763d4762361ee2"
+            "sha256": "ffbbc5522cd309ce5643877b937559c444b7d83220c33fa2dd66982b418f3706"
           },
           "kind": "accepted",
           "output": "omission: code=OM_VERIFIED keyid=test-only:hmac-sha256:8e10a5a15d233d54 expected=2 produced=1 missing=1 unreadable=0 digestMismatch=0 unexpected=0 pass=false\n",
@@ -1787,7 +1787,7 @@
         },
         {
           "case": "live-policy-accepted",
-          "command": "python3 <repo>/forensics/tools/policy_engine.py evaluate --candidate 58aeb2ee01000638cc545e4cad7c9ec3b5ff9672",
+          "command": "python3 <repo>/forensics/tools/policy_engine.py evaluate --candidate f34e429f13aa3cc1566e1ecebc185a466765f321",
           "exit": 1,
           "expected": {
             "code": null,
@@ -1810,7 +1810,7 @@
               "score_policy"
             ],
             "producedBy": "forensics/tools/adversarial_qualification.py",
-            "sha256": "8c999f39f9cd0c6f28f05498628c0d3442bfc7c75eaf763f19763d4762361ee2"
+            "sha256": "ffbbc5522cd309ce5643877b937559c444b7d83220c33fa2dd66982b418f3706"
           },
           "kind": "accepted",
           "output": "policy: id=release-policy version=1 digest=a3fcce8f195216c714f7d7cca228ee4cbca001d986b8104b6d168ee9152afacf default=deny scores=false pin=<pin-digest>\ndecision: DENY codes=NONE obligations=8 required=8 met=3 unmet=5 unknown=0 notApplicable=0\n  obligation: id=A05.populations-admitted state=MET required=true record=evidence/a5/ADMISSION.json#/populations observed={\"of\":[{\"allowed\":[\"ABSENT\",\"AGGREGATE_ONLY\",\"COMPLETE\",\"DEFERRED\",\"EMPTY\",\"SAMPLED\",\"TRUNCATED_BOUNDED\",\"UNKNOWN\"],\"examples\":[],\"members\":16,\"unreadable\":0,\"violations\":0},{\"examples\":[],\"matches\":0,\"members\":16,\"unevaluable\":0,\"vacuous\":false}]} codes=NONE\n  obligation: id=A06.suppression-member-identities state=UNMET required=true record=evidence/a6/SUPPRESSIONS.json#/records observed={\"examples\":[\"t3-known-nonconformance-agents-md\",\"t4-suppressions\",\"t4-test-modules\"],\"matches\":8,\"members\":11,\"unevaluable\":0,\"vacuous\":false} codes=NONE\n  obligation: id=A07.delta-resolution-conditions state=MET required=true record=evidence/a7/DELTA.json#/deltas observed={\"of\":[{\"examples\":[],\"matches\":0,\"members\":4,\"unevaluable\":0,\"vacuous\":false},{\"examples\":[],\"matches\":0,\"members\":4,\"unevaluable\":0,\"vacuous\":false}]} codes=NONE\n  obligation: id=A12.independent-attestation state=UNMET required=true record=evidence/a12/VERIFICATION.json#/verifications observed={\"atLeast\":1,\"count\":0,\"examples\":[],\"members\":4,\"unevaluable\":0} codes=NONE\n  obligation: id=A14.release-authorised state=UNMET required=true record=evidence/a14/AUTHORISATION.json#/actions/release observed={\"expected\":\"AUTHORISED\",\"value\":\"REFUSED\"} codes=NONE\n  obligation: id=A15.release-threshold-met state=UNMET required=true record=evidence/a15/EVALUATION.json#/evaluations/release observed={\"expected\":\"MET\",\"value\":\"UNREACHABLE\"} codes=NONE\n  obligation: id=A17.forward-freeze-closed state=UNMET required=true record=evidence/a17/STATUS.json#/forwardFreeze observed={\"of\":[{\"expected\":\"CLOSED\",\"value\":\"OPEN\"},{\"expected\":true,\"value\":false}]} codes=NONE\n  obligation: id=A19.retraction-propagated state=MET required=true record=evidence/a19/PROPAGATION.json#/events observed={\"examples\":[],\"matches\":0,\"members\":11,\"unevaluable\":0,\"vacuous\":false} codes=NONE\n  unmet: A06.suppression-member-identities,A12.independent-attestation,A14.release-authorised,A15.release-threshold-met,A17.forward-freeze-closed\n  unknown: NONE\n  notApplicable: NONE\n",
@@ -1847,6 +1847,6 @@
   },
   "tool": {
     "path": "forensics/tools/adversarial_qualification.py",
-    "sha256": "35eff911c472d380d4cb36666cc99903e2c9fcf806e054c51e50fd51175ac52d"
+    "sha256": "dc04389491075be18f846936f88cf6cce50678958ab2d65f5fea44c6b307294f"
   }
 }

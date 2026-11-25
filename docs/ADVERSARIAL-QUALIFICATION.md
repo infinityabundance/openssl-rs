@@ -439,7 +439,9 @@ E5 3/3, E6 2/2, E7 8/8, and the summary is **8 qualified / 0 defect / 0 partial
 / 0 not-run**. The old verdicts (`E5 DEFECT 0/3`, `E6 PARTIAL 1/2`, summary
 6 qualified / 1 defect / 1 partial) and the findings above are kept as the
 historical record; they are not erased. The old and new record digests are in
-`evidence/a22/RECEIPT.md` §11.
+`evidence/a22/RECEIPT.md` §11. The records were later re-measured at
+`11f6a06f8` when A20 re-bound its pinned candidate; the verdicts did not change
+(`evidence/a22/RECEIPT.md` §12).
 
 ---
 
@@ -503,8 +505,9 @@ The matching positive statements are the ones made: E5 and E6 returned success
 on the inputs the item names. That is a defect in those instruments, held open
 in §5, not repaired here.
 
-**After repair (`e4029e0d5`).** On the refreshed candidate the eight experiments
-all refused their inputs, and the records name `e4029e0d5`. What the
+**After repair (`e4029e0d5`), refreshed at `11f6a06f8`.** On the refreshed
+candidate the eight experiments all refused their inputs, and the records name
+`11f6a06f8`. What the
 qualification establishes is restated for that candidate: the eight instruments
 refused these inputs, the harness can tell a refusal from an acceptance, and the
 records are byte-reproducible. It still does not establish soundness, a real
@@ -534,9 +537,9 @@ The following are **not** run and are not claimed:
 * the Rust suite: no Rust source was modified, so no build and no `cargo test`
   is claimed;
 * an independent reviewer or adjudicator;
-* evidence about any candidate other than `e4029e0d5`; the earlier record at
-  `6e64e644c` is preserved by its verdicts and digests in
-  `evidence/a22/RECEIPT.md` §11, not by the refreshed records.
+* evidence about any candidate other than `11f6a06f8`; the earlier records at
+  `e4029e0d5` and `6e64e644c` are preserved by their verdicts and digests in
+  `evidence/a22/RECEIPT.md` §§11–12, not by the refreshed records.
 
 ---
 

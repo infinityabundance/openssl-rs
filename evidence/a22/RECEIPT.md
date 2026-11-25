@@ -459,3 +459,99 @@ All commands ran in the reused `openssl-rs-court` container
   refresh (`AGENTS.md` §15).
 * **The refresh is uncommitted here.** This subagent did not commit or push; the
   orchestrator commits and verifies it.
+
+---
+
+## 12. Correction: refresh for the A20 candidate re-bind (2026-11-25)
+
+This section is appended. Sections 1–11 are the record as produced at
+`6e64e644c` and refreshed at `e4029e0d5`; they are **not** edited.
+
+### 12.1 Why the record was refreshed
+
+A20 re-bound its policy candidate from
+`58aeb2ee01000638cc545e4cad7c9ec3b5ff9672` to
+`f34e429f13aa3cc1566e1ecebc185a466765f321`
+(`evidence/a20/RECEIPT.md`, the `candidate.commit` correction;
+`evidence/a20/POLICY-PIN.json` `candidate.commit`). A22's E8 harness reads that
+field:
+
+```python
+candidate = pin["candidate"]["commit"]
+```
+
+so the E8 policy-engine commands and the digest of the E8 input (which includes
+the normalised pin bytes) embedded the superseded candidate. The record was
+stale on that identity, not on any verdict.
+
+The producer does not read the working-tree `HEAD` and has no candidate flag:
+the A22 measurement candidate is the `BASE_COMMIT` constant, and E8's
+`--candidate` is the A20 pin's `candidate.commit`. Neither is derived from the
+live checkout.
+
+### 12.2 Venue
+
+E1/E2 compile fixtures with `cc`; E3 compiles three shared objects with `cc`;
+their `input.sha256` (and E3's `outputSha256`) therefore depend on the compiler
+and `objdump`. The producer was re-run in the declared venue,
+`openssl-rs-court-tools:1` (`openssl-rs-court`, `HostConfig.Memory` and
+`MemorySwap` both `4294967296`, running), so the recorded compiler/toolchain is
+the court's. The committed E1/E2/E3 bytes were already that venue's output and
+are unchanged; a host `cc` (GCC 16.2.1 here, against the court's Debian GCC
+12.2.0) produces different fixture bytes, so the byte-reproducibility control is
+meaningful only in the declared venue.
+
+### 12.3 What moved (old → new)
+
+| field | old | new |
+|---|---|---|
+| `baseCommit` / `baseCommitLong` | `e4029e0d5` / `e4029e0d5c4300bb097e1241c0bab34b069c9da6` | `11f6a06f8` / `11f6a06f831451c6a9103296d263d755985e67bd` |
+| E8 embedded candidate (3 commands; 6 `input.sha256`) | `58aeb2ee01000638cc545e4cad7c9ec3b5ff9672` | `f34e429f13aa3cc1566e1ecebc185a466765f321` |
+| `adversarial_qualification.py` `tool.sha256` | `35eff911c472d380d4cb36666cc99903e2c9fcf806e054c51e50fd51175ac52d` | `dc04389491075be18f846936f88cf6cce50678958ab2d65f5fea44c6b307294f` |
+
+Record digests (SHA-256, full):
+
+| file | old (`e4029e0d5`) | new (`11f6a06f8`) |
+|---|---|---|
+| `EXPERIMENTS.json` | `253ffce418f6fe675cc2d89a2cce9b1b617711294fbc88de8105943a15d5bafe` | `df72d2e090e76766f6aacc4c2ce0dd9b233305d2929d547b1893e04c4c863ce6` |
+| `RESULTS.json` | `976ecee77d13e5ab11ae78426c0cff3835a5de4bc25d2dcbbc2a035ca768ddde` | `db49003319376aa633aea9898fb9599097ae6f496ec5f6ff661cb547dfba7a1c` |
+| `CONTROLS.json` | `8c9009cc09e56eb1cba1f8f7894ad955c5886091af33b29422ee2767e3f7cb2a` | `40e0df959e2a08909bcfc5c3411629b6f5c494d507884ab88b957a9b155dbbf2` |
+
+### 12.4 Outcome is unchanged
+
+E1–E8 remain `QUALIFIED`: summary **8 qualified / 0 defect / 0 partial /
+0 not-run**, `allQualified=true`, producer exit **0**. No verdict, exit status,
+or `outputSha256` changed; the only observation changes are the E8 input digest
+and its three command strings. `EXPERIMENTS.json` and `CONTROLS.json` moved only
+in `baseCommit`, `baseCommitLong` and `tool.sha256`.
+
+### 12.5 What was preserved
+
+* Sections 1–11 (the `6e64e644c` record and the `e4029e0d5` refresh) are
+  unchanged.
+* The old record digests, the old `baseCommit`, and the old embedded candidate
+  are recorded above, not erased.
+* No control was removed, no deliberately broken arm was repaired, no experiment
+  was dropped, and no verdict was promoted.
+
+### 12.6 Gates
+
+All commands ran one at a time. The Rust suite was not run (no Rust source
+changed). The venue is named for each row.
+
+| gate | venue | observed |
+|---|---|---|
+| focused A22 | court | `Ran 46 tests in 14.600s`; `OK` |
+| focused A22 | host | `Ran 46 tests in 15.688s`; `FAILED (failures=1)` at `Determinism.test_the_committed_records_are_the_live_records (document='RESULTS.json')`, drifting only E1/E2/E3 `input.sha256`/`outputSha256` (host `cc` vs court `cc`), not E8 |
+| `test_policy_engine` | court | `Ran 40 tests`; `OK` |
+| `test_continuous_enforcement` | court | `Ran 43 tests`; `OK` |
+| `test_baseline` | court | `Ran 57 tests`; `OK` |
+| `test_sigstore_bundle` (bounded) | court | `Ran 30 tests`; `FAILED (failures=1)`; `PH_REFUSED_POPULATION_DRIFT` on `evidence/a22/CONTROLS.json`. The full module was OOM-killed at the 4 GiB cap (`evidence/incidents/2026-11-25-3`) |
+| `test_harden` | court | `Ran 69 tests`; `FAILED (failures=2, errors=1)`; all three name `evidence/a22/CONTROLS.json` |
+| `spec_guard.py check` | court | `10 registered specification(s), 5 recorded known nonconformance(s), 6 level(s); 0 unclassified, 0 unjustified exemptions` |
+| `docs_consistency.py` | court | `ok: 20 hand-written claim(s) agree with their generated sources; the earned-trust constitution is wired` |
+
+The `test_sigstore_bundle` and `test_harden` reds are the expected A16/A11
+cascade: their frozen populations still bind the previous A22 bytes
+(`evidence/a22/{CONTROLS,EXPERIMENTS,RESULTS}.json`). They are not re-frozen in
+this batch.
