@@ -163,7 +163,7 @@
  ],
  "schema": "openssl-rs/a27/controls/1",
  "slice": "evidence/a27/SLICE.json",
- "sliceSha256": "10c3b1965372d6ff26460f3f7e69cc358d3e9ee56b5413de6bed4a17abdc000c",
+ "sliceSha256": "9494842c782d766c4c0c91039dc6553aa0c73efe02a323a7d8c65d20d91aeb5e",
  "stopCodes": [
   "VS_STOP_NO_INDEPENDENT_VERIFICATION"
  ]

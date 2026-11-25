@@ -330,3 +330,40 @@ receipt records the item's result, gates and `NOT_RUN` obligations"). This file 
 that member: it records the result, the gates with their output, and the `NOT_RUN`
 obligations. The member predicate is satisfied. The freeze itself remains `OPEN`
 and is not moved by a member landing; A17 closes it at its own record.
+
+## 12. Correction (2026-11-25): rebind the slice to C9
+
+**Cause.** Two consumed records moved in the A19 → A20 repair chain: A7's
+`evidence/a7/BASELINES.json` was regenerated at `919360368` (commit-relative
+binding URI) and A20's `evidence/a20/DECISION.json` was regenerated at
+`4390c0f3`. The slice records each consumed record's SHA-256, so the A7 stage and
+the A20 counterfactual had to be rebound. `SLICE.json`, `STOPS.json` and
+`CONTROLS.json` were re-derived by `evidence/a27/build_evidence.py`, not
+hand-edited.
+
+**Old and new.**
+
+| field | old | new |
+|---|---|---|
+| A7 stage `detail.source.baselinesSha256` | `2a5a3f863c1ddf7775d0f524e7b36feb9f01a22a6c6569eff1d3c93081ae1cab` | `a57a2766046ff4123e39bce62b3baa75fde758790aac09520657550f76986ca5` |
+| `wouldBe.policy.sha256` | `7f5a3cb88972ecfe7506173ee25125b9be513f74c7ccf6ed801fe73076f40495` | `f4aebf28f8e79f0a50704df4f39e9332d670433055d007936c4588af91b3044e` |
+| `wouldBe.policy.candidate.commit` | `58aeb2ee01000638cc545e4cad7c9ec3b5ff9672` | `f34e429f13aa3cc1566e1ecebc185a466765f321` |
+| `SLICE.json` | `10c3b1965372d6ff26460f3f7e69cc358d3e9ee56b5413de6bed4a17abdc000c` | `9494842c782d766c4c0c91039dc6553aa0c73efe02a323a7d8c65d20d91aeb5e` |
+| `STOPS.json` | `4083b770ec2d890b156fe1c4fd9d959020ceb6a95ccf4f4c257d5bf65568bd85` | `cf65e0f55ed53c7b1ad0f3f5f65401fbe86e34448f24c5d123735031088e465a` |
+| `CONTROLS.json` | `4c10a9637d6c8bb7b8599bcd36dba112c053c35772442fbfc55b1bd7a0fa7359` | `cb16d928b02be4c07de8b714f9198674001797a07a4c970c0adb4d8ac8e24f2e` |
+
+**Outcome unchanged.** The chain still stops at `A12` with
+`VS_STOP_NO_INDEPENDENT_VERIFICATION`, 0 of 4 envelopes independently verified;
+`counts` is still `stages=17 passed=8 stopped=1 notReached=8`; the artefact
+(`a1-run3-result-2390`, exact `9387bcba07a0`) is identical; the decision is still
+`DENY` with the same five unmet obligations. Only the A7 payload digest, the A20
+counterfactual's digest/candidate and the records that digest them moved. The
+slice does **not** pass A12; it stops there.
+
+**History.** The digest quoted in §5 (`7f5a3cb8…`) and the original record
+digests remain this batch's values; §12 supersedes them by naming both values
+rather than overwriting the history.
+
+**Gates.** `python3 evidence/a27/build_evidence.py` exits 0 and prints
+`stop=A12 code=VS_STOP_NO_INDEPENDENT_VERIFICATION policy=DENY controls=9/9
+codes=NONE`; `test_vertical_slice` is 51/51 OK.

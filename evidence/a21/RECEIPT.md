@@ -248,3 +248,42 @@ and this receipt does not claim any of those members.
 
 No other path was modified. `docs/ETP-TODO.md` differs in exactly one row (A21),
 and `git diff --stat` reports one insertion and one deletion for that file.
+
+## 11. Correction (2026-11-25): rebind the summary to the A20 decision at C9
+
+**Cause.** A20 was regenerated at `4390c0f3` (C9) because A19's
+`evidence/a19/PROPAGATION.json` moved at C8. That re-freeze moved the decision
+digest from `7f5a3cb8…` to `f4aebf28…` and the A19 propagation source digest from
+`982054f9…` to `892be6ef…`. The summary, its envelope and the reconstruction were
+re-derived by `evidence/a21/build_evidence.py`, not hand-edited.
+
+**Old and new.**
+
+| field | old | new |
+|---|---|---|
+| `SUMMARY.decisionDigest` | `7f5a3cb88972ecfe7506173ee25125b9be513f74c7ccf6ed801fe73076f40495` | `f4aebf28f8e79f0a50704df4f39e9332d670433055d007936c4588af91b3044e` |
+| `SUMMARY.obligations[A19.retraction-propagated].sourceDigest` | `982054f9fb76777e6672137006c0b9388bc0d8c0245eda5638859cdd3d6d78f3` | `892be6ef2d394e7724f29563cb993778d844f90349c6325a0f195279e5003278` |
+| `SUMMARY.reconstructedFrom[evidence/a19/PROPAGATION.json]` | `982054f9…` | `892be6ef…` |
+| `SUMMARY.json` | `f1321b52aa0db4b2d5b66d471ede2b31a2984c17f60c17defc8d62356fc49061` | `e1d3c8a9bb490901ca85533466d73437081fbef9b7aa2194ee2f80c8229b068f` |
+| `SUMMARY.envelope.json` | `f02f098a0e2dfa4728146eb419144a902a4f41fb13a96a44f6cc9303218eefdd` | `859adf379105794b801b739f37af669f13254872b3799169659057b0c48516b7` |
+| `RECONSTRUCTION.json` | `9641a4c8c7f1566d54047d4cbb38a3ff683b68eb86493012fcfc0184b0bb7cea` | `9b74d0bf43a8a7eeb6d4f05f587f1d1613a7fe0f2647e0a909f267760f424197` |
+| `CONTROLS.json` | `9939b551…` | byte-identical |
+
+**Outcome unchanged.** The decision is still `DENY`, with 8 obligations,
+`met=3 unmet=5 unknown=0 notApplicable=0` and the same unmet set (`A06`, `A12`,
+`A14`, `A15`, `A17`). Every obligation's state is identical; only the digest
+bindings above moved. The envelope was re-derived by the same A10 test-only
+HMAC-SHA256 signer (`test-only:hmac-sha256:8e10a5a15d233d54`); no new key and no
+new signer.
+
+**History.** The digests in §4 and the decision digest `7f5a3cb8…` remain this
+batch's original values; §11 supersedes them by naming both values rather than
+overwriting the history.
+
+**Gates.** `python3 evidence/a21/build_evidence.py` reproduces the committed
+bytes and prints `decision=DENY ... decisionDigest=f4aebf28f8e79f0a`;
+`test_verification_summary` is 42/42 OK.
+
+**Downstream.** `docs/VERIFICATION-SUMMARIES.md` and `docs/VERTICAL-SLICE.md`
+quoted the old decision digest and were updated to the new one; A16 and A11's
+frozen populations still name it, and are the remaining links.

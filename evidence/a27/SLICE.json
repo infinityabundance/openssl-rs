@@ -584,7 +584,7 @@
     "seam": "The delta compares the pre-extraction SARIF projection with the generalised identity model over the same A1 emission. STILL_PRESENT therefore means the two identity models agree on this member; it is not a before/after code-change baseline, and A7 itself records that no second population for this area exists.",
     "source": {
      "baselines": "evidence/a7/BASELINES.json",
-     "baselinesSha256": "2a5a3f863c1ddf7775d0f524e7b36feb9f01a22a6c6569eff1d3c93081ae1cab",
+     "baselinesSha256": "a57a2766046ff4123e39bce62b3baa75fde758790aac09520657550f76986ca5",
      "record": "evidence/a7/DELTA.json",
      "sha256": "0444a879bf4a0ddf5c50cffba7f51a5834b0fc4a1702d5190815de1f4470c8cf"
     },
@@ -592,7 +592,7 @@
    },
    "inputDigest": "a9be1da7de07cf00c45459db3ef5d73fd0f8860452cd77923b949abd08649ddd",
    "item": "baseline delta",
-   "outputDigest": "ec18d9220518a0a6aa15cbd3d26cbdaf5abb26be23521cf501bc984d7d4a20b6",
+   "outputDigest": "409013591977cba316aec700294ddc69e1a0bdc7372b1a32076205453df3800b",
    "reads": [
     "evidence/a7/DELTA.json",
     "evidence/a7/BASELINES.json"
@@ -605,7 +605,7 @@
    "codes": [],
    "detail": {
     "asserts": "shard",
-    "consumes": "ec18d9220518a0a6aa15cbd3d26cbdaf5abb26be23521cf501bc984d7d4a20b6",
+    "consumes": "409013591977cba316aec700294ddc69e1a0bdc7372b1a32076205453df3800b",
     "limit": 5000,
     "manifestSha256": "b6ad2185c12ff2edb3e514462edceafe0eb15a6c96149407dc0d54515b261065",
     "member": {
@@ -646,7 +646,7 @@
      "shardResultCount": 4245
     }
    },
-   "inputDigest": "ec18d9220518a0a6aa15cbd3d26cbdaf5abb26be23521cf501bc984d7d4a20b6",
+   "inputDigest": "409013591977cba316aec700294ddc69e1a0bdc7372b1a32076205453df3800b",
    "item": "export shard and union",
    "outputDigest": "b16d376ae0b2fa5483650f8019eada15102fcae580b0a46419b13e7ee98450ed",
    "reads": [
@@ -1011,7 +1011,7 @@
     "state": "UNMET"
    },
    "candidate": {
-    "commit": "58aeb2ee01000638cc545e4cad7c9ec3b5ff9672",
+    "commit": "f34e429f13aa3cc1566e1ecebc185a466765f321",
     "producedBy": {
      "identity": "P-CAMPAIGN",
      "locator": "/actions/release/context/evidenceProducer",
@@ -1034,7 +1034,7 @@
    "policySha256": "2575ca0edc5d861baee9668ca647fc04addd06508ec0ad31bfed925ccb0ce15c",
    "policyVersion": 1,
    "record": "evidence/a20/DECISION.json",
-   "sha256": "7f5a3cb88972ecfe7506173ee25125b9be513f74c7ccf6ed801fe73076f40495",
+   "sha256": "f4aebf28f8e79f0a50704df4f39e9332d670433055d007936c4588af91b3044e",
    "sourceRecordsMatchCurrentTree": true,
    "sourceRecordsMismatched": [],
    "unknown": [],

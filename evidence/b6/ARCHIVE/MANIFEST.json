@@ -19,7 +19,7 @@
   "fixture-statement",
   "prose-only-withdrawal"
  ],
- "manifestDigest": "c2b595a3cb7d2fd3ddbe61075e7803a3f134d7c3ba7727f8b9134f169e5d62e4",
+ "manifestDigest": "d09400c474bc21a58f01bcbd6e5c55c8fefb9e3f840767a9ec29004d6cf0a586",
  "members": [
   {
    "bytes": 895,
@@ -75,14 +75,14 @@
    "id": "state-earlier",
    "path": "members/state/current-state-21.json",
    "role": "the derived state at version 21, which still records the claim ACTIVE",
-   "sha256": "d9d352440637bbf7e5d61b060d1f755805cd3a544d42a3672367617983176dff"
+   "sha256": "187dd9bcee6570d1fbf75f4c8f7d53c1a6eb11177bd67bfb37b90c15341920ab"
   },
   {
    "bytes": 5829,
    "id": "state-current",
    "path": "members/state/current-state-22.json",
    "role": "the derived state at version 22, which records the claim WITHDRAWN",
-   "sha256": "0da8b4a4780ca807d84764e34bee2287bd23af0688588ec5eee6165379cc15af"
+   "sha256": "dfb56e6dd992d6e0ac08fc8e821b1cb9c620c3e4875e389f707d4c8153a054da"
   }
  ],
  "model": "b6/archival/1",

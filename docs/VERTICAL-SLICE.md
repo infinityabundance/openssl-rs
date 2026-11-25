@@ -251,12 +251,12 @@ those records to know the chain has no next stage, and it does not use them.
 required obligations including `A12.independent-attestation`
 (`state: UNMET`, `observed.count: 0`, "0 qualifying member(s), at least 1
 required"), and `policy.default: deny`. The slice reads that record (SHA-256
-`7f5a3cb8…`), verifies that every obligation's `recordSha256` is the digest of
+`f4aebf28…`), verifies that every obligation's `recordSha256` is the digest of
 the current source record (`sourceRecordsMatchCurrentTree: true`, no mismatches),
 and verifies that the decision names the same `evidence/a12/VERIFICATION.json`
 digest the slice's stop is established by. The counterfactual is labelled
 `evaluatedByThisSlice: false`: this is the A20 record's own decision at the
-record's own candidate (`58aeb2ee…`), not a re-evaluation at this base commit.
+record's own candidate (`f34e429f…`), not a re-evaluation at this base commit.
 `test_the_policy_would_deny`, `test_the_policy_names_the_same_source_records` and
 `test_the_policy_attestation_is_unmet_at_zero` assert it.
 

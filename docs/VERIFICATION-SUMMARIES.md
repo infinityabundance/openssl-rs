@@ -177,7 +177,7 @@ registry is not. That is a retained obligation, not a claim of A9 registration.
 ## 7. The real summary and its reconstruction
 
 `evidence/a21/SUMMARY.json` summarises A20's committed decision
-`evidence/a20/DECISION.json` (digest `7f5a3cb88972ecfe…`). It records the decision
+`evidence/a20/DECISION.json` (digest `f4aebf28f8e79f0a…`). It records the decision
 `DENY`, 8 obligations, and counts of 3 `MET`, 5 `UNMET`, 0 `UNKNOWN` and 0
 `NOT_APPLICABLE`. `replacesEvidence` is `false`. Nine records are cited: the eight
 primary sources and `evidence/a17/FREEZE-forward.json` as corroboration for
