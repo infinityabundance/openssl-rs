@@ -1,0 +1,82 @@
+{
+ "baseCommit": "19b710192",
+ "claim": {
+  "a19Subject": "ETP0-CLM-032/verdict",
+  "assertedBy": "A19-E21",
+  "leafIndex": 1,
+  "statementSubject": "a19:ETP0-CLM-032/verdict",
+  "withdrawnBy": "A19-E22"
+ },
+ "facts": {
+  "currentIsWithdrawn": {
+   "asOf": "2026-11-23T00:00:00Z",
+   "code": "RV_OK",
+   "correctionDigest": "bf4f5320cc79244629b0f291a80e10d14344b3b39904ea38baa249a962fbab79",
+   "record": "CURRENT-STATE.json",
+   "state": "WITHDRAWN",
+   "supersededBy": "A19-E22",
+   "version": 22
+  },
+  "inclusionStillValid": {
+   "checkpointSize": 5,
+   "code": "RV_OK",
+   "leafHash": "eaf725703719d1bf8d4b038eddc412e8984b4893b2d706c67f0726a127f21d41",
+   "leafIndex": 1,
+   "proofElements": 3,
+   "record": "ARCHIVE.json#/reconstruction",
+   "root": "4b9b97a480f49511bd52f57b68112fdd64d014fbb25bae6aa4cd7f07004946d6",
+   "signatureName": "FIXTURE-2 test-only hmac-sha256",
+   "treeSize": 5
+  },
+  "presentTenseRefused": {
+   "code": "RV_REFUSED_WITHDRAWN_ACCEPTED",
+   "message": "'ETP0-CLM-032/verdict' was withdrawn by A19-E22 (state version 22); its inclusion may still be proven but it is not current",
+   "record": "CURRENT-STATE.json#/subjects[ETP0-CLM-032/verdict]"
+  }
+ },
+ "identity": "FIXTURE-2",
+ "labels": [
+  "FIXTURE-2",
+  "test-only",
+  "not-rekor-tiles",
+  "no-log-key",
+  "no-witness",
+  "no-production-signature",
+  "fixture-statement",
+  "prose-only-withdrawal"
+ ],
+ "model": "b6/archival/1",
+ "nonClaims": [
+  "FIXTURE-2 is a fixture log, not an admitted log and not a Rekor publication",
+  "the withdrawal is an A19 prose-only event, not an authenticated correction",
+  "inclusion in FIXTURE-2 does not establish inclusion in any public log",
+  "a withdrawal does not make the original untrue; it makes it not current"
+ ],
+ "replay": {
+  "earlierVersion": {
+   "digest": "d5219cea5926efbba82262517d3f02210c16e5157a5f7ef1fc48a89a1f62dcfd",
+   "member": "members/state/current-state-21.json",
+   "state": "ACTIVE",
+   "version": 21
+  },
+  "replayedAsCurrent": {
+   "code": "RV_REFUSED_REPLAY_AS_CURRENT",
+   "message": "state version 21 is older than the accepted 22: an old state cannot be presented as current"
+  },
+  "versionDecrease": {
+   "code": "RV_REFUSED_ROLLBACK_OF_STATE",
+   "message": "state version 21 is lower than the previous 22: a version may not decrease"
+  },
+  "why": "the older state still records the claim ACTIVE; admitting it would resurrect a withdrawn claim, so both the current-state admission (REPLAY_AS_CURRENT) and the version sequence (ROLLBACK_OF_STATE) refuse it"
+ },
+ "schema": "openssl-rs/b6/demonstration/1",
+ "sequence": [
+  "FIXTURE-2 publishes leaf 1 and the size-5 checkpoint",
+  "the inclusion lookup verifies the proof from the archive",
+  "the state advances from version 21 (ACTIVE) to version 22 (WITHDRAWN)",
+  "current(subject) reports WITHDRAWN",
+  "a present-tense use is refused",
+  "the version-21 state replayed as current is refused"
+ ],
+ "subject": "ETP0-CLM-032/verdict"
+}

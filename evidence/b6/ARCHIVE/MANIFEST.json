@@ -1,0 +1,95 @@
+{
+ "archiveId": "b6-archive-1",
+ "claims": [
+  {
+   "leafIndex": 1,
+   "statementId": "statement-fixture",
+   "statementSubject": "a19:ETP0-CLM-032/verdict",
+   "subject": "ETP0-CLM-032/verdict"
+  }
+ ],
+ "identity": "FIXTURE-2",
+ "labels": [
+  "FIXTURE-2",
+  "test-only",
+  "not-rekor-tiles",
+  "no-log-key",
+  "no-witness",
+  "no-production-signature",
+  "fixture-statement",
+  "prose-only-withdrawal"
+ ],
+ "manifestDigest": "5d0508b3772f0d4d3c507ce3955913b2f066a73151fb16d057ff3786ed703099",
+ "members": [
+  {
+   "bytes": 895,
+   "id": "statement-fixture",
+   "path": "members/statements/fixture-withdrawn-claim.json",
+   "role": "the labelled fixture statement over the withdrawn A19 claim; leaf 1",
+   "sha256": "4e3ec3677c77ffe19cac31c094edc8b1b3d31519d86bc7a8cd4f707f8f3bcc08"
+  },
+  {
+   "bytes": 714,
+   "id": "statement-a9",
+   "path": "members/statements/a9-a8-shard-000.json",
+   "role": "the real frozen A9 statement used as leaf 0",
+   "sha256": "ea67963abf16e9b1e33a86d0eec5e35354f3a890497055867e942eac41d22582"
+  },
+  {
+   "bytes": 143,
+   "id": "checkpoint",
+   "path": "members/log/checkpoint.note",
+   "role": "the signed checkpoint for size 5, test-only HMAC key",
+   "sha256": "039aba47fb9b03aa84015c7e5d79a05566d7a35b1860c8d687c114698eb3b2c6"
+  },
+  {
+   "bytes": 726,
+   "id": "inclusion-proof",
+   "path": "members/log/inclusion-proof.json",
+   "role": "the RFC 6962 inclusion proof for the claim's leaf",
+   "sha256": "a3b5b07585661a2662c31e7b9d0c17738b20a03c0a99c0f4317bf35ed49c7c04"
+  },
+  {
+   "bytes": 1834,
+   "id": "leaf-list",
+   "path": "members/log/leaf-list.json",
+   "role": "every leaf's hash, so the root can be recomputed from the archive",
+   "sha256": "8f7908f3657c01670dc02948f4c4648df249287f9ae166df555450aa1b63991a"
+  },
+  {
+   "bytes": 568,
+   "id": "publication",
+   "path": "members/log/publication.json",
+   "role": "the FIXTURE-2 publication record",
+   "sha256": "9e1b9cc823eacb539fbc69498625dd3a3a0a5a96b0b72e7202e9934941034e8b"
+  },
+  {
+   "bytes": 461,
+   "id": "a19-binding",
+   "path": "members/a19/binding.json",
+   "role": "the A19 assertion and retraction event identities the claim binds",
+   "sha256": "23a2a75830e253aa545b25b149c24f716f289f5f137e375f2ee7f43ffb30197a"
+  },
+  {
+   "bytes": 5595,
+   "id": "state-earlier",
+   "path": "members/state/current-state-21.json",
+   "role": "the derived state at version 21, which still records the claim ACTIVE",
+   "sha256": "a883dba296a9b8306191259dcea5bdeaf3254a26bc7daa0795913052f1d6086b"
+  },
+  {
+   "bytes": 5829,
+   "id": "state-current",
+   "path": "members/state/current-state-22.json",
+   "role": "the derived state at version 22, which records the claim WITHDRAWN",
+   "sha256": "b16aefb88f01aa53788c6c2abdb35402e1cded16def1d75ce604ee019526eccd"
+  }
+ ],
+ "model": "b6/archival/1",
+ "schema": "openssl-rs/b6/archive-manifest/1",
+ "signer": {
+  "kind": "test-only-hmac-sha256",
+  "name": "FIXTURE-2 test-only hmac-sha256",
+  "notATrustRoot": true
+ }
+}

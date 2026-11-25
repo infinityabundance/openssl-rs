@@ -1,0 +1,14 @@
+{
+ "admittedService": false,
+ "identity": "FIXTURE-2",
+ "leafHash": "eaf725703719d1bf8d4b038eddc412e8984b4893b2d706c67f0726a127f21d41",
+ "leafIndex": 1,
+ "notALogKey": true,
+ "origin": "FIXTURE-2",
+ "rootHash": "4b9b97a480f49511bd52f57b68112fdd64d014fbb25bae6aa4cd7f07004946d6",
+ "schema": "openssl-rs/b6/publication/1",
+ "signatureName": "FIXTURE-2 test-only hmac-sha256",
+ "signedNoteSha256": "039aba47fb9b03aa84015c7e5d79a05566d7a35b1860c8d687c114698eb3b2c6",
+ "statementSha256": "4e3ec3677c77ffe19cac31c094edc8b1b3d31519d86bc7a8cd4f707f8f3bcc08",
+ "treeSize": 5
+}

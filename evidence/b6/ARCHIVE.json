@@ -1,0 +1,200 @@
+{
+ "archiveId": "b6-archive-1",
+ "baseCommit": "19b710192",
+ "claim": {
+  "leafIndex": 1,
+  "statementId": "statement-fixture",
+  "statementSubject": "a19:ETP0-CLM-032/verdict",
+  "subject": "ETP0-CLM-032/verdict"
+ },
+ "identity": "FIXTURE-2",
+ "item": "B6",
+ "labels": [
+  "FIXTURE-2",
+  "test-only",
+  "not-rekor-tiles",
+  "no-log-key",
+  "no-witness",
+  "no-production-signature",
+  "fixture-statement",
+  "prose-only-withdrawal"
+ ],
+ "manifestDigest": "5d0508b3772f0d4d3c507ce3955913b2f066a73151fb16d057ff3786ed703099",
+ "manifestPath": "ARCHIVE/MANIFEST.json",
+ "members": [
+  {
+   "bytes": 895,
+   "id": "statement-fixture",
+   "path": "members/statements/fixture-withdrawn-claim.json",
+   "role": "the labelled fixture statement over the withdrawn A19 claim; leaf 1",
+   "sha256": "4e3ec3677c77ffe19cac31c094edc8b1b3d31519d86bc7a8cd4f707f8f3bcc08"
+  },
+  {
+   "bytes": 714,
+   "id": "statement-a9",
+   "path": "members/statements/a9-a8-shard-000.json",
+   "role": "the real frozen A9 statement used as leaf 0",
+   "sha256": "ea67963abf16e9b1e33a86d0eec5e35354f3a890497055867e942eac41d22582"
+  },
+  {
+   "bytes": 143,
+   "id": "checkpoint",
+   "path": "members/log/checkpoint.note",
+   "role": "the signed checkpoint for size 5, test-only HMAC key",
+   "sha256": "039aba47fb9b03aa84015c7e5d79a05566d7a35b1860c8d687c114698eb3b2c6"
+  },
+  {
+   "bytes": 726,
+   "id": "inclusion-proof",
+   "path": "members/log/inclusion-proof.json",
+   "role": "the RFC 6962 inclusion proof for the claim's leaf",
+   "sha256": "a3b5b07585661a2662c31e7b9d0c17738b20a03c0a99c0f4317bf35ed49c7c04"
+  },
+  {
+   "bytes": 1834,
+   "id": "leaf-list",
+   "path": "members/log/leaf-list.json",
+   "role": "every leaf's hash, so the root can be recomputed from the archive",
+   "sha256": "8f7908f3657c01670dc02948f4c4648df249287f9ae166df555450aa1b63991a"
+  },
+  {
+   "bytes": 568,
+   "id": "publication",
+   "path": "members/log/publication.json",
+   "role": "the FIXTURE-2 publication record",
+   "sha256": "9e1b9cc823eacb539fbc69498625dd3a3a0a5a96b0b72e7202e9934941034e8b"
+  },
+  {
+   "bytes": 461,
+   "id": "a19-binding",
+   "path": "members/a19/binding.json",
+   "role": "the A19 assertion and retraction event identities the claim binds",
+   "sha256": "23a2a75830e253aa545b25b149c24f716f289f5f137e375f2ee7f43ffb30197a"
+  },
+  {
+   "bytes": 5595,
+   "id": "state-earlier",
+   "path": "members/state/current-state-21.json",
+   "role": "the derived state at version 21, which still records the claim ACTIVE",
+   "sha256": "a883dba296a9b8306191259dcea5bdeaf3254a26bc7daa0795913052f1d6086b"
+  },
+  {
+   "bytes": 5829,
+   "id": "state-current",
+   "path": "members/state/current-state-22.json",
+   "role": "the derived state at version 22, which records the claim WITHDRAWN",
+   "sha256": "b16aefb88f01aa53788c6c2abdb35402e1cded16def1d75ce604ee019526eccd"
+  }
+ ],
+ "model": "b6/archival/1",
+ "nonClaims": [
+  "the archive is one copy, not an independent mirror of itself",
+  "the checkpoint is signed by A10's test-only HMAC key, not a log key",
+  "reconstruction establishes that the archived bytes verify; it does not establish that the archive is the only or the earliest copy",
+  "the archive holds the leaf hashes of all five leaves but the payloads only of the two statements it reconstructs",
+  "the A19 events are archived as event identities by digest, not as event bytes: re-deriving an event digest from its bytes needs evidence/a19/EVENTS.json"
+ ],
+ "reconstruction": {
+  "archiveId": "b6-archive-1",
+  "bytes": 16765,
+  "checkpoint": {
+   "notATrustRoot": true,
+   "origin": "FIXTURE-2",
+   "root": "4b9b97a480f49511bd52f57b68112fdd64d014fbb25bae6aa4cd7f07004946d6",
+   "signatureName": "FIXTURE-2 test-only hmac-sha256",
+   "size": 5
+  },
+  "checks": [
+   {
+    "members": 9,
+    "name": "member-digests",
+    "ok": true
+   },
+   {
+    "digest": "5d0508b3772f0d4d3c507ce3955913b2f066a73151fb16d057ff3786ed703099",
+    "name": "manifest-digest",
+    "ok": true
+   },
+   {
+    "keyName": "FIXTURE-2 test-only hmac-sha256",
+    "name": "checkpoint-signature",
+    "ok": true,
+    "origin": "FIXTURE-2",
+    "root": "4b9b97a480f49511bd52f57b68112fdd64d014fbb25bae6aa4cd7f07004946d6",
+    "size": 5
+   },
+   {
+    "leafIndex": 1,
+    "name": "publication-record",
+    "ok": true,
+    "treeSize": 5
+   },
+   {
+    "leafHash": "eaf725703719d1bf8d4b038eddc412e8984b4893b2d706c67f0726a127f21d41",
+    "leafIndex": 1,
+    "name": "leaf-identity",
+    "ok": true
+   },
+   {
+    "leafIndex": 1,
+    "name": "inclusion",
+    "ok": true,
+    "proofElements": 3,
+    "root": "4b9b97a480f49511bd52f57b68112fdd64d014fbb25bae6aa4cd7f07004946d6",
+    "treeSize": 5
+   },
+   {
+    "leaves": 5,
+    "name": "tree-root",
+    "ok": true,
+    "root": "4b9b97a480f49511bd52f57b68112fdd64d014fbb25bae6aa4cd7f07004946d6"
+   },
+   {
+    "assertionDigest": "af3925cf0d47d7ff26d06547855a299405c824d88f7984116470903a914c9c6c",
+    "binding": "digest-reference (event bytes not duplicated)",
+    "name": "statement-binding",
+    "ok": true,
+    "retractionDigest": "bf4f5320cc79244629b0f291a80e10d14344b3b39904ea38baa249a962fbab79",
+    "subject": "ETP0-CLM-032/verdict"
+   },
+   {
+    "currentVersion": 22,
+    "earlierVersion": 21,
+    "name": "state-link",
+    "ok": true,
+    "subjectState": "WITHDRAWN"
+   }
+  ],
+  "code": "RV_OK",
+  "identity": "FIXTURE-2",
+  "inclusion": {
+   "leafHash": "eaf725703719d1bf8d4b038eddc412e8984b4893b2d706c67f0726a127f21d41",
+   "leafIndex": 1,
+   "treeSize": 5,
+   "verified": true
+  },
+  "manifestDigest": "5d0508b3772f0d4d3c507ce3955913b2f066a73151fb16d057ff3786ed703099",
+  "members": 9,
+  "state": {
+   "state": "WITHDRAWN",
+   "supersededBy": "A19-E22",
+   "version": 22
+  },
+  "subject": "ETP0-CLM-032/verdict"
+ },
+ "schema": "openssl-rs/b6/archive/1",
+ "states": {
+  "current": {
+   "asOf": "2026-11-23T00:00:00Z",
+   "digest": "31b94d5ea2dbd1dd2fc888b5242e0834d3ef77130a6c8d02aa9e29066c641671",
+   "member": "members/state/current-state-22.json",
+   "version": 22
+  },
+  "earlier": {
+   "asOf": "2026-11-22T00:00:00Z",
+   "digest": "d5219cea5926efbba82262517d3f02210c16e5157a5f7ef1fc48a89a1f62dcfd",
+   "member": "members/state/current-state-21.json",
+   "version": 21
+  }
+ }
+}

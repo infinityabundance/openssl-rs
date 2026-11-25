@@ -1,0 +1,905 @@
+{
+ "controls": [
+  {
+   "code": "RV_REFUSED_RECONSTRUCTION_MISMATCH",
+   "controlOnly": true,
+   "fired": true,
+   "message": "member 'inclusion-proof' hashes to 21facd1a36c5a970ec2b9b485f34873dc4fcc4f5cba63b6868f7ba34e7f26c1d, not the recorded a3b5b07585661a2662c31e7b9d0c17738b20a03c0a99c0f4317bf35ed49c7c04",
+   "mutation": "one byte of the archived inclusion proof changed so its bytes differ from the recorded digest",
+   "name": "reconstruction-flipped-byte",
+   "restoration": {
+    "accepted": true,
+    "result": {
+     "archiveId": "b6-archive-1",
+     "bytes": 16765,
+     "checkpoint": {
+      "notATrustRoot": true,
+      "origin": "FIXTURE-2",
+      "root": "4b9b97a480f49511bd52f57b68112fdd64d014fbb25bae6aa4cd7f07004946d6",
+      "signatureName": "FIXTURE-2 test-only hmac-sha256",
+      "size": 5
+     },
+     "checks": [
+      {
+       "members": 9,
+       "name": "member-digests",
+       "ok": true
+      },
+      {
+       "digest": "5d0508b3772f0d4d3c507ce3955913b2f066a73151fb16d057ff3786ed703099",
+       "name": "manifest-digest",
+       "ok": true
+      },
+      {
+       "keyName": "FIXTURE-2 test-only hmac-sha256",
+       "name": "checkpoint-signature",
+       "ok": true,
+       "origin": "FIXTURE-2",
+       "root": "4b9b97a480f49511bd52f57b68112fdd64d014fbb25bae6aa4cd7f07004946d6",
+       "size": 5
+      },
+      {
+       "leafIndex": 1,
+       "name": "publication-record",
+       "ok": true,
+       "treeSize": 5
+      },
+      {
+       "leafHash": "eaf725703719d1bf8d4b038eddc412e8984b4893b2d706c67f0726a127f21d41",
+       "leafIndex": 1,
+       "name": "leaf-identity",
+       "ok": true
+      },
+      {
+       "leafIndex": 1,
+       "name": "inclusion",
+       "ok": true,
+       "proofElements": 3,
+       "root": "4b9b97a480f49511bd52f57b68112fdd64d014fbb25bae6aa4cd7f07004946d6",
+       "treeSize": 5
+      },
+      {
+       "leaves": 5,
+       "name": "tree-root",
+       "ok": true,
+       "root": "4b9b97a480f49511bd52f57b68112fdd64d014fbb25bae6aa4cd7f07004946d6"
+      },
+      {
+       "assertionDigest": "af3925cf0d47d7ff26d06547855a299405c824d88f7984116470903a914c9c6c",
+       "binding": "digest-reference (event bytes not duplicated)",
+       "name": "statement-binding",
+       "ok": true,
+       "retractionDigest": "bf4f5320cc79244629b0f291a80e10d14344b3b39904ea38baa249a962fbab79",
+       "subject": "ETP0-CLM-032/verdict"
+      },
+      {
+       "currentVersion": 22,
+       "earlierVersion": 21,
+       "name": "state-link",
+       "ok": true,
+       "subjectState": "WITHDRAWN"
+      }
+     ],
+     "code": "RV_OK",
+     "identity": "FIXTURE-2",
+     "inclusion": {
+      "leafHash": "eaf725703719d1bf8d4b038eddc412e8984b4893b2d706c67f0726a127f21d41",
+      "leafIndex": 1,
+      "treeSize": 5,
+      "verified": true
+     },
+     "manifestDigest": "5d0508b3772f0d4d3c507ce3955913b2f066a73151fb16d057ff3786ed703099",
+     "members": 9,
+     "state": {
+      "state": "WITHDRAWN",
+      "supersededBy": "A19-E22",
+      "version": 22
+     },
+     "subject": "ETP0-CLM-032/verdict"
+    }
+   }
+  },
+  {
+   "code": "RV_REFUSED_ARCHIVE_MISSING",
+   "controlOnly": true,
+   "fired": true,
+   "message": "member 'a19-binding' is absent (members/a19/binding.json)",
+   "mutation": "the A19 binding member removed from the archive",
+   "name": "archive-member-discarded",
+   "restoration": {
+    "accepted": true,
+    "result": {
+     "archiveId": "b6-archive-1",
+     "bytes": 16765,
+     "checkpoint": {
+      "notATrustRoot": true,
+      "origin": "FIXTURE-2",
+      "root": "4b9b97a480f49511bd52f57b68112fdd64d014fbb25bae6aa4cd7f07004946d6",
+      "signatureName": "FIXTURE-2 test-only hmac-sha256",
+      "size": 5
+     },
+     "checks": [
+      {
+       "members": 9,
+       "name": "member-digests",
+       "ok": true
+      },
+      {
+       "digest": "5d0508b3772f0d4d3c507ce3955913b2f066a73151fb16d057ff3786ed703099",
+       "name": "manifest-digest",
+       "ok": true
+      },
+      {
+       "keyName": "FIXTURE-2 test-only hmac-sha256",
+       "name": "checkpoint-signature",
+       "ok": true,
+       "origin": "FIXTURE-2",
+       "root": "4b9b97a480f49511bd52f57b68112fdd64d014fbb25bae6aa4cd7f07004946d6",
+       "size": 5
+      },
+      {
+       "leafIndex": 1,
+       "name": "publication-record",
+       "ok": true,
+       "treeSize": 5
+      },
+      {
+       "leafHash": "eaf725703719d1bf8d4b038eddc412e8984b4893b2d706c67f0726a127f21d41",
+       "leafIndex": 1,
+       "name": "leaf-identity",
+       "ok": true
+      },
+      {
+       "leafIndex": 1,
+       "name": "inclusion",
+       "ok": true,
+       "proofElements": 3,
+       "root": "4b9b97a480f49511bd52f57b68112fdd64d014fbb25bae6aa4cd7f07004946d6",
+       "treeSize": 5
+      },
+      {
+       "leaves": 5,
+       "name": "tree-root",
+       "ok": true,
+       "root": "4b9b97a480f49511bd52f57b68112fdd64d014fbb25bae6aa4cd7f07004946d6"
+      },
+      {
+       "assertionDigest": "af3925cf0d47d7ff26d06547855a299405c824d88f7984116470903a914c9c6c",
+       "binding": "digest-reference (event bytes not duplicated)",
+       "name": "statement-binding",
+       "ok": true,
+       "retractionDigest": "bf4f5320cc79244629b0f291a80e10d14344b3b39904ea38baa249a962fbab79",
+       "subject": "ETP0-CLM-032/verdict"
+      },
+      {
+       "currentVersion": 22,
+       "earlierVersion": 21,
+       "name": "state-link",
+       "ok": true,
+       "subjectState": "WITHDRAWN"
+      }
+     ],
+     "code": "RV_OK",
+     "identity": "FIXTURE-2",
+     "inclusion": {
+      "leafHash": "eaf725703719d1bf8d4b038eddc412e8984b4893b2d706c67f0726a127f21d41",
+      "leafIndex": 1,
+      "treeSize": 5,
+      "verified": true
+     },
+     "manifestDigest": "5d0508b3772f0d4d3c507ce3955913b2f066a73151fb16d057ff3786ed703099",
+     "members": 9,
+     "state": {
+      "state": "WITHDRAWN",
+      "supersededBy": "A19-E22",
+      "version": 22
+     },
+     "subject": "ETP0-CLM-032/verdict"
+    }
+   }
+  },
+  {
+   "code": "RV_REFUSED_ARCHIVE_INVALID",
+   "controlOnly": true,
+   "fired": true,
+   "message": "the manifest digest does not cover the manifest's bytes",
+   "mutation": "the manifest's archiveId edited without recomputing manifestDigest",
+   "name": "archive-manifest-unbound",
+   "restoration": {
+    "accepted": true,
+    "result": {
+     "archiveId": "b6-archive-1",
+     "bytes": 16765,
+     "checkpoint": {
+      "notATrustRoot": true,
+      "origin": "FIXTURE-2",
+      "root": "4b9b97a480f49511bd52f57b68112fdd64d014fbb25bae6aa4cd7f07004946d6",
+      "signatureName": "FIXTURE-2 test-only hmac-sha256",
+      "size": 5
+     },
+     "checks": [
+      {
+       "members": 9,
+       "name": "member-digests",
+       "ok": true
+      },
+      {
+       "digest": "5d0508b3772f0d4d3c507ce3955913b2f066a73151fb16d057ff3786ed703099",
+       "name": "manifest-digest",
+       "ok": true
+      },
+      {
+       "keyName": "FIXTURE-2 test-only hmac-sha256",
+       "name": "checkpoint-signature",
+       "ok": true,
+       "origin": "FIXTURE-2",
+       "root": "4b9b97a480f49511bd52f57b68112fdd64d014fbb25bae6aa4cd7f07004946d6",
+       "size": 5
+      },
+      {
+       "leafIndex": 1,
+       "name": "publication-record",
+       "ok": true,
+       "treeSize": 5
+      },
+      {
+       "leafHash": "eaf725703719d1bf8d4b038eddc412e8984b4893b2d706c67f0726a127f21d41",
+       "leafIndex": 1,
+       "name": "leaf-identity",
+       "ok": true
+      },
+      {
+       "leafIndex": 1,
+       "name": "inclusion",
+       "ok": true,
+       "proofElements": 3,
+       "root": "4b9b97a480f49511bd52f57b68112fdd64d014fbb25bae6aa4cd7f07004946d6",
+       "treeSize": 5
+      },
+      {
+       "leaves": 5,
+       "name": "tree-root",
+       "ok": true,
+       "root": "4b9b97a480f49511bd52f57b68112fdd64d014fbb25bae6aa4cd7f07004946d6"
+      },
+      {
+       "assertionDigest": "af3925cf0d47d7ff26d06547855a299405c824d88f7984116470903a914c9c6c",
+       "binding": "digest-reference (event bytes not duplicated)",
+       "name": "statement-binding",
+       "ok": true,
+       "retractionDigest": "bf4f5320cc79244629b0f291a80e10d14344b3b39904ea38baa249a962fbab79",
+       "subject": "ETP0-CLM-032/verdict"
+      },
+      {
+       "currentVersion": 22,
+       "earlierVersion": 21,
+       "name": "state-link",
+       "ok": true,
+       "subjectState": "WITHDRAWN"
+      }
+     ],
+     "code": "RV_OK",
+     "identity": "FIXTURE-2",
+     "inclusion": {
+      "leafHash": "eaf725703719d1bf8d4b038eddc412e8984b4893b2d706c67f0726a127f21d41",
+      "leafIndex": 1,
+      "treeSize": 5,
+      "verified": true
+     },
+     "manifestDigest": "5d0508b3772f0d4d3c507ce3955913b2f066a73151fb16d057ff3786ed703099",
+     "members": 9,
+     "state": {
+      "state": "WITHDRAWN",
+      "supersededBy": "A19-E22",
+      "version": 22
+     },
+     "subject": "ETP0-CLM-032/verdict"
+    }
+   }
+  },
+  {
+   "code": "RV_REFUSED_INCLUSION_LOST",
+   "controlOnly": true,
+   "fired": true,
+   "message": "the proof cannot be verified from the archive: RV_REFUSED_ARCHIVE_MISSING: member 'inclusion-proof' is absent (members/log/inclusion-proof.json)",
+   "mutation": "the inclusion-proof member removed and the inclusion lookup re-run",
+   "name": "inclusion-proof-discarded",
+   "restoration": {
+    "accepted": true,
+    "result": {
+     "checkpointSize": 5,
+     "code": "RV_OK",
+     "leafHash": "eaf725703719d1bf8d4b038eddc412e8984b4893b2d706c67f0726a127f21d41",
+     "leafIndex": 1,
+     "manifestDigest": "5d0508b3772f0d4d3c507ce3955913b2f066a73151fb16d057ff3786ed703099",
+     "root": "4b9b97a480f49511bd52f57b68112fdd64d014fbb25bae6aa4cd7f07004946d6",
+     "signatureName": "FIXTURE-2 test-only hmac-sha256",
+     "subject": "ETP0-CLM-032/verdict",
+     "treeSize": 5,
+     "verified": true
+    }
+   }
+  },
+  {
+   "code": "RV_REFUSED_STATE_INVALID",
+   "controlOnly": true,
+   "fired": true,
+   "message": "the state digest does not cover the document's bytes",
+   "mutation": "the state's version edited without recomputing its digest",
+   "name": "state-not-covered-by-digest",
+   "restoration": {
+    "accepted": true,
+    "result": null
+   }
+  },
+  {
+   "code": "RV_REFUSED_REVOCATION_UNBOUND",
+   "controlOnly": true,
+   "fired": true,
+   "message": "subject entry 7 ('ETP0-CLM-032/verdict') is WITHDRAWN with no correctionDigest",
+   "mutation": "the WITHDRAWN entry's correctionDigest removed and the digest recomputed",
+   "name": "withdrawal-unbound",
+   "restoration": {
+    "accepted": true,
+    "result": null
+   }
+  },
+  {
+   "code": "RV_REFUSED_CORRECTION_UNPROPAGATED",
+   "controlOnly": true,
+   "fired": true,
+   "message": "'ETP0-CLM-032/verdict': state (expected 'WITHDRAWN'); 1 problem(s)",
+   "mutation": "the field's version-21 state checked against the full A19 log, whose version 22 retracts the claim",
+   "name": "correction-unpropagated",
+   "restoration": {
+    "accepted": true,
+    "result": {
+     "checked": 11,
+     "code": "RV_OK",
+     "events": 22,
+     "subjects": 11,
+     "version": 22
+    }
+   }
+  },
+  {
+   "code": "RV_REFUSED_ROLLBACK_OF_STATE",
+   "controlOnly": true,
+   "fired": true,
+   "message": "state version 21 is lower than the previous 22: a version may not decrease",
+   "mutation": "the newer state (version 22) followed by the older (version 21)",
+   "name": "version-decreases",
+   "restoration": {
+    "accepted": true,
+    "result": {
+     "code": "RV_OK",
+     "from": 21,
+     "to": 22
+    }
+   }
+  },
+  {
+   "code": "RV_REFUSED_REPLAY_AS_CURRENT",
+   "controlOnly": true,
+   "fired": true,
+   "message": "state version 21 is older than the accepted 22: an old state cannot be presented as current",
+   "mutation": "the version-21 state offered as the current state against version 22",
+   "name": "stale-state-as-current",
+   "restoration": {
+    "accepted": true,
+    "result": {
+     "code": "RV_OK",
+     "outcome": "UNCHANGED",
+     "version": 22
+    }
+   }
+  },
+  {
+   "code": "RV_REFUSED_STATE_CONFLICT",
+   "controlOnly": true,
+   "fired": true,
+   "message": "two states at version 22 carry different digests (a7e28643ad555d32437f97fb47aec53ec3a8725571339c4adb2b62f052c592ab and 31b94d5ea2dbd1dd2fc888b5242e0834d3ef77130a6c8d02aa9e29066c641671)",
+   "mutation": "a second version-22 state with a different asOf, digest recomputed",
+   "name": "same-version-conflict",
+   "restoration": {
+    "accepted": true,
+    "result": {
+     "code": "RV_OK",
+     "outcome": "UNCHANGED",
+     "version": 22
+    }
+   }
+  },
+  {
+   "code": "RV_REFUSED_WITHDRAWN_ACCEPTED",
+   "controlOnly": true,
+   "fired": true,
+   "message": "'ETP0-CLM-032/verdict' was withdrawn by A19-E22 (state version 22); its inclusion may still be proven but it is not current",
+   "mutation": "the withdrawn subject used in the present tense at version 22",
+   "name": "withdrawn-used-as-current",
+   "restoration": {
+    "accepted": true,
+    "result": {
+     "asOf": "2026-11-22T00:00:00Z",
+     "code": "RV_OK",
+     "correctionDigest": null,
+     "entry": {
+      "correctionDigest": null,
+      "history": [
+       "A19-E21"
+      ],
+      "state": "ACTIVE",
+      "subject": "ETP0-CLM-032/verdict",
+      "supersededBy": null
+     },
+     "state": "ACTIVE",
+     "subject": "ETP0-CLM-032/verdict",
+     "supersededBy": null,
+     "version": 21
+    },
+    "scope": "the same subject is accepted in the present tense at version 21, which is exactly why RV_REFUSED_REPLAY_AS_CURRENT exists"
+   }
+  },
+  {
+   "code": "RV_REFUSED_SUBJECT_UNKNOWN",
+   "controlOnly": true,
+   "fired": true,
+   "message": "the current state has no entry for 'no/such/subject'",
+   "mutation": "a present-tense use of a subject the state does not contain",
+   "name": "subject-not-indexed",
+   "restoration": {
+    "accepted": false,
+    "reason": "no state exists for an unknown subject; the restoration is the control subject, which the index does contain",
+    "result": {
+     "asOf": "2026-11-23T00:00:00Z",
+     "code": "RV_OK",
+     "correctionDigest": "bf4f5320cc79244629b0f291a80e10d14344b3b39904ea38baa249a962fbab79",
+     "entry": {
+      "correctionDigest": "bf4f5320cc79244629b0f291a80e10d14344b3b39904ea38baa249a962fbab79",
+      "history": [
+       "A19-E21",
+       "A19-E22"
+      ],
+      "state": "WITHDRAWN",
+      "subject": "ETP0-CLM-032/verdict",
+      "supersededBy": "A19-E22"
+     },
+     "state": "WITHDRAWN",
+     "subject": "ETP0-CLM-032/verdict",
+     "supersededBy": "A19-E22",
+     "version": 22
+    }
+   }
+  },
+  {
+   "code": "RV_REFUSED_USAGE",
+   "controlOnly": true,
+   "fired": true,
+   "message": "the state covers 1..22 A19 events; 0 is not in range",
+   "mutation": "a state derived from 0 A19 events",
+   "name": "derivation-out-of-range",
+   "restoration": {
+    "accepted": true,
+    "result": {
+     "asOf": "2026-11-23T00:00:00Z",
+     "derivedFrom": {
+      "events": 22,
+      "logDigest": "869dc595721d626848e240ebc237496dbf74156057522a0c070802617ad620fd",
+      "path": "evidence/a19/EVENTS.json",
+      "sourceIdentity": {
+       "asOf": "2026-11-24",
+       "baseCommit": "6bf8c80aa9419addc85998f21a0c3010e697c4b3",
+       "baseCommitShort": "6bf8c80aa",
+       "branch": "staging",
+       "inputs": [
+        {
+         "path": "evidence/a14/ROLES.json",
+         "sha256": "54d37854b1f08398d7a475682ec4949a856aec5ed78a7889deab89b0e12b5aac"
+        },
+        {
+         "path": "evidence/a4/RECEIPT.md",
+         "sha256": "0f35f96b7a1772e4f044e4567d1e9e703c29cc21849f4ebe1146aebad387cb8a"
+        },
+        {
+         "path": "evidence/a7/RECEIPT.md",
+         "sha256": "8c00cd7aabe8bb1aba0c47981f581fd7aa709452d65fdee66ebd8b88a797efd5"
+        },
+        {
+         "path": "evidence/a11/RECEIPT.md",
+         "sha256": "a548c427f9ef5fac1a0e91b1d3612547eb834e2eb8d288e5a2d3d69b207227a4"
+        },
+        {
+         "path": "evidence/a16/RECEIPT.md",
+         "sha256": "b0d6a67fcc9db58247eedac3686aa693be154baeff5d65ef80a8a3aabf7f73a9"
+        },
+        {
+         "path": "evidence/gate-reliability/RECEIPT.md",
+         "sha256": "c051be4a89d95d235877ccad9f07abc8b77a0a414e54a87bc37a9e0b3b971689"
+        },
+        {
+         "path": "evidence/haz-15/KDK-CORRECTION.md",
+         "sha256": "42b61e280c7c85f04b88cea42ab863ee8e5bf5aa2a27909c16079e2f8d451c6c"
+        },
+        {
+         "path": "evidence/haz-15/REENTRANCY-AND-LENGTH.md",
+         "sha256": "240165e76eae6a76b98ddaf803f73706384607aa2aaa6427dac04e48d0c1bd37"
+        },
+        {
+         "path": "evidence/etp/claims.json",
+         "sha256": "2968ffd6976f19bd701c58636b51cceed192e42c928dd2116217449a7b85a1bb"
+        },
+        {
+         "path": "evidence/etp-t15/history/claims.before-reconciliation.json",
+         "sha256": "65d8105b744c80ae01e76af8bf3370c478ab116c7fc9b0f16f63eea5d5c579de"
+        },
+        {
+         "path": "evidence/etp7/RECEIPT.md",
+         "sha256": "b7b6edefbe8ecd6b85742f38bfb2bb8530a3403e7ecd0d3c58f22e03e74dcf4f"
+        },
+        {
+         "path": "docs/ADJUDICATION-RECONCILIATION.md",
+         "sha256": "a1cae9228119014a2a0dd86b405d058e916858be412409181f0ccaefc6980662"
+        },
+        {
+         "path": "docs/SECURITY_DIVERGENCE_POLICY.md",
+         "sha256": "a9b34973da3ea69c8f86dc85c1c178403723cf7730bdcee84f1312ae9b5a0d5a"
+        },
+        {
+         "path": "forensics/tools/dsse.py",
+         "sha256": "0a701eca4087215c0d0166076a0158b82a8e32c14d67ae38e397090720dd83b9"
+        }
+       ],
+       "item": "A19",
+       "tool": {
+        "path": "forensics/tools/corrections.py",
+        "sha256": "2c24c57e327726e1b912579d3a0a953ddd410d8b69c753afd3881d13c53850bb"
+       }
+      }
+     },
+     "digest": "0d323009cf2e688af31b6a1a400b1583e7d4de85b1546d279f106725e9a56e7b",
+     "identity": "current-state",
+     "model": "b6/archival/1",
+     "schema": "openssl-rs/b6/current-state/1",
+     "subjects": [
+      {
+       "correctionDigest": "2d881f51cdd9b229430c7ecc0151ce896fd70049e732b5ded6b1f1d8879e7de5",
+       "history": [
+        "A19-E07",
+        "A19-E08"
+       ],
+       "state": "CORRECTED",
+       "subject": "A11/SCAN.json/population",
+       "supersededBy": "A19-E08"
+      },
+      {
+       "correctionDigest": "4147124f16856a0b9c6d4923c28171df9ae55057468f171b8f2c1466dcc948be",
+       "history": [
+        "A19-E09",
+        "A19-E10"
+       ],
+       "state": "CORRECTED",
+       "subject": "A16/INVENTORY.json/populationFiles",
+       "supersededBy": "A19-E10"
+      },
+      {
+       "correctionDigest": "2f25326c57d46ed187fc0072731b44cc9a9fafddf6491149e8eeda5dd6738ef3",
+       "history": [
+        "A19-E01",
+        "A19-E02"
+       ],
+       "state": "CORRECTED",
+       "subject": "A4/L3-md32-update/byteLength",
+       "supersededBy": "A19-E02"
+      },
+      {
+       "correctionDigest": "45d6b8e2e3a103d8e5bb3ecff2e1e6a379c6e76870ec164331f7a27f274c8b61",
+       "history": [
+        "A19-E05",
+        "A19-E06"
+       ],
+       "state": "CORRECTED",
+       "subject": "A7/sourceIdentity",
+       "supersededBy": "A19-E06"
+      },
+      {
+       "correctionDigest": "a6f92ebce6c1d8d6dd7cb355c3d075c08744f6fe2d5fb62ee2a556a64659aeca",
+       "history": [
+        "A19-E15",
+        "A19-E16"
+       ],
+       "state": "WITHDRAWN",
+       "subject": "ETP0-CLM-004/verdict",
+       "supersededBy": "A19-E16"
+      },
+      {
+       "correctionDigest": "cc96dd2150186117af926c1bf88001cf63359a85d2a709613aa658a5d9a8d489",
+       "history": [
+        "A19-E17",
+        "A19-E18"
+       ],
+       "state": "WITHDRAWN",
+       "subject": "ETP0-CLM-005/verdict",
+       "supersededBy": "A19-E18"
+      },
+      {
+       "correctionDigest": "50722431a2a126c19969f2236446024f0e5861a9bd9c9e4ad166f03013fddf03",
+       "history": [
+        "A19-E19",
+        "A19-E20"
+       ],
+       "state": "WITHDRAWN",
+       "subject": "ETP0-CLM-030/verdict",
+       "supersededBy": "A19-E20"
+      },
+      {
+       "correctionDigest": "bf4f5320cc79244629b0f291a80e10d14344b3b39904ea38baa249a962fbab79",
+       "history": [
+        "A19-E21",
+        "A19-E22"
+       ],
+       "state": "WITHDRAWN",
+       "subject": "ETP0-CLM-032/verdict",
+       "supersededBy": "A19-E22"
+      },
+      {
+       "correctionDigest": "3f41d2fb819f28dba26832ffc9e5d4f2c0172cdaa637547cb45b9af5e7d92de9",
+       "history": [
+        "A19-E11",
+        "A19-E12"
+       ],
+       "state": "CORRECTED",
+       "subject": "HAZ-15/external-key-KDK",
+       "supersededBy": "A19-E12"
+      },
+      {
+       "correctionDigest": "c0504c5a75144b3acaaeec666ff3e66d1c84851d47d219ed6bbe0924238e9c8c",
+       "history": [
+        "A19-E13",
+        "A19-E14"
+       ],
+       "state": "WITHDRAWN",
+       "subject": "HAZ-15/posterior-probability-99.6",
+       "supersededBy": "A19-E14"
+      },
+      {
+       "correctionDigest": "cc4d86e1c6aecffad84fc602cee1ba769764e774cdd0571ae70bde9d566100a8",
+       "history": [
+        "A19-E03",
+        "A19-E04"
+       ],
+       "state": "CORRECTED",
+       "subject": "gate-reliability/verify-deterministic-projection",
+       "supersededBy": "A19-E04"
+      }
+     ],
+     "version": 22,
+     "versionRule": "the version is the number of A19 events the state was derived from; A19's log is append-only, so a later derivation covers a superset and its version is strictly greater"
+    }
+   }
+  },
+  {
+   "code": "RV_REFUSED_IO",
+   "controlOnly": true,
+   "fired": true,
+   "message": "the current state <out>/CONTROL-ONLY/absent-state.json: [Errno 2] No such file or directory: '<out>/CONTROL-ONLY/absent-state.json'",
+   "mutation": "a current-state path that holds no file",
+   "name": "state-unreadable",
+   "restoration": {
+    "accepted": true,
+    "result": {
+     "asOf": "2026-11-23T00:00:00Z",
+     "derivedFrom": {
+      "events": 22,
+      "logDigest": "869dc595721d626848e240ebc237496dbf74156057522a0c070802617ad620fd",
+      "path": "evidence/a19/EVENTS.json",
+      "sourceIdentity": {
+       "asOf": "2026-11-24",
+       "baseCommit": "6bf8c80aa9419addc85998f21a0c3010e697c4b3",
+       "baseCommitShort": "6bf8c80aa",
+       "branch": "staging",
+       "inputs": [
+        {
+         "path": "evidence/a14/ROLES.json",
+         "sha256": "54d37854b1f08398d7a475682ec4949a856aec5ed78a7889deab89b0e12b5aac"
+        },
+        {
+         "path": "evidence/a4/RECEIPT.md",
+         "sha256": "0f35f96b7a1772e4f044e4567d1e9e703c29cc21849f4ebe1146aebad387cb8a"
+        },
+        {
+         "path": "evidence/a7/RECEIPT.md",
+         "sha256": "8c00cd7aabe8bb1aba0c47981f581fd7aa709452d65fdee66ebd8b88a797efd5"
+        },
+        {
+         "path": "evidence/a11/RECEIPT.md",
+         "sha256": "a548c427f9ef5fac1a0e91b1d3612547eb834e2eb8d288e5a2d3d69b207227a4"
+        },
+        {
+         "path": "evidence/a16/RECEIPT.md",
+         "sha256": "b0d6a67fcc9db58247eedac3686aa693be154baeff5d65ef80a8a3aabf7f73a9"
+        },
+        {
+         "path": "evidence/gate-reliability/RECEIPT.md",
+         "sha256": "c051be4a89d95d235877ccad9f07abc8b77a0a414e54a87bc37a9e0b3b971689"
+        },
+        {
+         "path": "evidence/haz-15/KDK-CORRECTION.md",
+         "sha256": "42b61e280c7c85f04b88cea42ab863ee8e5bf5aa2a27909c16079e2f8d451c6c"
+        },
+        {
+         "path": "evidence/haz-15/REENTRANCY-AND-LENGTH.md",
+         "sha256": "240165e76eae6a76b98ddaf803f73706384607aa2aaa6427dac04e48d0c1bd37"
+        },
+        {
+         "path": "evidence/etp/claims.json",
+         "sha256": "2968ffd6976f19bd701c58636b51cceed192e42c928dd2116217449a7b85a1bb"
+        },
+        {
+         "path": "evidence/etp-t15/history/claims.before-reconciliation.json",
+         "sha256": "65d8105b744c80ae01e76af8bf3370c478ab116c7fc9b0f16f63eea5d5c579de"
+        },
+        {
+         "path": "evidence/etp7/RECEIPT.md",
+         "sha256": "b7b6edefbe8ecd6b85742f38bfb2bb8530a3403e7ecd0d3c58f22e03e74dcf4f"
+        },
+        {
+         "path": "docs/ADJUDICATION-RECONCILIATION.md",
+         "sha256": "a1cae9228119014a2a0dd86b405d058e916858be412409181f0ccaefc6980662"
+        },
+        {
+         "path": "docs/SECURITY_DIVERGENCE_POLICY.md",
+         "sha256": "a9b34973da3ea69c8f86dc85c1c178403723cf7730bdcee84f1312ae9b5a0d5a"
+        },
+        {
+         "path": "forensics/tools/dsse.py",
+         "sha256": "0a701eca4087215c0d0166076a0158b82a8e32c14d67ae38e397090720dd83b9"
+        }
+       ],
+       "item": "A19",
+       "tool": {
+        "path": "forensics/tools/corrections.py",
+        "sha256": "2c24c57e327726e1b912579d3a0a953ddd410d8b69c753afd3881d13c53850bb"
+       }
+      }
+     },
+     "digest": "31b94d5ea2dbd1dd2fc888b5242e0834d3ef77130a6c8d02aa9e29066c641671",
+     "identity": "current-state",
+     "model": "b6/archival/1",
+     "previous": {
+      "asOf": "2026-11-22T00:00:00Z",
+      "digest": "d5219cea5926efbba82262517d3f02210c16e5157a5f7ef1fc48a89a1f62dcfd",
+      "version": 21
+     },
+     "schema": "openssl-rs/b6/current-state/1",
+     "subjects": [
+      {
+       "correctionDigest": "2d881f51cdd9b229430c7ecc0151ce896fd70049e732b5ded6b1f1d8879e7de5",
+       "history": [
+        "A19-E07",
+        "A19-E08"
+       ],
+       "state": "CORRECTED",
+       "subject": "A11/SCAN.json/population",
+       "supersededBy": "A19-E08"
+      },
+      {
+       "correctionDigest": "4147124f16856a0b9c6d4923c28171df9ae55057468f171b8f2c1466dcc948be",
+       "history": [
+        "A19-E09",
+        "A19-E10"
+       ],
+       "state": "CORRECTED",
+       "subject": "A16/INVENTORY.json/populationFiles",
+       "supersededBy": "A19-E10"
+      },
+      {
+       "correctionDigest": "2f25326c57d46ed187fc0072731b44cc9a9fafddf6491149e8eeda5dd6738ef3",
+       "history": [
+        "A19-E01",
+        "A19-E02"
+       ],
+       "state": "CORRECTED",
+       "subject": "A4/L3-md32-update/byteLength",
+       "supersededBy": "A19-E02"
+      },
+      {
+       "correctionDigest": "45d6b8e2e3a103d8e5bb3ecff2e1e6a379c6e76870ec164331f7a27f274c8b61",
+       "history": [
+        "A19-E05",
+        "A19-E06"
+       ],
+       "state": "CORRECTED",
+       "subject": "A7/sourceIdentity",
+       "supersededBy": "A19-E06"
+      },
+      {
+       "correctionDigest": "a6f92ebce6c1d8d6dd7cb355c3d075c08744f6fe2d5fb62ee2a556a64659aeca",
+       "history": [
+        "A19-E15",
+        "A19-E16"
+       ],
+       "state": "WITHDRAWN",
+       "subject": "ETP0-CLM-004/verdict",
+       "supersededBy": "A19-E16"
+      },
+      {
+       "correctionDigest": "cc96dd2150186117af926c1bf88001cf63359a85d2a709613aa658a5d9a8d489",
+       "history": [
+        "A19-E17",
+        "A19-E18"
+       ],
+       "state": "WITHDRAWN",
+       "subject": "ETP0-CLM-005/verdict",
+       "supersededBy": "A19-E18"
+      },
+      {
+       "correctionDigest": "50722431a2a126c19969f2236446024f0e5861a9bd9c9e4ad166f03013fddf03",
+       "history": [
+        "A19-E19",
+        "A19-E20"
+       ],
+       "state": "WITHDRAWN",
+       "subject": "ETP0-CLM-030/verdict",
+       "supersededBy": "A19-E20"
+      },
+      {
+       "correctionDigest": "bf4f5320cc79244629b0f291a80e10d14344b3b39904ea38baa249a962fbab79",
+       "history": [
+        "A19-E21",
+        "A19-E22"
+       ],
+       "state": "WITHDRAWN",
+       "subject": "ETP0-CLM-032/verdict",
+       "supersededBy": "A19-E22"
+      },
+      {
+       "correctionDigest": "3f41d2fb819f28dba26832ffc9e5d4f2c0172cdaa637547cb45b9af5e7d92de9",
+       "history": [
+        "A19-E11",
+        "A19-E12"
+       ],
+       "state": "CORRECTED",
+       "subject": "HAZ-15/external-key-KDK",
+       "supersededBy": "A19-E12"
+      },
+      {
+       "correctionDigest": "c0504c5a75144b3acaaeec666ff3e66d1c84851d47d219ed6bbe0924238e9c8c",
+       "history": [
+        "A19-E13",
+        "A19-E14"
+       ],
+       "state": "WITHDRAWN",
+       "subject": "HAZ-15/posterior-probability-99.6",
+       "supersededBy": "A19-E14"
+      },
+      {
+       "correctionDigest": "cc4d86e1c6aecffad84fc602cee1ba769764e774cdd0571ae70bde9d566100a8",
+       "history": [
+        "A19-E03",
+        "A19-E04"
+       ],
+       "state": "CORRECTED",
+       "subject": "gate-reliability/verify-deterministic-projection",
+       "supersededBy": "A19-E04"
+      }
+     ],
+     "version": 22,
+     "versionRule": "the version is the number of A19 events the state was derived from; A19's log is append-only, so a later derivation covers a superset and its version is strictly greater"
+    }
+   }
+  },
+  {
+   "code": "RV_OK",
+   "controlOnly": true,
+   "fired": true,
+   "mutation": "none: the produced archive, state and policy are checked",
+   "name": "positive-control",
+   "restoration": {
+    "accepted": true,
+    "current": "WITHDRAWN",
+    "inclusion": "RV_OK",
+    "reconstruction": "RV_OK"
+   }
+  }
+ ]
+}

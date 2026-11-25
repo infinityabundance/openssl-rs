@@ -1,0 +1,66 @@
+{
+ "leaves": [
+  {
+   "bytes": 714,
+   "index": 0,
+   "kind": "real-a9-statement",
+   "leafHash": "d634ef880585fd724608819941c9717ddaf3b5081508649df21b86771fdd13ad",
+   "path": "evidence/a9/STATEMENTS/a8-shard-000.json",
+   "sha256": "ea67963abf16e9b1e33a86d0eec5e35354f3a890497055867e942eac41d22582",
+   "subjects": [
+    {
+     "digest": {
+      "sha256": "b16d376ae0b2fa5483650f8019eada15102fcae580b0a46419b13e7ee98450ed"
+     },
+     "name": "evidence/a8/SHARD-000.sarif"
+    }
+   ]
+  },
+  {
+   "bytes": 895,
+   "index": 1,
+   "kind": "fixture-statement",
+   "leafHash": "eaf725703719d1bf8d4b038eddc412e8984b4893b2d706c67f0726a127f21d41",
+   "path": null,
+   "sha256": "4e3ec3677c77ffe19cac31c094edc8b1b3d31519d86bc7a8cd4f707f8f3bcc08",
+   "subjects": [
+    {
+     "digest": {
+      "sha256": "af3925cf0d47d7ff26d06547855a299405c824d88f7984116470903a914c9c6c"
+     },
+     "name": "a19:ETP0-CLM-032/verdict"
+    }
+   ]
+  },
+  {
+   "bytes": 220,
+   "index": 2,
+   "kind": "synthetic-test-only",
+   "leafHash": "6ee05cefdb2e0fb06d54dc48ecbc41a17cd8abc0daf2c98344975e8995fc0d35",
+   "path": null,
+   "sha256": "764ea923459eefb825497258f28ebdc423e243bea9838f7afae876a7a33b76f0",
+   "subjects": []
+  },
+  {
+   "bytes": 220,
+   "index": 3,
+   "kind": "synthetic-test-only",
+   "leafHash": "4ee0873003668468c3723402e14dab3e6581342c3c4b6a54b7e7c0d00dfbe77e",
+   "path": null,
+   "sha256": "bc97ca4014b3563b5d15822cd7f4c6465b4e2b4440a616ba22018e1af8ee3b9a",
+   "subjects": []
+  },
+  {
+   "bytes": 220,
+   "index": 4,
+   "kind": "synthetic-test-only",
+   "leafHash": "54a2476f8a39dd11bfe9b2395faf17d523af0ac4c73d6b004310dce79d6bfec1",
+   "path": null,
+   "sha256": "1d7f2700f1fb30ef92ae84ed36d0150e6a8908d3183a527c63e2c6e538849da5",
+   "subjects": []
+  }
+ ],
+ "origin": "FIXTURE-2",
+ "schema": "openssl-rs/b6/leaf-list/1",
+ "treeSize": 5
+}

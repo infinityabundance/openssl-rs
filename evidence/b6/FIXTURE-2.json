@@ -1,0 +1,124 @@
+{
+ "admittedService": false,
+ "baseCommit": "19b710192",
+ "construction": {
+  "clause": "RFC 6962 §2.1; docs/ETP-ADDENDUM-B.md §B.3.2",
+  "emptyRoot": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "hash": "sha256",
+  "leafHash": "SHA-256(0x00 || leaf)",
+  "nodeHash": "SHA-256(0x01 || left || right)",
+  "treeSize": 5
+ },
+ "identity": "FIXTURE-2",
+ "item": "B6",
+ "labels": [
+  "FIXTURE-2",
+  "test-only",
+  "not-rekor-tiles",
+  "no-log-key",
+  "no-witness",
+  "no-production-signature",
+  "fixture-statement",
+  "prose-only-withdrawal"
+ ],
+ "leaves": [
+  {
+   "bytes": 714,
+   "index": 0,
+   "kind": "real-a9-statement",
+   "leafHash": "d634ef880585fd724608819941c9717ddaf3b5081508649df21b86771fdd13ad",
+   "path": "evidence/a9/STATEMENTS/a8-shard-000.json",
+   "sha256": "ea67963abf16e9b1e33a86d0eec5e35354f3a890497055867e942eac41d22582",
+   "subjects": [
+    {
+     "digest": {
+      "sha256": "b16d376ae0b2fa5483650f8019eada15102fcae580b0a46419b13e7ee98450ed"
+     },
+     "name": "evidence/a8/SHARD-000.sarif"
+    }
+   ]
+  },
+  {
+   "bytes": 895,
+   "index": 1,
+   "kind": "fixture-statement",
+   "leafHash": "eaf725703719d1bf8d4b038eddc412e8984b4893b2d706c67f0726a127f21d41",
+   "path": null,
+   "sha256": "4e3ec3677c77ffe19cac31c094edc8b1b3d31519d86bc7a8cd4f707f8f3bcc08",
+   "subjects": [
+    {
+     "digest": {
+      "sha256": "af3925cf0d47d7ff26d06547855a299405c824d88f7984116470903a914c9c6c"
+     },
+     "name": "a19:ETP0-CLM-032/verdict"
+    }
+   ]
+  },
+  {
+   "bytes": 220,
+   "index": 2,
+   "kind": "synthetic-test-only",
+   "leafHash": "6ee05cefdb2e0fb06d54dc48ecbc41a17cd8abc0daf2c98344975e8995fc0d35",
+   "path": null,
+   "sha256": "764ea923459eefb825497258f28ebdc423e243bea9838f7afae876a7a33b76f0",
+   "subjects": []
+  },
+  {
+   "bytes": 220,
+   "index": 3,
+   "kind": "synthetic-test-only",
+   "leafHash": "4ee0873003668468c3723402e14dab3e6581342c3c4b6a54b7e7c0d00dfbe77e",
+   "path": null,
+   "sha256": "bc97ca4014b3563b5d15822cd7f4c6465b4e2b4440a616ba22018e1af8ee3b9a",
+   "subjects": []
+  },
+  {
+   "bytes": 220,
+   "index": 4,
+   "kind": "synthetic-test-only",
+   "leafHash": "54a2476f8a39dd11bfe9b2395faf17d523af0ac4c73d6b004310dce79d6bfec1",
+   "path": null,
+   "sha256": "1d7f2700f1fb30ef92ae84ed36d0150e6a8908d3183a527c63e2c6e538849da5",
+   "subjects": []
+  }
+ ],
+ "model": "b6/archival/1",
+ "nonClaims": [
+  "FIXTURE-2 is a fixture, not an admitted log",
+  "the checkpoint is signed by A10's test-only HMAC key, not a log key",
+  "no Rekor entry, hashedrekord submission or integrated time exists",
+  "no witness cosignature exists",
+  "the fixture statement is not an in-toto attestation registered by A9"
+ ],
+ "publication": {
+  "archiveMember": "members/log/checkpoint.note",
+  "checkpoint": {
+   "keyHash": "d9471dd6",
+   "notALogKey": true,
+   "noteText": "FIXTURE-2\n5\nS5uXpID0lRG9UvV7aBEv3WTQFPuyW65qpM1/BwBJRtY=\n\n",
+   "noteTextSha256": "93b7a1a1172b40a7fbf63e21677c8b322dc1111a10eb9ab085165b36f2b0ebb8",
+   "signatureName": "FIXTURE-2 test-only hmac-sha256",
+   "signedNote": "FIXTURE-2\n5\nS5uXpID0lRG9UvV7aBEv3WTQFPuyW65qpM1/BwBJRtY=\n\n— FIXTURE-2 test-only hmac-sha256 2Ucd1tG9ojTpSI+d69yR1xKYOzyNPqWDBfUWYol14Kn/vS5V\n",
+   "signedNoteSha256": "039aba47fb9b03aa84015c7e5d79a05566d7a35b1860c8d687c114698eb3b2c6",
+   "testOnly": true
+  },
+  "inclusionProof": [
+   "d634ef880585fd724608819941c9717ddaf3b5081508649df21b86771fdd13ad",
+   "f50b64f3d12e50d5a943d38847c6167031de916025c83c9b424d06dc842db7a1",
+   "54a2476f8a39dd11bfe9b2395faf17d523af0ac4c73d6b004310dce79d6bfec1"
+  ],
+  "leafHash": "eaf725703719d1bf8d4b038eddc412e8984b4893b2d706c67f0726a127f21d41",
+  "leafIndex": 1,
+  "rootHash": "4b9b97a480f49511bd52f57b68112fdd64d014fbb25bae6aa4cd7f07004946d6",
+  "statementSha256": "4e3ec3677c77ffe19cac31c094edc8b1b3d31519d86bc7a8cd4f707f8f3bcc08",
+  "treeSize": 5
+ },
+ "schema": "openssl-rs/b6/fixture/1",
+ "subject": {
+  "a19Subject": "ETP0-CLM-032/verdict",
+  "fixtureStatement": true,
+  "isA9Statement": false,
+  "statementSubject": "a19:ETP0-CLM-032/verdict",
+  "why": "A9's four statements cover A1, A5, A7 and A8 artefacts; none covers an A19 correction subject, so the statement is built over the withdrawn record's bytes and labelled a fixture statement"
+ }
+}

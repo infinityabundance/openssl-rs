@@ -1,0 +1,13 @@
+{
+ "assertion": {
+  "digest": "af3925cf0d47d7ff26d06547855a299405c824d88f7984116470903a914c9c6c",
+  "eventId": "A19-E21"
+ },
+ "note": "A19 event identities by canonical digest; the event bytes remain in evidence/a19/EVENTS.json and are not duplicated here",
+ "retraction": {
+  "digest": "bf4f5320cc79244629b0f291a80e10d14344b3b39904ea38baa249a962fbab79",
+  "eventId": "A19-E22"
+ },
+ "schema": "openssl-rs/b6/a19-binding/1",
+ "subject": "ETP0-CLM-032/verdict"
+}

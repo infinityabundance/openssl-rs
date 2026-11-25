@@ -1,0 +1,16 @@
+{
+ "checkpointSha256": "039aba47fb9b03aa84015c7e5d79a05566d7a35b1860c8d687c114698eb3b2c6",
+ "leafHash": "eaf725703719d1bf8d4b038eddc412e8984b4893b2d706c67f0726a127f21d41",
+ "leafIndex": 1,
+ "leafSha256": "4e3ec3677c77ffe19cac31c094edc8b1b3d31519d86bc7a8cd4f707f8f3bcc08",
+ "proof": [
+  "d634ef880585fd724608819941c9717ddaf3b5081508649df21b86771fdd13ad",
+  "f50b64f3d12e50d5a943d38847c6167031de916025c83c9b424d06dc842db7a1",
+  "54a2476f8a39dd11bfe9b2395faf17d523af0ac4c73d6b004310dce79d6bfec1"
+ ],
+ "rootHash": "4b9b97a480f49511bd52f57b68112fdd64d014fbb25bae6aa4cd7f07004946d6",
+ "schema": "openssl-rs/b6/inclusion-proof/1",
+ "statementSubject": "a19:ETP0-CLM-032/verdict",
+ "subject": "ETP0-CLM-032/verdict",
+ "treeSize": 5
+}
