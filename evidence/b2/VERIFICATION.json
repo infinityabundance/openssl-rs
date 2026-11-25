@@ -1,0 +1,127 @@
+{
+ "aggregate": {
+  "artefacts": 5,
+  "chainVerified": 0,
+  "imprintVerified": 0,
+  "noToken": 5,
+  "rootAdmitted": 0,
+  "signatureVerified": 0,
+  "trusted": 0
+ },
+ "baseCommit": "ebc539869",
+ "controlBaseline": {
+  "artifact": "evidence/a9/STATEMENTS/a8-shard-000.json",
+  "chain": "NOT_RUN",
+  "code": "TS_OK",
+  "eku": "PASS",
+  "fixture": "control-only",
+  "imprint": "PASS",
+  "note": "a deterministic fixture token verifies because the fixture verification function is the control HMAC; it is not an authority's token and the outcome is UNTRUSTED",
+  "outcome": "TIMESTAMP_SIGNATURE_VERIFIED_UNTRUSTED",
+  "root": "NOT_RUN",
+  "signature": "PASS",
+  "trusted": false
+ },
+ "item": "B2",
+ "nonClaims": [
+  "an imprint match is not a trusted time",
+  "a fixture token that verifies is not an authority's assertion",
+  "trusted is 0 because no authority exists, not because verification was skipped"
+ ],
+ "notRun": [
+  "signature verification of a real token (no token exists)",
+  "certificate-chain validation against an admitted root (no certificate, no root)",
+  "id-kp-timeStamping evaluation for a real TSA (no certificate)",
+  "nonce correspondence with a real request (no request, no TSA)",
+  "revocation and historical validity (no chain, no revocation source)"
+ ],
+ "perArtefact": [
+  {
+   "accuracy": "NOT_RUN",
+   "algorithm": "sha256",
+   "chain": "NOT_RUN",
+   "code": "TS_NO_TOKEN",
+   "eku": "NOT_RUN",
+   "id": "a9-a1-sarif",
+   "imprint": "NOT_RUN",
+   "outcome": "TIMESTAMP_NO_TOKEN",
+   "path": "evidence/a9/STATEMENTS/a1-sarif.json",
+   "reason": "no RFC 3161 token exists for this artefact: no TSA is admitted (TA-B2 UNMET), no certificate or trust root exists, and the tree contains no token file",
+   "root": "NOT_RUN",
+   "signature": "NOT_RUN",
+   "token": null,
+   "trusted": false
+  },
+  {
+   "accuracy": "NOT_RUN",
+   "algorithm": "sha256",
+   "chain": "NOT_RUN",
+   "code": "TS_NO_TOKEN",
+   "eku": "NOT_RUN",
+   "id": "a9-a5-admission",
+   "imprint": "NOT_RUN",
+   "outcome": "TIMESTAMP_NO_TOKEN",
+   "path": "evidence/a9/STATEMENTS/a5-admission.json",
+   "reason": "no RFC 3161 token exists for this artefact: no TSA is admitted (TA-B2 UNMET), no certificate or trust root exists, and the tree contains no token file",
+   "root": "NOT_RUN",
+   "signature": "NOT_RUN",
+   "token": null,
+   "trusted": false
+  },
+  {
+   "accuracy": "NOT_RUN",
+   "algorithm": "sha256",
+   "chain": "NOT_RUN",
+   "code": "TS_NO_TOKEN",
+   "eku": "NOT_RUN",
+   "id": "a9-a7-delta",
+   "imprint": "NOT_RUN",
+   "outcome": "TIMESTAMP_NO_TOKEN",
+   "path": "evidence/a9/STATEMENTS/a7-delta.json",
+   "reason": "no RFC 3161 token exists for this artefact: no TSA is admitted (TA-B2 UNMET), no certificate or trust root exists, and the tree contains no token file",
+   "root": "NOT_RUN",
+   "signature": "NOT_RUN",
+   "token": null,
+   "trusted": false
+  },
+  {
+   "accuracy": "NOT_RUN",
+   "algorithm": "sha256",
+   "chain": "NOT_RUN",
+   "code": "TS_NO_TOKEN",
+   "eku": "NOT_RUN",
+   "id": "a9-a8-shard-000",
+   "imprint": "NOT_RUN",
+   "outcome": "TIMESTAMP_NO_TOKEN",
+   "path": "evidence/a9/STATEMENTS/a8-shard-000.json",
+   "reason": "no RFC 3161 token exists for this artefact: no TSA is admitted (TA-B2 UNMET), no certificate or trust root exists, and the tree contains no token file",
+   "root": "NOT_RUN",
+   "signature": "NOT_RUN",
+   "token": null,
+   "trusted": false
+  },
+  {
+   "accuracy": "NOT_RUN",
+   "algorithm": "sha256",
+   "chain": "NOT_RUN",
+   "code": "TS_NO_TOKEN",
+   "eku": "NOT_RUN",
+   "id": "b1-publication",
+   "imprint": "NOT_RUN",
+   "outcome": "TIMESTAMP_NO_TOKEN",
+   "path": "evidence/b1/PUBLICATION.json",
+   "reason": "no RFC 3161 token exists for this artefact: no TSA is admitted (TA-B2 UNMET), no certificate or trust root exists, and the tree contains no token file",
+   "root": "NOT_RUN",
+   "signature": "NOT_RUN",
+   "token": null,
+   "trusted": false
+  }
+ ],
+ "recordedAt": "2026-11-24",
+ "schema": "openssl-rs/b2/verification/1",
+ "unusedCertificateFixture": {
+  "eku": "control-only",
+  "note": "the certificate without an EKU is used only by the TS_REFUSED_EKU control",
+  "sha256": "a7f78749606c81b385d0f17af567bc0a589fee0cf593984ef2bfe4eb0107f2d7"
+ }
+}

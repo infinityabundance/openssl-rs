@@ -1,0 +1,616 @@
+{
+ "artefacts": [
+  {
+   "id": "a9-a1-sarif",
+   "kind": "a9-statement",
+   "path": "evidence/a9/STATEMENTS/a1-sarif.json",
+   "refusals": [],
+   "sha256": "d53bc4eb66f71bab7227fb9e590d151287a1d64b4446f8dd84b94ca8fef26329",
+   "slots": [
+    {
+     "accuracy": "unknown",
+     "clause": "docs/ETP-ADDENDUM-B.md §B.9 time 1: source creation",
+     "established": "unknown",
+     "kind": "local",
+     "name": "source-creation",
+     "reason": "the A8 manifest names six run candidates (for example source candidate 17042ccf29bc39df638c63e69d3be6c6f965eef7) but records no date for the source tree; no tracked record states when the source was created",
+     "recordedBy": "A8 producer",
+     "source": "evidence/a8/MANIFEST.json#/candidate/perRun",
+     "value": null
+    },
+    {
+     "accuracy": "unknown",
+     "clause": "docs/ETP-ADDENDUM-B.md §B.9 time 2: experimental execution",
+     "established": "unknown",
+     "kind": "local",
+     "name": "experimental-execution",
+     "reason": "the SARIF runs carry candidate identities, not execution timestamps; A8's asOf is the record's date and §B.9 forbids inferring execution from a later timestamp",
+     "recordedBy": "A8 producer",
+     "source": "evidence/a8/MANIFEST.json#/candidate/perRun",
+     "value": null
+    },
+    {
+     "accuracy": "day",
+     "clause": "docs/ETP-ADDENDUM-B.md §B.9 time 3: evidence production",
+     "established": true,
+     "kind": "local",
+     "name": "evidence-production",
+     "reason": "the record carries a date, not an instant; day granularity only",
+     "recordedBy": "A9 producer",
+     "source": "evidence/a9/STATEMENTS.json#/sourceIdentity/asOf",
+     "value": "2026-11-24"
+    },
+    {
+     "accuracy": "day",
+     "clause": "docs/ETP-ADDENDUM-B.md §B.9 time 4: statement authentication",
+     "established": true,
+     "kind": "client",
+     "name": "statement-authentication",
+     "reason": "the A10 record's asOf dates the test-only signature; the envelope records no signing instant and the signer is not an independent authority",
+     "recordedBy": "A10 producer (test-only HMAC-SHA256; not a trust root)",
+     "source": "evidence/a10/ENVELOPES.json#/sourceIdentity/asOf",
+     "value": "2026-11-24"
+    },
+    {
+     "accuracy": "unknown",
+     "clause": "docs/ETP-ADDENDUM-B.md §B.9 time 5: trusted timestamping",
+     "established": "unknown",
+     "kind": "authority",
+     "name": "trusted-timestamping",
+     "reason": "TA-B2 is UNMET: evidence/b0/SERVICE-CONFIGURATION.json records '0 certificates and no timestamp-authority root'",
+     "recordedBy": "B0 audit",
+     "source": "evidence/b0/SERVICE-CONFIGURATION.json#/trustAssumptions[id=TA-B2]",
+     "value": null
+    },
+    {
+     "accuracy": "unknown",
+     "clause": "docs/ETP-ADDENDUM-B.md §B.9 time 6: transparency inclusion",
+     "established": "unknown",
+     "kind": "log",
+     "name": "transparency-inclusion",
+     "reason": "no transparency log exists; B1's FIXTURE-1 is an offline fixture with no integrated time, and no statement was submitted to an admitted log",
+     "recordedBy": "none",
+     "source": "none",
+     "value": null
+    },
+    {
+     "accuracy": "unknown",
+     "clause": "docs/ETP-ADDENDUM-B.md §B.9 time 7: witness observation",
+     "established": "unknown",
+     "kind": "verifier",
+     "name": "witness-observation",
+     "reason": "no independent witness exists (TA-B5 UNMET); no cosignature was observed",
+     "recordedBy": "none",
+     "source": "none",
+     "value": null
+    },
+    {
+     "accuracy": "unknown",
+     "clause": "docs/ETP-ADDENDUM-B.md §B.9 time 8: release promotion",
+     "established": "unknown",
+     "kind": "publication",
+     "name": "release-promotion",
+     "reason": "no release was promoted; the statements exist only on the staging branch",
+     "recordedBy": "none",
+     "source": "none",
+     "value": null
+    },
+    {
+     "accuracy": "unknown",
+     "clause": "docs/ETP-ADDENDUM-B.md §B.9 time 9: subsequent correction or revocation",
+     "established": false,
+     "kind": "publication",
+     "name": "correction-or-revocation",
+     "reason": "no correction or revocation of this statement exists in the tracked record",
+     "recordedBy": "none",
+     "source": "none",
+     "value": null
+    }
+   ]
+  },
+  {
+   "id": "a9-a5-admission",
+   "kind": "a9-statement",
+   "path": "evidence/a9/STATEMENTS/a5-admission.json",
+   "refusals": [],
+   "sha256": "d17bb4c990893dc61ee06687a78b6c1b9a91b772e9dbefe233d1fa8b6c21e45f",
+   "slots": [
+    {
+     "accuracy": "unknown",
+     "clause": "docs/ETP-ADDENDUM-B.md §B.9 time 1: source creation",
+     "established": "unknown",
+     "kind": "local",
+     "name": "source-creation",
+     "reason": "the A8 manifest names six run candidates (for example source candidate 17042ccf29bc39df638c63e69d3be6c6f965eef7) but records no date for the source tree; no tracked record states when the source was created",
+     "recordedBy": "A8 producer",
+     "source": "evidence/a8/MANIFEST.json#/candidate/perRun",
+     "value": null
+    },
+    {
+     "accuracy": "unknown",
+     "clause": "docs/ETP-ADDENDUM-B.md §B.9 time 2: experimental execution",
+     "established": "unknown",
+     "kind": "local",
+     "name": "experimental-execution",
+     "reason": "the SARIF runs carry candidate identities, not execution timestamps; A8's asOf is the record's date and §B.9 forbids inferring execution from a later timestamp",
+     "recordedBy": "A8 producer",
+     "source": "evidence/a8/MANIFEST.json#/candidate/perRun",
+     "value": null
+    },
+    {
+     "accuracy": "day",
+     "clause": "docs/ETP-ADDENDUM-B.md §B.9 time 3: evidence production",
+     "established": true,
+     "kind": "local",
+     "name": "evidence-production",
+     "reason": "the record carries a date, not an instant; day granularity only",
+     "recordedBy": "A9 producer",
+     "source": "evidence/a9/STATEMENTS.json#/sourceIdentity/asOf",
+     "value": "2026-11-24"
+    },
+    {
+     "accuracy": "day",
+     "clause": "docs/ETP-ADDENDUM-B.md §B.9 time 4: statement authentication",
+     "established": true,
+     "kind": "client",
+     "name": "statement-authentication",
+     "reason": "the A10 record's asOf dates the test-only signature; the envelope records no signing instant and the signer is not an independent authority",
+     "recordedBy": "A10 producer (test-only HMAC-SHA256; not a trust root)",
+     "source": "evidence/a10/ENVELOPES.json#/sourceIdentity/asOf",
+     "value": "2026-11-24"
+    },
+    {
+     "accuracy": "unknown",
+     "clause": "docs/ETP-ADDENDUM-B.md §B.9 time 5: trusted timestamping",
+     "established": "unknown",
+     "kind": "authority",
+     "name": "trusted-timestamping",
+     "reason": "TA-B2 is UNMET: evidence/b0/SERVICE-CONFIGURATION.json records '0 certificates and no timestamp-authority root'",
+     "recordedBy": "B0 audit",
+     "source": "evidence/b0/SERVICE-CONFIGURATION.json#/trustAssumptions[id=TA-B2]",
+     "value": null
+    },
+    {
+     "accuracy": "unknown",
+     "clause": "docs/ETP-ADDENDUM-B.md §B.9 time 6: transparency inclusion",
+     "established": "unknown",
+     "kind": "log",
+     "name": "transparency-inclusion",
+     "reason": "no transparency log exists; B1's FIXTURE-1 is an offline fixture with no integrated time, and no statement was submitted to an admitted log",
+     "recordedBy": "none",
+     "source": "none",
+     "value": null
+    },
+    {
+     "accuracy": "unknown",
+     "clause": "docs/ETP-ADDENDUM-B.md §B.9 time 7: witness observation",
+     "established": "unknown",
+     "kind": "verifier",
+     "name": "witness-observation",
+     "reason": "no independent witness exists (TA-B5 UNMET); no cosignature was observed",
+     "recordedBy": "none",
+     "source": "none",
+     "value": null
+    },
+    {
+     "accuracy": "unknown",
+     "clause": "docs/ETP-ADDENDUM-B.md §B.9 time 8: release promotion",
+     "established": "unknown",
+     "kind": "publication",
+     "name": "release-promotion",
+     "reason": "no release was promoted; the statements exist only on the staging branch",
+     "recordedBy": "none",
+     "source": "none",
+     "value": null
+    },
+    {
+     "accuracy": "unknown",
+     "clause": "docs/ETP-ADDENDUM-B.md §B.9 time 9: subsequent correction or revocation",
+     "established": false,
+     "kind": "publication",
+     "name": "correction-or-revocation",
+     "reason": "no correction or revocation of this statement exists in the tracked record",
+     "recordedBy": "none",
+     "source": "none",
+     "value": null
+    }
+   ]
+  },
+  {
+   "id": "a9-a7-delta",
+   "kind": "a9-statement",
+   "path": "evidence/a9/STATEMENTS/a7-delta.json",
+   "refusals": [],
+   "sha256": "d4dfa5a3b374ffc4382964dcac61e8a785cfe7f833cbe5c7731a210c0fe7fba8",
+   "slots": [
+    {
+     "accuracy": "unknown",
+     "clause": "docs/ETP-ADDENDUM-B.md §B.9 time 1: source creation",
+     "established": "unknown",
+     "kind": "local",
+     "name": "source-creation",
+     "reason": "the A8 manifest names six run candidates (for example source candidate 17042ccf29bc39df638c63e69d3be6c6f965eef7) but records no date for the source tree; no tracked record states when the source was created",
+     "recordedBy": "A8 producer",
+     "source": "evidence/a8/MANIFEST.json#/candidate/perRun",
+     "value": null
+    },
+    {
+     "accuracy": "unknown",
+     "clause": "docs/ETP-ADDENDUM-B.md §B.9 time 2: experimental execution",
+     "established": "unknown",
+     "kind": "local",
+     "name": "experimental-execution",
+     "reason": "the SARIF runs carry candidate identities, not execution timestamps; A8's asOf is the record's date and §B.9 forbids inferring execution from a later timestamp",
+     "recordedBy": "A8 producer",
+     "source": "evidence/a8/MANIFEST.json#/candidate/perRun",
+     "value": null
+    },
+    {
+     "accuracy": "day",
+     "clause": "docs/ETP-ADDENDUM-B.md §B.9 time 3: evidence production",
+     "established": true,
+     "kind": "local",
+     "name": "evidence-production",
+     "reason": "the record carries a date, not an instant; day granularity only",
+     "recordedBy": "A9 producer",
+     "source": "evidence/a9/STATEMENTS.json#/sourceIdentity/asOf",
+     "value": "2026-11-24"
+    },
+    {
+     "accuracy": "day",
+     "clause": "docs/ETP-ADDENDUM-B.md §B.9 time 4: statement authentication",
+     "established": true,
+     "kind": "client",
+     "name": "statement-authentication",
+     "reason": "the A10 record's asOf dates the test-only signature; the envelope records no signing instant and the signer is not an independent authority",
+     "recordedBy": "A10 producer (test-only HMAC-SHA256; not a trust root)",
+     "source": "evidence/a10/ENVELOPES.json#/sourceIdentity/asOf",
+     "value": "2026-11-24"
+    },
+    {
+     "accuracy": "unknown",
+     "clause": "docs/ETP-ADDENDUM-B.md §B.9 time 5: trusted timestamping",
+     "established": "unknown",
+     "kind": "authority",
+     "name": "trusted-timestamping",
+     "reason": "TA-B2 is UNMET: evidence/b0/SERVICE-CONFIGURATION.json records '0 certificates and no timestamp-authority root'",
+     "recordedBy": "B0 audit",
+     "source": "evidence/b0/SERVICE-CONFIGURATION.json#/trustAssumptions[id=TA-B2]",
+     "value": null
+    },
+    {
+     "accuracy": "unknown",
+     "clause": "docs/ETP-ADDENDUM-B.md §B.9 time 6: transparency inclusion",
+     "established": "unknown",
+     "kind": "log",
+     "name": "transparency-inclusion",
+     "reason": "no transparency log exists; B1's FIXTURE-1 is an offline fixture with no integrated time, and no statement was submitted to an admitted log",
+     "recordedBy": "none",
+     "source": "none",
+     "value": null
+    },
+    {
+     "accuracy": "unknown",
+     "clause": "docs/ETP-ADDENDUM-B.md §B.9 time 7: witness observation",
+     "established": "unknown",
+     "kind": "verifier",
+     "name": "witness-observation",
+     "reason": "no independent witness exists (TA-B5 UNMET); no cosignature was observed",
+     "recordedBy": "none",
+     "source": "none",
+     "value": null
+    },
+    {
+     "accuracy": "unknown",
+     "clause": "docs/ETP-ADDENDUM-B.md §B.9 time 8: release promotion",
+     "established": "unknown",
+     "kind": "publication",
+     "name": "release-promotion",
+     "reason": "no release was promoted; the statements exist only on the staging branch",
+     "recordedBy": "none",
+     "source": "none",
+     "value": null
+    },
+    {
+     "accuracy": "unknown",
+     "clause": "docs/ETP-ADDENDUM-B.md §B.9 time 9: subsequent correction or revocation",
+     "established": false,
+     "kind": "publication",
+     "name": "correction-or-revocation",
+     "reason": "no correction or revocation of this statement exists in the tracked record",
+     "recordedBy": "none",
+     "source": "none",
+     "value": null
+    }
+   ]
+  },
+  {
+   "id": "a9-a8-shard-000",
+   "kind": "a9-statement",
+   "path": "evidence/a9/STATEMENTS/a8-shard-000.json",
+   "refusals": [],
+   "sha256": "ea67963abf16e9b1e33a86d0eec5e35354f3a890497055867e942eac41d22582",
+   "slots": [
+    {
+     "accuracy": "unknown",
+     "clause": "docs/ETP-ADDENDUM-B.md §B.9 time 1: source creation",
+     "established": "unknown",
+     "kind": "local",
+     "name": "source-creation",
+     "reason": "the A8 manifest names six run candidates (for example source candidate 17042ccf29bc39df638c63e69d3be6c6f965eef7) but records no date for the source tree; no tracked record states when the source was created",
+     "recordedBy": "A8 producer",
+     "source": "evidence/a8/MANIFEST.json#/candidate/perRun",
+     "value": null
+    },
+    {
+     "accuracy": "unknown",
+     "clause": "docs/ETP-ADDENDUM-B.md §B.9 time 2: experimental execution",
+     "established": "unknown",
+     "kind": "local",
+     "name": "experimental-execution",
+     "reason": "the SARIF runs carry candidate identities, not execution timestamps; A8's asOf is the record's date and §B.9 forbids inferring execution from a later timestamp",
+     "recordedBy": "A8 producer",
+     "source": "evidence/a8/MANIFEST.json#/candidate/perRun",
+     "value": null
+    },
+    {
+     "accuracy": "day",
+     "clause": "docs/ETP-ADDENDUM-B.md §B.9 time 3: evidence production",
+     "established": true,
+     "kind": "local",
+     "name": "evidence-production",
+     "reason": "the record carries a date, not an instant; day granularity only",
+     "recordedBy": "A9 producer",
+     "source": "evidence/a9/STATEMENTS.json#/sourceIdentity/asOf",
+     "value": "2026-11-24"
+    },
+    {
+     "accuracy": "day",
+     "clause": "docs/ETP-ADDENDUM-B.md §B.9 time 4: statement authentication",
+     "established": true,
+     "kind": "client",
+     "name": "statement-authentication",
+     "reason": "the A10 record's asOf dates the test-only signature; the envelope records no signing instant and the signer is not an independent authority",
+     "recordedBy": "A10 producer (test-only HMAC-SHA256; not a trust root)",
+     "source": "evidence/a10/ENVELOPES.json#/sourceIdentity/asOf",
+     "value": "2026-11-24"
+    },
+    {
+     "accuracy": "unknown",
+     "clause": "docs/ETP-ADDENDUM-B.md §B.9 time 5: trusted timestamping",
+     "established": "unknown",
+     "kind": "authority",
+     "name": "trusted-timestamping",
+     "reason": "TA-B2 is UNMET: evidence/b0/SERVICE-CONFIGURATION.json records '0 certificates and no timestamp-authority root'",
+     "recordedBy": "B0 audit",
+     "source": "evidence/b0/SERVICE-CONFIGURATION.json#/trustAssumptions[id=TA-B2]",
+     "value": null
+    },
+    {
+     "accuracy": "unknown",
+     "clause": "docs/ETP-ADDENDUM-B.md §B.9 time 6: transparency inclusion",
+     "established": "unknown",
+     "kind": "log",
+     "name": "transparency-inclusion",
+     "reason": "no transparency log exists; B1's FIXTURE-1 is an offline fixture with no integrated time, and no statement was submitted to an admitted log",
+     "recordedBy": "none",
+     "source": "none",
+     "value": null
+    },
+    {
+     "accuracy": "unknown",
+     "clause": "docs/ETP-ADDENDUM-B.md §B.9 time 7: witness observation",
+     "established": "unknown",
+     "kind": "verifier",
+     "name": "witness-observation",
+     "reason": "no independent witness exists (TA-B5 UNMET); no cosignature was observed",
+     "recordedBy": "none",
+     "source": "none",
+     "value": null
+    },
+    {
+     "accuracy": "unknown",
+     "clause": "docs/ETP-ADDENDUM-B.md §B.9 time 8: release promotion",
+     "established": "unknown",
+     "kind": "publication",
+     "name": "release-promotion",
+     "reason": "no release was promoted; the statements exist only on the staging branch",
+     "recordedBy": "none",
+     "source": "none",
+     "value": null
+    },
+    {
+     "accuracy": "unknown",
+     "clause": "docs/ETP-ADDENDUM-B.md §B.9 time 9: subsequent correction or revocation",
+     "established": false,
+     "kind": "publication",
+     "name": "correction-or-revocation",
+     "reason": "no correction or revocation of this statement exists in the tracked record",
+     "recordedBy": "none",
+     "source": "none",
+     "value": null
+    }
+   ]
+  },
+  {
+   "id": "b1-publication",
+   "kind": "b1-fixture-publication",
+   "path": "evidence/b1/PUBLICATION.json",
+   "refusals": [],
+   "sha256": "765fcdf5a1db612ab43e2d56294ddc48528d0e0e4eabc85ff07244f2d77ab6b9",
+   "slots": [
+    {
+     "accuracy": "unknown",
+     "clause": "docs/ETP-ADDENDUM-B.md §B.9 time 1: source creation",
+     "established": "unknown",
+     "kind": "local",
+     "name": "source-creation",
+     "reason": "the A8 manifest names six run candidates (for example source candidate 17042ccf29bc39df638c63e69d3be6c6f965eef7) but records no date for the source tree; no tracked record states when the source was created",
+     "recordedBy": "A8 producer",
+     "source": "evidence/a8/MANIFEST.json#/candidate/perRun",
+     "value": null
+    },
+    {
+     "accuracy": "unknown",
+     "clause": "docs/ETP-ADDENDUM-B.md §B.9 time 2: experimental execution",
+     "established": "unknown",
+     "kind": "local",
+     "name": "experimental-execution",
+     "reason": "the SARIF runs carry candidate identities, not execution timestamps; A8's asOf is the record's date and §B.9 forbids inferring execution from a later timestamp",
+     "recordedBy": "A8 producer",
+     "source": "evidence/a8/MANIFEST.json#/candidate/perRun",
+     "value": null
+    },
+    {
+     "accuracy": "day",
+     "clause": "docs/ETP-ADDENDUM-B.md §B.9 time 3: evidence production",
+     "established": true,
+     "kind": "local",
+     "name": "evidence-production",
+     "reason": "the publication record carries a date, not an instant",
+     "recordedBy": "B1 producer",
+     "source": "evidence/b1/PUBLICATION.json#/recordedAt",
+     "value": "2026-11-24"
+    },
+    {
+     "accuracy": "day",
+     "clause": "docs/ETP-ADDENDUM-B.md §B.9 time 4: statement authentication",
+     "established": true,
+     "kind": "client",
+     "name": "statement-authentication",
+     "reason": "the A10 record's asOf dates the test-only signature; the envelope records no signing instant and the signer is not an independent authority",
+     "recordedBy": "A10 producer (test-only HMAC-SHA256; not a trust root)",
+     "source": "evidence/a10/ENVELOPES.json#/sourceIdentity/asOf",
+     "value": "2026-11-24"
+    },
+    {
+     "accuracy": "unknown",
+     "clause": "docs/ETP-ADDENDUM-B.md §B.9 time 5: trusted timestamping",
+     "established": "unknown",
+     "kind": "authority",
+     "name": "trusted-timestamping",
+     "reason": "TA-B2 is UNMET: evidence/b0/SERVICE-CONFIGURATION.json records '0 certificates and no timestamp-authority root'",
+     "recordedBy": "B0 audit",
+     "source": "evidence/b0/SERVICE-CONFIGURATION.json#/trustAssumptions[id=TA-B2]",
+     "value": null
+    },
+    {
+     "accuracy": "unknown",
+     "clause": "docs/ETP-ADDENDUM-B.md §B.9 time 6: transparency inclusion",
+     "established": false,
+     "kind": "log",
+     "name": "transparency-inclusion",
+     "reason": "inclusion is in FIXTURE-1, which is not a transparency log: it has no log key, no integrated time and no operator, so no transparency inclusion time exists",
+     "recordedBy": "B1 producer",
+     "source": "evidence/b1/PUBLICATION.json#/inclusion",
+     "value": null
+    },
+    {
+     "accuracy": "unknown",
+     "clause": "docs/ETP-ADDENDUM-B.md §B.9 time 7: witness observation",
+     "established": false,
+     "kind": "verifier",
+     "name": "witness-observation",
+     "reason": "no witness observed FIXTURE-1; it is not a log",
+     "recordedBy": "none",
+     "source": "none",
+     "value": null
+    },
+    {
+     "accuracy": "unknown",
+     "clause": "docs/ETP-ADDENDUM-B.md §B.9 time 8: release promotion",
+     "established": "unknown",
+     "kind": "publication",
+     "name": "release-promotion",
+     "reason": "no release was promoted; the fixture evidence is not a release",
+     "recordedBy": "none",
+     "source": "none",
+     "value": null
+    },
+    {
+     "accuracy": "unknown",
+     "clause": "docs/ETP-ADDENDUM-B.md §B.9 time 9: subsequent correction or revocation",
+     "established": false,
+     "kind": "publication",
+     "name": "correction-or-revocation",
+     "reason": "no correction or revocation of this publication exists",
+     "recordedBy": "none",
+     "source": "none",
+     "value": null
+    }
+   ]
+  }
+ ],
+ "baseCommit": "ebc539869",
+ "clause": "docs/ETP-ADDENDUM-B.md §B.9, §B.24 items 24-26, §B.30 B2",
+ "item": "B2",
+ "model": "b2/timestamp/1",
+ "nonClaims": [
+  "a recorded date is not a trusted time; no slot here is an authority's assertion",
+  "no clock is trustworthy because it is read; no slot is filled from the wall clock",
+  "the nine slots are not interchangeable and were not collapsed into one timestamp"
+ ],
+ "orderingInvariants": [
+  {
+   "earlier": "source-creation",
+   "later": "experimental-execution"
+  },
+  {
+   "earlier": "experimental-execution",
+   "later": "evidence-production"
+  },
+  {
+   "earlier": "evidence-production",
+   "later": "statement-authentication"
+  },
+  {
+   "earlier": "statement-authentication",
+   "later": "trusted-timestamping"
+  },
+  {
+   "earlier": "trusted-timestamping",
+   "later": "transparency-inclusion"
+  },
+  {
+   "earlier": "transparency-inclusion",
+   "later": "witness-observation"
+  },
+  {
+   "earlier": "transparency-inclusion",
+   "later": "release-promotion"
+  },
+  {
+   "earlier": "release-promotion",
+   "later": "correction-or-revocation"
+  }
+ ],
+ "recordedAt": "2026-11-24",
+ "schema": "openssl-rs/b2/times/1",
+ "summary": {
+  "artefacts": 5,
+  "established": 10,
+  "notEstablished": 7,
+  "refusals": 0,
+  "slots": 45,
+  "unknown": 28
+ },
+ "twoClaims": {
+  "authorityAssertedTheTime": {
+   "checkableOffline": false,
+   "establishedForRealArtefacts": 0,
+   "needs": [
+    "the token signature",
+    "the TSA certificate chain",
+    "id-kp-timeStamping extended key usage",
+    "an admitted root of trust"
+   ],
+   "reason": "TA-B2 is UNMET: evidence/b0/SERVICE-CONFIGURATION.json records '0 certificates and no timestamp-authority root'"
+  },
+  "imprintMatchesArtefact": {
+   "checkableOffline": true,
+   "establishedForRealArtefacts": 0,
+   "needs": "the artefact bytes and the token's hashedMessage",
+   "reason": "no RFC 3161 token exists for this artefact: no TSA is admitted (TA-B2 UNMET), no certificate or trust root exists, and the tree contains no token file"
+  }
+ }
+}
