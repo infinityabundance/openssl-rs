@@ -1775,6 +1775,19 @@ INVENTORY_RECORD = REPO_ROOT / "evidence/a16/INVENTORY.json"
 POPULATION_SELF = "evidence/a16/INVENTORY.json"
 POPULATION_BINDING = harden.POPULATION_FROZEN
 
+# This item's own records are not population members.  Each one embeds
+# ``sourceIdentity.baseCommit``; if such a record were also a member bound to its
+# own digest, the digest would depend on the commit hash, which depends on the
+# record's bytes -- a commit-hash fixed point that no commit can satisfy.  They
+# are therefore excluded *by identity*, separately from the declared cut below.
+# A11 does the same thing for its own records: no ``evidence/a11/*`` path is a
+# member of ``evidence/a11/SCAN.json``.
+POPULATION_IDENTITY_EXCLUDED = (
+    POPULATION_SELF,
+    "evidence/a16/PROFILE.json",
+    "evidence/a16/CONTROLS.json",
+)
+
 # The declared excluded set.  A11's scan population is every tracked evidence
 # JSON (``evidence/*.json``) except its own three records, so it includes this
 # item's records; if this item's population also included A11's three records,
@@ -1805,18 +1818,25 @@ def _refuse_population(message: str) -> None:
 
 
 def freeze_population(
-    paths: Iterable[str], *, repo_root: Path | str = REPO_ROOT
+    paths: Iterable[str],
+    *,
+    repo_root: Path | str = REPO_ROOT,
+    blobs: Callable[[str], bytes] | None = None,
 ) -> list[dict[str, Any]]:
-    """Bind an explicit path list to the bytes at this tree.
+    """Bind an explicit path list to bytes, sorted by path.
 
-    This is :func:`harden.freeze_population`; it returns the member list a record
-    stores instead of a count, sorted by path.  It is called only to create or
-    replace a declared population, never to reproduce one.
+    Without ``blobs`` this is :func:`harden.freeze_population` and reads the
+    working tree.  With ``blobs`` every digest is read from the supplied source
+    (the candidate commit's blobs), so an uncommitted member cannot be absorbed.
     """
-    if POPULATION_SELF in set(paths):
+    paths = list(paths)
+    identity = sorted(set(paths) & set(POPULATION_IDENTITY_EXCLUDED))
+    if identity:
         _refuse_population(
-            f"{POPULATION_SELF} cannot be a member of its own population: "
-            "its bytes would have to contain their own digest"
+            f"{', '.join(identity)} cannot be a member of this population: each "
+            "record embeds sourceIdentity.baseCommit, so a digest of its bytes "
+            "would depend on the commit hash that depends on those bytes (a "
+            "commit-hash fixed point). It is excluded by identity."
         )
     excluded = set(paths) & set(POPULATION_EXCLUDED_PATHS)
     if excluded:
@@ -1824,18 +1844,34 @@ def freeze_population(
             "the declared exclusion cannot be overridden: "
             f"{', '.join(sorted(excluded))}"
         )
+    if blobs is not None:
+        members: list[dict[str, Any]] = []
+        for relative in sorted(paths):
+            data = blobs(relative)
+            members.append(
+                {
+                    "path": relative,
+                    "sha256": hashlib.sha256(data).hexdigest(),
+                    "bytes": len(data),
+                }
+            )
+        return members
     return harden.freeze_population(sorted(paths), repo_root=repo_root)
 
 
 def verify_population(
-    members: Iterable[dict[str, Any]], *, repo_root: Path | str = REPO_ROOT
+    members: Iterable[dict[str, Any]],
+    *,
+    repo_root: Path | str = REPO_ROOT,
+    blobs: Callable[[str], bytes] | None = None,
 ) -> list[dict[str, Any]]:
-    """Re-hash every declared member at this tree.
+    """Re-hash every declared member at this tree or in the candidate blobs.
 
     The population and its count come from the member list only.  A changed,
     removed or malformed member is refused with ``PH_REFUSED_POPULATION_DRIFT``;
     a file that matches the glob but is not a member cannot enlarge the answer
-    (see :func:`growth_report`).
+    (see :func:`growth_report`).  ``blobs`` binds every measurement to an exact
+    candidate instead of the working tree.
     """
     declared = list(members)
     paths = [member["path"] for member in declared]
@@ -1844,10 +1880,20 @@ def verify_population(
     for member in declared:
         if not isinstance(member.get("sha256"), str) or len(member["sha256"]) != 64:
             _refuse_population(f"a declared member has no sha256: {member.get('path')!r}")
-    current = {
-        row["path"]: row
-        for row in harden.freeze_population(paths, repo_root=repo_root)
-    }
+    if blobs is None:
+        current = {
+            row["path"]: row
+            for row in harden.freeze_population(paths, repo_root=repo_root)
+        }
+    else:
+        current = {}
+        for relative in paths:
+            data = blobs(relative)
+            current[relative] = {
+                "path": relative,
+                "sha256": hashlib.sha256(data).hexdigest(),
+                "bytes": len(data),
+            }
     for member in declared:
         row = current[member["path"]]
         if row["sha256"] != member["sha256"]:
@@ -1893,6 +1939,21 @@ def declared_population(path: Path | str = INVENTORY_RECORD) -> dict[str, Any]:
         _refuse_population(
             f"{path}: the declared exclusion is not the closed set "
             f"{list(POPULATION_EXCLUDED_PATHS)}"
+        )
+    identity_members = sorted(
+        {
+            member.get("path")
+            for member in members
+            if isinstance(member, dict) and isinstance(member.get("path"), str)
+        }
+        & set(POPULATION_IDENTITY_EXCLUDED)
+    )
+    if identity_members:
+        _refuse_population(
+            f"{path}: {', '.join(identity_members)} cannot be a member of this "
+            "population: each record embeds sourceIdentity.baseCommit, so binding "
+            "it to a population frozen at that commit is a commit-hash fixed "
+            "point. It is excluded by identity, not by the declared cut."
         )
     certificates = document.get("certificatePopulation")
     certificate_members = (
@@ -1981,6 +2042,7 @@ def inventory(
     *,
     frozen_at_candidate: str | None = None,
     repo_root: Path | str = REPO_ROOT,
+    blobs: Callable[[str], bytes] | None = None,
 ) -> dict[str, Any]:
     """Measure the frozen population.  A bundle is a *file* whose top level is one.
 
@@ -1990,15 +2052,19 @@ def inventory(
     separately from the frozen member paths.
     """
     root = Path(repo_root)
-    population = verify_population(members, repo_root=root)
-    certificate_population = verify_population(certificate_members, repo_root=root)
+    population = verify_population(members, repo_root=root, blobs=blobs)
+    certificate_population = verify_population(
+        certificate_members, repo_root=root, blobs=blobs
+    )
     candidate_files: list[dict[str, Any]] = []
     bundle_files: list[dict[str, Any]] = []
     logs: set[str] = set()
     certificates = 0
     for row in population:
         relative = row["path"]
-        data = (root / relative).read_bytes()
+        data = (
+            blobs(relative) if blobs is not None else (root / relative).read_bytes()
+        )
         if SIGSTORE_BUNDLE_PREFIX.encode("ascii") not in data:
             continue
         try:
@@ -2063,6 +2129,16 @@ def inventory(
                 "paths": list(POPULATION_EXCLUDED_PATHS),
                 "reason": POPULATION_EXCLUDED_REASON,
                 "result": POPULATION_EXCLUDED_RESULT,
+            },
+            "identityExcluded": {
+                "paths": list(POPULATION_IDENTITY_EXCLUDED),
+                "reason": (
+                    "each of these records embeds sourceIdentity.baseCommit, so "
+                    "a member digest would depend on the commit hash that "
+                    "depends on the record's bytes: a commit-hash fixed point. "
+                    "They are excluded by identity, not by the declared cut, "
+                    "which remains exactly the three A11 records."
+                ),
             },
             "frozenAtCandidate": frozen_at_candidate,
             "files": len(population),

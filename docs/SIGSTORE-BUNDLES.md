@@ -211,18 +211,31 @@ timestamp, and are not counted as any.
 
 The population is a **frozen member list**, not a live glob:
 `evidence/a16/INVENTORY.json` records the tracked `evidence/**/*.json` files that
-existed at the declared candidate `b26552e21a7465405ad542edeaef7b9104c0298d`
-(**505** members), each bound to its `sha256`, and `populationFiles` is that
-list's length. Four paths are outside it by declaration: this item's own
-`INVENTORY.json` (a record cannot contain its own digest) and exactly three A11
-records — `evidence/a11/{SCAN,DIFFERENTIAL,CONTROLS}.json` — which A11 digests.
-That exclusion is **declared, closed and reported**, not silent: the record
-stores the three paths and the reason (mutual digest binding: A11's scan is
-complete over `evidence/*.json` and therefore contains this item's records, so
-this population cannot contain A11's without a cycle), and the growth report
-reports them as `NEW_SINCE_RECORD` with their path and digest. An excluded path
-cannot be frozen back in, a record whose declared exclusion is any other set is
-refused, and an exclusion that names a path absent at the candidate is refused.
+existed at the declared candidate, each bound to its `sha256` read from that
+candidate's blobs (never the working tree), and `populationFiles` is the list's
+length. The committed record is still the pre-change freeze at
+`b26552e21a7465405ad542edeaef7b9104c0298d` (**505** members); the regenerated
+record at the commit that carries the identity-exclusion contract has **503**,
+because this item's own records are no longer members.
+
+This item's three records — `INVENTORY.json`, `PROFILE.json` and
+`CONTROLS.json` — are outside the population **by identity**: each embeds
+`sourceIdentity.baseCommit`, so binding it to a population frozen at that commit
+would make the member digest depend on the commit hash that depends on the
+record's bytes (a commit-hash fixed point no commit can satisfy). They are not
+part of the declared cut, and a record that lists any of them as a member is
+refused with `PH_REFUSED_POPULATION_DRIFT` naming the path.
+
+Separately, exactly three A11 records —
+`evidence/a11/{SCAN,DIFFERENTIAL,CONTROLS}.json` — are outside it **by
+declaration**, because A11 digests this item's records. That exclusion is
+**declared, closed and reported**, not silent: the record stores the three paths
+and the reason (mutual digest binding: A11's scan is complete over
+`evidence/*.json` and therefore contains this item's records, so this population
+cannot contain A11's without a cycle), and the growth report reports them as
+`NEW_SINCE_RECORD` with their path and digest. An excluded path cannot be frozen
+back in, a record whose declared exclusion is any other set is refused, and an
+exclusion that names a path absent at the candidate is refused.
 
 Any *other* file that matches the glob but is not a member is reported as
 `NEW_SINCE_RECORD` with its path and digest, counted separately; it never changes
@@ -237,8 +250,8 @@ the `0` above.
 A file is a bundle only when its **top level** carries a Sigstore bundle media
 type. `evidence/a16/PROFILE.json` (the profile constant) and
 `evidence/a16/CONTROLS.json` (the synthetic fixtures) mention the media type and
-are not bundles; they are members of the population and are counted as candidate
-files, not as bundles.
+are not bundles; they are this item's own records, excluded from the population
+by identity, and are not counted as bundles.
 
 This is the honest result. There is no Sigstore bundle to verify, no log public
 key, no CA root and no timestamp-authority root. Every real `validate`

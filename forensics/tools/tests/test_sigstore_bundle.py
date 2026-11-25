@@ -37,6 +37,11 @@ BUILDER_PATH = EVIDENCE / "build_evidence.py"
 INVENTORY = EVIDENCE / "INVENTORY.json"
 TOOL = TOOLS / "sigstore_bundle.py"
 DOCUMENT = REPO / "docs/SIGSTORE-BUNDLES.md"
+# The current records are still frozen at b26552e21.  The next batch regenerates
+# them from the commit that carries the candidate-blob generator and must set
+# these two constants to that commit's full and nine-character hashes: the new
+# records declare ``baseCommit == frozenAtCandidate == that commit`` and every
+# member digest is read from its tree.
 FULL_COMMIT = "b26552e21a7465405ad542edeaef7b9104c0298d"
 SHORT_COMMIT = "b26552e21"
 POPULATION_SELF = "evidence/a16/INVENTORY.json"
@@ -52,6 +57,24 @@ def load_builder() -> Any:
     assert spec.loader is not None
     spec.loader.exec_module(module)
     return module
+
+
+def committed_blob(commit: str, relative: str) -> bytes:
+    result = subprocess.run(
+        [
+            "git",
+            "-c",
+            "safe.directory=*",
+            "-C",
+            str(REPO),
+            "cat-file",
+            "blob",
+            f"{commit}:{relative}",
+        ],
+        capture_output=True,
+    )
+    assert result.returncode == 0, result.stderr
+    return result.stdout
 
 
 def fresh_module() -> Any:
@@ -469,9 +492,66 @@ class DeterminismAndRecords(unittest.TestCase):
             )
             self.assertEqual(
                 document["sourceIdentity"]["tool"]["sha256"],
-                hashlib.sha256(TOOL.read_bytes()).hexdigest(),
+                hashlib.sha256(
+                    committed_blob(FULL_COMMIT, "forensics/tools/sigstore_bundle.py")
+                ).hexdigest(),
                 name,
             )
+
+    def test_the_source_identity_reads_the_candidate_tool(self) -> None:
+        builder = load_builder()
+        identity = builder.source_identity(FULL_COMMIT)
+        self.assertEqual(identity["baseCommit"], FULL_COMMIT)
+        self.assertEqual(
+            identity["tool"]["sha256"],
+            hashlib.sha256(
+                committed_blob(FULL_COMMIT, "forensics/tools/sigstore_bundle.py")
+            ).hexdigest(),
+        )
+        for entry in identity["delegatedTools"]:
+            self.assertEqual(
+                entry["sha256"],
+                hashlib.sha256(committed_blob(FULL_COMMIT, entry["path"])).hexdigest(),
+                entry["path"],
+            )
+
+    def test_the_superseded_freeze_is_preserved(self) -> None:
+        builder = load_builder()
+        prior = {
+            "population": {
+                "frozenAtCandidate": "a" * 40,
+                "files": 2,
+                "members": [
+                    {"path": "evidence/ONE.json"},
+                    {"path": "evidence/a16/PROFILE.json"},
+                ],
+            }
+        }
+        entries = builder._superseded_entries(
+            prior, FULL_COMMIT, FULL_COMMIT, ["evidence/ONE.json"]
+        )
+        self.assertEqual(len(entries), 1)
+        self.assertEqual(entries[0]["frozenAtCandidate"], "a" * 40)
+        self.assertEqual(entries[0]["memberCount"], 2)
+        self.assertIn("evidence/a16/PROFILE.json", entries[0]["reason"])
+        self.assertEqual(
+            {row["path"] for row in entries[0]["recordDigests"]},
+            set(builder.RECORD_PATHS),
+        )
+        # Repeating the same freeze at the same candidate preserves no duplicate.
+        same = {
+            "population": {
+                "frozenAtCandidate": FULL_COMMIT,
+                "files": 1,
+                "members": [{"path": "evidence/ONE.json"}],
+            }
+        }
+        self.assertEqual(
+            builder._superseded_entries(
+                same, FULL_COMMIT, FULL_COMMIT, ["evidence/ONE.json"]
+            ),
+            [],
+        )
 
     def test_the_profile_record_matches_the_tool(self) -> None:
         record = load_json(EVIDENCE / "PROFILE.json")
@@ -571,6 +651,58 @@ class FrozenPopulation(unittest.TestCase):
                     caught.exception.code, h.PH_REFUSED_POPULATION_DRIFT
                 )
 
+    def test_readmitting_this_items_profile_record_is_refused_by_identity(self) -> None:
+        builder = load_builder()
+        paths, _ = builder.candidate_population(FULL_COMMIT)
+        self.assertNotIn("evidence/a16/PROFILE.json", paths)
+        self.assertNotIn("evidence/a16/CONTROLS.json", paths)
+        self.assertNotIn(POPULATION_SELF, paths)
+        with self.assertRaises(h.Refusal) as caught:
+            sb.freeze_population(list(paths) + ["evidence/a16/PROFILE.json"])
+        self.assertEqual(caught.exception.code, h.PH_REFUSED_POPULATION_DRIFT)
+        self.assertIn("evidence/a16/PROFILE.json", caught.exception.message)
+
+        # A record that re-admits the record as a member is unsatisfiable: it is
+        # refused by the record gate, naming the re-admitted path.
+        record = dict(self.record)
+        population = dict(record["population"])
+        members = [dict(member) for member in population["members"]]
+        profile = next(
+            member
+            for member in self.members
+            if member["path"] == "evidence/a16/PROFILE.json"
+        )
+        members.append(dict(profile))
+        population["members"] = members
+        population["files"] = len(members)
+        record["population"] = population
+        record["populationFiles"] = len(members)
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "INVENTORY.json"
+            path.write_bytes(json.dumps(record, sort_keys=True).encode("utf-8"))
+            with self.assertRaises(h.Refusal) as caught:
+                sb.declared_population(path)
+        self.assertEqual(caught.exception.code, h.PH_REFUSED_POPULATION_DRIFT)
+        self.assertIn("evidence/a16/PROFILE.json", caught.exception.message)
+
+    def test_the_record_declares_the_identity_exclusion_separately(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            mirror = Path(directory)
+            (mirror / "evidence").mkdir()
+            (mirror / "evidence/ONE.json").write_bytes(b'{"a": 1}\n')
+            members = sb.freeze_population(["evidence/ONE.json"], repo_root=mirror)
+            record = sb.inventory(
+                members, (), frozen_at_candidate="control-only", repo_root=mirror
+            )
+        self.assertEqual(
+            record["population"]["identityExcluded"]["paths"],
+            list(sb.POPULATION_IDENTITY_EXCLUDED),
+        )
+        self.assertEqual(
+            record["population"]["excluded"]["paths"],
+            list(sb.POPULATION_EXCLUDED_PATHS),
+        )
+
     def test_a_record_that_drops_the_exclusion_is_refused(self) -> None:
         population = dict(self.population)
         population.pop("excluded", None)
@@ -664,7 +796,7 @@ class FrozenPopulation(unittest.TestCase):
             builder.A16 = Path(directory)
             try:
                 with self.assertRaises(SystemExit) as caught:
-                    builder._declared_population(None)
+                    builder._declared_population(None, FULL_COMMIT)
             finally:
                 builder.A16 = original
             self.assertIn("live glob", str(caught.exception))

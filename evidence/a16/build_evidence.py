@@ -28,10 +28,19 @@ The population is never read from a live glob.  ``INVENTORY.json`` declares an
 explicit ``{path, sha256}`` member list frozen at a candidate commit, and this
 producer reproduces that list.  ``--freeze-population CANDIDATE`` is the one
 explicit act that replaces it: it takes the tracked evidence JSON and
-certificate files that existed at ``CANDIDATE`` (verifying that none of them has
-changed since), so a record added later is ``NEW_SINCE_RECORD`` rather than
-silently included.  A new bundle therefore needs a re-freeze and a fresh
-inventory; it is not absorbed.
+certificate files that existed at ``CANDIDATE``, so a record added later is
+``NEW_SINCE_RECORD`` rather than silently included.  A new bundle therefore
+needs a re-freeze and a fresh inventory; it is not absorbed.
+
+Every digest is read from the candidate commit's blobs (``git cat-file blob
+CANDIDATE:path``), never from the working tree.  ``sourceIdentity`` and each
+member's ``sha256`` are therefore bound to the exact candidate; an uncommitted
+edit to a member cannot be absorbed.  This item's own records
+(``INVENTORY.json``, ``PROFILE.json``, ``CONTROLS.json``) are excluded by
+identity because each embeds ``sourceIdentity.baseCommit``.
+
+``BASE_COMMIT`` is the declared default candidate.  The tests pin it separately;
+see the comment beside it.
 
 SPDX-License-Identifier: Apache-2.0
 """
@@ -45,6 +54,7 @@ import json
 import subprocess
 import sys
 from datetime import datetime, timezone
+from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
@@ -56,8 +66,19 @@ sys.path.insert(0, str(TOOLS))
 import harden as h  # noqa: E402
 import sigstore_bundle as sb  # noqa: E402
 
+# The record's declared default candidate.  The code in this batch reads the
+# candidate's blobs, but the records themselves have not been regenerated yet.
+# The next batch must set this (and ``BASE_COMMIT_SHORT``) to the commit that
+# carries this code, because the regenerated ``sourceIdentity.baseCommit`` and
+# ``population.frozenAtCandidate`` must name that commit and every member digest
+# is read from its tree.
 BASE_COMMIT = "b26552e21a7465405ad542edeaef7b9104c0298d"
 BASE_COMMIT_SHORT = "b26552e21"
+RECORD_PATHS = (
+    "evidence/a16/INVENTORY.json",
+    "evidence/a16/PROFILE.json",
+    "evidence/a16/CONTROLS.json",
+)
 ITEM = "A16"
 AS_OF = "2026-11-24"
 TOOL_PATH = "forensics/tools/sigstore_bundle.py"
@@ -760,32 +781,74 @@ def boundary_controls() -> list[dict[str, Any]]:
     return records
 
 
-def _sha256_file(path: Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest()
+@lru_cache(maxsize=None)
+def _candidate_blob(commit: str, relative: str) -> bytes:
+    """Read ``relative`` from ``commit``'s tree, never from the working tree."""
+    result = subprocess.run(
+        [
+            "git",
+            "-c",
+            "safe.directory=*",
+            "-C",
+            str(REPO_ROOT),
+            "cat-file",
+            "blob",
+            f"{commit}:{relative}",
+        ],
+        capture_output=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        raise SystemExit(
+            f"{relative} is not readable at candidate {commit}: "
+            f"{result.stderr.decode('utf-8', 'replace').strip()}; a live glob "
+            "or the working tree is not a substitute"
+        )
+    return result.stdout
+
+
+def _blob_reader(commit: str):
+    def read(relative: str) -> bytes:
+        return _candidate_blob(commit, relative)
+
+    return read
 
 
 def source_identity(source_commit: str) -> dict[str, Any]:
-    tool = REPO_ROOT / TOOL_PATH
     return {
         "baseCommit": source_commit,
         "baseCommitShort": source_commit[:9],
         "item": ITEM,
         "asOf": AS_OF,
-        "tool": {"path": TOOL_PATH, "sha256": _sha256_file(tool)},
+        "tool": {
+            "path": TOOL_PATH,
+            "sha256": hashlib.sha256(
+                _candidate_blob(source_commit, TOOL_PATH)
+            ).hexdigest(),
+        },
         "delegatedTools": [
-            {"path": path, "sha256": _sha256_file(REPO_ROOT / path)}
+            {
+                "path": path,
+                "sha256": hashlib.sha256(
+                    _candidate_blob(source_commit, path)
+                ).hexdigest(),
+            }
             for path in DELEGATED_TOOLS
         ],
     }
 
 
 def build(source_commit: str, population: dict[str, Any] | None = None) -> dict[str, Any]:
-    declared = population if population is not None else _declared_population(None)
+    declared = population if population is not None else _declared_population(None, source_commit)
+    blobs = _blob_reader(source_commit)
     measured = sb.inventory(
         declared["members"],
         declared["certificateMembers"],
         frozen_at_candidate=declared["frozenAtCandidate"],
+        blobs=blobs,
     )
+    if declared.get("superseded"):
+        measured["population"]["superseded"] = declared["superseded"]
     measured.update(
         {
             "schema": sb.INVENTORY_SCHEMA,
@@ -879,17 +942,19 @@ def _tree_blobs(commit: str) -> dict[str, str]:
 def candidate_population(commit: str) -> tuple[list[str], list[str]]:
     """The evidence JSON and certificate files that existed at ``commit``.
 
-    The member's bytes at this tree must still be the candidate's bytes; a
-    member that changed or was removed since cannot be frozen at this candidate.
-    The inventory record itself is excluded by identity: it cannot contain its
-    own digest, so it is never a member and is not part of the declared exclusion.
-    The declared exclusion (``sb.POPULATION_EXCLUDED_PATHS``) is removed from the
-    JSON population and must exist at the candidate, so an exclusion can never
-    hide a record that is missing rather than excluded.
+    This item's own records (``INVENTORY.json``, ``PROFILE.json``,
+    ``CONTROLS.json``) are excluded by identity: each embeds
+    ``sourceIdentity.baseCommit``, so it cannot also be bound to its own digest
+    at the commit that carries it.  That exclusion is separate from the declared
+    cut (``sb.POPULATION_EXCLUDED_PATHS``), which remains exactly the three A11
+    records and must exist at the candidate, so it can never hide a record that
+    is missing rather than excluded.
+
+    Only the candidate tree is read; the working tree is never a fallback.
     """
     candidate = _tree_blobs(commit)
-    present = _tree_blobs("HEAD")
     excluded = set(sb.POPULATION_EXCLUDED_PATHS)
+    identity = set(sb.POPULATION_IDENTITY_EXCLUDED)
     missing = sorted(excluded - set(candidate))
     if missing:
         raise SystemExit(
@@ -901,55 +966,149 @@ def candidate_population(commit: str) -> tuple[list[str], list[str]]:
         for path in candidate
         if path.endswith(".json")
         and path not in excluded
-        and path != sb.POPULATION_SELF
+        and path not in identity
     )
     certificate_paths = sorted(
         path for path in candidate if path.endswith(CERTIFICATE_SUFFIXES)
     )
     if not json_paths:
         raise SystemExit(f"the candidate {commit} has no evidence JSON to freeze")
-    for relative in json_paths + certificate_paths:
-        if present.get(relative) != candidate[relative]:
-            raise SystemExit(
-                f"{relative}: changed or removed since the declared candidate "
-                f"{commit}; freeze at the candidate's tree, not at this one"
-            )
     return json_paths, certificate_paths
 
 
-def _shown(path: Path) -> str:
+def _prior_record(source_commit: str) -> dict[str, Any] | None:
+    """The record the re-freeze supersedes, read from ``source_commit``'s tree."""
     try:
-        return str(path.relative_to(REPO_ROOT))
-    except ValueError:
-        return str(path)
+        raw = _candidate_blob(source_commit, "evidence/a16/INVENTORY.json")
+    except SystemExit:
+        return None
+    try:
+        document = json.loads(raw.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        return None
+    return document if isinstance(document, dict) else None
 
 
-def _declared_population(freeze_candidate: str | None) -> dict[str, Any]:
+def _record_digests(commit: str) -> list[dict[str, str]]:
+    rows: list[dict[str, str]] = []
+    for relative in RECORD_PATHS:
+        try:
+            data = _candidate_blob(commit, relative)
+        except SystemExit:
+            continue
+        rows.append(
+            {"path": relative, "sha256": hashlib.sha256(data).hexdigest()}
+        )
+    return rows
+
+
+def _superseded_entries(
+    prior: dict[str, Any] | None,
+    prior_commit: str,
+    new_candidate: str,
+    new_paths: list[str],
+) -> list[dict[str, Any]]:
+    """The prior freeze, preserved inside the record instead of overwritten.
+
+    A re-freeze is only recorded as superseding a *different* freeze; repeating
+    the same freeze at the same candidate produces no entry, so two runs stay
+    byte-identical.
+    """
+    population = prior.get("population") if isinstance(prior, dict) else None
+    if not isinstance(population, dict):
+        return []
+    prior_members = population.get("members")
+    prior_paths = (
+        [
+            member.get("path")
+            for member in prior_members
+            if isinstance(member, dict) and isinstance(member.get("path"), str)
+        ]
+        if isinstance(prior_members, list)
+        else []
+    )
+    if population.get("frozenAtCandidate") == new_candidate and sorted(
+        prior_paths
+    ) == sorted(new_paths):
+        return []
+    entries: list[dict[str, Any]] = []
+    existing = population.get("superseded")
+    if isinstance(existing, list):
+        entries.extend(existing)
+    identity = sorted(set(prior_paths) & set(sb.POPULATION_IDENTITY_EXCLUDED))
+    if identity:
+        reason = (
+            "the prior freeze listed "
+            + ", ".join(identity)
+            + " as members; each embeds sourceIdentity.baseCommit, so a population "
+            "frozen at that commit cannot also contain the record's own bytes (a "
+            "commit-hash fixed point). This item's own records are now excluded "
+            "by identity, not by the declared cut, and the population is "
+            "re-frozen at the candidate's blobs."
+        )
+    else:
+        reason = (
+            "an explicit re-freeze replaced the prior population at a new "
+            "candidate; the prior freeze, member count and record digests are "
+            "preserved here rather than silently overwritten."
+        )
+    entries.append(
+        {
+            "frozenAtCandidate": population.get("frozenAtCandidate"),
+            "files": population.get("files"),
+            "memberCount": len(prior_paths),
+            "recordDigests": _record_digests(prior_commit),
+            "reason": reason,
+        }
+    )
+    return entries
+
+
+def _declared_population(
+    freeze_candidate: str | None, source_commit: str
+) -> dict[str, Any]:
     """The population to reproduce, or the one an explicit re-freeze creates.
 
-    The committed record is the declared candidate.  A live glob is not a
-    substitute for it in either branch.
+    The record is the declared evidence artifact (the thing being regenerated);
+    its member *list* is read from the committed record.  Every member *digest*
+    and every ``sourceIdentity`` digest is read from ``source_commit``'s blobs,
+    never from the working tree, so an uncommitted edit cannot be absorbed.  A
+    live glob is not a substitute for the declared record in either branch.
     """
     if freeze_candidate is not None:
         paths, certificate_paths = candidate_population(freeze_candidate)
-        return {
+        blobs = _blob_reader(freeze_candidate)
+        result: dict[str, Any] = {
             "frozenAtCandidate": freeze_candidate,
-            "members": sb.freeze_population(paths),
-            "certificateMembers": sb.freeze_population(certificate_paths),
+            "members": sb.freeze_population(paths, blobs=blobs),
+            "certificateMembers": sb.freeze_population(
+                certificate_paths, blobs=blobs
+            ),
         }
+        superseded = _superseded_entries(
+            _prior_record(source_commit), source_commit, freeze_candidate, paths
+        )
+        if superseded:
+            result["superseded"] = superseded
+        return result
     record = A16 / "INVENTORY.json"
     if not record.is_file():
         raise SystemExit(
-            f"{_shown(record)} is the declared population and is "
+            "evidence/a16/INVENTORY.json is the declared population and is "
             "missing; a live glob is not a substitute (re-freeze with "
             "--freeze-population CANDIDATE)"
         )
-    document = json.loads(record.read_text(encoding="utf-8"))
+    try:
+        document = json.loads(record.read_text(encoding="utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as error:
+        raise SystemExit(
+            "evidence/a16/INVENTORY.json is not valid JSON: " f"{error}"
+        )
     population = document.get("population") if isinstance(document, dict) else None
     if not isinstance(population, dict) or population.get("binding") != sb.POPULATION_BINDING:
         raise SystemExit(
-            f"{_shown(record)} declares no frozen population; a "
-            "live glob is not a substitute (re-freeze with --freeze-population "
+            "evidence/a16/INVENTORY.json declares no frozen population; a live "
+            "glob is not a substitute (re-freeze with --freeze-population "
             "CANDIDATE)"
         )
     excluded = population.get("excluded")
@@ -958,7 +1117,7 @@ def _declared_population(freeze_candidate: str | None) -> dict[str, Any]:
         sb.POPULATION_EXCLUDED_PATHS
     ):
         raise SystemExit(
-            f"{_shown(record)} does not declare the closed exclusion "
+            "evidence/a16/INVENTORY.json does not declare the closed exclusion "
             f"{list(sb.POPULATION_EXCLUDED_PATHS)}; a record that drops it cannot "
             "be reproduced (re-freeze with --freeze-population CANDIDATE)"
         )
@@ -969,13 +1128,34 @@ def _declared_population(freeze_candidate: str | None) -> dict[str, Any]:
     )
     if not isinstance(members, list) or not members or not isinstance(certificate_members, list):
         raise SystemExit(
-            f"{_shown(record)} has no usable member list; re-freeze "
+            "evidence/a16/INVENTORY.json has no usable member list; re-freeze "
             "with --freeze-population CANDIDATE"
+        )
+    identity_members = sorted(
+        {
+            member.get("path")
+            for member in members
+            if isinstance(member, dict) and isinstance(member.get("path"), str)
+        }
+        & set(sb.POPULATION_IDENTITY_EXCLUDED)
+    )
+    if identity_members:
+        raise SystemExit(
+            "evidence/a16/INVENTORY.json lists this item's own records as "
+            f"members ({', '.join(identity_members)}); each embeds the candidate "
+            "commit, so the population would be a commit-hash fixed point. "
+            "Re-freeze with --freeze-population CANDIDATE to exclude them by "
+            "identity."
         )
     return {
         "frozenAtCandidate": population.get("frozenAtCandidate"),
         "members": members,
         "certificateMembers": certificate_members,
+        "superseded": (
+            population.get("superseded")
+            if isinstance(population.get("superseded"), list)
+            else []
+        ),
     }
 
 
@@ -993,9 +1173,20 @@ def main(argv: list[str] | None = None) -> int:
         ),
     )
     args = parser.parse_args(argv)
-    source_commit = args.source_commit or BASE_COMMIT
+    if args.freeze_population is not None:
+        source_commit = args.source_commit or args.freeze_population
+        if source_commit != args.freeze_population:
+            print(
+                "a16: --freeze-population CANDIDATE must be the same candidate "
+                "as --source-commit: the member digests and the recorded "
+                "sourceIdentity must name the same commit",
+                file=sys.stderr,
+            )
+            return 2
+    else:
+        source_commit = args.source_commit or BASE_COMMIT
     try:
-        declared = _declared_population(args.freeze_population)
+        declared = _declared_population(args.freeze_population, source_commit)
         records = build(source_commit, declared)
         growth = sb.growth_report(
             declared["members"], declared["certificateMembers"]
