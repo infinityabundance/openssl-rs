@@ -1,0 +1,282 @@
+{
+  "author": {
+    "identity": "openssl-rs performance programme (staging session, 2026-11-25)",
+    "role": "producer"
+  },
+  "authority": {
+    "build_id": "5b4871ce9d78edeafc96f143d7d6697d943ad804",
+    "id": "openssl-3.6.4-production",
+    "sha256": "611e511db4273c4b6b522031fd171efce71b80661bb8310c2a21dfd18ec0efd2",
+    "verification": "every candidate and authority process proved its mapped realpath, device, inode and size against the expected on-disk DSO; raw/identity-check.tsv records both subjects",
+    "verified_at_recorded_digest": true,
+    "version": "3.6.4"
+  },
+  "campaign": {
+    "id": "PFP-2",
+    "not_comparable_to": [
+      "PFP-0 (c9a0fdd5)",
+      "PFP-1 (91ac573c0)"
+    ],
+    "protocol": "docs/PERFORMANCE-METHODOLOGY.md \u00a75-\u00a76, 15 paired repetitions, balanced random order, one process per subject per repetition",
+    "results": {
+      "path": "evidence/performance-frontier/campaigns/PFP-2/authority/results.json",
+      "present": true,
+      "sha256": "b8934a99ff80ca2285995df2fd25749e6165f2a15834697076590855565cd675"
+    },
+    "venue_has_pmu": false
+  },
+  "candidate": {
+    "artefact": {
+      "label": "distribution-shaped libcrypto.so.3 built from staging HEAD 2004ea243 with the PFP-2 P-256 engine copied from wip/pfp2-p256-engine 5a3c8dc39",
+      "location": "campaign workspace court/tmp/pfp2-run/build/distribution",
+      "obligation": "The benchmarked DSO was built in the campaign workspace from an uncommitted worktree and is not committed; its digest, the changed-path digest and the build identity are tracked, the bytes are not.",
+      "present_in_repository": false,
+      "sha256": "467527ae6a61fb217facd6f50bd1187fc25ce2dea3817d0b37c71bdd0ada9bf8"
+    },
+    "binding": "uncommitted-worktree",
+    "build": {
+      "changed_paths": [
+        "src/ec/mult.rs",
+        "src/ec/mod.rs",
+        "src/ec/smpl.rs",
+        "src/ec/p256.rs",
+        "src/ec/p256/tests.rs"
+      ],
+      "changed_paths_sha256": "5c63c35d69219b5d0acf08200f7514a0fce6dbf58a8b460e2abd789ad2f0dade",
+      "profile": "release",
+      "recipe": "cargo build --release --lib --offline into a fresh CARGO_TARGET_DIR with CARGO_BUILD_JOBS=4, then the tracked Phase-18 distribution-shell link",
+      "target": "x86_64-unknown-linux-gnu",
+      "toolchain": "rustc 1.98.1 (48a229cea 2026-09-01)"
+    },
+    "source_commit": "2004ea2430b8f04ed0aa1762768299e2bc6093ac"
+  },
+  "classification": "SCOPED_OBSERVATION",
+  "comparators": [
+    {
+      "id": "openssl-3.6.4-production",
+      "identity": "sha256:611e511db4273c4b6b522031fd171efce71b80661bb8310c2a21dfd18ec0efd2",
+      "role": "compatibility_authority",
+      "status": "MEASURED"
+    },
+    {
+      "id": "pfp2-generic-kernel",
+      "identity": "SOLINAS kernel of the same candidate DSO, forced through the test-only selector; kernels/summary.json",
+      "role": "within_candidate_mutation_control",
+      "status": "MEASURED"
+    },
+    {
+      "id": "aws-lc",
+      "reason": "not executed in this campaign; its row is unmeasured, never a loss",
+      "role": "external_comparator",
+      "status": "UNAVAILABLE"
+    }
+  ],
+  "instrument": {
+    "identity": {
+      "alloc_probe_sha256": "76b432fd428322e75f068c2d70569a281671207469348628012a389bdae1f446",
+      "analyser_note": "executed_runner_sha256 is the scratch copy court/tmp/pfp2-run/run_local.sh; it differs from runner_sha256 only by disabling the dirty-tree guard, which this session cannot satisfy without committing. The measurement harness, population, protocol and analyser are the tracked ones, invoked unchanged.",
+      "analyser_sha256": "5182354dfa750d8d0e8949790163f6a02f1f8aad7a6276765d8f1fce5d1d9ab7",
+      "build_identity_sha256": "86dc69de2159521e46736c436fd0e54b6e2790141478306963463de505af5e41",
+      "emit_shell_sha256": "5290bc716600f2ec95d3975437023b370997d43188fb98edb21fb05cb2b5a7d4",
+      "executed_runner_sha256": "b08af7bc6f7fcc36f0de15e6d900b0194601a85bd6bccd35e8e7153e402108e4",
+      "extract_dh_fixtures_sha256": "bbff92ec3d06e948434a8ffa871d60fef43cdc7b8abb5b61bf02490e6413384b",
+      "harness_sha256": "e1add483b9bee3158e93e2f7d84296441bb2fc5d715cbf27cfd13f80cfde263f",
+      "runner_sha256": "653994bf2e8eba9b39bdd64c73b518a8d86aca048e2ddea2c47b69c5924ebf44"
+    },
+    "measures": [
+      "cross-library single-operation latency for nine workloads, candidate versus OpenSSL 3.6.4",
+      "end-to-end P-256 ladder and field operations for the MONT, SOLINAS and ARCH kernels",
+      "allocation count per operation through the shared alloc probe"
+    ],
+    "name": "bench_api.c with analyse_bench_api.py, plus the in-process PFP-2 kernel measurement",
+    "preregistration": {
+      "path": "evidence/performance-frontier/campaigns/PFP-2/authority/preregistration.json",
+      "present": true,
+      "sha256": "19a97cb76640bc77ca6547a5ad7b7555128860e890ffdf695a0c65f2cc7eb93a"
+    },
+    "procedure": "docs/PERFORMANCE-METHODOLOGY.md \u00a75-\u00a76",
+    "repetition_count": 15,
+    "samples": {
+      "location": "evidence/performance-frontier/campaigns/PFP-2, enumerated by the bound manifest",
+      "path": "evidence/performance-frontier/claims/PFP-2.raw-manifest.json",
+      "present_in_repository": true,
+      "repetitions": 15,
+      "sha256": "4a03086c3dde3016446b685655e9d5aa2b070b0890d85d0bca5fa753834065c6",
+      "statistic": "median over repetitions of candidate_us / authority_us",
+      "unit_of_replication": "one process per subject per repetition"
+    },
+    "statistic": "median of paired per-repetition ratios candidate_us/authority_us; percentile bootstrap 20 000 resamples, seed 0x50465030",
+    "unit": "microseconds per call for the cross-library workloads; nanoseconds per field operation and microseconds per ladder in the kernel comparison"
+  },
+  "obligations": {
+    "attempted_discharge": [],
+    "none_open_because": null,
+    "open": [
+      {
+        "description": "Secret ownership does not propagate through the arithmetic itself; the P-256 engine keeps fixed-width storage but the transfer window into and out of it remains open.",
+        "discharged": false,
+        "id": "T23"
+      },
+      {
+        "description": "The constant-time inversion's scratch storage and the operands' normalised limb-count metadata remain the recorded residual.",
+        "discharged": false,
+        "id": "T24"
+      },
+      {
+        "description": "The ECDSA per-signature allocation count falls from 273.4 to 253.6 against 29 for the authority; it is improved, not discharged.",
+        "discharged": false,
+        "id": "T29"
+      },
+      {
+        "description": "The candidate was built from an uncommitted worktree at 2004ea243; the changed-path digest and DSO digest are recorded, but the candidate is not reproducible from a commit.",
+        "discharged": false,
+        "id": "PFP2-DIRTY-CANDIDATE"
+      },
+      {
+        "description": "The binary branch audit was extended with the P-256 mont_reduce_into and wide_mul_x86 kernels (8 of 9 targets resolve) but exits 1 because mod_exp_core_consttime_from_parts is inlined out of this DSO; there is no passing audit at the candidate digest.",
+        "discharged": false,
+        "id": "PFP2-BRANCH-AUDIT-INCOMPLETE"
+      },
+      {
+        "description": "The in-crate differential courts pass, but they link the crate and are bound to the source tree, not to the distribution DSO digest.",
+        "discharged": false,
+        "id": "PFP2-DIFFERENTIAL-NOT-DSO-BOUND"
+      },
+      {
+        "description": "The venue exposes no PMU and has no frequency, turbo, SMT or isolation control; every row is SCOPED_OBSERVATION.",
+        "discharged": false,
+        "id": "PFP2-NO-PMU"
+      },
+      {
+        "description": "ctgrind executed the debug test binary built from the same source, not the distribution DSO; its context count is not a DSO-level result.",
+        "discharged": false,
+        "id": "PFP2-CTGRIND-TEST-BINARY"
+      }
+    ]
+  },
+  "population": {
+    "completeness_rule": "The realised identifier set equals the frozen WORKLOADS identifier set; every timing subject and the allocation probe emit the same nine identifiers.",
+    "duplicate": [],
+    "expected": [
+      "dh-ffdhe2048",
+      "dh-ffdhe3072",
+      "dh-modp2048",
+      "dh-synth2048",
+      "dh-synth3072",
+      "ecdsa256",
+      "modexp2048",
+      "modexp8192",
+      "rsa2048"
+    ],
+    "frozen_at": "c9a0fdd58429ef13ca9b25ddccbc84a832787277",
+    "missing": [],
+    "realised": [
+      "dh-ffdhe2048",
+      "dh-ffdhe3072",
+      "dh-modp2048",
+      "dh-synth2048",
+      "dh-synth3072",
+      "ecdsa256",
+      "modexp2048",
+      "modexp8192",
+      "rsa2048"
+    ],
+    "undeclared": []
+  },
+  "producer": {
+    "inputs": [
+      {
+        "path": "evidence/performance-frontier/campaigns/PFP-2/authority/results.json",
+        "present": true,
+        "sha256": "b8934a99ff80ca2285995df2fd25749e6165f2a15834697076590855565cd675"
+      },
+      {
+        "path": "evidence/performance-frontier/campaigns/PFP-2/authority/build-identity.json",
+        "present": true,
+        "sha256": "3348cdc4db1033a3a161a185de5a2bec6242d314002c68b1922515afe475894c"
+      },
+      {
+        "path": "evidence/performance-frontier/claims/PFP-2.raw-manifest.json",
+        "present": true,
+        "sha256": "4a03086c3dde3016446b685655e9d5aa2b070b0890d85d0bca5fa753834065c6"
+      },
+      {
+        "path": "forensics/performance/WORKLOADS.json",
+        "present": true,
+        "sha256": "1d33143a7ee97208c25da95dadd0c7eafcce300794f71a78e6f6b3da60d7fa88"
+      },
+      {
+        "path": "forensics/performance/AUTHORITIES.json",
+        "present": true,
+        "sha256": "04171d2b56b385f53992b6b167e6e262905f81eece498d0472f9dc982d4cd31b"
+      },
+      {
+        "path": "docs/PERFORMANCE-METHODOLOGY.md",
+        "present": true,
+        "sha256": "7a7e33ae3f42d73331b022954b0ca9d0f078c3de85cbd326cbd5d6d1663b3993"
+      }
+    ],
+    "limits": [
+      "This record binds the PFP-2 classification and its declared identity; it executes nothing.",
+      "It does not establish that the cited campaign occurred as described; the campaign raw output is the record of that.",
+      "The candidate is an uncommitted worktree, so the DSO digest identifies it but the bytes are not reproducible from a commit.",
+      "The binary branch audit exits 1 on a pre-existing inlined target, so there is no passing constant-time gate at this digest.",
+      "A green validation is a statement about claim form, not about the truth of the measurement."
+    ],
+    "name": "performance_classification.py",
+    "tool_path": "forensics/tools/performance_classification.py",
+    "tool_sha256": "9ad9b402103c6d1eb6580d458dd4144cc26f9346d6d23936c92c1576dd7d2605",
+    "version": "1"
+  },
+  "queue_item": "PFP-2",
+  "record_id": "PFP-CLAIM-PFP2",
+  "schema": "openssl-rs/performance/claim-record/v1",
+  "scope": {
+    "exclusions": [
+      "the candidate is an uncommitted worktree; the DSO digest identifies it, the bytes are not committed",
+      "P-384 and P-521 still take the generic fixed-width workspace and are not measured here",
+      "L4 protocol and L5 downstream workloads are not measured",
+      "the binary branch audit exits 1 on the pre-existing inlined mod_exp_core_consttime_from_parts, so it is not a gate result",
+      "ctgrind ran the debug test binary from the same source, not the distribution DSO, and is not a constant-time proof"
+    ],
+    "level": "L3",
+    "security_profile": "candidate distribution-shaped libcrypto.so.3 at digest 3ce91b53 against the recorded OpenSSL 3.6.4 authority; the P-256 engine only changes the P-256 scalar ladder, so only ecdsa256 is expected to move",
+    "workloads": [
+      "dh-ffdhe2048",
+      "dh-ffdhe3072",
+      "dh-modp2048",
+      "dh-synth2048",
+      "dh-synth3072",
+      "ecdsa256",
+      "modexp2048",
+      "modexp8192",
+      "rsa2048"
+    ]
+  },
+  "threat_model": {
+    "constant_time_required": true,
+    "observation_model": "wall-clock latency on a virtualised host; no PMU, no cache or branch counters, no frequency, turbo or SMT control",
+    "secret_classification": [
+      "SECRET_DATA",
+      "PUBLIC_DATA"
+    ],
+    "statement": "P-256 private scalars and ECDSA nonces are SECRET_DATA; the field prime, the group order and the base point are public. The P-256 field engine uses masked add, subtract, select, cswap and conditional subtraction with fixed loop counts; neither its selection nor its loop bounds read a value. ctgrind at the same source records no new context, but that is bounded evidence, not a constant-time proof.",
+    "tags": [
+      "SECRET_DATA",
+      "CONSTANT_TIME_REQUIRED",
+      "SECRET_DEPENDENT_CONTROL",
+      "PUBLIC_MODULUS"
+    ]
+  },
+  "venue": {
+    "class": "VIRTUALISED_COURT",
+    "controls": {
+      "core_isolation": false,
+      "frequency_pinned": false,
+      "smt_disabled": false,
+      "turbo_disabled": false
+    },
+    "description": "court container openssl-rs-court-tools:1 at the \u00a76.1 8 GiB cap, one CPU pinned with taskset -c 1; the results file records venue_has_pmu=false",
+    "pmu_exposed": false
+  }
+}

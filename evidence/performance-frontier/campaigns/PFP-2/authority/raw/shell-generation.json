@@ -1,0 +1,21 @@
+{
+  "fresh_surface": "/work/court/tmp/pfp2-recheck/implemented-surface.json",
+  "fresh_surface_body_hash": "1eef30858808c1a69d0be25b7b052e3cba8251a3335b8d1f5323abbd5a24c040",
+  "libraries": {
+    "libcrypto": {
+      "fresh_count": 5896,
+      "sets_match": true,
+      "tracked_count": 5896
+    },
+    "libssl": {
+      "fresh_count": 603,
+      "sets_match": true,
+      "tracked_count": 603
+    }
+  },
+  "schema": "openssl-rs/performance/shell-generation/v1",
+  "shell_used": "fresh",
+  "tracked_surface": "forensics/atlas/implemented-surface.json",
+  "tracked_surface_body_hash": "9142d43a2c462ae820b76e2fb9f9c0eef7d52404c0b0964e440b7b86f21ca2e3",
+  "tracked_surface_matches_fresh": true
+}

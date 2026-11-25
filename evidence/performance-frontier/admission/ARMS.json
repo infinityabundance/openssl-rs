@@ -1,262 +1,403 @@
 {
-  "schema": "openssl-rs/performance/arm-register/v1",
+  "arms": [
+    {
+      "arm_id": "PFP-1",
+      "assurance": {
+        "safe_compatible": false,
+        "semantic_assurance": false
+      },
+      "candidate": {
+        "artefact": {
+          "label": "distribution-shaped libcrypto.so.3 from HEAD 91ac573c0 with the PFP-1 patch applied",
+          "sha256": "596f4833e35932da7efff936185dee17dcb56f3b6363f4682300afb741d3c5b9"
+        },
+        "build_profile": "release, x86_64-unknown-linux-gnu, rustc 1.98.1; patch ddd4e0e01cf467880aaf5a6e44762bd19b9efa015df3944fcfa8f217dfdb2c82",
+        "source_commit": "91ac573c0a8e1bc11371718e5f2a6022c55c9535"
+      },
+      "constant_time_audit": {
+        "candidate_sha256": "596f4833e35932da7efff936185dee17dcb56f3b6363f4682300afb741d3c5b9",
+        "instrument": "valgrind 3.19.0 memcheck with VALGRIND_MAKE_MEM_UNDEFINED (ctgrind technique)",
+        "kind": "CTGRIND",
+        "note": "ctgrind is a taint run, not the binary branch audit the candidate predicate requires; the harness binary digest is not recorded in this register",
+        "reference": {
+          "path": "evidence/performance-frontier/campaigns/PFP-1/ctgrind/summary.json",
+          "present": true,
+          "sha256": "fd452168f7885e81aa4e5311ead8c7847afaaaabdf111b1de6da693814e072a9"
+        },
+        "result": "recorded at the same digest; the counts are inside the instrument's recorded variance and are not a constant-time proof",
+        "taint": [
+          "rsa->p and rsa->q limb contents",
+          "private scalar and per-signature nonce"
+        ]
+      },
+      "description": "prepared Montgomery domains: setup-inclusive versus prepared latency within the candidate",
+      "differential_courts": null,
+      "measurement": {
+        "candidate_sha256": "596f4833e35932da7efff936185dee17dcb56f3b6363f4682300afb741d3c5b9",
+        "classification": "SCOPED_OBSERVATION",
+        "identity": {
+          "instrument": "within-candidate setup-inclusive versus prepared single-operation latency",
+          "population": "40d1537b1a86851a17c49636cd5620704c4836bf6153074fd964f1c3a4fe691e",
+          "source": "91ac573c0a8e1bc11371718e5f2a6022c55c9535 with patch ddd4e0e01cf467880aaf5a6e44762bd19b9efa015df3944fcfa8f217dfdb2c82",
+          "target": "x86_64-unknown-linux-gnu release",
+          "tool": "bench_pfp1.c and analyse_pfp1.py"
+        },
+        "population": {
+          "digest": "40d1537b1a86851a17c49636cd5620704c4836bf6153074fd964f1c3a4fe691e",
+          "frozen_at": "c9a0fdd58429ef13ca9b25ddccbc84a832787277",
+          "frozen_before_execution": true
+        },
+        "record": {
+          "path": "evidence/performance-frontier/claims/PFP-1.claim.json",
+          "present": true,
+          "sha256": "a1ec33a5bf97badf71a2019f73c7fc33a8fbd15d30569827b458b71895310357"
+        }
+      },
+      "queue_item": "PFP-1",
+      "reuse": null,
+      "shortcuts": [],
+      "status": "EXPERIMENT",
+      "timing_obligations": {
+        "attempted_discharge": [],
+        "none_open_because": null,
+        "open": [
+          {
+            "description": "Secret ownership does not propagate through the arithmetic itself; PFP-1 changes the prepared-domain ownership but does not close the transfer window.",
+            "discharged": false,
+            "id": "T23"
+          },
+          {
+            "description": "The constant-time inversion's scratch storage and the operands' normalised limb-count metadata remain the recorded residual.",
+            "discharged": false,
+            "id": "T24"
+          },
+          {
+            "description": "The ECDSA per-signature allocation blow-up is unchanged by PFP-1 and remains open.",
+            "discharged": false,
+            "id": "T29"
+          },
+          {
+            "description": "The programme's differential courts were not recorded at digest 596f4833; the receipt records in-crate differential tests, which are a different instrument.",
+            "discharged": false,
+            "id": "PFP1-DIFFERENTIAL-COURTS"
+          },
+          {
+            "description": "No binary branch audit at digest 596f4833 is recorded in this register; ctgrind alone does not satisfy the candidate predicate.",
+            "discharged": false,
+            "id": "PFP1-BINARY-BRANCH-AUDIT"
+          },
+          {
+            "description": "The candidate was built from an uncommitted patch at 91ac573c0; the patch digest is recorded but the candidate is not reproducible from a commit.",
+            "discharged": false,
+            "id": "PFP1-DIRTY-CANDIDATE"
+          },
+          {
+            "description": "The comparison is setup-inclusive versus prepared within the candidate; no external comparator was executed.",
+            "discharged": false,
+            "id": "PFP1-WITHIN-CANDIDATE"
+          },
+          {
+            "description": "The venue exposes no PMU and has no frequency, turbo, SMT or isolation control; the measurement is SCOPED_OBSERVATION.",
+            "discharged": false,
+            "id": "PFP1-NO-PMU"
+          }
+        ]
+      }
+    },
+    {
+      "arm_id": "PFP-0-refreeze-2e9c4c5cf",
+      "assurance": {
+        "safe_compatible": false,
+        "semantic_assurance": false
+      },
+      "candidate": {
+        "artefact": {
+          "label": "distribution-shaped libcrypto.so.3 built from staging HEAD 2e9c4c5cf into a fresh CARGO_TARGET_DIR",
+          "sha256": "6d7e282d091aedb783d0e55874ed2ce4dab8eaf219f9f5c32653ad4630953b9c"
+        },
+        "build_profile": "release, x86_64-unknown-linux-gnu, rustc 1.98.1; the tree is committed and clean for build-relevant paths, so the candidate is reproducible from the commit",
+        "source_commit": "2e9c4c5cff6c431cc44352a475b011fd92df5b93"
+      },
+      "constant_time_audit": {
+        "candidate_sha256": "6d7e282d091aedb783d0e55874ed2ce4dab8eaf219f9f5c32653ad4630953b9c",
+        "instrument": "courts/phase18/timing/binary_branch_audit.py against the built distribution DSO",
+        "kind": "BINARY_BRANCH_AUDIT_ATTEMPT",
+        "note": "an attempted audit is not an audit result and is not in the candidate-constant-time vocabulary; no constant-time conclusion follows",
+        "reference": {
+          "path": "evidence/performance-frontier/campaigns/PFP-0-refreeze-2e9c4c5cf/binary-branch-audit.md",
+          "present": true,
+          "sha256": "5fbe3c9cc39bde644a3a4e25a1104b99c03c2e6a0f4eda45e4fc2e1e1e80531d"
+        },
+        "result": "exit 1, fail-closed: 1 of 7 inventory targets refused; mod_exp_core_consttime_from_parts is missing from this DSO (inlined into mod_exp_core_consttime_from_parts_prepared), so the report is not a gate result"
+      },
+      "description": "the unchanged PFP-0 harness re-executed at staging HEAD 2e9c4c5cf against the same OpenSSL 3.6.4 authority DSO; a new measurement basis for the queue, not a comparison with the c9a0fdd5 or 91ac573c figures",
+      "differential_courts": null,
+      "measurement": {
+        "candidate_sha256": "6d7e282d091aedb783d0e55874ed2ce4dab8eaf219f9f5c32653ad4630953b9c",
+        "classification": "SCOPED_OBSERVATION",
+        "identity": {
+          "instrument": "cross-library single-operation latency, 15 paired processes pinned to one CPU, median of paired ratios with a percentile bootstrap",
+          "population": "40d1537b1a86851a17c49636cd5620704c4836bf6153074fd964f1c3a4fe691e",
+          "source": "2e9c4c5cff6c431cc44352a475b011fd92df5b93",
+          "target": "x86_64-unknown-linux-gnu release",
+          "tool": "courts/phase18/timing/bench_api.c, alloc_probe.c and analyse_bench_api.py at the digests recorded in the claim record"
+        },
+        "population": {
+          "digest": "40d1537b1a86851a17c49636cd5620704c4836bf6153074fd964f1c3a4fe691e",
+          "frozen_at": "c9a0fdd58429ef13ca9b25ddccbc84a832787277",
+          "frozen_before_execution": true
+        },
+        "record": {
+          "path": "evidence/performance-frontier/claims/PFP-0-refreeze-2e9c4c5cf.claim.json",
+          "present": true,
+          "sha256": "a52c7b5703e773034fa997799f1ae0b70607b911bb29e08d36e294808b761f80"
+        }
+      },
+      "queue_item": "PFP-0",
+      "reuse": null,
+      "shortcuts": [],
+      "status": "EXPERIMENT",
+      "timing_obligations": {
+        "attempted_discharge": [],
+        "none_open_because": null,
+        "open": [
+          {
+            "description": "Secret ownership does not propagate through the arithmetic itself; the transfer window and 17 inversion intermediates at secret-dependent width remain open.",
+            "discharged": false,
+            "id": "T23"
+          },
+          {
+            "description": "The constant-time inversion's scratch storage and the operands' normalised limb-count metadata remain the recorded residual.",
+            "discharged": false,
+            "id": "T24"
+          },
+          {
+            "description": "The ECDSA per-signature allocation blow-up and the related fixed-width workspace residual remain open; this campaign measures 273.4 candidate allocations per signature against 29 for the authority.",
+            "discharged": false,
+            "id": "T29"
+          },
+          {
+            "description": "The venue exposes no PMU and has no frequency, turbo, SMT or isolation control.",
+            "discharged": false,
+            "id": "REFREEZE-NO-PMU"
+          },
+          {
+            "description": "No differential court was run at DSO 6d7e282d in this campaign.",
+            "discharged": false,
+            "id": "REFREEZE-NO-DIFFERENTIAL-COURT"
+          },
+          {
+            "description": "The binary branch audit was attempted at this digest and refused 1 of 7 inventory targets; there is no binary constant-time audit result.",
+            "discharged": false,
+            "id": "REFREEZE-BRANCH-AUDIT-INCOMPLETE"
+          },
+          {
+            "description": "AWS-LC, BoringSSL, rustls and wolfSSL were not executed; their rows are UNAVAILABLE or NOT_APPLICABLE, never losses.",
+            "discharged": false,
+            "id": "REFREEZE-UNMEASURED-COMPARATORS"
+          },
+          {
+            "description": "The benchmarked DSO is not committed; the digest, build-id and rebuild recipe are.",
+            "discharged": false,
+            "id": "REFREEZE-CANDIDATE-BYTES"
+          }
+        ]
+      }
+    },
+    {
+      "arm_id": "PFP-2",
+      "assurance": {
+        "safe_compatible": false,
+        "semantic_assurance": false
+      },
+      "candidate": {
+        "artefact": {
+          "label": "distribution-shaped libcrypto.so.3 built from staging 2004ea243 with the PFP-2 engine copied from wip/pfp2-p256-engine 5a3c8dc39",
+          "sha256": "467527ae6a61fb217facd6f50bd1187fc25ce2dea3817d0b37c71bdd0ada9bf8"
+        },
+        "build_profile": "release, x86_64-unknown-linux-gnu, rustc 1.98.1; uncommitted worktree, changed-path digest 5c63c35d69219b5d0acf08200f7514a0fce6dbf58a8b460e2abd789ad2f0dade",
+        "source_commit": "2004ea2430b8f04ed0aa1762768299e2bc6093ac"
+      },
+      "constant_time_audit": {
+        "candidate_sha256": "467527ae6a61fb217facd6f50bd1187fc25ce2dea3817d0b37c71bdd0ada9bf8",
+        "harness_sha256": "35caadee92b74498ae9b1fecd0ef1613eea665d6256c2efe49d999cd5174ad5a",
+        "instrument": "courts/phase18/timing/binary_branch_audit.py, extended with module-qualified P-256 targets",
+        "kind": "BINARY_BRANCH_AUDIT_ATTEMPT",
+        "note": "an attempted audit is not an audit result; ctgrind at the same source recorded 128 contexts (control 129) but executed the debug test binary, not the DSO",
+        "reference": {
+          "path": "evidence/performance-frontier/campaigns/PFP-2/audit/binary-branch-audit.md",
+          "present": true,
+          "sha256": "e31f530bf1314f74fd351fc35170a89f89382fa35dc15a927995d103b9374c82"
+        },
+        "result": "exit 1, fail-closed: 8 of 9 targets resolved, including the new P-256 mont_reduce_into and wide_mul_x86; mod_exp_core_consttime_from_parts is inlined out of this DSO, so this is not a gate result"
+      },
+      "description": "fixed-width P-256 field engine: MONT, SOLINAS and ARCH behind one FieldKernel interface; ecdsa256 measured against the recorded OpenSSL 3.6.4 authority",
+      "differential_courts": null,
+      "measurement": {
+        "candidate_sha256": "467527ae6a61fb217facd6f50bd1187fc25ce2dea3817d0b37c71bdd0ada9bf8",
+        "classification": "SCOPED_OBSERVATION",
+        "identity": {
+          "instrument": "cross-library single-operation latency, 15 paired processes pinned to one CPU, median of paired ratios with a percentile bootstrap",
+          "population": "40d1537b1a86851a17c49636cd5620704c4836bf6153074fd964f1c3a4fe691e",
+          "source": "2004ea2430b8f04ed0aa1762768299e2bc6093ac with the PFP-2 worktree changes, changed-path digest 5c63c35d69219b5d0acf08200f7514a0fce6dbf58a8b460e2abd789ad2f0dade",
+          "target": "x86_64-unknown-linux-gnu release",
+          "tool": "courts/phase18/timing/bench_api.c, alloc_probe.c and analyse_bench_api.py; ec::p256 pfp2_kernel_measurement"
+        },
+        "population": {
+          "digest": "40d1537b1a86851a17c49636cd5620704c4836bf6153074fd964f1c3a4fe691e",
+          "frozen_at": "c9a0fdd58429ef13ca9b25ddccbc84a832787277",
+          "frozen_before_execution": true
+        },
+        "record": {
+          "path": "evidence/performance-frontier/claims/PFP-2.claim.json",
+          "present": true,
+          "sha256": "31ac1ad13801be211e05147c7bae03e51ba844bd5e504f6d37a1efea18dc2576"
+        }
+      },
+      "queue_item": "PFP-2",
+      "reuse": null,
+      "shortcuts": [],
+      "status": "EXPERIMENT",
+      "timing_obligations": {
+        "attempted_discharge": [],
+        "none_open_because": null,
+        "open": [
+          {
+            "description": "Secret ownership does not propagate through the arithmetic itself; the P-256 engine's transfer window remains open.",
+            "discharged": false,
+            "id": "T23"
+          },
+          {
+            "description": "The constant-time inversion's scratch storage and normalised limb-count metadata remain the recorded residual.",
+            "discharged": false,
+            "id": "T24"
+          },
+          {
+            "description": "Per-signature allocations fall from 273.4 to 253.6 against 29 for the authority; improved, not discharged.",
+            "discharged": false,
+            "id": "T29"
+          },
+          {
+            "description": "The candidate is an uncommitted worktree; the DSO digest and changed-path digest are recorded, but it is not reproducible from a commit.",
+            "discharged": false,
+            "id": "PFP2-DIRTY-CANDIDATE"
+          },
+          {
+            "description": "The inventory now covers P-256 mont_reduce_into and wide_mul_x86, but the audit still refuses the pre-existing inlined mod_exp_core_consttime_from_parts; no passing audit at the candidate digest.",
+            "discharged": false,
+            "id": "PFP2-BRANCH-AUDIT-INCOMPLETE"
+          },
+          {
+            "description": "The in-crate differential courts pass but link the crate, not the distribution DSO.",
+            "discharged": false,
+            "id": "PFP2-DIFFERENTIAL-NOT-DSO-BOUND"
+          },
+          {
+            "description": "The venue exposes no PMU and has no frequency, turbo, SMT or isolation control.",
+            "discharged": false,
+            "id": "PFP2-NO-PMU"
+          },
+          {
+            "description": "ctgrind ran the debug test binary built from the same source, not the distribution DSO.",
+            "discharged": false,
+            "id": "PFP2-CTGRIND-TEST-BINARY"
+          }
+        ]
+      }
+    }
+  ],
   "author": {
     "identity": "openssl-rs performance programme (staging session, 2026-11-25)",
     "role": "producer"
   },
   "producer": {
-    "name": "performance_admission.py",
-    "version": "1",
-    "tool_path": "forensics/tools/performance_admission.py",
-    "tool_sha256": "19c0f9d768f17deaf98ccb06dee8008e8729640329fb37db4fdb5f7c161695d0",
+    "inputs": [
+      {
+        "path": "evidence/performance-frontier/claims/PFP-1.claim.json",
+        "present": true,
+        "sha256": "a1ec33a5bf97badf71a2019f73c7fc33a8fbd15d30569827b458b71895310357"
+      },
+      {
+        "path": "evidence/performance-frontier/campaigns/PFP-1/performance/results.json",
+        "present": true,
+        "sha256": "969ffad3dffccfcae6e1bf35a46f7a54f70959d11fb0ff231bb742cedd9ce3cb"
+      },
+      {
+        "path": "evidence/performance-frontier/campaigns/PFP-1/performance/build-identity.json",
+        "present": true,
+        "sha256": "3915a91023ddbef50ebfa69275500c9e65510a32a7fc9e6d4f470ebbd6d6e37c"
+      },
+      {
+        "path": "evidence/performance-frontier/campaigns/PFP-1/ctgrind/summary.json",
+        "present": true,
+        "sha256": "fd452168f7885e81aa4e5311ead8c7847afaaaabdf111b1de6da693814e072a9"
+      },
+      {
+        "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/identity-verify.tsv",
+        "present": true,
+        "sha256": "2bc6d2365aef96800dbe2ddee7c46ab0d0f2574f19a95f39d49b3e0b4d2e0015"
+      },
+      {
+        "path": "forensics/performance/WORKLOADS.json",
+        "present": true,
+        "sha256": "1d33143a7ee97208c25da95dadd0c7eafcce300794f71a78e6f6b3da60d7fa88"
+      },
+      {
+        "path": "docs/PERFORMANCE-METHODOLOGY.md",
+        "present": true,
+        "sha256": "7a7e33ae3f42d73331b022954b0ca9d0f078c3de85cbd326cbd5d6d1663b3993"
+      },
+      {
+        "path": "evidence/performance-frontier/claims/PFP-2.claim.json",
+        "present": true,
+        "sha256": "31ac1ad13801be211e05147c7bae03e51ba844bd5e504f6d37a1efea18dc2576"
+      },
+      {
+        "path": "evidence/performance-frontier/campaigns/PFP-2/authority/results.json",
+        "present": true,
+        "sha256": "b8934a99ff80ca2285995df2fd25749e6165f2a15834697076590855565cd675"
+      },
+      {
+        "path": "evidence/performance-frontier/campaigns/PFP-2/authority/build-identity.json",
+        "present": true,
+        "sha256": "3348cdc4db1033a3a161a185de5a2bec6242d314002c68b1922515afe475894c"
+      },
+      {
+        "path": "evidence/performance-frontier/claims/PFP-2.raw-manifest.json",
+        "present": true,
+        "sha256": "4a03086c3dde3016446b685655e9d5aa2b070b0890d85d0bca5fa753834065c6"
+      },
+      {
+        "path": "evidence/performance-frontier/campaigns/PFP-2/audit/binary-branch-audit.md",
+        "present": true,
+        "sha256": "e31f530bf1314f74fd351fc35170a89f89382fa35dc15a927995d103b9374c82"
+      },
+      {
+        "path": "evidence/performance-frontier/campaigns/PFP-2/ctgrind/summary.json",
+        "present": true,
+        "sha256": "ee43e469eec3efc6f4463f89c7000ac2b80de07e15eb3cc60fcd5a33c170b106"
+      },
+      {
+        "path": "evidence/performance-frontier/campaigns/PFP-2/kernels/summary.json",
+        "present": true,
+        "sha256": "d70322ae8638b1f69b9a01ecede82b17f8ee55d53e0244d6eac2a8e324b0ea0c"
+      },
+      {
+        "path": "evidence/performance-frontier/campaigns/PFP-2/differential.json",
+        "present": true,
+        "sha256": "9e6b1eb1f439e5dea96ee89af3b3c984cfefe114f9a3f8d77c20d60cac1ca556"
+      }
+    ],
     "limits": [
       "This register binds the admission state of the arms named here; it runs no court, audit or benchmark.",
       "It does not establish that a cited court passed, that a cited audit is sensitive to its defect class, or that a measurement is correct.",
       "An EXPERIMENT arm is not a failure: it records that the candidate conjunction is incomplete and names the missing evidence.",
       "A green validation is a statement about record form, not about the truth of the cited evidence."
     ],
-    "inputs": [
-      {
-        "path": "evidence/performance-frontier/claims/PFP-1.claim.json",
-        "sha256": "a1ec33a5bf97badf71a2019f73c7fc33a8fbd15d30569827b458b71895310357",
-        "present": true
-      },
-      {
-        "path": "evidence/performance-frontier/campaigns/PFP-1/performance/results.json",
-        "sha256": "969ffad3dffccfcae6e1bf35a46f7a54f70959d11fb0ff231bb742cedd9ce3cb",
-        "present": true
-      },
-      {
-        "path": "evidence/performance-frontier/campaigns/PFP-1/performance/build-identity.json",
-        "sha256": "3915a91023ddbef50ebfa69275500c9e65510a32a7fc9e6d4f470ebbd6d6e37c",
-        "present": true
-      },
-      {
-        "path": "evidence/performance-frontier/campaigns/PFP-1/ctgrind/summary.json",
-        "sha256": "fd452168f7885e81aa4e5311ead8c7847afaaaabdf111b1de6da693814e072a9",
-        "present": true
-      },
-      {
-        "path": "evidence/performance-frontier/campaigns/PFP-1/performance/raw/identity-verify.tsv",
-        "sha256": "2bc6d2365aef96800dbe2ddee7c46ab0d0f2574f19a95f39d49b3e0b4d2e0015",
-        "present": true
-      },
-      {
-        "path": "forensics/performance/WORKLOADS.json",
-        "sha256": "1d33143a7ee97208c25da95dadd0c7eafcce300794f71a78e6f6b3da60d7fa88",
-        "present": true
-      },
-      {
-        "path": "docs/PERFORMANCE-METHODOLOGY.md",
-        "sha256": "7a7e33ae3f42d73331b022954b0ca9d0f078c3de85cbd326cbd5d6d1663b3993",
-        "present": true
-      }
-    ]
+    "name": "performance_admission.py",
+    "tool_path": "forensics/tools/performance_admission.py",
+    "tool_sha256": "19c0f9d768f17deaf98ccb06dee8008e8729640329fb37db4fdb5f7c161695d0",
+    "version": "1"
   },
-  "arms": [
-    {
-      "arm_id": "PFP-1",
-      "queue_item": "PFP-1",
-      "description": "prepared Montgomery domains: setup-inclusive versus prepared latency within the candidate",
-      "status": "EXPERIMENT",
-      "candidate": {
-        "source_commit": "91ac573c0a8e1bc11371718e5f2a6022c55c9535",
-        "artefact": {
-          "label": "distribution-shaped libcrypto.so.3 from HEAD 91ac573c0 with the PFP-1 patch applied",
-          "sha256": "596f4833e35932da7efff936185dee17dcb56f3b6363f4682300afb741d3c5b9"
-        },
-        "build_profile": "release, x86_64-unknown-linux-gnu, rustc 1.98.1; patch ddd4e0e01cf467880aaf5a6e44762bd19b9efa015df3944fcfa8f217dfdb2c82"
-      },
-      "measurement": {
-        "record": {
-          "path": "evidence/performance-frontier/claims/PFP-1.claim.json",
-          "sha256": "a1ec33a5bf97badf71a2019f73c7fc33a8fbd15d30569827b458b71895310357",
-          "present": true
-        },
-        "classification": "SCOPED_OBSERVATION",
-        "candidate_sha256": "596f4833e35932da7efff936185dee17dcb56f3b6363f4682300afb741d3c5b9",
-        "population": {
-          "digest": "40d1537b1a86851a17c49636cd5620704c4836bf6153074fd964f1c3a4fe691e",
-          "frozen_at": "c9a0fdd58429ef13ca9b25ddccbc84a832787277",
-          "frozen_before_execution": true
-        },
-        "identity": {
-          "source": "91ac573c0a8e1bc11371718e5f2a6022c55c9535 with patch ddd4e0e01cf467880aaf5a6e44762bd19b9efa015df3944fcfa8f217dfdb2c82",
-          "tool": "bench_pfp1.c and analyse_pfp1.py",
-          "instrument": "within-candidate setup-inclusive versus prepared single-operation latency",
-          "target": "x86_64-unknown-linux-gnu release",
-          "population": "40d1537b1a86851a17c49636cd5620704c4836bf6153074fd964f1c3a4fe691e"
-        }
-      },
-      "differential_courts": null,
-      "constant_time_audit": {
-        "kind": "CTGRIND",
-        "instrument": "valgrind 3.19.0 memcheck with VALGRIND_MAKE_MEM_UNDEFINED (ctgrind technique)",
-        "reference": {
-          "path": "evidence/performance-frontier/campaigns/PFP-1/ctgrind/summary.json",
-          "sha256": "fd452168f7885e81aa4e5311ead8c7847afaaaabdf111b1de6da693814e072a9",
-          "present": true
-        },
-        "candidate_sha256": "596f4833e35932da7efff936185dee17dcb56f3b6363f4682300afb741d3c5b9",
-        "taint": [
-          "rsa->p and rsa->q limb contents",
-          "private scalar and per-signature nonce"
-        ],
-        "result": "recorded at the same digest; the counts are inside the instrument's recorded variance and are not a constant-time proof",
-        "note": "ctgrind is a taint run, not the binary branch audit the candidate predicate requires; the harness binary digest is not recorded in this register"
-      },
-      "timing_obligations": {
-        "open": [
-          {
-            "id": "T23",
-            "description": "Secret ownership does not propagate through the arithmetic itself; PFP-1 changes the prepared-domain ownership but does not close the transfer window.",
-            "discharged": false
-          },
-          {
-            "id": "T24",
-            "description": "The constant-time inversion's scratch storage and the operands' normalised limb-count metadata remain the recorded residual.",
-            "discharged": false
-          },
-          {
-            "id": "T29",
-            "description": "The ECDSA per-signature allocation blow-up is unchanged by PFP-1 and remains open.",
-            "discharged": false
-          },
-          {
-            "id": "PFP1-DIFFERENTIAL-COURTS",
-            "description": "The programme's differential courts were not recorded at digest 596f4833; the receipt records in-crate differential tests, which are a different instrument.",
-            "discharged": false
-          },
-          {
-            "id": "PFP1-BINARY-BRANCH-AUDIT",
-            "description": "No binary branch audit at digest 596f4833 is recorded in this register; ctgrind alone does not satisfy the candidate predicate.",
-            "discharged": false
-          },
-          {
-            "id": "PFP1-DIRTY-CANDIDATE",
-            "description": "The candidate was built from an uncommitted patch at 91ac573c0; the patch digest is recorded but the candidate is not reproducible from a commit.",
-            "discharged": false
-          },
-          {
-            "id": "PFP1-WITHIN-CANDIDATE",
-            "description": "The comparison is setup-inclusive versus prepared within the candidate; no external comparator was executed.",
-            "discharged": false
-          },
-          {
-            "id": "PFP1-NO-PMU",
-            "description": "The venue exposes no PMU and has no frequency, turbo, SMT or isolation control; the measurement is SCOPED_OBSERVATION.",
-            "discharged": false
-          }
-        ],
-        "attempted_discharge": [],
-        "none_open_because": null
-      },
-      "assurance": {
-        "safe_compatible": false,
-        "semantic_assurance": false
-      },
-      "shortcuts": [],
-      "reuse": null
-    },
-    {
-      "arm_id": "PFP-0-refreeze-2e9c4c5cf",
-      "queue_item": "PFP-0",
-      "description": "the unchanged PFP-0 harness re-executed at staging HEAD 2e9c4c5cf against the same OpenSSL 3.6.4 authority DSO; a new measurement basis for the queue, not a comparison with the c9a0fdd5 or 91ac573c figures",
-      "status": "EXPERIMENT",
-      "candidate": {
-        "source_commit": "2e9c4c5cff6c431cc44352a475b011fd92df5b93",
-        "artefact": {
-          "label": "distribution-shaped libcrypto.so.3 built from staging HEAD 2e9c4c5cf into a fresh CARGO_TARGET_DIR",
-          "sha256": "6d7e282d091aedb783d0e55874ed2ce4dab8eaf219f9f5c32653ad4630953b9c"
-        },
-        "build_profile": "release, x86_64-unknown-linux-gnu, rustc 1.98.1; the tree is committed and clean for build-relevant paths, so the candidate is reproducible from the commit"
-      },
-      "measurement": {
-        "record": {
-          "path": "evidence/performance-frontier/claims/PFP-0-refreeze-2e9c4c5cf.claim.json",
-          "sha256": "a52c7b5703e773034fa997799f1ae0b70607b911bb29e08d36e294808b761f80",
-          "present": true
-        },
-        "classification": "SCOPED_OBSERVATION",
-        "candidate_sha256": "6d7e282d091aedb783d0e55874ed2ce4dab8eaf219f9f5c32653ad4630953b9c",
-        "population": {
-          "digest": "40d1537b1a86851a17c49636cd5620704c4836bf6153074fd964f1c3a4fe691e",
-          "frozen_at": "c9a0fdd58429ef13ca9b25ddccbc84a832787277",
-          "frozen_before_execution": true
-        },
-        "identity": {
-          "source": "2e9c4c5cff6c431cc44352a475b011fd92df5b93",
-          "tool": "courts/phase18/timing/bench_api.c, alloc_probe.c and analyse_bench_api.py at the digests recorded in the claim record",
-          "instrument": "cross-library single-operation latency, 15 paired processes pinned to one CPU, median of paired ratios with a percentile bootstrap",
-          "target": "x86_64-unknown-linux-gnu release",
-          "population": "40d1537b1a86851a17c49636cd5620704c4836bf6153074fd964f1c3a4fe691e"
-        }
-      },
-      "differential_courts": null,
-      "constant_time_audit": {
-        "kind": "BINARY_BRANCH_AUDIT_ATTEMPT",
-        "instrument": "courts/phase18/timing/binary_branch_audit.py against the built distribution DSO",
-        "reference": {
-          "path": "evidence/performance-frontier/campaigns/PFP-0-refreeze-2e9c4c5cf/binary-branch-audit.md",
-          "sha256": "5fbe3c9cc39bde644a3a4e25a1104b99c03c2e6a0f4eda45e4fc2e1e1e80531d",
-          "present": true
-        },
-        "candidate_sha256": "6d7e282d091aedb783d0e55874ed2ce4dab8eaf219f9f5c32653ad4630953b9c",
-        "result": "exit 1, fail-closed: 1 of 7 inventory targets refused; mod_exp_core_consttime_from_parts is missing from this DSO (inlined into mod_exp_core_consttime_from_parts_prepared), so the report is not a gate result",
-        "note": "an attempted audit is not an audit result and is not in the candidate-constant-time vocabulary; no constant-time conclusion follows"
-      },
-      "timing_obligations": {
-        "open": [
-          {
-            "id": "T23",
-            "description": "Secret ownership does not propagate through the arithmetic itself; the transfer window and 17 inversion intermediates at secret-dependent width remain open.",
-            "discharged": false
-          },
-          {
-            "id": "T24",
-            "description": "The constant-time inversion's scratch storage and the operands' normalised limb-count metadata remain the recorded residual.",
-            "discharged": false
-          },
-          {
-            "id": "T29",
-            "description": "The ECDSA per-signature allocation blow-up and the related fixed-width workspace residual remain open; this campaign measures 273.4 candidate allocations per signature against 29 for the authority.",
-            "discharged": false
-          },
-          {
-            "id": "REFREEZE-NO-PMU",
-            "description": "The venue exposes no PMU and has no frequency, turbo, SMT or isolation control.",
-            "discharged": false
-          },
-          {
-            "id": "REFREEZE-NO-DIFFERENTIAL-COURT",
-            "description": "No differential court was run at DSO 6d7e282d in this campaign.",
-            "discharged": false
-          },
-          {
-            "id": "REFREEZE-BRANCH-AUDIT-INCOMPLETE",
-            "description": "The binary branch audit was attempted at this digest and refused 1 of 7 inventory targets; there is no binary constant-time audit result.",
-            "discharged": false
-          },
-          {
-            "id": "REFREEZE-UNMEASURED-COMPARATORS",
-            "description": "AWS-LC, BoringSSL, rustls and wolfSSL were not executed; their rows are UNAVAILABLE or NOT_APPLICABLE, never losses.",
-            "discharged": false
-          },
-          {
-            "id": "REFREEZE-CANDIDATE-BYTES",
-            "description": "The benchmarked DSO is not committed; the digest, build-id and rebuild recipe are.",
-            "discharged": false
-          }
-        ],
-        "attempted_discharge": [],
-        "none_open_because": null
-      },
-      "assurance": {
-        "safe_compatible": false,
-        "semantic_assurance": false
-      },
-      "shortcuts": [],
-      "reuse": null
-    }
-  ]
+  "schema": "openssl-rs/performance/arm-register/v1"
 }

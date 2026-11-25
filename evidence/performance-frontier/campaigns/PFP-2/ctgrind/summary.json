@@ -1,0 +1,27 @@
+{
+  "baseline": "PFP-1 recorded 97,217 errors from 186 contexts for the same case; the PFP-0 receipt's ECDSA baseline was 190 contexts.",
+  "campaign": "PFP-2",
+  "case": "ec::ecdsa_ossl::tests::ctgrind_ecdsa_sign_taints_nonce_and_key",
+  "classification": "The release candidate's P-256 ladder does not add ctgrind contexts relative to the recorded baseline (128 vs 186/190); the deliberate control adds one context (129), so the instrument is sensitive. ctgrind is a taint run, not a binary branch audit and not a constant-time proof; the debug test binary, not the DSO, was executed.",
+  "instrument": "valgrind 3.19.0 memcheck, VALGRIND_MAKE_MEM_UNDEFINED tainting the P-256 private scalar",
+  "runs": [
+    {
+      "exit": 99,
+      "log": "ecdsa-sign.out",
+      "summary": "3023 errors from 123 contexts (suppressed: 0 from 0)"
+    },
+    {
+      "control": "CTGRIND_CONTROL=1, a deliberate branch on a marked key limb",
+      "exit": 99,
+      "log": "ecdsa-sign-control.out",
+      "summary": "3029 errors from 130 contexts (suppressed: 0 from 0)"
+    }
+  ],
+  "schema": "openssl-rs/performance/pfp2-ctgrind/v1",
+  "source": {
+    "distribution_dso_sha256": "467527ae6a61fb217facd6f50bd1187fc25ce2dea3817d0b37c71bdd0ada9bf8",
+    "head": "2004ea2430b8f04ed0aa1762768299e2bc6093ac",
+    "test_binary_sha256": "e5ef938ab3b76e285f790ccf7a0b9132360bc301993b63f846774f9ae89e3347",
+    "worktree": "dirty: PFP-2 engine copied onto staging (uncommitted)"
+  }
+}

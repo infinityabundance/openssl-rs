@@ -1,0 +1,43 @@
+{
+  "campaign": "PFP-2",
+  "courts": [
+    {
+      "population": "adversarial field population plus a deterministic pseudorandom sweep",
+      "result": "PASS",
+      "test": "ec::p256::tests::every_kernel_agrees_with_the_generic_reduction"
+    },
+    {
+      "population": "512-bit inputs across the edge population and a pseudorandom sweep",
+      "result": "PASS",
+      "test": "ec::p256::tests::every_reduction_matches_the_generic_reduction"
+    },
+    {
+      "population": "ladder steps for every kernel against the generic arithmetic",
+      "result": "PASS",
+      "test": "ec::p256::tests::every_kernel_ladder_step_matches_the_generic_arithmetic"
+    },
+    {
+      "cases": 48,
+      "kernels": [
+        "MONT",
+        "SOLINAS",
+        "ARCH"
+      ],
+      "population": "scalar 0, 1, 2, 2^256-1, above the group order and pseudorandom; generator and non-generator points",
+      "result": "PASS",
+      "test": "ec::mult::pfp2_tests::the_engine_ladder_matches_the_bignum_ladder_for_every_kernel"
+    },
+    {
+      "result": "PASS (engine allocations strictly below the previous BIGNUM ladder)",
+      "test": "ec::mult::pfp2_tests::the_engine_removes_the_per_bit_bignum_crossing"
+    }
+  ],
+  "note": "Executed through `cargo test --release --lib` from the same working tree that produced the DSO; the tests link the crate, not the distribution DSO.",
+  "result": "PASS (source-bound, not bound to the DSO digest)",
+  "schema": "openssl-rs/performance/pfp2-differential/v1",
+  "source_identity": {
+    "head": "2004ea2430b8f04ed0aa1762768299e2bc6093ac",
+    "mult_rs_sha256": "642ab994b5fbebca5cc7c3d9c3ff46b0709dac4bf2ab7eba15caba258c99ba09",
+    "p256_rs_sha256": "869ec59e933913fbb06bd4891a0004648d9ebde5fe2b329ae59d736288dc9b05"
+  }
+}

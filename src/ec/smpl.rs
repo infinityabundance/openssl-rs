@@ -2610,7 +2610,7 @@ pub(crate) unsafe fn ossl_ec_GFp_simple_ladder_step_workspace(
 /// # Safety
 ///
 /// `dst` is null or a live, uniquely-owned `BIGNUM` coordinate.
-unsafe fn store_coordinate(dst: *mut BigNum, src: &[limbs::Limb]) -> bool {
+pub(crate) unsafe fn store_coordinate(dst: *mut BigNum, src: &[limbs::Limb]) -> bool {
     // SAFETY: the caller guarantees `dst` is null or a live, uniquely-owned
     // `BIGNUM`; this is the only borrow of it in this call.
     let Some(bn) = (unsafe { as_mut(dst) }) else {

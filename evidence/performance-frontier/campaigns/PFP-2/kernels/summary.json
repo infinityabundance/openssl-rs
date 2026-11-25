@@ -1,0 +1,210 @@
+{
+  "campaign": "PFP-2",
+  "instrument": "cargo test pfp2_kernel_measurement with PFP2_MEASURE=1, three rotated repetitions",
+  "mutation_control": {
+    "conclusion": "The default MONT kernel is load-bearing: SOLINAS is slower on mul, sqr, reduce and the end-to-end ladder in every repetition. No row is a frontier claim.",
+    "forced": "SOLINAS (generic portable kernel) versus default MONT",
+    "ratios": {
+      "add": {
+        "mont": 2.797,
+        "solasina_over_mont": 1.0110833035395066,
+        "solinas": 2.828
+      },
+      "ladder": {
+        "mont": 224.423,
+        "solasina_over_mont": 2.397597394206476,
+        "solinas": 538.076
+      },
+      "mul": {
+        "mont": 20.662,
+        "solasina_over_mont": 4.011470332010455,
+        "solinas": 82.885
+      },
+      "reduce": {
+        "mont": 17.062,
+        "solasina_over_mont": 4.768549994139022,
+        "solinas": 81.361
+      },
+      "sqr": {
+        "mont": 18.084,
+        "solasina_over_mont": 4.607111258571113,
+        "solinas": 83.315
+      },
+      "sub": {
+        "mont": 1.843,
+        "solasina_over_mont": 1.0,
+        "solinas": 1.843
+      }
+    }
+  },
+  "rows": {
+    "ARCH/add": {
+      "median": 2.805,
+      "medians_ns_per_op": [
+        2.805,
+        2.864,
+        2.797
+      ],
+      "repetitions": 3
+    },
+    "ARCH/ladder": {
+      "median": 422.821,
+      "medians_ns_per_op": [
+        422.821,
+        422.589,
+        422.887
+      ],
+      "repetitions": 3
+    },
+    "ARCH/mul": {
+      "median": 61.793,
+      "medians_ns_per_op": [
+        61.783,
+        62.855,
+        61.793
+      ],
+      "repetitions": 3
+    },
+    "ARCH/reduce": {
+      "median": 81.351,
+      "medians_ns_per_op": [
+        81.256,
+        83.352,
+        81.351
+      ],
+      "repetitions": 3
+    },
+    "ARCH/sqr": {
+      "median": 59.916,
+      "medians_ns_per_op": [
+        59.81,
+        61.113,
+        59.916
+      ],
+      "repetitions": 3
+    },
+    "ARCH/sub": {
+      "median": 1.856,
+      "medians_ns_per_op": [
+        1.856,
+        1.908,
+        1.851
+      ],
+      "repetitions": 3
+    },
+    "MONT/add": {
+      "median": 2.797,
+      "medians_ns_per_op": [
+        2.81,
+        2.795,
+        2.797
+      ],
+      "repetitions": 3
+    },
+    "MONT/ladder": {
+      "median": 224.423,
+      "medians_ns_per_op": [
+        224.263,
+        225.101,
+        224.423
+      ],
+      "repetitions": 3
+    },
+    "MONT/mul": {
+      "median": 20.662,
+      "medians_ns_per_op": [
+        20.662,
+        20.747,
+        20.559
+      ],
+      "repetitions": 3
+    },
+    "MONT/reduce": {
+      "median": 17.062,
+      "medians_ns_per_op": [
+        17.062,
+        17.06,
+        17.062
+      ],
+      "repetitions": 3
+    },
+    "MONT/sqr": {
+      "median": 18.084,
+      "medians_ns_per_op": [
+        18.167,
+        18.084,
+        18.044
+      ],
+      "repetitions": 3
+    },
+    "MONT/sub": {
+      "median": 1.843,
+      "medians_ns_per_op": [
+        1.843,
+        1.824,
+        1.846
+      ],
+      "repetitions": 3
+    },
+    "SOLINAS/add": {
+      "median": 2.828,
+      "medians_ns_per_op": [
+        2.828,
+        2.841,
+        2.827
+      ],
+      "repetitions": 3
+    },
+    "SOLINAS/ladder": {
+      "median": 538.076,
+      "medians_ns_per_op": [
+        538.076,
+        539.217,
+        537.396
+      ],
+      "repetitions": 3
+    },
+    "SOLINAS/mul": {
+      "median": 82.885,
+      "medians_ns_per_op": [
+        82.885,
+        84.921,
+        82.384
+      ],
+      "repetitions": 3
+    },
+    "SOLINAS/reduce": {
+      "median": 81.361,
+      "medians_ns_per_op": [
+        81.31,
+        84.001,
+        81.361
+      ],
+      "repetitions": 3
+    },
+    "SOLINAS/sqr": {
+      "median": 83.315,
+      "medians_ns_per_op": [
+        83.175,
+        83.721,
+        83.315
+      ],
+      "repetitions": 3
+    },
+    "SOLINAS/sub": {
+      "median": 1.843,
+      "medians_ns_per_op": [
+        1.854,
+        1.838,
+        1.843
+      ],
+      "repetitions": 3
+    }
+  },
+  "schema": "openssl-rs/performance/pfp2-kernels/v1",
+  "source_identity": {
+    "distribution_dso_sha256": "467527ae6a61fb217facd6f50bd1187fc25ce2dea3817d0b37c71bdd0ada9bf8",
+    "mult_rs_sha256": "642ab994b5fbebca5cc7c3d9c3ff46b0709dac4bf2ab7eba15caba258c99ba09",
+    "p256_rs_sha256": "869ec59e933913fbb06bd4891a0004648d9ebde5fe2b329ae59d736288dc9b05"
+  }
+}

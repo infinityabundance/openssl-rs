@@ -1,0 +1,40 @@
+{
+  "groups": {
+    "ffdhe2048": {
+      "bits": 2048,
+      "file": "ffdhe2048.hex",
+      "file_sha256": "282f234f613de65db40d34eab8a6bd44b643b1dd066f371d6e39baab569f1ada",
+      "p_array": "OSSL_BIGNUM_FFDHE2048_P_BYTES",
+      "p_bytes": 256,
+      "p_sha256": "9cd3b7f336872f46c09428d1bbc19877a4d440512cda8d1c1cf0cd6e33698966",
+      "q_array": "OSSL_BIGNUM_FFDHE2048_Q_BYTES",
+      "q_bytes": 256,
+      "q_sha256": "3072ed775345bbd8721aeb890833aa381bf5a19a889fb8c2b71ebd5cead60fe1"
+    },
+    "ffdhe3072": {
+      "bits": 3072,
+      "file": "ffdhe3072.hex",
+      "file_sha256": "6bf9255618857cf8fef1dedff475e7b3c4d9b80ab3b98302c586492a04e1546d",
+      "p_array": "OSSL_BIGNUM_FFDHE3072_P_BYTES",
+      "p_bytes": 384,
+      "p_sha256": "0eaf67db3a839156d5013494a5318a772b5697d270d721f37f092efc69ea5a17",
+      "q_array": "OSSL_BIGNUM_FFDHE3072_Q_BYTES",
+      "q_bytes": 384,
+      "q_sha256": "181f68e06ad73585303cbcab43a6ac96ce2ce8e4927e8dbf2251a469108b72a3"
+    },
+    "modp2048": {
+      "bits": 2048,
+      "file": "modp2048.hex",
+      "file_sha256": "36ac9d9a9a8b3b943d4ebec1f280770b2a6ebef425140ac77a7db1675ddbc352",
+      "p_array": "OSSL_BIGNUM_MODP_2048_P_BYTES",
+      "p_bytes": 256,
+      "p_sha256": "d66436f79bbd6b2e38c0ffbd079be904d2641415e2e67140e09448be9a60890e",
+      "q_array": "OSSL_BIGNUM_MODP_2048_Q_BYTES",
+      "q_bytes": 256,
+      "q_sha256": "a638f55d63c78f6d9ca04f0de138b1699fd6ff9737d926f4c24f318fc1d0f572"
+    }
+  },
+  "schema": "openssl-rs/performance/dh-fixtures/v1",
+  "source": "/work/src/bn/dh_data.rs",
+  "source_sha256": "1887a18b15c7eda2caee4956905fc0d3a8d37d7b2d4c26e6995a14f904a22505"
+}

@@ -73,17 +73,26 @@ import subprocess
 import sys
 from dataclasses import dataclass
 
-# (family, short symbol name).  The short name is the final length-prefixed
-# identifier of the Rust v0 mangled symbol, matched exactly so that e.g.
-# `mod_inverse_consttime` is not confused with `BN_mod_inverse_consttime`.
+# (family, module, short symbol name).  The short name is the final
+# length-prefixed identifier of the Rust v0 mangled symbol, matched exactly so
+# that e.g. `mod_inverse_consttime` is not confused with
+# `BN_mod_inverse_consttime`.  When `module` is present the match additionally
+# requires the preceding v0 path component to be exactly that module, using the
+# same length-prefix check for both identifiers.  This names a free function
+# whose final identifier alone is not unique-or-resolvable (P-256's
+# `mont_reduce_into` follows the module `p256`, whose trailing digits merge with
+# the function's length prefix).  It is an exact, more specific match; it does
+# not relax the short-name rule.
 TARGETS = [
-    ("Montgomery multiply (core)", "mont_mul_into"),
-    ("Montgomery multiply (allocating wrapper)", "mont_mul_fallible"),
-    ("Constant-time ladder core", "mod_exp_core_consttime_from_parts"),
-    ("Constant-time inversion", "mod_inverse_consttime"),
-    ("ECDSA scalar ladder (driver)", "ossl_ec_scalar_mul_ladder"),
-    ("EC ladder step (secret core)", "ossl_ec_GFp_simple_ladder_step"),
-    ("RSA CRT arms", "rsa_ossl_mod_exp"),
+    ("Montgomery multiply (core)", None, "mont_mul_into"),
+    ("Montgomery multiply (allocating wrapper)", None, "mont_mul_fallible"),
+    ("Constant-time ladder core", None, "mod_exp_core_consttime_from_parts"),
+    ("Constant-time inversion", None, "mod_inverse_consttime"),
+    ("ECDSA scalar ladder (driver)", None, "ossl_ec_scalar_mul_ladder"),
+    ("EC ladder step (secret core)", None, "ossl_ec_GFp_simple_ladder_step"),
+    ("RSA CRT arms", None, "rsa_ossl_mod_exp"),
+    ("P-256 Montgomery reduction", "p256", "mont_reduce_into"),
+    ("P-256 x86-64 multiply", "p256", "wide_mul_x86"),
 ]
 
 FLAG_SETTERS = {
@@ -196,9 +205,10 @@ def symbol_table(dso: str, timeout: float) -> list[tuple[int, int, str]]:
     return out
 
 
-def find_symbols(symtab: list[tuple[int, int, str]], name: str):
+def find_symbols(symtab: list[tuple[int, int, str]], name: str,
+                 module: str | None = None):
     """All defined .text symbols whose v0-mangled final identifier is exactly
-    `name`.
+    `name`, optionally preceded by the v0 path component `module`.
 
     Rust v0 mangles an identifier as "<decimal length><identifier>", so the
     match is accepted only when the digits immediately preceding the name parse
@@ -207,12 +217,27 @@ def find_symbols(symtab: list[tuple[int, int, str]], name: str):
     ``13mont_mul_into`` and be accepted by it.  Every match is returned; the
     caller refuses an ambiguous name rather than resolving it to whichever
     symbol happened to be first in the table.
+
+    With `module`, both the module and the name must be complete length-prefixed
+    identifiers.  That disambiguates a free function whose short name is not
+    resolvable on its own: `p256` ends in digits, so the mangled suffix is
+    ``4p25616mont_reduce_into`` and both prefixes are checked exactly.
     """
-    pattern = re.compile(r"(\d+)" + re.escape(name) + r"$")
+    if module is None:
+        pattern = re.compile(r"(\d+)" + re.escape(name) + r"$")
+        matches = []
+        for addr, size, sym in symtab:
+            m = pattern.search(sym)
+            if m and int(m.group(1)) == len(name):
+                matches.append((addr, size, sym))
+        return matches
+    pattern = re.compile(
+        r"(\d+)" + re.escape(module) + r"(\d+)" + re.escape(name) + r"$")
     matches = []
     for addr, size, sym in symtab:
         m = pattern.search(sym)
-        if m and int(m.group(1)) == len(name):
+        if (m and int(m.group(1)) == len(module)
+                and int(m.group(2)) == len(name)):
             matches.append((addr, size, sym))
     return matches
 
@@ -345,12 +370,14 @@ def guarded_window(insns: list[Insn], i: int) -> tuple[str, list[Insn]]:
     return "+".join(sorted(tags)), window
 
 
-def audit(dso: str, family: str, short: str, symtab, timeout: float) -> tuple[str, dict, list[dict]]:
-    matches = find_symbols(symtab, short)
+def audit(dso: str, family: str, module: str | None, short: str, symtab,
+          timeout: float) -> tuple[str, dict, list[dict]]:
+    label = short if module is None else f"{module}::{short}"
+    matches = find_symbols(symtab, short, module)
     if not matches:
-        return family, {"failure": "missing", "short": short}, []
+        return family, {"failure": "missing", "short": label}, []
     if len(matches) > 1:
-        return family, {"failure": "ambiguous", "short": short,
+        return family, {"failure": "ambiguous", "short": label,
                         "candidates": [s for _, _, s in matches]}, []
     addr, size, sym = matches[0]
     if size == 0:
@@ -431,7 +458,7 @@ def scan_cpuid(dso: str, timeout: float) -> tuple[int, list[int]]:
     return len(addrs), addrs
 
 
-def load_targets(path: str | None) -> list[tuple[str, str]]:
+def load_targets(path: str | None) -> list[tuple[str, str | None, str]]:
     if path is None:
         targets = list(TARGETS)
     else:
@@ -444,23 +471,29 @@ def load_targets(path: str | None) -> list[tuple[str, str]]:
             raise Refusal(EXIT_USAGE, f"targets inventory '{path}' must be a non-empty list")
         targets = []
         for index, entry in enumerate(document):
-            if not isinstance(entry, dict) or set(entry) != {"family", "symbol"}:
+            if not isinstance(entry, dict) or set(entry) not in (
+                    {"family", "symbol"}, {"family", "module", "symbol"}):
                 raise Refusal(EXIT_USAGE,
                               f"targets inventory entry {index} must be "
-                              f'{{"family": ..., "symbol": ...}}')
+                              f'{{"family": ..., "symbol": ...}} or '
+                              f'{{"family": ..., "module": ..., "symbol": ...}}')
             family, symbol = entry["family"], entry["symbol"]
+            module = entry.get("module")
             if not isinstance(family, str) or not family:
                 raise Refusal(EXIT_USAGE, f"targets inventory entry {index}: empty family")
             if not isinstance(symbol, str) or not symbol:
                 raise Refusal(EXIT_USAGE, f"targets inventory entry {index}: empty symbol")
-            targets.append((family, symbol))
+            if module is not None and (not isinstance(module, str) or not module):
+                raise Refusal(EXIT_USAGE, f"targets inventory entry {index}: empty module")
+            targets.append((family, module, symbol))
     if not targets:
         raise Refusal(EXIT_USAGE, "the expected-target inventory is empty")
-    seen: set[str] = set()
-    for _, symbol in targets:
-        if symbol in seen:
-            raise Refusal(EXIT_USAGE, f"duplicate target symbol in inventory: {symbol}")
-        seen.add(symbol)
+    seen: set[tuple[str | None, str]] = set()
+    for _, module, symbol in targets:
+        if (module, symbol) in seen:
+            label = symbol if module is None else f"{module}::{symbol}"
+            raise Refusal(EXIT_USAGE, f"duplicate target symbol in inventory: {label}")
+        seen.add((module, symbol))
     return targets
 
 
@@ -517,8 +550,8 @@ def main(argv: list[str] | None = None) -> int:
         symtab = symbol_table(args.dso, args.timeout)
         objdump_version = run([objdump_bin(), "--version"], args.timeout,
                               "objdump --version").splitlines()[0]
-        results = [audit(args.dso, fam, short, symtab, args.timeout)
-                   for fam, short in targets]
+        results = [audit(args.dso, fam, module, short, symtab, args.timeout)
+                   for fam, module, short in targets]
         cpuid = None
         if not args.no_cpuid_scan:
             cpuid = scan_cpuid(args.dso, args.timeout)
