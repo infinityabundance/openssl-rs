@@ -1,0 +1,251 @@
+{
+ "authority": {
+  "checkpointFormat": "forensics/tools/tlog.py (C2SP tlog-checkpoint body and note signature)",
+  "consistencyProof": "forensics/tools/tlog.py verify_consistency (RFC 6962 §2.1.2)",
+  "note": "The verifier checks the bytes and the test key's signature; it does not establish that an independent log operator signed them.",
+  "signatureKind": "test-only HMAC-SHA256 over the exact note text",
+  "trustRoot": false
+ },
+ "baseCommit": "24ac742f5",
+ "causalOrder": [
+  "checkpoint",
+  "signature",
+  "origin",
+  "rollback",
+  "split-view",
+  "backdated",
+  "consistency"
+ ],
+ "clause": "docs/ETP-ADDENDUM-B.md §B.7, §B.11-§B.12 and §B.30 B5",
+ "controls": {
+  "onePerRefusalCode": true,
+  "path": "evidence/b5/CONTROLS.json",
+  "total": 16
+ },
+ "corruptedSequence": [
+  {
+   "canary": {
+    "accepted": true,
+    "code": "MN_OK",
+    "distinctDomains": null,
+    "observation": "with the rollback comparison disabled the older head is accepted as a re-observation",
+    "observations": 4,
+    "scope": "observe",
+    "treeSize": 2
+   },
+   "code": "MN_REFUSED_ROLLBACK",
+   "id": "rollback",
+   "mutation": "present the real size-2 checkpoint after the size-6 head was accepted"
+  },
+  {
+   "canary": {
+    "accepted": true,
+    "code": "MN_OK",
+    "distinctDomains": null,
+    "observation": "with the split-view comparison disabled the equivocating head is accepted",
+    "observations": 4,
+    "scope": "observe",
+    "treeSize": 6
+   },
+   "code": "MN_REFUSED_SPLIT_VIEW",
+   "id": "split-view",
+   "mutation": "sign a different root for the already accepted size 6"
+  },
+  {
+   "canary": {
+    "accepted": true,
+    "code": "MN_OK",
+    "distinctDomains": null,
+    "observation": "with the origin comparison disabled the other log's head is accepted",
+    "observations": 4,
+    "scope": "observe",
+    "treeSize": 6
+   },
+   "code": "MN_REFUSED_ORIGIN",
+   "id": "origin",
+   "mutation": "present a correctly signed size-6 checkpoint whose origin is OTHER-LOG"
+  },
+  {
+   "canary": {
+    "accepted": true,
+    "code": "MN_OK",
+    "distinctDomains": null,
+    "observation": "with the backdating comparison disabled the older observation is accepted as a re-observation",
+    "observations": 4,
+    "scope": "observe",
+    "treeSize": 6
+   },
+   "code": "MN_REFUSED_BACKDATED",
+   "id": "backdated",
+   "mutation": "replay the real size-6 checkpoint with an observation instant before the accepted one"
+  },
+  {
+   "canary": {
+    "accepted": true,
+    "code": "MN_OK",
+    "distinctDomains": null,
+    "observation": "with the chained-digest check disabled the edited bytes are read and the last record is reported",
+    "observations": 3,
+    "scope": "store",
+    "treeSize": null
+   },
+   "code": "MN_REFUSED_STORE_TAMPERED",
+   "id": "store-tampered",
+   "mutation": "flip one byte in the first record's chained digest after the store was written"
+  }
+ ],
+ "finalHead": {
+  "observedAt": "2026-11-24T00:00:03Z",
+  "origin": "FIXTURE-1",
+  "recordDigest": "820e353e0243f46f3eb85a63e8d7cb72658c64ad4f00279fdaccd60b3c20997f",
+  "rootHash": "e9a8ad0126e834c0ec34fed464572772d3f3c2d3501198239a1a5554324c540f",
+  "treeSize": 6
+ },
+ "fixture": {
+  "admittedService": false,
+  "identity": "FIXTURE-1",
+  "labels": [
+   "FIXTURE-1",
+   "test-only",
+   "not-rekor-tiles",
+   "no-log-key",
+   "no-witness",
+   "no-production-signature"
+  ],
+  "origin": "FIXTURE-1",
+  "record": "evidence/b1/FIXTURE.json",
+  "recordSha256": "e286800030e7d1a803fa9f0469156821ad8a4598970bb3b7033d7c8c00644620",
+  "rootHash": "e9a8ad0126e834c0ec34fed464572772d3f3c2d3501198239a1a5554324c540f",
+  "signature": "A10 test-only HMAC-SHA256 key (fixed public seed; not a trust root)",
+  "treeSize": 6
+ },
+ "item": "B5",
+ "malformedCheckpoint": {
+  "attributionCanary": {
+   "accepted": false,
+   "nextRefusal": "MN_REFUSED_CHECKPOINT",
+   "observation": "a malformed body is not a checkpoint: the parse is what makes every other check possible, so disabling signature, origin and root-validity still refuses with MN_REFUSED_CHECKPOINT and no acceptance exists",
+   "scope": "check"
+  },
+  "code": "MN_REFUSED_CHECKPOINT",
+  "controlOnly": true
+ },
+ "nonClaims": [
+  "monitoring establishes that this sequence of heads is internally consistent and append-only; it does not establish that the log is honest",
+  "the monitor observed one fixture's sequence; it cannot assert complete observation of any log",
+  "the fixture is not an admitted Rekor service and the signer is A10's test-only key, not a log key",
+  "the observation instant is the monitor's own record, not a signing time or a trusted timestamp",
+  "a consistency proof shows that two heads are related; it does not show that either head was served to anyone else",
+  "no witness, witness key or independent operator domain exists, so witness admission is NOT_RUN"
+ ],
+ "notRun": [
+  "admission of a genuinely independent witness (no witness service, key or operator domain exists)",
+  "observation of a public log, a second view or another monitor's transcript (no log and no network)",
+  "an independently operated monitor or an independent reviewer",
+  "detection of equivocation that was never served to this monitor",
+  "a trusted timestamp for any observation (§B.9; B2 records no authority)",
+  "closure of the A17 forward freeze"
+ ],
+ "recordedAt": "2026-11-24",
+ "schema": "openssl-rs/b5/monitor/1",
+ "sequence": [
+  {
+   "code": "MN_OK",
+   "consistency": null,
+   "noteSha256": "ea79027e61b53ac3e74a573256abced4643ecded05c192175795c8b78a809987",
+   "observation": 1,
+   "observedAt": "2026-11-24T00:00:01Z",
+   "recordDigest": "7ca8aa260cc35010f08e0e75d3c9a1c1a949843e45f3cffb329626505c0ba52c",
+   "rootHash": "4f91d95745457dbee73edfebe0ac6fa4475a312bdb4ce0545aafe0d4079cb2d8",
+   "source": "evidence/b1/fixture/checkpoint-2.note",
+   "treeSize": 2
+  },
+  {
+   "code": "MN_OK",
+   "consistency": {
+    "elements": 2,
+    "from": 2,
+    "to": 5,
+    "verified": true
+   },
+   "noteSha256": "88ef279694ad7b2e0106f58a86c3e6e40238c69df22429e8539317f59ac73882",
+   "observation": 2,
+   "observedAt": "2026-11-24T00:00:02Z",
+   "recordDigest": "ddb9c720a61c9b4378ae842d21ca1d5d3e98702c9e4d30620279cde6ff045b2a",
+   "rootHash": "106a8e6ea12497c5f0ecd065d34eac15c2b7f9dd45811ce253f700d50d3a2be2",
+   "source": "evidence/b1/fixture/checkpoint-5.note",
+   "treeSize": 5
+  },
+  {
+   "code": "MN_OK",
+   "consistency": {
+    "elements": 3,
+    "from": 5,
+    "to": 6,
+    "verified": true
+   },
+   "noteSha256": "b3ccfb9bbf57f481dc1afd6982dd1514d7886acf0a13f83eb7267c2b18d65c07",
+   "observation": 3,
+   "observedAt": "2026-11-24T00:00:03Z",
+   "recordDigest": "820e353e0243f46f3eb85a63e8d7cb72658c64ad4f00279fdaccd60b3c20997f",
+   "rootHash": "e9a8ad0126e834c0ec34fed464572772d3f3c2d3501198239a1a5554324c540f",
+   "source": "evidence/b1/fixture/checkpoint-6.note",
+   "treeSize": 6
+  }
+ ],
+ "status": {
+  "acceptedSize": 6,
+  "observations": 3,
+  "rootsPerSize": {
+   "2": [
+    "4f91d95745457dbee73edfebe0ac6fa4475a312bdb4ce0545aafe0d4079cb2d8"
+   ],
+   "5": [
+    "106a8e6ea12497c5f0ecd065d34eac15c2b7f9dd45811ce253f700d50d3a2be2"
+   ],
+   "6": [
+    "e9a8ad0126e834c0ec34fed464572772d3f3c2d3501198239a1a5554324c540f"
+   ]
+  },
+  "sizes": [
+   2,
+   5,
+   6
+  ],
+  "transitions": 2
+ },
+ "store": {
+  "bytes": 1665,
+  "chain": "verified",
+  "path": "evidence/b5/store/monitor-store.jsonl",
+  "records": 3,
+  "schema": "openssl-rs/b5/store/1",
+  "sha256": "08db31ac2292c11fb93cd4d5169a8823461dac9564a12b5e82900c91b4ae7c5b"
+ },
+ "witnessPositiveControl": {
+  "controlOnly": true,
+  "observation": "two distinct synthetic operator domains meet k=2",
+  "result": {
+   "code": "MN_OK",
+   "distinctDomains": 2,
+   "required": 2
+  }
+ },
+ "witnesses": {
+  "a15ExternalDomains": [],
+  "availableDomains": 0,
+  "code": "MN_REFUSED_NO_WITNESS",
+  "countOverZeroApprovals": 0,
+  "distinctDomains": 0,
+  "message": "no witness set exists; witness admission is NOT_RUN, not met",
+  "outcome": "NOT_RUN",
+  "path": "evidence/b5/WITNESSES.json",
+  "required": 3,
+  "signatureLinesPerNote": {
+   "checkpoint-2.note": 1,
+   "checkpoint-5.note": 1,
+   "checkpoint-6.note": 1
+  },
+  "witnesses": 0
+ }
+}

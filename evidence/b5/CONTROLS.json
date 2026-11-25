@@ -1,0 +1,371 @@
+{
+ "baseCommit": "24ac742f5",
+ "clause": "docs/ETP-ADDENDUM-B.md §B.7, §B.11-§B.12 and §B.24 items 8-10, 18-23",
+ "controlOnly": true,
+ "controls": [
+  {
+   "canary": {
+    "accepted": true,
+    "code": "MN_OK",
+    "distinctDomains": null,
+    "observation": "with the rollback comparison disabled the older head is accepted as a re-observation",
+    "observations": 4,
+    "scope": "observe",
+    "treeSize": 2
+   },
+   "clause": "docs/ETP-ADDENDUM-B.md §B.7; §B.24 item 18",
+   "code": "MN_REFUSED_ROLLBACK",
+   "controlOnly": true,
+   "id": "rollback",
+   "mutation": "present the real size-2 checkpoint after the size-6 head was accepted",
+   "observed": {
+    "code": "MN_REFUSED_ROLLBACK",
+    "message": "tree size 2 is smaller than the accepted 6: a stale checkpoint cannot replace it"
+   },
+   "scope": "observe"
+  },
+  {
+   "canary": {
+    "accepted": true,
+    "code": "MN_OK",
+    "distinctDomains": null,
+    "observation": "with the split-view comparison disabled the equivocating head is accepted",
+    "observations": 4,
+    "scope": "observe",
+    "treeSize": 6
+   },
+   "clause": "docs/ETP-ADDENDUM-B.md §B.7; §B.24 item 19",
+   "code": "MN_REFUSED_SPLIT_VIEW",
+   "controlOnly": true,
+   "id": "split-view",
+   "mutation": "sign a different root for the already accepted size 6",
+   "observed": {
+    "code": "MN_REFUSED_SPLIT_VIEW",
+    "message": "size 6 already has the accepted root e9a8ad0126e834c0ec34fed464572772d3f3c2d3501198239a1a5554324c540f and this head carries e8a8ad0126e834c0ec34fed464572772d3f3c2d3501198239a1a5554324c540f: equivocation"
+   },
+   "scope": "observe"
+  },
+  {
+   "canary": {
+    "accepted": true,
+    "code": "MN_OK",
+    "distinctDomains": null,
+    "observation": "with the origin comparison disabled the other log's head is accepted",
+    "observations": 4,
+    "scope": "observe",
+    "treeSize": 6
+   },
+   "clause": "docs/ETP-ADDENDUM-B.md §B.7; §B.24 items 9-10",
+   "code": "MN_REFUSED_ORIGIN",
+   "controlOnly": true,
+   "id": "origin",
+   "mutation": "present a correctly signed size-6 checkpoint whose origin is OTHER-LOG",
+   "observed": {
+    "code": "MN_REFUSED_ORIGIN",
+    "message": "the checkpoint origin 'OTHER-LOG' is not the expected 'FIXTURE-1'"
+   },
+   "scope": "observe"
+  },
+  {
+   "canary": {
+    "accepted": true,
+    "code": "MN_OK",
+    "distinctDomains": null,
+    "observation": "with the backdating comparison disabled the older observation is accepted as a re-observation",
+    "observations": 4,
+    "scope": "observe",
+    "treeSize": 6
+   },
+   "clause": "docs/ETP-ADDENDUM-B.md §B.7 freshness; §B.9 (an observation time is not a signing time)",
+   "code": "MN_REFUSED_BACKDATED",
+   "controlOnly": true,
+   "id": "backdated",
+   "mutation": "replay the real size-6 checkpoint with an observation instant before the accepted one",
+   "observed": {
+    "code": "MN_REFUSED_BACKDATED",
+    "message": "the checkpoint is observed at 2026-11-24T00:00:00Z, before the accepted 2026-11-24T00:00:03Z"
+   },
+   "scope": "observe"
+  },
+  {
+   "canary": {
+    "accepted": true,
+    "code": "MN_OK",
+    "distinctDomains": null,
+    "observation": "with the chained-digest check disabled the edited bytes are read and the last record is reported",
+    "observations": 3,
+    "scope": "store",
+    "treeSize": null
+   },
+   "clause": "docs/ETP-ADDENDUM-B.md §B.7 (persistent rollback-resistant inventory)",
+   "code": "MN_REFUSED_STORE_TAMPERED",
+   "controlOnly": true,
+   "id": "store-tampered",
+   "mutation": "flip one byte in the first record's chained digest after the store was written",
+   "observed": {
+    "code": "MN_REFUSED_STORE_TAMPERED",
+    "message": "record 1's chained digest does not verify over its bytes"
+   },
+   "scope": "store"
+  },
+  {
+   "canary": {
+    "accepted": true,
+    "code": "MN_OK",
+    "distinctDomains": null,
+    "observation": "with the consistency check disabled the larger head is accepted without append-only credit",
+    "observations": 2,
+    "scope": "observe",
+    "treeSize": 6
+   },
+   "clause": "docs/ETP-ADDENDUM-B.md §B.6-§B.7; §B.24 item 20",
+   "code": "MN_REFUSED_INCONSISTENT",
+   "controlOnly": true,
+   "id": "inconsistent",
+   "mutation": "grow a fresh size-2 store to size 6 with the first 2 -> 6 proof element flipped",
+   "observed": {
+    "code": "MN_REFUSED_INCONSISTENT",
+    "message": "the proof reconstructs 2571a8f1744592c310a4381d769de181fd285b430db86bf6934c328da4c71249, not the later root e9a8ad0126e834c0ec34fed464572772d3f3c2d3501198239a1a5554324c540f"
+   },
+   "scope": "observe"
+  },
+  {
+   "canary": {
+    "accepted": true,
+    "code": "MN_OK",
+    "distinctDomains": null,
+    "observation": "with signature verification disabled the forged head is accepted as a re-observation",
+    "observations": 4,
+    "scope": "observe",
+    "treeSize": 6
+   },
+   "clause": "docs/ETP-ADDENDUM-B.md §B.7; §B.24 item 8",
+   "code": "MN_REFUSED_SIGNATURE",
+   "controlOnly": true,
+   "id": "signature",
+   "mutation": "sign the exact size-6 body with a key other than the policy-selected test key",
+   "observed": {
+    "code": "MN_REFUSED_SIGNATURE",
+    "message": "the signature does not verify over the exact note text"
+   },
+   "scope": "observe"
+  },
+  {
+   "canary": {
+    "accepted": true,
+    "code": "MN_OK",
+    "distinctDomains": null,
+    "observation": "with the checkpoint root-validity check disabled the signed size-0 head is accepted",
+    "observations": 1,
+    "scope": "observe",
+    "treeSize": 0
+   },
+   "clause": "docs/ETP-ADDENDUM-B.md §B.7 (authentic checkpoint); §B.24 item 6",
+   "code": "MN_REFUSED_CHECKPOINT",
+   "controlOnly": true,
+   "id": "checkpoint",
+   "mutation": "sign a size-0 checkpoint whose root is not SHA-256 of the empty string",
+   "observed": {
+    "code": "MN_REFUSED_CHECKPOINT",
+    "message": "a size-0 checkpoint's root is SHA-256 of the empty string"
+   },
+   "scope": "observe"
+  },
+  {
+   "canary": {
+    "accepted": false,
+    "disabledCall": true,
+    "nextRefusal": "MN_REFUSED_WITNESS_QUORUM",
+    "observation": "with the no-witness check disabled the empty set is not refused for absence; the next independent refusal is the quorum, so no admission exists without witnesses",
+    "scope": "witness"
+   },
+   "clause": "docs/ETP-ADDENDUM-B.md §B.11; §B.24 items 21-23",
+   "code": "MN_REFUSED_NO_WITNESS",
+   "controlOnly": true,
+   "id": "no-witness",
+   "mutation": "offer an empty witness set",
+   "observed": {
+    "code": "MN_REFUSED_NO_WITNESS",
+    "message": "no witness set exists; witness admission is NOT_RUN, not met"
+   },
+   "scope": "witness"
+  },
+  {
+   "canary": {
+    "accepted": true,
+    "code": "MN_OK",
+    "distinctDomains": 2,
+    "observation": "with the quorum comparison disabled two distinct domains are admitted against k=3",
+    "observations": null,
+    "scope": "witness",
+    "treeSize": null
+   },
+   "clause": "docs/ETP-ADDENDUM-B.md §B.11; §B.24 items 21-23",
+   "code": "MN_REFUSED_WITNESS_QUORUM",
+   "controlOnly": true,
+   "id": "witness-quorum",
+   "mutation": "present two distinct operator domains against a recorded quorum of k=3",
+   "observed": {
+    "code": "MN_REFUSED_WITNESS_QUORUM",
+    "message": "2 distinct established witness domain(s) and the recorded quorum is k=3"
+   },
+   "scope": "witness"
+  },
+  {
+   "canary": {
+    "accepted": true,
+    "code": "MN_OK",
+    "distinctDomains": 1,
+    "observation": "with the aliasing check disabled the two labels are admitted and A15 still counts one domain",
+    "observations": null,
+    "scope": "witness",
+    "treeSize": null
+   },
+   "clause": "docs/ETP-ADDENDUM-B.md §B.11; §B.24 items 21-23",
+   "code": "MN_REFUSED_WITNESS_ALIASED",
+   "controlOnly": true,
+   "id": "witness-aliased",
+   "mutation": "present two domain labels whose establishment record is the same operator record",
+   "observed": {
+    "code": "MN_REFUSED_WITNESS_ALIASED",
+    "message": "these witness labels or identities resolve to one domain: control-only:alpha, control-only:alpha-alias"
+   },
+   "scope": "witness"
+  },
+  {
+   "canary": {
+    "accepted": true,
+    "code": "MN_OK",
+    "distinctDomains": 1,
+    "observation": "with the expiry comparison disabled the expired witness is admitted",
+    "observations": null,
+    "scope": "witness",
+    "treeSize": null
+   },
+   "clause": "docs/ETP-ADDENDUM-B.md §B.11; §B.24 items 21-23",
+   "code": "MN_REFUSED_WITNESS_EXPIRED",
+   "controlOnly": true,
+   "id": "witness-expired",
+   "mutation": "present a witness whose key expired before the evaluation instant",
+   "observed": {
+    "code": "MN_REFUSED_WITNESS_EXPIRED",
+    "message": "witness key 'control-only-key-a' expired at 2026-01-01, before 2026-11-24"
+   },
+   "scope": "witness"
+  },
+  {
+   "canary": {
+    "accepted": true,
+    "code": "MN_OK",
+    "distinctDomains": 1,
+    "observation": "with the witness-signature check disabled the wrong signature is admitted",
+    "observations": null,
+    "scope": "witness",
+    "treeSize": null
+   },
+   "clause": "docs/ETP-ADDENDUM-B.md §B.11; §B.24 items 21-23",
+   "code": "MN_REFUSED_WITNESS_SIGNATURE",
+   "controlOnly": true,
+   "id": "witness-signature",
+   "mutation": "present a witness signature over different checkpoint bytes",
+   "observed": {
+    "code": "MN_REFUSED_WITNESS_SIGNATURE",
+    "message": "witness 'control-only-key-a' signed different checkpoint bytes"
+   },
+   "scope": "witness"
+  },
+  {
+   "canary": {
+    "accepted": null,
+    "observation": "a malformed invocation has no accepted form to reach by disabling a check",
+    "scope": "none"
+   },
+   "clause": "forensics/tools/monitor.py usage contract",
+   "code": "MN_REFUSED_USAGE",
+   "controlOnly": true,
+   "id": "usage",
+   "mutation": "invoke observe with a required argument absent",
+   "observed": {
+    "code": "MN_REFUSED_USAGE",
+    "exitStatus": 2,
+    "printed": true
+   },
+   "scope": "cli"
+  },
+  {
+   "canary": {
+    "accepted": null,
+    "observation": "an unreadable path has no bytes; disabling a check cannot make it readable",
+    "scope": "none"
+   },
+   "clause": "forensics/tools/monitor.py usage contract",
+   "code": "MN_REFUSED_IO",
+   "controlOnly": true,
+   "id": "io",
+   "mutation": "name a directory as the store",
+   "observed": {
+    "code": "MN_REFUSED_IO",
+    "exitStatus": 2,
+    "printed": true
+   },
+   "scope": "cli"
+  },
+  {
+   "canary": {
+    "accepted": true,
+    "observation": "the positive control is the accepted sequence itself",
+    "scope": "observe"
+   },
+   "clause": "docs/ETP-ADDENDUM-B.md §B.7",
+   "code": "MN_OK",
+   "controlOnly": true,
+   "id": "fixture-sequence",
+   "mutation": "none: the real size-2, size-5 and size-6 sequence in order",
+   "observed": {
+    "acceptedSize": 6,
+    "code": "MN_OK",
+    "observations": 3,
+    "rootHash": "e9a8ad0126e834c0ec34fed464572772d3f3c2d3501198239a1a5554324c540f"
+   },
+   "scope": "observe"
+  }
+ ],
+ "item": "B5",
+ "nonClaims": [
+  "a control that fires proves the refusal works; it does not show the substituted form occurs in any log",
+  "every witness fixture is control-only and synthetic; no witness admission is claimed",
+  "the canary disables a named check; it does not show the corrupt input is valid"
+ ],
+ "recordedAt": "2026-11-24",
+ "schema": "openssl-rs/b5/controls/1",
+ "summary": {
+  "acceptingCanaries": 13,
+  "coveredCodes": [
+   "MN_OK",
+   "MN_REFUSED_BACKDATED",
+   "MN_REFUSED_CHECKPOINT",
+   "MN_REFUSED_INCONSISTENT",
+   "MN_REFUSED_IO",
+   "MN_REFUSED_NO_WITNESS",
+   "MN_REFUSED_ORIGIN",
+   "MN_REFUSED_ROLLBACK",
+   "MN_REFUSED_SIGNATURE",
+   "MN_REFUSED_SPLIT_VIEW",
+   "MN_REFUSED_STORE_TAMPERED",
+   "MN_REFUSED_USAGE",
+   "MN_REFUSED_WITNESS_ALIASED",
+   "MN_REFUSED_WITNESS_EXPIRED",
+   "MN_REFUSED_WITNESS_QUORUM",
+   "MN_REFUSED_WITNESS_SIGNATURE"
+  ],
+  "fired": 16,
+  "nonAcceptingCanaries": [
+   "no-witness",
+   "usage",
+   "io"
+  ],
+  "onePerRefusalCode": true,
+  "refusalCodes": 15,
+  "total": 16
+ }
+}

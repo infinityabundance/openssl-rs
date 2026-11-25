@@ -1,0 +1,72 @@
+{
+ "aliasingRule": {
+  "delegatedTo": "forensics/tools/thresholds.py distinct_domains (A15)",
+  "note": "a witness signature and key expiry are witness-specific checks that A15 does not perform; A15 documents that it does not verify signatures",
+  "refusalCode": "MN_REFUSED_WITNESS_ALIASED",
+  "rule": "count distinct establishment records and distinct operators, not labels: two domain labels that share one establishment record are one domain, one operator under two labels is one domain, and the labels or identities that collapsed are reported"
+ },
+ "baseCommit": "24ac742f5",
+ "clause": "docs/ETP-ADDENDUM-B.md §B.11",
+ "establishedBy": [
+  {
+   "check": "every signed note in evidence/b1/fixture carries exactly one signature line and none is a witness cosignature (tlog.parse_signed_checkpoint); the B1 fixture is labelled no-witness; the witnessSet below is empty",
+   "quantity": "witnesses",
+   "value": 0
+  },
+  {
+   "check": "the recorded quorum is k=3 and thresholds.available_domain_count over the empty witness domain inventory is 0, so no quorum is reachable; the monitor refuses the empty set before counting",
+   "quantity": "quorum",
+   "value": 0
+  },
+  {
+   "check": "thresholds.distinct_domains over zero witness approvals returns count 0; evidence/a15/DOMAINS.json records externalDomains []",
+   "quantity": "independentDomains",
+   "value": 0
+  }
+ ],
+ "evaluatedAt": "2026-11-24T00:00:00Z",
+ "fixture": {
+  "checkpoint": "evidence/b1/fixture/checkpoint-6.note",
+  "identity": "FIXTURE-1",
+  "origin": "FIXTURE-1",
+  "rootHash": "e9a8ad0126e834c0ec34fed464572772d3f3c2d3501198239a1a5554324c540f",
+  "treeSize": 6
+ },
+ "inventory": {
+  "cosignatures": 0,
+  "independentDomains": 0,
+  "operators": 0,
+  "witnessKeys": 0,
+  "witnesses": 0
+ },
+ "item": "B5",
+ "keys": {},
+ "nonClaims": [
+  "a witness quorum is a count of distinct established operator domains, not a threshold of labels",
+  "no witness exists here, so no cosignature and no witness-dependent property is established",
+  "operating several services under one maintainer is not several independent witnesses",
+  "this record names the quorum that would be required; it does not meet it"
+ ],
+ "observed": {
+  "a15ExternalDomains": [],
+  "availableDomains": 0,
+  "code": "MN_REFUSED_NO_WITNESS",
+  "countOverZeroApprovals": 0,
+  "message": "no witness set exists; witness admission is NOT_RUN, not met",
+  "signatureLinesPerNote": {
+   "checkpoint-2.note": 1,
+   "checkpoint-5.note": 1,
+   "checkpoint-6.note": 1
+  }
+ },
+ "outcome": "NOT_RUN",
+ "recordedAt": "2026-11-24",
+ "requiredQuorum": {
+  "basis": "§B.11: a three-of-four policy over independent witnesses survives one compromised witness under a model permitting at most one; a fixed three-witness population with a two-witness threshold does not. The quorum is recorded, not met, and no witness exists to meet it.",
+  "k": 3,
+  "met": false,
+  "n": 4
+ },
+ "schema": "openssl-rs/b5/witnesses/1",
+ "witnessSet": []
+}
