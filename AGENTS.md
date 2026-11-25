@@ -738,3 +738,67 @@ The consistency checker is `forensics/tools/earned_trust.py`, invoked from
 `forensics/tools/docs_consistency.py` (release-gate item 6); it refuses an
 article citation that names no article, an article with no enforcement and no
 declaration of that, and a gate mention of an article no gate item covers.
+
+---
+
+## 24. Memory-incident stop-work rule (additive, 2026-11-24)
+
+A memory incident has occurred in this campaign: a full test discovery ran while
+host `available` was near the floor, and the session was killed. This section is
+normative and cumulative with §6 and §6.1. Where they differ, this section
+governs.
+
+### 24.1 What counts as an incident
+
+* an OOM kill of any process (cgroup `memory.events` `oom` or `oom_kill`
+  increased, or a kernel OOM line);
+* host `available` below 4 GiB at any point during a heavy command;
+* a session or editor crash attributed to memory;
+* a command whose observed peak plus the court cap exceeds the `available`
+  figure measured immediately before it.
+
+### 24.2 Stop-work
+
+On an incident: no build, no full test discovery, no benchmark, no new court and
+no concurrent heavy command. The only permitted actions are to record the
+incident, reduce the unit of work, and re-measure. Re-running the same command
+at the same or a larger size is forbidden.
+
+### 24.3 Bounded work units (no whole-discovery runs)
+
+* `python3 -m unittest discover -s forensics/tools/tests` may run only when
+  `available >= 24 GiB` measured immediately before it.
+* Otherwise run one named module at a time
+  (`python3 -m unittest forensics.tools.tests.<module>`), with a bounded
+  timeout, and record which modules ran and which did not.
+* A partial run is `PARTIAL`, never `PASS`. The receipt names the modules
+  executed and the number of tests actually run.
+* Never run two heavy commands concurrently, in one agent or across agents.
+
+### 24.4 Cap derivation, tightened
+
+`cap = min(4g, available - 8g)`, floor `2g`. If `available - 8g < 2g`, no new
+court and no heavy command. Reusing a running court is permitted only when the
+command's declared peak is below half of `available`. The §6.1 formula remains
+the upper bound; this one is operative while incidents are recent.
+
+### 24.5 Every brief states its cap
+
+A brief that can compile, link, test or benchmark must name the measured
+`available`, the computed cap, and the bounded unit it will run. A brief that
+does not is defective; the subagent must stop and report rather than proceed.
+
+### 24.6 Incident receipt
+
+Each incident produces `evidence/incidents/<date>-<n>/RECEIPT.md`: the command,
+`available` before it, the cap, the observed peak, the OOM evidence, what was
+lost, the reduced unit that replaced it, and the module list subsequently run.
+
+### 24.7 Claim discipline
+
+A suite result obtained during an incident is `NOT_RUN`. A green bounded subset
+is never reported as "the suite passes", and no item is `DONE` on the strength
+of a run that was interrupted.
+
+This section adds no permission and withdraws none. The stricter reading of §6,
+§6.1 and this section governs every agent, every command.
