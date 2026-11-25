@@ -1,0 +1,229 @@
+{
+  "codes": [
+    "AC_REFUSED_ABANDONMENT_SILENT",
+    "AC_REFUSED_COUNT_MISMATCH",
+    "AC_REFUSED_DOUBLE_OPENING",
+    "AC_REFUSED_DOUBLE_TERMINATOR",
+    "AC_REFUSED_DUPLICATE_OUTCOME",
+    "AC_REFUSED_FAILURE_OMITTED",
+    "AC_REFUSED_MANIFEST_INVALID",
+    "AC_REFUSED_NOT_RUN_AS_PASS",
+    "AC_REFUSED_NO_OPENING",
+    "AC_REFUSED_NO_TERMINATOR",
+    "AC_REFUSED_OMITTED_CHECK",
+    "AC_REFUSED_ORDER",
+    "AC_REFUSED_PLAN_NARROWED",
+    "AC_REFUSED_RETROACTIVE_AMENDMENT",
+    "AC_REFUSED_SKIP_AS_PASS",
+    "AC_REFUSED_UNBOUND_AMENDMENT",
+    "AC_REFUSED_UNPLANNED_OUTCOME"
+  ],
+  "controls": [
+    {
+      "code": "AC_REFUSED_NO_OPENING",
+      "controlOnly": true,
+      "established": true,
+      "fixture": "a campaign whose opening record is absent",
+      "kind": "refusal",
+      "name": "no-opening",
+      "observed": "AC_REFUSED_NO_OPENING"
+    },
+    {
+      "code": "AC_REFUSED_DOUBLE_OPENING",
+      "controlOnly": true,
+      "established": true,
+      "fixture": "two opening records, so the plan can be chosen after execution",
+      "kind": "refusal",
+      "name": "double-opening",
+      "observed": "AC_REFUSED_DOUBLE_OPENING"
+    },
+    {
+      "code": "AC_REFUSED_NO_TERMINATOR",
+      "controlOnly": true,
+      "established": true,
+      "fixture": "neither a closure nor an abandonment, where the caller asked for a finished record",
+      "kind": "refusal",
+      "name": "no-terminator",
+      "observed": "AC_REFUSED_NO_TERMINATOR"
+    },
+    {
+      "code": "AC_REFUSED_NO_TERMINATOR",
+      "controlOnly": true,
+      "established": true,
+      "fixture": "a record whose state says CLOSED_CLEAN but which carries no closure",
+      "kind": "refusal",
+      "name": "claimed-closed-without-terminator",
+      "observed": "AC_REFUSED_NO_TERMINATOR"
+    },
+    {
+      "code": "AC_REFUSED_DOUBLE_TERMINATOR",
+      "controlOnly": true,
+      "established": true,
+      "fixture": "two closure records, so either can be cited later",
+      "kind": "refusal",
+      "name": "double-terminator",
+      "observed": "AC_REFUSED_DOUBLE_TERMINATOR"
+    },
+    {
+      "code": "AC_REFUSED_RETROACTIVE_AMENDMENT",
+      "controlOnly": true,
+      "established": true,
+      "fixture": "an amendment supersedes a check whose outcome the closure already records",
+      "kind": "refusal",
+      "name": "retroactive-amendment",
+      "observed": "AC_REFUSED_RETROACTIVE_AMENDMENT"
+    },
+    {
+      "code": "AC_REFUSED_UNBOUND_AMENDMENT",
+      "controlOnly": true,
+      "established": true,
+      "fixture": "an amendment that adds, removes and supersedes nothing",
+      "kind": "refusal",
+      "name": "unbound-amendment",
+      "observed": "AC_REFUSED_UNBOUND_AMENDMENT"
+    },
+    {
+      "code": "AC_REFUSED_OMITTED_CHECK",
+      "controlOnly": true,
+      "established": true,
+      "fixture": "a closure that leaves required check C3 absent",
+      "kind": "refusal",
+      "name": "omitted-check",
+      "observed": "AC_REFUSED_OMITTED_CHECK"
+    },
+    {
+      "code": "AC_REFUSED_FAILURE_OMITTED",
+      "controlOnly": true,
+      "established": true,
+      "fixture": "a closure records C2 FAIL while its summary claims success",
+      "kind": "refusal",
+      "name": "failure-omitted",
+      "observed": "AC_REFUSED_FAILURE_OMITTED"
+    },
+    {
+      "code": "AC_REFUSED_SKIP_AS_PASS",
+      "controlOnly": true,
+      "established": true,
+      "fixture": "a closure records C2 SKIP while its summary claims success",
+      "kind": "refusal",
+      "name": "skip-as-pass",
+      "observed": "AC_REFUSED_SKIP_AS_PASS"
+    },
+    {
+      "code": "AC_REFUSED_NOT_RUN_AS_PASS",
+      "controlOnly": true,
+      "established": true,
+      "fixture": "a closure records C2 NOT_RUN while its summary claims success",
+      "kind": "refusal",
+      "name": "not-run-as-pass",
+      "observed": "AC_REFUSED_NOT_RUN_AS_PASS"
+    },
+    {
+      "code": "AC_REFUSED_UNPLANNED_OUTCOME",
+      "controlOnly": true,
+      "established": true,
+      "fixture": "an outcome for C9, which the plan never contained",
+      "kind": "refusal",
+      "name": "unplanned-outcome",
+      "observed": "AC_REFUSED_UNPLANNED_OUTCOME"
+    },
+    {
+      "code": "AC_REFUSED_DUPLICATE_OUTCOME",
+      "controlOnly": true,
+      "established": true,
+      "fixture": "two outcomes for C1",
+      "kind": "refusal",
+      "name": "duplicate-outcome",
+      "observed": "AC_REFUSED_DUPLICATE_OUTCOME"
+    },
+    {
+      "code": "AC_REFUSED_ABANDONMENT_SILENT",
+      "controlOnly": true,
+      "established": true,
+      "fixture": "an abandonment whose notDone omits required check C3",
+      "kind": "refusal",
+      "name": "abandonment-silent",
+      "observed": "AC_REFUSED_ABANDONMENT_SILENT"
+    },
+    {
+      "code": "AC_REFUSED_ORDER",
+      "controlOnly": true,
+      "established": true,
+      "fixture": "a closure dated before its opening",
+      "kind": "refusal",
+      "name": "order-terminator",
+      "observed": "AC_REFUSED_ORDER"
+    },
+    {
+      "code": "AC_REFUSED_ORDER",
+      "controlOnly": true,
+      "established": true,
+      "fixture": "an amendment dated after the closure",
+      "kind": "refusal",
+      "name": "amendment-after-terminator",
+      "observed": "AC_REFUSED_ORDER"
+    },
+    {
+      "code": "AC_REFUSED_COUNT_MISMATCH",
+      "controlOnly": true,
+      "established": true,
+      "fixture": "a summary that counts two PASS when the outcomes contain three",
+      "kind": "refusal",
+      "name": "count-mismatch",
+      "observed": "AC_REFUSED_COUNT_MISMATCH"
+    },
+    {
+      "code": "AC_REFUSED_PLAN_NARROWED",
+      "controlOnly": true,
+      "established": true,
+      "fixture": "a campaign plan C1/C2 reconciled against an independent plan C1/C2/C3",
+      "kind": "refusal",
+      "name": "plan-narrowed",
+      "observed": "AC_REFUSED_PLAN_NARROWED"
+    },
+    {
+      "code": "AC_REFUSED_MANIFEST_INVALID",
+      "controlOnly": true,
+      "established": true,
+      "fixture": "a campaign with no campaignId",
+      "kind": "refusal",
+      "name": "manifest-invalid",
+      "observed": "AC_REFUSED_MANIFEST_INVALID"
+    },
+    {
+      "code": "AC_REFUSED_MANIFEST_INVALID",
+      "controlOnly": true,
+      "established": true,
+      "fixture": "an outcome result that is not PASS/FAIL/SKIP/NOT_RUN",
+      "kind": "refusal",
+      "name": "unknown-result",
+      "observed": "AC_REFUSED_MANIFEST_INVALID"
+    },
+    {
+      "code": null,
+      "controlOnly": true,
+      "established": true,
+      "fixture": "a closure that records C2 FAIL and claims no success",
+      "kind": "positive",
+      "name": "positive-closed-with-failures",
+      "observed": null
+    },
+    {
+      "code": null,
+      "controlOnly": true,
+      "established": true,
+      "fixture": "three PASS outcomes and a success summary",
+      "kind": "positive",
+      "name": "positive-closed-clean",
+      "observed": null
+    }
+  ],
+  "coversEveryCode": true,
+  "model": "b3/v1",
+  "positiveControls": [
+    "positive-closed-with-failures",
+    "positive-closed-clean"
+  ],
+  "schema": "openssl-rs/b3/controls/1",
+  "tool": "forensics/tools/campaign.py"
+}

@@ -1,0 +1,885 @@
+{
+  "baseCommit": "1155843e6",
+  "baseCommitLong": "1155843e6fca64704183f6b7d71b2df5b60652ff",
+  "campaigns": [
+    {
+      "abandonment": null,
+      "amendments": [
+        {
+          "adds": [],
+          "at": "2026-11-24T07:44:49-05:00",
+          "by": "openssl-rs <dev@openssl-rs.invalid>",
+          "reason": "a17: freeze what must exist before execution and close against it [commit 8185577eb]",
+          "removes": [],
+          "supersedes": [
+            "A17"
+          ]
+        },
+        {
+          "adds": [],
+          "at": "2026-11-24T08:17:47-05:00",
+          "by": "openssl-rs <dev@openssl-rs.invalid>",
+          "reason": "a18: an old signature never authorises a stale release [commit 6bf8c80aa]",
+          "removes": [],
+          "supersedes": [
+            "A18"
+          ]
+        },
+        {
+          "adds": [],
+          "at": "2026-11-24T08:42:45-05:00",
+          "by": "openssl-rs <dev@openssl-rs.invalid>",
+          "reason": "a19: a correction is bound to the original it supersedes [commit 8c23f4571]",
+          "removes": [],
+          "supersedes": [
+            "A19"
+          ]
+        },
+        {
+          "adds": [],
+          "at": "2026-11-24T09:31:32-05:00",
+          "by": "openssl-rs <dev@openssl-rs.invalid>",
+          "reason": "a20: a conjunction of obligations, denied by default [commit ad49d33f2]",
+          "removes": [],
+          "supersedes": [
+            "A20"
+          ]
+        },
+        {
+          "adds": [],
+          "at": "2026-11-24T09:47:33-05:00",
+          "by": "openssl-rs <dev@openssl-rs.invalid>",
+          "reason": "a21: a summary never replaces the evidence it condenses [commit 6e64e644c]",
+          "removes": [],
+          "supersedes": [
+            "A21"
+          ]
+        },
+        {
+          "adds": [],
+          "at": "2026-11-24T10:23:59-05:00",
+          "by": "openssl-rs <dev@openssl-rs.invalid>",
+          "reason": "a22: eight instruments asked to fail, and two did [commit d3050312f]",
+          "removes": [],
+          "supersedes": [
+            "A22"
+          ]
+        },
+        {
+          "adds": [],
+          "at": "2026-11-24T11:20:19-05:00",
+          "by": "openssl-rs <dev@openssl-rs.invalid>",
+          "reason": "a22: re-measure the eight after the repair, and bind witnesses to behaviour [commit 7c2b5f25f]",
+          "removes": [],
+          "supersedes": [
+            "A22"
+          ]
+        },
+        {
+          "adds": [],
+          "at": "2026-11-24T12:01:46-05:00",
+          "by": "openssl-rs <dev@openssl-rs.invalid>",
+          "reason": "a23: write the rules down, then check the code against them [commit b19869e22]",
+          "removes": [],
+          "supersedes": [
+            "A23"
+          ]
+        },
+        {
+          "adds": [],
+          "at": "2026-11-24T13:33:35-05:00",
+          "by": "openssl-rs <dev@openssl-rs.invalid>",
+          "reason": "a24: a package an outsider can run, and an honest external status [commit a9bcb5480]",
+          "removes": [],
+          "supersedes": [
+            "A24"
+          ]
+        },
+        {
+          "adds": [],
+          "at": "2026-11-24T14:26:52-05:00",
+          "by": "openssl-rs <dev@openssl-rs.invalid>",
+          "reason": "a25: the documented surface and the executable surface must agree [commit 0ea00ac4d]",
+          "removes": [],
+          "supersedes": [
+            "A25"
+          ]
+        },
+        {
+          "adds": [],
+          "at": "2026-11-24T15:06:02-05:00",
+          "by": "openssl-rs <dev@openssl-rs.invalid>",
+          "reason": "a25: re-derive the surface after the repair and freeze its identity [commit 46f385772]",
+          "removes": [],
+          "supersedes": [
+            "A25"
+          ]
+        },
+        {
+          "adds": [],
+          "at": "2026-11-24T15:37:53-05:00",
+          "by": "openssl-rs <dev@openssl-rs.invalid>",
+          "reason": "a26: measure the cost, state the machine, and never skip to save it [commit e3bed067c]",
+          "removes": [],
+          "supersedes": [
+            "A26"
+          ]
+        },
+        {
+          "adds": [],
+          "at": "2026-11-24T16:22:31-05:00",
+          "by": "openssl-rs <dev@openssl-rs.invalid>",
+          "reason": "a27: take one finding through every stage, and stop where it stops [commit 5015b6239]",
+          "removes": [],
+          "supersedes": [
+            "A27"
+          ]
+        },
+        {
+          "adds": [],
+          "at": "2026-11-24T16:39:50-05:00",
+          "by": "openssl-rs <dev@openssl-rs.invalid>",
+          "reason": "b0: a pinned version is not an admitted service [commit 54fb5085b]",
+          "removes": [],
+          "supersedes": [
+            "B0"
+          ]
+        },
+        {
+          "adds": [],
+          "at": "2026-11-24T17:10:08-05:00",
+          "by": "openssl-rs <dev@openssl-rs.invalid>",
+          "reason": "b1: a fixture can prove the verifier, not the service [commit ebc539869]",
+          "removes": [],
+          "supersedes": [
+            "B1"
+          ]
+        },
+        {
+          "adds": [],
+          "at": "2026-11-24T19:50:57-05:00",
+          "by": "openssl-rs <dev@openssl-rs.invalid>",
+          "reason": "b2: nine times, one imprint verifier, and no trusted clock [commit 1155843e6]",
+          "removes": [],
+          "supersedes": [
+            "B2"
+          ]
+        }
+      ],
+      "campaignId": "etp-programme",
+      "closure": null,
+      "closureHistory": [],
+      "label": "the ETP programme: the queue at the A17 forward freeze, amended by later queue changes",
+      "note": "no terminator exists: the programme is OPEN, not closed. The reconciliation against the A17 forward freeze is a live observation at the recorded base, not a closure of that freeze.",
+      "opening": {
+        "campaignId": "etp-programme",
+        "openedAt": "2026-11-24T00:20:00Z",
+        "plan": [
+          {
+            "checkId": "T1",
+            "description": "Infallible allocations in `limbs::rem`/`limbs::mul`; `base_plain`, `rr`, `one_mont`, `product` still plain `Vec`s (`OBL-BN-ALLOCATOR`)",
+            "required": true
+          },
+          {
+            "checkId": "T2",
+            "description": "`SecretBuf::from_vec` cleanses initialised length only; spare capacity may retain secret bytes \u2014 establish a storage invariant or cleanse the whole allocation",
+            "required": true
+          },
+          {
+            "checkId": "T3",
+            "description": "Destructor cleansing is proportional to normalised (secret) length; representation-level fix needed, not a normalisation tweak",
+            "required": true
+          },
+          {
+            "checkId": "T4",
+            "description": "Mutate only `cleanse_now()` while keeping the observer, to prove the tests detect uncleansed bytes rather than only the absence of the destructor",
+            "required": true
+          },
+          {
+            "checkId": "T5",
+            "description": "EC secret-base reduction: `ecdsa_sign_setup` inverts nonce `k` via `ec_field_inverse_mod_ord`; `ossl_ec_GFp_mont_field_inv` takes field elements; initial `limbs::rem` is variable-time",
+            "required": true
+          },
+          {
+            "checkId": "T6",
+            "description": "RSA CRT moduli are secret (only the width is public); Montgomery precomputation runs on them \u2014 taint CRT modulus contents, not just exponents",
+            "required": true
+          },
+          {
+            "checkId": "T7",
+            "description": "`BN_mod_inverse`: 171 branches + 38 secret-derived addresses + 28 allocator branches; needs a domain-correct constant-time inversion, with a separate variable-time public path",
+            "required": true
+          },
+          {
+            "checkId": "T8",
+            "description": "Observable result bit length survives in the returned `BIGNUM` (`store_consttime`)",
+            "required": true
+          },
+          {
+            "checkId": "T9",
+            "description": "Secret-length-dependent boundary copy and admission checks (the 19 length-taint sites)",
+            "required": true
+          },
+          {
+            "checkId": "T10",
+            "description": "Unify `CleansedScratch<const N>` and `SecretBuf<T>` into one secret-storage policy (`SecretArray<N>`, `SecretBuf<T>`, `SecretLimbs`, `SecretRef`)",
+            "required": true
+          },
+          {
+            "checkId": "T11",
+            "description": "RSA blinding lifecycle and CRT recombination review; padding implicit-rejection consistency; error paths not disclosing secret validation state",
+            "required": true
+          },
+          {
+            "checkId": "T12",
+            "description": "ECDSA nonce generation, inversion and scalar arithmetic reviewed end to end",
+            "required": true
+          },
+          {
+            "checkId": "T13",
+            "description": "`core::hint::black_box` audit \u2014 it guarantees nothing; audit every use and every secret-bearing caller of `constant_time.rs`",
+            "required": true
+          },
+          {
+            "checkId": "T14",
+            "description": "Optimised-code review: LTO/inlining/cmov-vs-branch, division latency, CPU feature dispatch; automated binary inspection rather than assembly snapshots",
+            "required": true
+          },
+          {
+            "checkId": "T15",
+            "description": "Compiler-upgrade policy that invalidates code-generation assurance until rechecked",
+            "required": true
+          },
+          {
+            "checkId": "T16",
+            "description": "BINSEC `-checkct` with a validated `-sse-script`; previously exited 0 with no output",
+            "required": true
+          },
+          {
+            "checkId": "T17",
+            "description": "Hardware PMU counters",
+            "required": true
+          },
+          {
+            "checkId": "T18",
+            "description": "TIMECOP SUPERCOP harness (dormant, pinned to 2018\u20132019 trees); client-request method available",
+            "required": true
+          },
+          {
+            "checkId": "T19",
+            "description": "Fresh binary-bound measurement of the **final** candidate",
+            "required": true
+          },
+          {
+            "checkId": "T20",
+            "description": "Byte-reproducible instrumentation build (D255 `.symtab` difference); preserve measured binaries as content-addressed artefacts",
+            "required": true
+          },
+          {
+            "checkId": "T21",
+            "description": "Benchmark against reference OpenSSL for RSA/DH/EC workloads",
+            "required": true
+          },
+          {
+            "checkId": "T22",
+            "description": "Allocation-failure behaviour for the whole secret-bearing operation, not just ladder scratch",
+            "required": true
+          },
+          {
+            "checkId": "T23",
+            "description": "Secret ownership does not propagate through the arithmetic itself",
+            "required": true
+          },
+          {
+            "checkId": "T24",
+            "description": "The constant-time inversion's intermediates are ordinary `vec!` allocations at a secret-dependent width (`w.max(a.len())`), so they are infallible, uncleansed on drop, and their geometry may follow secret metadata. Use the same public-width, fallible, auto-cleansed storage as the ladder.",
+            "required": true
+          },
+          {
+            "checkId": "T25",
+            "description": "`runtime::secure` init-order instability",
+            "required": true
+          },
+          {
+            "checkId": "T26",
+            "description": "Move the `SecretBuf` implementation from `bn::secret` into `runtime::secret` so the runtime-wide abstraction does not depend on the BN subsystem; keep the BN alias and re-run the mutation controls.",
+            "required": true
+          },
+          {
+            "checkId": "T27",
+            "description": "Constant-time modular addition and a fixed-width secret store",
+            "required": true
+          },
+          {
+            "checkId": "T28",
+            "description": "`BN_div` ignores `BN_FLG_CONSTTIME`: the RSA CRT path has 10 indirect `BN_div` callsites on flagged (secret) operands, and the crate's `div_rem_fallible` branches on a value comparison. Measured at DSO `5d0f9098` with `courts/phase18/timing/binary_branch_audit.py`. Non-smooth and tail error paths, so narrow \u2014 but it is a variable-time path on secret operands.",
+            "required": true
+          },
+          {
+            "checkId": "T29",
+            "description": "ECDSA signing is allocation-bound: ~75 344 allocations per signature against the reference's 29, and 82.8x the reference wall time. Establish where the per-bit allocations come from in the scalar ladder and the modular arithmetic, then reuse fixed scratch as the exponentiation ladder does. Measure again after.",
+            "required": true
+          },
+          {
+            "checkId": "T30",
+            "description": "Secret-bearing vector growth released old blocks before cleansing: `try_assign_limbs` used `Vec::try_reserve_exact` then cleansed only the new block, `bn_wexpand` reserved in place, and `try_boxed` dropped a refused `BIGNUM` normally.",
+            "required": true
+          },
+          {
+            "checkId": "T31",
+            "description": "`runtime::obj` tests are not deterministic at the default thread count: a global `NameDb::active_walks` defers a test's removal past its own assertion when a concurrent unlocked `EVP_*_do_all` walk runs. Needs a policy decision (per-test registry instance or a scoped walk lock), not a mechanical lock.",
+            "required": true
+          },
+          {
+            "checkId": "T32",
+            "description": "`runtime::mem::tests::array_overflow_returns_null_and_raises` failed once at the default thread count; establish whether it shares the T25 global-state mechanism.",
+            "required": true
+          },
+          {
+            "checkId": "O1",
+            "description": "Choose and justify the primary version (9.9p1 backs closures/L7; 10.5p1 backs probe/unit probe); keep the other as a separate cohort",
+            "required": true
+          },
+          {
+            "checkId": "O2",
+            "description": "Hermetic environment: pin and verify OpenSSL source, OpenSSH tarball, PuTTY, Dropbear by digest",
+            "required": true
+          },
+          {
+            "checkId": "O3",
+            "description": "Install plink/puttygen/dropbear/dbclient/dropbearkey/dropbearconvert **before** configure; verify detection from the generated Makefile and `regress/test-exec.sh` rather than assuming",
+            "required": true
+          },
+          {
+            "checkId": "O4",
+            "description": "Build A (reference OpenSSL) and Build B (OpenSSL-RS) from the same unmodified source in isolated trees, no shared `LD_LIBRARY_PATH`",
+            "required": true
+          },
+          {
+            "checkId": "O5",
+            "description": "Per-executable runtime identity (`ssh`, `sshd`, `sshd-session`, `ssh-keygen`, `ssh-agent`, `sftp-server`): `readelf -d`, resolved `ldd`, live `/proc/<pid>/maps`; fail closed on mixed linkage",
+            "required": true
+          },
+          {
+            "checkId": "O6",
+            "description": "Full upstream `make tests` on both builds; classify every failure as upstream-common / candidate-specific / harness; keep upstream-common failures as failures",
+            "required": true
+          },
+          {
+            "checkId": "O7",
+            "description": "Four-cell matrix (A-A, B-B, B-A, A-B) using the upstream harness and `TEST_SSH_SSH`, with isolated ports/config/keys per cell",
+            "required": true
+          },
+          {
+            "checkId": "O8",
+            "description": "PuTTY client \u2192 OpenSSH server and Dropbear client \u2192 OpenSSH server; OpenSSH client \u2192 Dropbear server where the harness supports it; record negotiated algorithms from transcripts; distinguish unsupported from failed",
+            "required": true
+          },
+          {
+            "checkId": "O9",
+            "description": "Coverage: Ed25519/RSA/ECDSA auth, X25519 and NIST ECDH, FFDH, PQ hybrid, AES-CTR/GCM, ChaCha20-Poly1305, HMAC integrity failures, host-key rejection, certificates, rekeying, agent, concurrent sessions",
+            "required": true
+          },
+          {
+            "checkId": "O10",
+            "description": "Harness negative controls: wrong client binary, wrong crypto library, failed auth, dead server, unsupported algorithm, missing third-party tool, timeout/signal kill; harness must fail if a control does not trigger",
+            "required": true
+          },
+          {
+            "checkId": "O11",
+            "description": "Machine-readable manifests, exact executed/skipped/blocked counts, reproduction commands; no hand-authored totals",
+            "required": true
+          },
+          {
+            "checkId": "O12",
+            "description": "Reconcile the historical 9.9p1/10.5p1 populations in one receipt so their results are never treated as interchangeable",
+            "required": true
+          },
+          {
+            "checkId": "A0",
+            "description": "Evidence and trust audit: inventory formats, receipts, identities, adjudications, release tooling; find every truncation, silent suppression, summary-without-reconstruction and wrong-candidate application",
+            "required": true
+          },
+          {
+            "checkId": "A1",
+            "description": "SARIF 2.1.0 (+ Errata 01) interoperability profile; deterministic adapter for representative real findings (BN timing, unsafe-boundary obligations, curl element-7 refusals, OpenSSH adjudication)",
+            "required": true
+          },
+          {
+            "checkId": "A2",
+            "description": "Lossless evidence preservation: original output, args, instrument identity, candidate identity, population, counts, unsupported ops, timeouts; content-addressed; reconciliation of native vs exported populations",
+            "required": true
+          },
+          {
+            "checkId": "A3",
+            "description": "Identity model: rule identity / logical finding identity / exact occurrence identity; fingerprints never authorise reuse across artefacts; conservative on collisions and code movement",
+            "required": true
+          },
+          {
+            "checkId": "A4",
+            "description": "Rust/FFI/binary location fidelity: macro expansion, monomorphisation, C ABI, indirect dispatch, optimised code; no fabricated line precision for machine-code findings",
+            "required": true
+          },
+          {
+            "checkId": "A5",
+            "description": "Completeness and execution admission: expected vs examined population, unsupported constructs, skips, timeouts, truncation; an absent population is not an empty population; exit code is not completeness",
+            "required": true
+          },
+          {
+            "checkId": "A6",
+            "description": "Suppression governance: a suppressed finding remains a finding; justification, scope, evidence, reviewer, independence, expiry, consequences; auto-invalidate on change",
+            "required": true
+          },
+          {
+            "checkId": "A7",
+            "description": "Baselines and honest regression tracking: distinguish root-cause elimination and proved unreachable from tool-stopped-reporting; no artificial monotonicity",
+            "required": true
+          },
+          {
+            "checkId": "A8",
+            "description": "GitHub code-scanning integration without GitHub dependency: full local artefacts authoritative; shard manifest when export limits truncate (5 000-result limit)",
+            "required": true
+          },
+          {
+            "checkId": "A9",
+            "description": "in-toto Statement v1 typed attestations; SLSA provenance predicate only for genuine SLSA statements; versioned project predicate types for everything else",
+            "required": true
+          },
+          {
+            "checkId": "A10",
+            "description": "DSSE authentication with the exact PAE over the received bytes; never reparse/reserialise before verification; `keyid` is an unauthenticated hint only",
+            "required": true
+          },
+          {
+            "checkId": "A11",
+            "description": "DSSE parser hardening: duplicate JSON keys, invalid encodings, oversized payloads, signature-count bounds, algorithm downgrade refusal, forward-extension discipline",
+            "required": true
+          },
+          {
+            "checkId": "A12",
+            "description": "Independent cryptographic verification of envelopes: the root of trust must not be the unverified candidate; keep verification deps out of `libcrypto`/`libssl`",
+            "required": true
+          },
+          {
+            "checkId": "A13",
+            "description": "Signature reproducibility vs artefact reproducibility kept separate; never seed production randomness for reproducible signatures",
+            "required": true
+          },
+          {
+            "checkId": "A14",
+            "description": "Role-bound authorisation: maintainer, source/build/analysis/proof producer, instrument reviewer, adjudicator, external reproducer, release authority, revocation authority; wrong-role signature insufficient",
+            "required": true
+          },
+          {
+            "checkId": "A15",
+            "description": "Thresholds over distinct authorised keys and distinct trust domains; repeated signatures and aliases cannot satisfy independence",
+            "required": true
+          },
+          {
+            "checkId": "A16",
+            "description": "Sigstore bundle profile with certificates, transparency entries, inclusion proofs, timestamps; offline verification with stated trust-root/freshness assumptions",
+            "required": true
+          },
+          {
+            "checkId": "A17",
+            "description": "Transparency and omission resistance: freeze an expected evidence manifest before execution; close with a signed reconciliation manifest; a producer cannot PASS by omitting a failed result",
+            "required": true
+          },
+          {
+            "checkId": "A18",
+            "description": "Survivable key compromise (TUF principles): rotation, delegation, expiry, revocation, anti-rollback, anti-freeze; old signatures never authorise a stale release",
+            "required": true
+          },
+          {
+            "checkId": "A19",
+            "description": "Authenticated corrections and retractions: append-only, bound to the original attestation, propagating invalidation; preserve what was believed and what was disproved",
+            "required": true
+          },
+          {
+            "checkId": "A20",
+            "description": "Deterministic policy engine: conjunction of obligations, not a score; denial-by-default; a candidate may not choose a permissive policy for itself",
+            "required": true
+          },
+          {
+            "checkId": "A21",
+            "description": "Verification-summary attestations after policy evaluation; a summary never replaces the evidence for independent reconstruction",
+            "required": true
+          },
+          {
+            "checkId": "A22",
+            "description": "Adversarial qualification: the eight mandatory experiments (stripped results, wrong-binary proof, self-signed independence, crashed-but-empty report, one-person-two-credentials, withdrawn claim, reproducible-but-defective binary, complete-and-independent evidence)",
+            "required": true
+          },
+          {
+            "checkId": "A23",
+            "description": "Formal verification of the verifier: the smallest evidence-processing core; verify that required evidence cannot be omitted, signatures cannot imply semantic correctness, substitution cannot preserve acceptance",
+            "required": true
+          },
+          {
+            "checkId": "A24",
+            "description": "External verification package: frozen manifest, provenance, full SARIF, native evidence, reconciliation, envelopes, statements, bundles, policy, controls, rebuild instructions; treat remote evidence as hostile",
+            "required": true
+          },
+          {
+            "checkId": "A25",
+            "description": "Extended public verifier surface (`verify sarif",
+            "required": true
+          },
+          {
+            "checkId": "A26",
+            "description": "Verification economics: FAST/BATCH/BOUNDARY/SEAL/EXTERNAL; sign immutable manifests rather than every report; never trade completeness for cost",
+            "required": true
+          },
+          {
+            "checkId": "A27",
+            "description": "Vertical slice first: real frozen finding \u2192 native evidence \u2192 SARIF \u2192 content-addressed manifest \u2192 in-toto statement \u2192 DSSE \u2192 independent verification \u2192 policy adjudication \u2192 reproducible result; then the deliberately corrupted counterpart",
+            "required": true
+          },
+          {
+            "checkId": "B0",
+            "description": "Protocol and infrastructure audit: inspect the current ETP, SARIF, DSSE and release infrastructure; pin admitted Rekor, Sigstore, timestamping and C2SP versions; identify actual client support, signing configuration, witness availability and trust assumptions. Evidence: a tracked registry naming each admitted version, digest and unsupported feature, plus the recorded service-configuration finding",
+            "required": true
+          },
+          {
+            "checkId": "B1",
+            "description": "Local vertical slice: pinned POSIX-backed Rekor v2 instance; publish one real frozen ETP statement through the supported `hashedrekord` path; verify binding, inclusion and checkpoint; archive the complete evidence; execute the relevant corruption controls (\u00a7B.24 items 1\u201312, 14\u201316, 18\u201320)",
+            "required": true
+          },
+          {
+            "checkId": "B2",
+            "description": "Trusted timestamping and offline verification: RFC 3161 timestamp evidence integrated; verification demonstrated without the original live service; the nine separate times of \u00a7B.9 recorded distinctly",
+            "required": true
+          },
+          {
+            "checkId": "B3",
+            "description": "Campaign accountability: opening, amendment, closure and abandonment records; omission-sensitive reconciliation that refuses a closure omitting an applicable failure (\u00a7B.13\u2013B.14)",
+            "required": true
+          },
+          {
+            "checkId": "B4",
+            "description": "Public transparency: admitted public-good Rekor v2 profile; only classified release-critical material published; independently executable verification demonstrated",
+            "required": true
+          },
+          {
+            "checkId": "B5",
+            "description": "Consistency, monitoring and witnesses: persistent checkpoint state, consistency verification and monitoring; genuinely independent witnesses admitted when available; split-view controls demonstrated (\u00a7B.7, \u00a7B.11\u2013B.12)",
+            "required": true
+          },
+          {
+            "checkId": "B6",
+            "description": "Archival and revocation: durable evidence reconstruction, current-state metadata, authenticated correction and anti-rollback controls; a withdrawn claim refused by current-state policy while its original inclusion proof stays valid (\u00a7B.17, \u00a7B.19)",
+            "required": true
+          },
+          {
+            "checkId": "B7",
+            "description": "Formal assurance: transparency-policy invariants of \u00a7B.23 verified in a small model; tool assumptions and the refinement gap recorded",
+            "required": true
+          },
+          {
+            "checkId": "B8",
+            "description": "Continuous enforcement: admitted profile integrated into `AGENTS.md`, release gates, ETP claim schemas, CI and public non-claims; silent regression prevented",
+            "required": true
+          },
+          {
+            "checkId": "C1",
+            "description": "Close or honestly hold the 27 named element-7 refusals (`http` 4 local-copy sites; `provider/rand`, `confmod`, `evp_pbe`, `encoder_meth`, `rand_lib`, PEM pair, `passphrase`, `store_result`, `obj`, `stack`, `ui_read`, `check_crl`, `dh/check`)",
+            "required": true
+          },
+          {
+            "checkId": "C2",
+            "description": "Reconcile the running site count against the named rows (the \u00b11/\u00b12 discrepancies recorded in the batch notes)",
+            "required": true
+          },
+          {
+            "checkId": "C3",
+            "description": "One frozen census \u2192 freeze \u2192 closure run at a single identity after the tool changes",
+            "required": true
+          },
+          {
+            "checkId": "C4",
+            "description": "Independent adversarial review of the ~9,600 new lines in `consumer_closure.py` (CFG dominance, frame-slot scans, DSO-local copies, callback writers)",
+            "required": true
+          },
+          {
+            "checkId": "C5",
+            "description": "Curl L7 replay at the final candidate; element-7 PASS; graduation record; counter 2/33 only if the safety argument survives independent review",
+            "required": true
+          }
+        ]
+      },
+      "schema": "openssl-rs/b3/campaign/1",
+      "source": {
+        "base": "731b066e261ebc64cf8acb909df18d23b9b11883",
+        "openedAtSource": "evidence/a17/FREEZE-forward.json#/frozenAt",
+        "plan": "docs/ETP-TODO.md",
+        "reconstructed": false
+      },
+      "state": "OPEN"
+    },
+    {
+      "abandonment": null,
+      "amendments": [],
+      "campaignId": "a22-adversarial-qualification",
+      "closure": {
+        "at": "2026-11-24T11:20:19-05:00",
+        "outcomes": [
+          {
+            "checkId": "E1",
+            "evidence": "evidence/a22/RESULTS.json#/experiments/0 (sha256 976ecee77d13e5ab11ae78426c0cff3835a5de4bc25d2dcbbc2a035ca768ddde)",
+            "history": [
+              {
+                "at": "2026-11-24T10:23:59-05:00",
+                "evidence": "git:evidence/a22/RESULTS.json@d3050312fd10e5b45053c6c3d8e9f501a3c6356b (sha256 45098707995813c060aa802e585e5e7e0cbba66b82980408f3dbd16ca68c5dbe)",
+                "reason": "earlier observation, preserved rather than erased",
+                "result": "PASS"
+              }
+            ],
+            "reason": "re-measured at e4029e0d5 after the repair recorded in evidence/defects/e5-e6/RECEIPT.md; refusals 3/3",
+            "result": "PASS"
+          },
+          {
+            "checkId": "E2",
+            "evidence": "evidence/a22/RESULTS.json#/experiments/1 (sha256 976ecee77d13e5ab11ae78426c0cff3835a5de4bc25d2dcbbc2a035ca768ddde)",
+            "history": [
+              {
+                "at": "2026-11-24T10:23:59-05:00",
+                "evidence": "git:evidence/a22/RESULTS.json@d3050312fd10e5b45053c6c3d8e9f501a3c6356b (sha256 45098707995813c060aa802e585e5e7e0cbba66b82980408f3dbd16ca68c5dbe)",
+                "reason": "earlier observation, preserved rather than erased",
+                "result": "PASS"
+              }
+            ],
+            "reason": "re-measured at e4029e0d5 after the repair recorded in evidence/defects/e5-e6/RECEIPT.md; refusals 3/3",
+            "result": "PASS"
+          },
+          {
+            "checkId": "E3",
+            "evidence": "evidence/a22/RESULTS.json#/experiments/2 (sha256 976ecee77d13e5ab11ae78426c0cff3835a5de4bc25d2dcbbc2a035ca768ddde)",
+            "history": [
+              {
+                "at": "2026-11-24T10:23:59-05:00",
+                "evidence": "git:evidence/a22/RESULTS.json@d3050312fd10e5b45053c6c3d8e9f501a3c6356b (sha256 45098707995813c060aa802e585e5e7e0cbba66b82980408f3dbd16ca68c5dbe)",
+                "reason": "earlier observation, preserved rather than erased",
+                "result": "PASS"
+              }
+            ],
+            "reason": "re-measured at e4029e0d5 after the repair recorded in evidence/defects/e5-e6/RECEIPT.md; refusals 5/5",
+            "result": "PASS"
+          },
+          {
+            "checkId": "E4",
+            "evidence": "evidence/a22/RESULTS.json#/experiments/3 (sha256 976ecee77d13e5ab11ae78426c0cff3835a5de4bc25d2dcbbc2a035ca768ddde)",
+            "history": [
+              {
+                "at": "2026-11-24T10:23:59-05:00",
+                "evidence": "git:evidence/a22/RESULTS.json@d3050312fd10e5b45053c6c3d8e9f501a3c6356b (sha256 45098707995813c060aa802e585e5e7e0cbba66b82980408f3dbd16ca68c5dbe)",
+                "reason": "earlier observation, preserved rather than erased",
+                "result": "PASS"
+              }
+            ],
+            "reason": "re-measured at e4029e0d5 after the repair recorded in evidence/defects/e5-e6/RECEIPT.md; refusals 3/3",
+            "result": "PASS"
+          },
+          {
+            "checkId": "E5",
+            "evidence": "evidence/a22/RESULTS.json#/experiments/4 (sha256 976ecee77d13e5ab11ae78426c0cff3835a5de4bc25d2dcbbc2a035ca768ddde)",
+            "history": [
+              {
+                "at": "2026-11-24T10:23:59-05:00",
+                "evidence": "git:evidence/a22/RESULTS.json@d3050312fd10e5b45053c6c3d8e9f501a3c6356b (sha256 45098707995813c060aa802e585e5e7e0cbba66b82980408f3dbd16ca68c5dbe)",
+                "reason": "earlier observation, preserved rather than erased",
+                "result": "FAIL"
+              }
+            ],
+            "reason": "re-measured at e4029e0d5 after the repair recorded in evidence/defects/e5-e6/RECEIPT.md; refusals 3/3",
+            "result": "PASS"
+          },
+          {
+            "checkId": "E6",
+            "evidence": "evidence/a22/RESULTS.json#/experiments/5 (sha256 976ecee77d13e5ab11ae78426c0cff3835a5de4bc25d2dcbbc2a035ca768ddde)",
+            "history": [
+              {
+                "at": "2026-11-24T10:23:59-05:00",
+                "evidence": "git:evidence/a22/RESULTS.json@d3050312fd10e5b45053c6c3d8e9f501a3c6356b (sha256 45098707995813c060aa802e585e5e7e0cbba66b82980408f3dbd16ca68c5dbe)",
+                "reason": "earlier observation, preserved rather than erased",
+                "result": "SKIP"
+              }
+            ],
+            "reason": "re-measured at e4029e0d5 after the repair recorded in evidence/defects/e5-e6/RECEIPT.md; refusals 2/2",
+            "result": "PASS"
+          },
+          {
+            "checkId": "E7",
+            "evidence": "evidence/a22/RESULTS.json#/experiments/6 (sha256 976ecee77d13e5ab11ae78426c0cff3835a5de4bc25d2dcbbc2a035ca768ddde)",
+            "history": [
+              {
+                "at": "2026-11-24T10:23:59-05:00",
+                "evidence": "git:evidence/a22/RESULTS.json@d3050312fd10e5b45053c6c3d8e9f501a3c6356b (sha256 45098707995813c060aa802e585e5e7e0cbba66b82980408f3dbd16ca68c5dbe)",
+                "reason": "earlier observation, preserved rather than erased",
+                "result": "PASS"
+              }
+            ],
+            "reason": "re-measured at e4029e0d5 after the repair recorded in evidence/defects/e5-e6/RECEIPT.md; refusals 8/8",
+            "result": "PASS"
+          },
+          {
+            "checkId": "E8",
+            "evidence": "evidence/a22/RESULTS.json#/experiments/7 (sha256 976ecee77d13e5ab11ae78426c0cff3835a5de4bc25d2dcbbc2a035ca768ddde)",
+            "history": [
+              {
+                "at": "2026-11-24T10:23:59-05:00",
+                "evidence": "git:evidence/a22/RESULTS.json@d3050312fd10e5b45053c6c3d8e9f501a3c6356b (sha256 45098707995813c060aa802e585e5e7e0cbba66b82980408f3dbd16ca68c5dbe)",
+                "reason": "earlier observation, preserved rather than erased",
+                "result": "PASS"
+              }
+            ],
+            "reason": "re-measured at e4029e0d5 after the repair recorded in evidence/defects/e5-e6/RECEIPT.md; refusals 4/4",
+            "result": "PASS"
+          }
+        ],
+        "record": "git:evidence/a22/RESULTS.json@7c2b5f25fe55e6302b942ed124f4fbec5aff8888",
+        "summary": {
+          "claimsSuccess": true,
+          "counts": {
+            "accounted": 8,
+            "fail": 0,
+            "notRun": 0,
+            "pass": 8,
+            "planned": 8,
+            "skip": 0
+          },
+          "text": "8 PASS / 0 FAIL / 0 SKIP / 0 NOT_RUN after the repair at e4029e0d5; the earlier 6/1/1 closure is preserved in closureHistory and in each outcome's history"
+        }
+      },
+      "closureHistory": [
+        {
+          "at": "2026-11-24T10:23:59-05:00",
+          "outcomes": [
+            {
+              "checkId": "E1",
+              "evidence": "git:evidence/a22/RESULTS.json@d3050312fd10e5b45053c6c3d8e9f501a3c6356b (sha256 45098707995813c060aa802e585e5e7e0cbba66b82980408f3dbd16ca68c5dbe)",
+              "reason": "recorded verdict QUALIFIED (3/3 refused witnesses)",
+              "result": "PASS"
+            },
+            {
+              "checkId": "E2",
+              "evidence": "git:evidence/a22/RESULTS.json@d3050312fd10e5b45053c6c3d8e9f501a3c6356b (sha256 45098707995813c060aa802e585e5e7e0cbba66b82980408f3dbd16ca68c5dbe)",
+              "reason": "recorded verdict QUALIFIED (3/3 refused witnesses)",
+              "result": "PASS"
+            },
+            {
+              "checkId": "E3",
+              "evidence": "git:evidence/a22/RESULTS.json@d3050312fd10e5b45053c6c3d8e9f501a3c6356b (sha256 45098707995813c060aa802e585e5e7e0cbba66b82980408f3dbd16ca68c5dbe)",
+              "reason": "recorded verdict QUALIFIED (5/5 refused witnesses)",
+              "result": "PASS"
+            },
+            {
+              "checkId": "E4",
+              "evidence": "git:evidence/a22/RESULTS.json@d3050312fd10e5b45053c6c3d8e9f501a3c6356b (sha256 45098707995813c060aa802e585e5e7e0cbba66b82980408f3dbd16ca68c5dbe)",
+              "reason": "recorded verdict QUALIFIED (3/3 refused witnesses)",
+              "result": "PASS"
+            },
+            {
+              "checkId": "E5",
+              "evidence": "git:evidence/a22/RESULTS.json@d3050312fd10e5b45053c6c3d8e9f501a3c6356b (sha256 45098707995813c060aa802e585e5e7e0cbba66b82980408f3dbd16ca68c5dbe)",
+              "reason": "recorded verdict DEFECT (0/3 refused witnesses)",
+              "result": "FAIL"
+            },
+            {
+              "checkId": "E6",
+              "evidence": "git:evidence/a22/RESULTS.json@d3050312fd10e5b45053c6c3d8e9f501a3c6356b (sha256 45098707995813c060aa802e585e5e7e0cbba66b82980408f3dbd16ca68c5dbe)",
+              "reason": "recorded verdict PARTIAL (1/2 refused witnesses)",
+              "result": "SKIP"
+            },
+            {
+              "checkId": "E7",
+              "evidence": "git:evidence/a22/RESULTS.json@d3050312fd10e5b45053c6c3d8e9f501a3c6356b (sha256 45098707995813c060aa802e585e5e7e0cbba66b82980408f3dbd16ca68c5dbe)",
+              "reason": "recorded verdict QUALIFIED (6/6 refused witnesses)",
+              "result": "PASS"
+            },
+            {
+              "checkId": "E8",
+              "evidence": "git:evidence/a22/RESULTS.json@d3050312fd10e5b45053c6c3d8e9f501a3c6356b (sha256 45098707995813c060aa802e585e5e7e0cbba66b82980408f3dbd16ca68c5dbe)",
+              "reason": "recorded verdict QUALIFIED (4/4 refused witnesses)",
+              "result": "PASS"
+            }
+          ],
+          "record": "git:evidence/a22/RESULTS.json@d3050312fd10e5b45053c6c3d8e9f501a3c6356b",
+          "summary": {
+            "claimsSuccess": false,
+            "counts": {
+              "accounted": 8,
+              "fail": 1,
+              "notRun": 0,
+              "pass": 6,
+              "planned": 8,
+              "skip": 1
+            },
+            "text": "6 qualified / 1 defect / 1 partial / 0 not-run; allQualified=False; codes=AQ_DEFECT_FOUND"
+          }
+        }
+      ],
+      "label": "A22: eight experiments on the instruments the campaign relies on",
+      "note": "the plan did not change; the repair changed observations, so the earlier closure is history, not an amendment to the plan. Old and new record digests are in evidence/a22/RECEIPT.md section 11.5.",
+      "opening": {
+        "campaignId": "a22-adversarial-qualification",
+        "openedAt": "2026-11-24T09:47:33-05:00",
+        "plan": [
+          {
+            "checkId": "E1",
+            "description": "BINSEC wrapper: conflicting verdicts",
+            "required": true
+          },
+          {
+            "checkId": "E2",
+            "description": "BINSEC wrapper: missing or duplicated verdict",
+            "required": true
+          },
+          {
+            "checkId": "E3",
+            "description": "Binary branch audit: zero-size and malformed symbols",
+            "required": true
+          },
+          {
+            "checkId": "E4",
+            "description": "Timing instrument: under-sampled or failed run",
+            "required": true
+          },
+          {
+            "checkId": "E5",
+            "description": "ctgrind: no errors because nothing ran",
+            "required": true
+          },
+          {
+            "checkId": "E6",
+            "description": "SARIF: population mismatch",
+            "required": true
+          },
+          {
+            "checkId": "E7",
+            "description": "Strict parser versus a permissive consumer",
+            "required": true
+          },
+          {
+            "checkId": "E8",
+            "description": "Policy and omission",
+            "required": true
+          }
+        ]
+      },
+      "schema": "openssl-rs/b3/campaign/1",
+      "source": {
+        "base": "6e64e644ced49bf5d969e0eb56ab51f8f4f2c4fc",
+        "openedAtSource": "commit 6e64e644c (the item's recorded start base); the plan text is from EXPERIMENTS.json, so this opening is reconstructed, not an authenticated preregistration",
+        "plan": "evidence/a22/EXPERIMENTS.json",
+        "reconstructed": true
+      },
+      "state": "CLOSED_CLEAN"
+    }
+  ],
+  "model": "b3/v1",
+  "schema": "openssl-rs/b3/campaigns/1",
+  "tool": {
+    "path": "forensics/tools/campaign.py",
+    "sha256": "4625974490170c12b080ec5395b4419e72752f52947fadf8285e6fad8949d364"
+  }
+}
