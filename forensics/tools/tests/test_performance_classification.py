@@ -66,6 +66,8 @@ class CommittedRecords(unittest.TestCase):
             self.assertEqual(record["classification"], "SCOPED_OBSERVATION", path.name)
 
     def test_the_committed_records_pass_the_cli(self) -> None:
+        claims = sorted(CLAIMS.glob("*.claim.json"))
+        self.assertTrue(claims, "the claim glob must not be empty")
         result = subprocess.run(
             [sys.executable, str(TOOL), "check"],
             cwd=REPO_ROOT,
@@ -73,7 +75,15 @@ class CommittedRecords(unittest.TestCase):
             text=True,
         )
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        self.assertIn("4 record(s) accepted, 0 refused", result.stdout)
+        self.assertIn(f"{len(claims)} record(s) accepted, 0 refused", result.stdout)
+        accepted = [
+            line for line in result.stdout.splitlines() if line.startswith("OK ")
+        ]
+        self.assertEqual(
+            len(accepted), len(claims), "every glob match must be accepted exactly once"
+        )
+        for path in claims:
+            self.assertIn(path.name, result.stdout, path.name)
 
     def test_pfp0_record_matches_its_campaign_files(self) -> None:
         record = load(PFP0)
