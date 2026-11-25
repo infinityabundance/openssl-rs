@@ -1,6 +1,6 @@
 {
-  "baseCommit": "11f6a06f8",
-  "baseCommitLong": "11f6a06f831451c6a9103296d263d755985e67bd",
+  "baseCommit": "97bde6560",
+  "baseCommitLong": "97bde6560af86248114a116c8a355609e69f30b3",
   "canaryRule": "every experiment runs the same harness twice: once with the strict detector, once with a deliberately weak detector that accepts any observation. A harness that cannot report DEFECT on an input the instrument accepted is not measuring anything.",
   "experiments": [
     {
@@ -650,6 +650,6 @@
   "schema": "openssl-rs/a22/experiments/1",
   "tool": {
     "path": "forensics/tools/adversarial_qualification.py",
-    "sha256": "dc04389491075be18f846936f88cf6cce50678958ab2d65f5fea44c6b307294f"
+    "sha256": "ef5d6c7916fe59bf3824b1bf2aab89b13739c11f91b39dce14ae03bbe5f44d34"
   }
 }

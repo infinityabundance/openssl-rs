@@ -109,10 +109,11 @@ TOOL_PATH = "forensics/tools/adversarial_qualification.py"
 #: measured, not to whatever commit happens to be checked out later. The refresh
 #: after the E5/E6/E7 repairs re-measured the eight experiments at the repair
 #: commit; the later refresh that re-bound E8 to the A20 pin's current candidate
-#: re-measured them again. The earlier records named ``6e64e644c`` and
-#: ``e4029e0d5``.
-BASE_COMMIT = "11f6a06f8"
-BASE_COMMIT_LONG = "11f6a06f831451c6a9103296d263d755985e67bd"
+#: re-measured them again; the C24 refresh after A20's C19/C20 regeneration did so
+#: once more. The earlier records named ``6e64e644c``, ``e4029e0d5`` and
+#: ``11f6a06f8``.
+BASE_COMMIT = "97bde6560"
+BASE_COMMIT_LONG = "97bde6560af86248114a116c8a355609e69f30b3"
 
 EXIT_OK = 0
 EXIT_REFUSED = 1

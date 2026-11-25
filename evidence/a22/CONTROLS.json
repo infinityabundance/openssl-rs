@@ -1,7 +1,7 @@
 {
   "allCanariesDetected": true,
-  "baseCommit": "11f6a06f8",
-  "baseCommitLong": "11f6a06f831451c6a9103296d263d755985e67bd",
+  "baseCommit": "97bde6560",
+  "baseCommitLong": "97bde6560af86248114a116c8a355609e69f30b3",
   "canary": [
     {
       "acceptedCase": "secure-accepted",
@@ -406,6 +406,6 @@
   "schema": "openssl-rs/a22/controls/1",
   "tool": {
     "path": "forensics/tools/adversarial_qualification.py",
-    "sha256": "dc04389491075be18f846936f88cf6cce50678958ab2d65f5fea44c6b307294f"
+    "sha256": "ef5d6c7916fe59bf3824b1bf2aab89b13739c11f91b39dce14ae03bbe5f44d34"
   }
 }
