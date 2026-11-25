@@ -1,0 +1,326 @@
+{
+  "alphabet": [
+    "append_claim",
+    "append_other",
+    "issue_checkpoint",
+    "observe_head",
+    "observe_stale",
+    "observe_split",
+    "observe_unsigned",
+    "observe_foreign",
+    "correct_subject",
+    "use_claim",
+    "publish_public",
+    "publish_private",
+    "witness_distinct",
+    "witness_alias"
+  ],
+  "alphabetSize": 14,
+  "baseCommit": "554acc9d0",
+  "bound": 5,
+  "canary": {
+    "allDetected": true,
+    "canaries": [
+      {
+        "description": "accept an unsigned checkpoint, as if a signature were not required",
+        "detected": true,
+        "firstWitness": {
+          "depth": 2,
+          "detail": "accepted checkpoint at size 1 is unsigned",
+          "invariant": "BM-I1",
+          "previous": {
+            "acceptedSizes": [],
+            "leaves": [
+              "claim-0"
+            ],
+            "published": [],
+            "quorum": 0,
+            "verdict": "ACTIVE",
+            "version": 1
+          },
+          "sequence": [
+            "issue_checkpoint",
+            "observe_unsigned"
+          ]
+        },
+        "id": "unsigned-accepted",
+        "targetInvariant": "BM-I1",
+        "targetViolations": 20,
+        "violations": 571
+      },
+      {
+        "description": "accept a checkpoint smaller than the largest accepted size",
+        "detected": true,
+        "firstWitness": {
+          "depth": 5,
+          "detail": "accepted size decreases 2 -> 1",
+          "invariant": "BM-I2",
+          "previous": {
+            "acceptedSizes": [
+              2
+            ],
+            "leaves": [
+              "claim-0",
+              "claim-1"
+            ],
+            "published": [],
+            "quorum": 0,
+            "verdict": "ACTIVE",
+            "version": 1
+          },
+          "sequence": [
+            "issue_checkpoint",
+            "append_claim",
+            "issue_checkpoint",
+            "observe_head",
+            "observe_stale"
+          ]
+        },
+        "id": "rollback-accepted",
+        "targetInvariant": "BM-I2",
+        "targetViolations": 4,
+        "violations": 4
+      },
+      {
+        "description": "accept a second, conflicting root at an accepted size",
+        "detected": true,
+        "firstWitness": {
+          "depth": 3,
+          "detail": "origin 'log-a' size 1 has two roots 6a3c5affc4f4c86925c0d2439869cfffc1018d693b4fd4dab304795dc6044b97 and 77340fd0b61af8e435a7f10cd8b3d4e85503a1cab4576ac39e1d147f6f229a25",
+          "invariant": "BM-I3",
+          "previous": {
+            "acceptedSizes": [
+              1
+            ],
+            "leaves": [
+              "claim-0"
+            ],
+            "published": [],
+            "quorum": 0,
+            "verdict": "ACTIVE",
+            "version": 1
+          },
+          "sequence": [
+            "issue_checkpoint",
+            "observe_head",
+            "observe_split"
+          ]
+        },
+        "id": "split-accepted",
+        "targetInvariant": "BM-I3",
+        "targetViolations": 10,
+        "violations": 452
+      },
+      {
+        "description": "issue and accept a checkpoint whose root is not the root over its leaves",
+        "detected": true,
+        "firstWitness": {
+          "depth": 2,
+          "detail": "the root at size 1 is not the root over its committed leaves (a false proof was accepted)",
+          "invariant": "BM-I4",
+          "previous": {
+            "acceptedSizes": [],
+            "leaves": [
+              "claim-0"
+            ],
+            "published": [],
+            "quorum": 0,
+            "verdict": "ACTIVE",
+            "version": 1
+          },
+          "sequence": [
+            "issue_checkpoint",
+            "observe_head"
+          ]
+        },
+        "id": "root-ignored",
+        "targetInvariant": "BM-I4",
+        "targetViolations": 19,
+        "violations": 953
+      },
+      {
+        "description": "accept a present-tense use after the subject was corrected",
+        "detected": true,
+        "firstWitness": {
+          "depth": 2,
+          "detail": "a present-tense use at version 2 was accepted after the correction at version 2",
+          "invariant": "BM-I5",
+          "previous": {
+            "acceptedSizes": [],
+            "leaves": [
+              "claim-0"
+            ],
+            "published": [],
+            "quorum": 0,
+            "verdict": "CORRECTED",
+            "version": 2
+          },
+          "sequence": [
+            "correct_subject",
+            "use_claim"
+          ]
+        },
+        "id": "withdrawn-current",
+        "targetInvariant": "BM-I5",
+        "targetViolations": 20,
+        "violations": 123
+      },
+      {
+        "description": "count witness labels rather than distinct operator domains",
+        "detected": true,
+        "firstWitness": {
+          "depth": 2,
+          "detail": "the quorum 2 is not the 1 distinct witness domain(s)",
+          "invariant": "BM-I6",
+          "previous": {
+            "acceptedSizes": [],
+            "leaves": [
+              "claim-0"
+            ],
+            "published": [],
+            "quorum": 1,
+            "verdict": "ACTIVE",
+            "version": 1
+          },
+          "sequence": [
+            "witness_distinct",
+            "witness_alias"
+          ]
+        },
+        "id": "witness-labels",
+        "targetInvariant": "BM-I6",
+        "targetViolations": 20,
+        "violations": 193
+      },
+      {
+        "description": "lower the current-state version below the reached version",
+        "detected": true,
+        "firstWitness": {
+          "depth": 1,
+          "detail": "state version 0 is below the reached 1",
+          "invariant": "BM-I7",
+          "previous": {
+            "acceptedSizes": [],
+            "leaves": [
+              "claim-0"
+            ],
+            "published": [],
+            "quorum": 0,
+            "verdict": "ACTIVE",
+            "version": 1
+          },
+          "sequence": [
+            "correct_subject"
+          ]
+        },
+        "id": "version-decrease",
+        "targetInvariant": "BM-I7",
+        "targetViolations": 18,
+        "violations": 678
+      },
+      {
+        "description": "publish a member classified private",
+        "detected": true,
+        "firstWitness": {
+          "depth": 1,
+          "detail": "published member 'keys/release.pem' is not classified public",
+          "invariant": "BM-I8",
+          "previous": {
+            "acceptedSizes": [],
+            "leaves": [
+              "claim-0"
+            ],
+            "published": [],
+            "quorum": 0,
+            "verdict": "ACTIVE",
+            "version": 1
+          },
+          "sequence": [
+            "publish_private"
+          ]
+        },
+        "id": "publish-private",
+        "targetInvariant": "BM-I8",
+        "targetViolations": 20,
+        "violations": 1349
+      }
+    ],
+    "targets": {
+      "BM-I1": "unsigned-accepted",
+      "BM-I2": "rollback-accepted",
+      "BM-I3": "split-accepted",
+      "BM-I4": "root-ignored",
+      "BM-I5": "withdrawn-current",
+      "BM-I6": "witness-labels",
+      "BM-I7": "version-decrease",
+      "BM-I8": "publish-private"
+    }
+  },
+  "code": "BM_OK",
+  "document": "docs/TRANSPARENCY-FORMAL-ASSURANCE.md",
+  "invariants": [
+    {
+      "checked": 1871,
+      "id": "BM-I1",
+      "violations": 0
+    },
+    {
+      "checked": 1871,
+      "id": "BM-I2",
+      "violations": 0
+    },
+    {
+      "checked": 1871,
+      "id": "BM-I3",
+      "violations": 0
+    },
+    {
+      "checked": 1871,
+      "id": "BM-I4",
+      "violations": 0
+    },
+    {
+      "checked": 1871,
+      "id": "BM-I5",
+      "violations": 0
+    },
+    {
+      "checked": 1871,
+      "id": "BM-I6",
+      "violations": 0
+    },
+    {
+      "checked": 1871,
+      "id": "BM-I7",
+      "violations": 0
+    },
+    {
+      "checked": 1871,
+      "id": "BM-I8",
+      "violations": 0
+    }
+  ],
+  "item": "B7 of docs/ETP-TODO.md",
+  "maxDepthReached": 5,
+  "refusalsByCode": {
+    "BM_STEP_CORRECTED": 155,
+    "BM_STEP_FOREIGN": 321,
+    "BM_STEP_INCONSISTENT": 4,
+    "BM_STEP_NOTHING_TO_ALIAS": 362,
+    "BM_STEP_NO_NOTE": 1170,
+    "BM_STEP_PRIVATE": 555,
+    "BM_STEP_ROLLBACK": 4,
+    "BM_STEP_SPLIT": 174,
+    "BM_STEP_UNSIGNED": 321
+  },
+  "schema": "openssl-rs/b7/enumeration/1",
+  "sequenceSpace": 579195,
+  "sequences": 579195,
+  "statesChecked": 1871,
+  "statesExpanded": 555,
+  "statesReached": 1871,
+  "tool": "forensics/tools/transparency_model.py",
+  "transitionsExplored": 7770,
+  "violationCount": 0,
+  "violations": []
+}

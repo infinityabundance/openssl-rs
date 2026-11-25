@@ -1,0 +1,89 @@
+{
+  "code": "BM_OK",
+  "codesCovered": [
+    "BM_OK",
+    "BM_REFUSED_CANARY_NOT_DETECTED",
+    "BM_REFUSED_DIFFERENTIAL_DISAGREEMENT",
+    "BM_REFUSED_ENUMERATION_TRUNCATED",
+    "BM_REFUSED_INVARIANT_UNSOURCED",
+    "BM_REFUSED_INVARIANT_VIOLATED",
+    "BM_REFUSED_MODEL_INCOMPLETE",
+    "BM_REFUSED_NOT_RUN_AS_VERIFIED",
+    "BM_REFUSED_REFINEMENT_UNSTATED",
+    "BM_REFUSED_USAGE"
+  ],
+  "controls": [
+    {
+      "controlOnly": true,
+      "detail": "the broken model reached 4 violation(s)",
+      "expectedCode": "BM_REFUSED_INVARIANT_VIOLATED",
+      "id": "rollback-accepted-invariant-violated",
+      "observedCode": "BM_REFUSED_INVARIANT_VIOLATED"
+    },
+    {
+      "controlOnly": true,
+      "detail": "the alphabet omits witness_alias",
+      "expectedCode": "BM_REFUSED_MODEL_INCOMPLETE",
+      "id": "alphabet-short",
+      "observedCode": "BM_REFUSED_MODEL_INCOMPLETE"
+    },
+    {
+      "controlOnly": true,
+      "detail": "BM-I1's clause is replaced by a sentence B.23 does not contain",
+      "expectedCode": "BM_REFUSED_INVARIANT_UNSOURCED",
+      "id": "fabricated-clause",
+      "observedCode": "BM_REFUSED_INVARIANT_UNSOURCED"
+    },
+    {
+      "controlOnly": true,
+      "detail": "a limit of 4 stops below bound 5",
+      "expectedCode": "BM_REFUSED_ENUMERATION_TRUNCATED",
+      "id": "limit-below-bound",
+      "observedCode": "BM_REFUSED_ENUMERATION_TRUNCATED"
+    },
+    {
+      "controlOnly": true,
+      "detail": "every canary row is rewritten to detected = false",
+      "expectedCode": "BM_REFUSED_CANARY_NOT_DETECTED",
+      "id": "canary-not-detected",
+      "observedCode": "BM_REFUSED_CANARY_NOT_DETECTED"
+    },
+    {
+      "controlOnly": true,
+      "detail": "BM-G1's source is erased",
+      "expectedCode": "BM_REFUSED_REFINEMENT_UNSTATED",
+      "id": "gap-without-source",
+      "observedCode": "BM_REFUSED_REFINEMENT_UNSTATED"
+    },
+    {
+      "controlOnly": true,
+      "detail": "one implementation accept vector is inverted",
+      "expectedCode": "BM_REFUSED_DIFFERENTIAL_DISAGREEMENT",
+      "id": "driver-differs",
+      "observedCode": "BM_REFUSED_DIFFERENTIAL_DISAGREEMENT"
+    },
+    {
+      "controlOnly": true,
+      "detail": "the differential's only row is NOT_RUN, so no matched status has a run behind it",
+      "expectedCode": "BM_REFUSED_NOT_RUN_AS_VERIFIED",
+      "id": "not-run-counted",
+      "observedCode": "BM_REFUSED_NOT_RUN_AS_VERIFIED"
+    },
+    {
+      "controlOnly": true,
+      "detail": "a forced NOT_RUN row carries its reason and is excluded from compared",
+      "expectedCode": "BM_OK",
+      "id": "not-run-labelled",
+      "observedCode": "BM_OK"
+    },
+    {
+      "controlOnly": true,
+      "detail": "a bound of 9 exceeds the declared maximum 8",
+      "expectedCode": "BM_REFUSED_USAGE",
+      "id": "bound-above-maximum",
+      "observedCode": "BM_REFUSED_USAGE"
+    }
+  ],
+  "coversEveryCode": true,
+  "schema": "openssl-rs/b7/controls/1"
+}

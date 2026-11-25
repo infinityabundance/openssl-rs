@@ -1,0 +1,269 @@
+{
+  "bound": 5,
+  "gaps": [
+    {
+      "assumption": "the model's signed flag is an oracle and the note bytes are the signed bytes",
+      "consequence": "no claim is made about signature verification, key binding or DER parsing; the differential uses a test-only HMAC-SHA256 key",
+      "gap": "DER and signature cryptography are assumed unforgeable",
+      "id": "BM-G1",
+      "source": "docs/ETP-ADDENDUM-B.md section B.23 (unauthenticated checkpoint clause); docs/LOCAL-TRANSPARENCY.md (test-only HMAC key)"
+    },
+    {
+      "assumption": "each observation carries a monotonically increasing recorded instant",
+      "consequence": "backdating is a comparison of records; trusted time, clock skew and RFC 3161 are NOT_RUN",
+      "gap": "time is the recorded instant, not a clock",
+      "id": "BM-G2",
+      "source": "docs/TRANSPARENCY-MONITORING.md section 5; evidence/b5/RECEIPT.md"
+    },
+    {
+      "assumption": "a leaf is its bytes; no parsing, DSSE payload or tile structure exists",
+      "consequence": "B.23's unrelated-entry, shard, campaign, timestamp and reconstruction clauses are NOT_MODELLED",
+      "gap": "the model's leaves are opaque bytes",
+      "id": "BM-G3",
+      "source": "docs/ETP-ADDENDUM-B.md section B.23 (model paragraph); docs/ARCHIVAL-REVOCATION.md section 2"
+    },
+    {
+      "assumption": "an operation either takes effect atomically or is refused with the state unchanged",
+      "consequence": "the B.23 requirement to model crash recovery, retries, partial writes and concurrency is not met; those properties are NOT_RUN",
+      "gap": "the model does not model process failure, IO or concurrency",
+      "id": "BM-G4",
+      "source": "docs/ETP-ADDENDUM-B.md section B.23 (crash recovery, retries, partial writes, concurrent publication and shard transitions are modelled)"
+    },
+    {
+      "assumption": "bound = 5; the reachable state graph is explored, not every sequence executed",
+      "consequence": "no claim about a sequence longer than the bound or an alphabet larger than the fourteen operations",
+      "gap": "the enumeration is finite and sequence-bounded",
+      "id": "BM-G5",
+      "source": "docs/ETP-ADDENDUM-B.md section B.23 (bounded model checkers; the abstract model stays small)"
+    },
+    {
+      "assumption": "the model is written from B.23 and the B4/B5/B6 documents, not from the modules",
+      "consequence": "agreement is a shared reading, not independent verification; a model theorem is not a proof about the binary (Article 7)",
+      "gap": "the model, the checker and the driver share an author",
+      "id": "BM-G6",
+      "source": "docs/EARNED-TRUST.md Article 5; docs/ETP-ADDENDUM-B.md section B.23 (a verified abstract state machine is not a verified implementation)"
+    }
+  ],
+  "invariants": [
+    {
+      "differential": "MATCHED",
+      "id": "BM-I1",
+      "model": "PASS",
+      "notRun": [],
+      "note": "the model's checker reports no violation and the model and the real modules agree on the accept/reject vector and the resulting state for the named sequences",
+      "sequences": [
+        "S002",
+        "S003",
+        "S004",
+        "S005",
+        "S006",
+        "S007",
+        "S016",
+        "S017"
+      ],
+      "status": "MODEL_AND_MATCHED"
+    },
+    {
+      "differential": "MATCHED",
+      "id": "BM-I2",
+      "model": "PASS",
+      "notRun": [],
+      "note": "the model's checker reports no violation and the model and the real modules agree on the accept/reject vector and the resulting state for the named sequences",
+      "sequences": [
+        "S003",
+        "S004",
+        "S005",
+        "S017",
+        "S018",
+        "S019",
+        "S031",
+        "S032"
+      ],
+      "status": "MODEL_AND_MATCHED"
+    },
+    {
+      "differential": "MATCHED",
+      "id": "BM-I3",
+      "model": "PASS",
+      "notRun": [],
+      "note": "the model's checker reports no violation and the model and the real modules agree on the accept/reject vector and the resulting state for the named sequences",
+      "sequences": [
+        "S003",
+        "S004",
+        "S005",
+        "S017",
+        "S018",
+        "S019",
+        "S031",
+        "S032"
+      ],
+      "status": "MODEL_AND_MATCHED"
+    },
+    {
+      "differential": "MATCHED",
+      "id": "BM-I4",
+      "model": "PASS",
+      "notRun": [],
+      "note": "the model's checker reports no violation and the model and the real modules agree on the accept/reject vector and the resulting state for the named sequences",
+      "sequences": [
+        "S000",
+        "S001",
+        "S002",
+        "S003",
+        "S004",
+        "S005",
+        "S009",
+        "S014"
+      ],
+      "status": "MODEL_AND_MATCHED"
+    },
+    {
+      "differential": "MATCHED",
+      "id": "BM-I5",
+      "model": "PASS",
+      "notRun": [],
+      "note": "the model's checker reports no violation and the model and the real modules agree on the accept/reject vector and the resulting state for the named sequences",
+      "sequences": [
+        "S002",
+        "S003",
+        "S008",
+        "S009",
+        "S016",
+        "S017",
+        "S022",
+        "S023"
+      ],
+      "status": "MODEL_AND_MATCHED"
+    },
+    {
+      "differential": "MATCHED",
+      "id": "BM-I6",
+      "model": "PASS",
+      "notRun": [],
+      "note": "the model's checker reports no violation and the model and the real modules agree on the accept/reject vector and the resulting state for the named sequences",
+      "sequences": [
+        "S012",
+        "S013",
+        "S026",
+        "S027",
+        "S040",
+        "S041",
+        "S054",
+        "S055"
+      ],
+      "status": "MODEL_AND_MATCHED"
+    },
+    {
+      "differential": "MATCHED",
+      "id": "BM-I7",
+      "model": "PASS",
+      "notRun": [],
+      "note": "the model's checker reports no violation and the model and the real modules agree on the accept/reject vector and the resulting state for the named sequences",
+      "sequences": [
+        "S008",
+        "S009",
+        "S022",
+        "S023",
+        "S036",
+        "S037",
+        "S050",
+        "S051"
+      ],
+      "status": "MODEL_AND_MATCHED"
+    },
+    {
+      "differential": "MATCHED",
+      "id": "BM-I8",
+      "model": "PASS",
+      "notRun": [],
+      "note": "the model's checker reports no violation and the model and the real modules agree on the accept/reject vector and the resulting state for the named sequences",
+      "sequences": [
+        "S010",
+        "S011",
+        "S024",
+        "S025",
+        "S038",
+        "S039",
+        "S052",
+        "S053"
+      ],
+      "status": "MODEL_AND_MATCHED"
+    }
+  ],
+  "limits": [
+    "The enumeration is finite: the sequence space is bounded at 5 operations over 14 operations.",
+    "The state graph is explored, not every sequence executed; the state is complete and the step deterministic, so no sequence's outcome is missed.",
+    "A model theorem is not a proof about the binary or the service.",
+    "The model shares an author with the implementation."
+  ],
+  "notRun": [
+    {
+      "id": "BM-NR1",
+      "item": "an admitted public transparency log",
+      "reason": "no admitted service, log key or client exists in this venue (B0/B1 record a fixture)"
+    },
+    {
+      "id": "BM-NR2",
+      "item": "a witness cosignature admitted from an independent operator",
+      "reason": "B5 records 0 witnesses; the model's witness op counts distinct domains from a local fixture"
+    },
+    {
+      "id": "BM-NR3",
+      "item": "a trusted RFC 3161 timestamp",
+      "reason": "B2 records no timestamp authority in this venue"
+    },
+    {
+      "id": "BM-NR4",
+      "item": "crash recovery, retries, partial writes and concurrent publication",
+      "reason": "not modelled; B.23 requires them and this item does not claim them"
+    },
+    {
+      "id": "BM-NR5",
+      "item": "a machine-checked proof (TLA+, Coq, Lean, Kani) and a source-to-binary refinement edge",
+      "reason": "no such tool ran; a model theorem is not a proof about the binary (Article 7)"
+    },
+    {
+      "id": "BM-NR6",
+      "item": "an independent reviewer or a distinct trust domain",
+      "reason": "the model, the checker and the driver share an author (Article 5)"
+    }
+  ],
+  "schema": "openssl-rs/b7/refinement/1",
+  "unmodelled": [
+    {
+      "clause": "an unrelated log entry cannot authenticate a DSSE statement;",
+      "differential": "NOT_MODELLED",
+      "model": "NOT_MODELLED",
+      "reason": "the model's leaves are opaque bytes; DSSE statements, payload types and the A9/A10 binding are outside it (A23 and A9/A10 own them)",
+      "status": "NOT_MODELLED"
+    },
+    {
+      "clause": "unrelated log shards cannot satisfy a same-tree consistency obligation;",
+      "differential": "NOT_MODELLED",
+      "model": "NOT_MODELLED",
+      "reason": "the model has one origin and no shard transitions; cross-shard proof substitution is a tlog/monitor property, exercised by B5's controls",
+      "status": "NOT_MODELLED"
+    },
+    {
+      "clause": "an omitted required campaign activity cannot permit promotion;",
+      "differential": "NOT_MODELLED",
+      "model": "NOT_MODELLED",
+      "reason": "campaign opening, amendment and closure are A19/B3 machinery and have no representation in this state",
+      "status": "NOT_MODELLED"
+    },
+    {
+      "clause": "missing timestamp evidence cannot satisfy a timestamp-dependent claim;",
+      "differential": "NOT_MODELLED",
+      "model": "NOT_MODELLED",
+      "reason": "the model records an observation instant but has no trusted-time authority or RFC 3161 evidence; B2 records no authority in this venue",
+      "status": "NOT_MODELLED"
+    },
+    {
+      "clause": "unavailable evidence cannot satisfy reconstruction requirements;",
+      "differential": "NOT_MODELLED",
+      "model": "NOT_MODELLED",
+      "reason": "archival reconstruction is B6's archive reader; the model has no archive members and no IO",
+      "status": "NOT_MODELLED"
+    }
+  ]
+}

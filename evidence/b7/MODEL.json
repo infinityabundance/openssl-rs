@@ -1,0 +1,332 @@
+{
+  "alphabet": [
+    "append_claim",
+    "append_other",
+    "issue_checkpoint",
+    "observe_head",
+    "observe_stale",
+    "observe_split",
+    "observe_unsigned",
+    "observe_foreign",
+    "correct_subject",
+    "use_claim",
+    "publish_public",
+    "publish_private",
+    "witness_distinct",
+    "witness_alias"
+  ],
+  "alphabetSize": 14,
+  "assumptions": [
+    {
+      "consequence": "the model's signed flag is an oracle; the differential signs with a test-only HMAC-SHA256 key",
+      "id": "BM-A1",
+      "source": "docs/ETP-ADDENDUM-B.md section B.23 (unauthenticated checkpoint clause); docs/LOCAL-TRANSPARENCY.md (the test-only HMAC key)",
+      "statement": "signatures are unforgeable and cover the exact note bytes"
+    },
+    {
+      "consequence": "no DSSE, ASN.1, tile or statement binding is modelled; B.23 bullet 3 is NOT_MODELLED",
+      "id": "BM-A2",
+      "source": "docs/ETP-ADDENDUM-B.md section B.23 (model paragraph); docs/ARCHIVAL-REVOCATION.md section 2 (byte-identified members)",
+      "statement": "leaf bytes are atomic and are not parsed"
+    },
+    {
+      "consequence": "backdating is a comparison of recorded instants; clock skew, trusted time and RFC 3161 are NOT_RUN",
+      "id": "BM-A3",
+      "source": "docs/TRANSPARENCY-MONITORING.md section 5 (the monitor's observation time is its own record, not a trusted timestamp); evidence/b5/RECEIPT.md",
+      "statement": "time is the recorded observation instant, not a clock"
+    },
+    {
+      "consequence": "cross-origin substitution is modelled as a refused origin; shard transitions are NOT_MODELLED",
+      "id": "BM-A4",
+      "source": "docs/ETP-ADDENDUM-B.md section B.23 (unrelated shards clause); docs/LOCAL-TRANSPARENCY.md",
+      "statement": "origins are atomic labels and one log is modelled"
+    },
+    {
+      "consequence": "B.23 requires these to be modelled; this model does not, and says so in the refinement record",
+      "id": "BM-A5",
+      "source": "docs/ETP-ADDENDUM-B.md section B.23 (the crash-recovery and partial-write sentence)",
+      "statement": "process failure, IO, retries, partial writes and concurrency are not modelled"
+    },
+    {
+      "consequence": "no theorem about sequences longer than the bound or about the binary (Article 7)",
+      "id": "BM-A6",
+      "source": "docs/ETP-ADDENDUM-B.md section B.23 (the abstract model paragraph); docs/ETP-ADDENDUM-B.md section B.23 ('bounded model checkers')",
+      "statement": "the enumeration is finite and sequence-bounded"
+    }
+  ],
+  "authority": "docs/ETP-ADDENDUM-B.md section B.23",
+  "bound": 5,
+  "checker": {
+    "canaries": {
+      "publish-private": "BM-I8",
+      "rollback-accepted": "BM-I2",
+      "root-ignored": "BM-I4",
+      "split-accepted": "BM-I3",
+      "unsigned-accepted": "BM-I1",
+      "version-decrease": "BM-I7",
+      "withdrawn-current": "BM-I5",
+      "witness-labels": "BM-I6"
+    },
+    "function": "check",
+    "result": "0 violations on every reachable state of the unbroken model"
+  },
+  "clauses": [
+    {
+      "clause": "a false inclusion proof cannot satisfy inclusion verification;",
+      "id": "BM-C1",
+      "invariants": [
+        "BM-I4"
+      ],
+      "modelled": true
+    },
+    {
+      "clause": "an unauthenticated checkpoint cannot authorise an accepted tree root;",
+      "id": "BM-C2",
+      "invariants": [
+        "BM-I1"
+      ],
+      "modelled": true
+    },
+    {
+      "clause": "an unrelated log entry cannot authenticate a DSSE statement;",
+      "id": "BM-C3",
+      "invariants": [],
+      "modelled": false,
+      "reason": "the model's leaves are opaque bytes; DSSE statements, payload types and the A9/A10 binding are outside it (A23 and A9/A10 own them)"
+    },
+    {
+      "clause": "a smaller checkpoint cannot silently roll back accepted state;",
+      "id": "BM-C4",
+      "invariants": [
+        "BM-I2",
+        "BM-I7"
+      ],
+      "modelled": true
+    },
+    {
+      "clause": "equal-size conflicting authenticated roots produce an incident;",
+      "id": "BM-C5",
+      "invariants": [
+        "BM-I3"
+      ],
+      "modelled": true
+    },
+    {
+      "clause": "unrelated log shards cannot satisfy a same-tree consistency obligation;",
+      "id": "BM-C6",
+      "invariants": [],
+      "modelled": false,
+      "reason": "the model has one origin and no shard transitions; cross-shard proof substitution is a tlog/monitor property, exercised by B5's controls"
+    },
+    {
+      "clause": "duplicate witness credentials cannot satisfy independence thresholds;",
+      "id": "BM-C7",
+      "invariants": [
+        "BM-I6"
+      ],
+      "modelled": true
+    },
+    {
+      "clause": "an omitted required campaign activity cannot permit promotion;",
+      "id": "BM-C8",
+      "invariants": [],
+      "modelled": false,
+      "reason": "campaign opening, amendment and closure are A19/B3 machinery and have no representation in this state"
+    },
+    {
+      "clause": "a revoked claim cannot satisfy a sufficiently fresh current-state policy;",
+      "id": "BM-C9",
+      "invariants": [
+        "BM-I5"
+      ],
+      "modelled": true
+    },
+    {
+      "clause": "missing timestamp evidence cannot satisfy a timestamp-dependent claim;",
+      "id": "BM-C10",
+      "invariants": [],
+      "modelled": false,
+      "reason": "the model records an observation instant but has no trusted-time authority or RFC 3161 evidence; B2 records no authority in this venue"
+    },
+    {
+      "clause": "unavailable evidence cannot satisfy reconstruction requirements;",
+      "id": "BM-C11",
+      "invariants": [],
+      "modelled": false,
+      "reason": "archival reconstruction is B6's archive reader; the model has no archive members and no IO"
+    },
+    {
+      "clause": "a publication failure cannot masquerade as transparent acceptance.",
+      "id": "BM-C12",
+      "invariants": [
+        "BM-I8"
+      ],
+      "modelled": true
+    }
+  ],
+  "digest": "b53474c708c9c589daadcc998ef3c4ec81514f718b1035164d1880d9a940cc24",
+  "document": "docs/TRANSPARENCY-FORMAL-ASSURANCE.md",
+  "initialState": {
+    "leaves": [
+      "claim-0"
+    ],
+    "origin": "log-a",
+    "verdict": "ACTIVE",
+    "version": 1
+  },
+  "invariants": [
+    {
+      "assumption": "signatures are unforgeable and cover the exact note bytes; the model represents 'verified' as a boolean supplied by a signer/verifier pair it does not implement",
+      "brokenBy": "unsigned-accepted",
+      "check": "no accepted checkpoint has signed == false",
+      "clause": "an unauthenticated checkpoint cannot authorise an accepted tree root;",
+      "id": "BM-I1",
+      "name": "checkpoint-signature",
+      "operations": [
+        "issue_checkpoint",
+        "observe_head",
+        "observe_stale",
+        "observe_split",
+        "observe_unsigned",
+        "observe_foreign"
+      ],
+      "statement": "No checkpoint enters acceptedCheckpoints without a signature over its exact note bytes. Every observation carries a signature-valid flag; an unsigned observation is refused and leaves the state unchanged."
+    },
+    {
+      "assumption": "a checkpoint's tree size is the length of the leaf sequence it commits; leaf bytes are atomic",
+      "brokenBy": "rollback-accepted",
+      "check": "the accepted sizes are non-decreasing",
+      "clause": "a smaller checkpoint cannot silently roll back accepted state;",
+      "id": "BM-I2",
+      "name": "tree-size-monotone",
+      "operations": [
+        "observe_head",
+        "observe_stale",
+        "observe_split"
+      ],
+      "statement": "The tree sizes of accepted checkpoints never decrease: a checkpoint smaller than the largest accepted size is refused, not applied."
+    },
+    {
+      "assumption": "origins are atomic labels; the log is the only producer of its own checkpoints",
+      "brokenBy": "split-accepted",
+      "check": "no (origin, size) key maps to two roots among accepted checkpoints",
+      "clause": "equal-size conflicting authenticated roots produce an incident;",
+      "id": "BM-I3",
+      "name": "one-root-per-origin-size",
+      "operations": [
+        "observe_head",
+        "observe_stale",
+        "observe_split"
+      ],
+      "statement": "For one origin and one tree size there is at most one accepted root; a second authenticated root at that size is refused as an incident."
+    },
+    {
+      "assumption": "leaf bytes are atomic; the RFC 6962 hash geometry is part of the model, not imported",
+      "brokenBy": "root-ignored",
+      "check": "root == root_of(committed); committed lengths agree; earlier committed prefixes persist; a mutated inclusion path fails",
+      "clause": "a false inclusion proof cannot satisfy inclusion verification;",
+      "id": "BM-I4",
+      "name": "inclusion-persistence",
+      "operations": [
+        "append_claim",
+        "append_other",
+        "issue_checkpoint",
+        "observe_head",
+        "observe_stale",
+        "observe_split",
+        "use_claim"
+      ],
+      "statement": "Every accepted checkpoint's root is the RFC 6962 root over the leaf sequence it commits; a leaf committed at size n is committed at the same index by every later accepted checkpoint; and the model's inclusion verifier accepts the true path and rejects a mutated one."
+    },
+    {
+      "assumption": "the corrected value is a new state version; the claim leaf's position is atomic",
+      "brokenBy": "withdrawn-current",
+      "check": "after a correction, lastUseVersion < correctedAt; the claim leaf is still at index 0; every honest checkpoint that committed it still does",
+      "clause": "a revoked claim cannot satisfy a sufficiently fresh current-state policy;",
+      "id": "BM-I5",
+      "name": "withdrawn-is-not-current",
+      "operations": [
+        "correct_subject",
+        "use_claim",
+        "issue_checkpoint",
+        "observe_head"
+      ],
+      "statement": "Once a subject is corrected or withdrawn, no present-tense use is accepted at that version or any later version, while the claim leaf's original inclusion at its index remains valid in every honest accepted checkpoint."
+    },
+    {
+      "assumption": "a domain is identified by its establishment record (path, sha256), not by its label",
+      "brokenBy": "witness-labels",
+      "check": "quorum == the number of distinct domains and never exceeds the label count",
+      "clause": "duplicate witness credentials cannot satisfy independence thresholds;",
+      "id": "BM-I6",
+      "name": "witness-distinct-domains",
+      "operations": [
+        "witness_distinct",
+        "witness_alias"
+      ],
+      "statement": "A witness quorum counts distinct operator domains, not labels: an alias of an established domain adds a label and does not raise the quorum."
+    },
+    {
+      "assumption": "the B6 current-state version is the number of covered correction events",
+      "brokenBy": "version-decrease",
+      "check": "version >= versionFloor",
+      "clause": "a smaller checkpoint cannot silently roll back accepted state;",
+      "id": "BM-I7",
+      "name": "state-version-monotone",
+      "operations": [
+        "correct_subject",
+        "use_claim"
+      ],
+      "statement": "The current-state version never decreases: a correction advances it and no operation lowers it below the highest version the model has reached."
+    },
+    {
+      "assumption": "the classification policy is the B4 policy and a member's class is atomic",
+      "brokenBy": "publish-private",
+      "check": "every published path is in PUBLIC_PATHS",
+      "clause": "a publication failure cannot masquerade as transparent acceptance.",
+      "id": "BM-I8",
+      "name": "published-is-classified",
+      "operations": [
+        "publish_public",
+        "publish_private"
+      ],
+      "statement": "The published set contains only members the classification policy calls publishable; publishing a private member is refused, not recorded."
+    }
+  ],
+  "item": "B7 of docs/ETP-TODO.md: the transparency-policy invariants of docs/ETP-ADDENDUM-B.md section B.23, checked in a small model",
+  "operations": [
+    "append_claim",
+    "append_other",
+    "issue_checkpoint",
+    "observe_head",
+    "observe_stale",
+    "observe_split",
+    "observe_unsigned",
+    "observe_foreign",
+    "correct_subject",
+    "use_claim",
+    "publish_public",
+    "publish_private",
+    "witness_distinct",
+    "witness_alias"
+  ],
+  "schema": "openssl-rs/b7/model/1",
+  "sequenceSpace": 579195,
+  "state": "origin is one atomic label; leaves is an append-only sequence of opaque leaf strings; issued is the first and last checkpoint the log signed; accepted is the sequence of accepted checkpoints with the leaf sequence each commits; version/versionFloor are current-state counters; verdict/correctedAt/lastUseVersion are the subject's current state; published is the set of published members; witnessLabels/witnessDomains/quorum are the witness counts.",
+  "stateFields": [
+    "origin",
+    "leaves",
+    "issued",
+    "accepted",
+    "version",
+    "versionFloor",
+    "verdict",
+    "correctedAt",
+    "lastUseVersion",
+    "published",
+    "witnessLabels",
+    "witnessDomains",
+    "quorum"
+  ],
+  "tool": "forensics/tools/transparency_model.py"
+}
