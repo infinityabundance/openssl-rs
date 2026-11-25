@@ -186,7 +186,7 @@ its result says `population: LIVE` and is not comparable to a frozen record.
 
 Every examined record parses `STRICT_OK`; no tracked evidence record is refused
 at this bound. The 175 skipped files are the large records (the population is
-about 2.16 GB, 2,157,307,581 bytes; the largest single file is 15,629,485 bytes).
+about 2.16 GB, 2,157,328,134 bytes; the largest single file is 15,629,485 bytes).
 They are reported
 `SKIPPED_SIZE` with their size and are not parsed, because reading them into a
 pure-Python parser would be the denial-of-service surface this item exists to
@@ -195,9 +195,17 @@ bound; they are streamed in 1 MiB chunks only to bind their digest.
 `STRICT_OK` or `SKIPPED_SIZE`, and the SHA-256 of every member.
 
 The count is the member list's length at the declaration
-(`b26552e21a7465405ad542edeaef7b9104c0298d`); it moves only through an explicit
+(`e94c7fdf127d2f2290f7f7c248924a4d6755add6`); it moves only through an explicit
 re-freeze (`build_evidence.py --freeze-population CANDIDATE`), never because
-another item landed. The population is complete over tracked evidence JSON:
+another item landed. That declaration supersedes `b26552e21a7465405ad542edeaef7b9104c0298d`
+without changing membership or counts: the same 506 members, 331 examined, 331
+`STRICT_OK`, 175 `SKIPPED_SIZE`, 0 refused. Only four members' content moved
+(`evidence/a16/{INVENTORY,PROFILE,CONTROLS}.json` and
+`evidence/etp-t14/ARTICLES.json`), so the candidate and those digests were
+re-bound; the earlier freeze stays auditable in `evidence/a11/RECEIPT.md` §13,
+in `evidence/a16/INVENTORY.json`'s `population.superseded` block and in the
+history of `evidence/a11/SCAN.json`. The population is complete over tracked
+evidence JSON:
 other items' records — including A16's three records — are members, and A16
 breaks the resulting digest cycle from its side by declaring exactly
 `evidence/a11/{SCAN,DIFFERENTIAL,CONTROLS}.json` excluded and reporting them
@@ -317,8 +325,8 @@ contracts are not changed by this reader.
 ## 10. Reproducing the evidence
 
 ```
-python3 evidence/a11/build_evidence.py --source-commit b26552e21a7465405ad542edeaef7b9104c0298d
-python3 evidence/a11/build_evidence.py --freeze-population b26552e21a7465405ad542edeaef7b9104c0298d
+python3 evidence/a11/build_evidence.py --source-commit e94c7fdf127d2f2290f7f7c248924a4d6755add6
+python3 evidence/a11/build_evidence.py --freeze-population e94c7fdf127d2f2290f7f7c248924a4d6755add6
 python3 forensics/tools/harden.py scan --frozen evidence/a11/SCAN.json
 python3 forensics/tools/harden.py scan 'evidence/*.json'
 python3 forensics/tools/harden.py parse evidence/a11/CONTROLS.json

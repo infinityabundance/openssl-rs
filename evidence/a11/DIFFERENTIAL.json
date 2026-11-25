@@ -670,7 +670,7 @@
   },
   "schema": "openssl-rs/a11/differential/1",
   "sourceIdentity": {
-    "baseCommit": "b26552e21a7465405ad542edeaef7b9104c0298d",
+    "baseCommit": "e94c7fdf127d2f2290f7f7c248924a4d6755add6",
     "tool": {
       "bytes": 54477,
       "path": "forensics/tools/harden.py",

@@ -7,7 +7,7 @@ typed.  Re-running with the same inputs reproduces the same files.
 Usage
 -----
     python3 evidence/a11/build_evidence.py
-    python3 evidence/a11/build_evidence.py --out /tmp/a11a --source-commit b26552e21a7465405ad542edeaef7b9104c0298d
+    python3 evidence/a11/build_evidence.py --out /tmp/a11a --source-commit e94c7fdf127d2f2290f7f7c248924a4d6755add6
     python3 evidence/a11/build_evidence.py --freeze-population CANDIDATE
 
 The default output is ``evidence/a11``.  The source identity is supplied; it is
@@ -37,7 +37,7 @@ sys.path.insert(0, str(TOOLS))
 
 import harden as h  # noqa: E402
 
-BASE_COMMIT = "b26552e21a7465405ad542edeaef7b9104c0298d"
+BASE_COMMIT = "e94c7fdf127d2f2290f7f7c248924a4d6755add6"
 EVIDENCE = REPO_ROOT / "evidence" / "a11"
 TOOL_RELATIVE = "forensics/tools/harden.py"
 
