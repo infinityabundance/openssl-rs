@@ -347,11 +347,15 @@ not covered by an item that merely mentions the same subject.
 | `gate-4` — instrument register (`release_gate.py` item 4) | Article 3, Article 8 | the register is absent or invalid (`RG_INSTRUMENT_REGISTRY_MISSING`, `RG_INSTRUMENT`); an executable control fails; a `RECORDED` control is presented as a pass; an instrument entry states no soundness limits, scope, failure modes or disclaimer |
 | `gate-5` — external package (`release_gate.py` item 5) | Article 2 | no package was supplied (`RG_PACKAGE_MISSING`), the package cannot be unpacked or verified (`RG_PACKAGE_INVALID`), or its own `verify.sh` fails (`RG_PACKAGE`) |
 | `gate-6` — documentation consistency (`release_gate.py` item 6) | none | a hand-written document contradicts generated evidence (`RG_DOCS`), and — through `forensics/tools/docs_consistency.py` — a constitution that cites an article that does not exist, an article with no enforcement and no declaration of that, a rule identifier absent from the tool it credits, or a gate section that does not name every uncovered article (`ET_*` rules) |
+| `gate-7` — role authorisation (`release_gate.py` item 7) | Article 5 | the release action is refused, not run, or signed by too few distinct signers (`RG_AUTHORISATION_REFUSED`), which is how a release whose adjudicator is the author's party where the class requires separation is refused |
+| `gate-8` — thresholds (`release_gate.py` item 8) | Article 5 | the release threshold is unmet or unreachable over distinct trust domains (`RG_THRESHOLD_UNMET`), which is how a threshold met by two aliases of one party is refused |
+| `gate-9` — release policy (`release_gate.py` item 9) | Article 11 | the pinned policy denies the release or cannot be evaluated (`RG_POLICY_DENIED`), including a policy a candidate supplies for itself or a self-waiver, so a record cannot declare its own acceptance rule |
+| `gate-10` — transparency enforcement (`release_gate.py` item 10) | Article 1 | a claim asserts publication or admission the B4 record does not support (`CE_REFUSED_PUBLICATION_CLAIM`, `CE_REFUSED_PROFILE_NOT_ADMITTED`), or the checker or its record is absent (`RG_TRANSPARENCY_TOOL_MISSING`, `RG_TRANSPARENCY_ERROR`), so the claim exceeds its evidence |
 
 `gate-6` is the meta-item: it refuses a broken or miscited mapping. It does not
 evidence any article's substance, so it covers no article.
 
-**Articles no gate item covers: 5, 6, 7, 9.** For those, the release gate
+**Articles no gate item covers: 6, 7, 9.** For those, the release gate
 evidences nothing. The tools those articles name — `independence.py`,
 `spec_guard.py`, `binary_assurance.py`, `hazard_register.py` and
 `side_channel_erasure.py` — must be run and their outputs retained with the

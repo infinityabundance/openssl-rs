@@ -61,7 +61,11 @@ input is a refusal, never a pass.
   over no present current evidence), `EG_GRADUATED_WITH_OPEN_OBLIGATION`, and the
   closed claim type (`EG_SCHEMA_VIOLATION`), which has no field for a combined
   strength; `forensics/tools/release_gate.py` — `RG_CLAIM_CONTRADICTED`,
-  `RG_CLAIM_REFUTED`, `RG_CLAIM_WITHDRAWN`.
+  `RG_CLAIM_REFUTED`, `RG_CLAIM_WITHDRAWN`;
+  `forensics/tools/continuous_enforcement.py` — `CE_REFUSED_PUBLICATION_CLAIM` (a
+  claim asserts publication the B4 record does not support) and
+  `CE_REFUSED_PROFILE_NOT_ADMITTED` (a claim asserts admission the B4 record does
+  not support).
 - **Refused when.** A claim whose verdict is `ESTABLISHED` or `SAFE_COMPATIBLE`
   rests on an evidence entry whose declared state is `WITHDRAWN`, `REFUTED` or
   `NOT_ESTABLISHED`, or on no present current evidence; a `DOCUMENTED` modality
@@ -172,7 +176,11 @@ input is a refusal, never a pass.
   `IND_REPRODUCER_CONTAMINATED` (an "independent" reproduction that used this
   repository's environment or a project-produced artefact), plus structural
   refusals for an unknown role or class, an aliased party, an unfilled required
-  role and a recorded sameness that disagrees with the computed sameness.
+  role and a recorded sameness that disagrees with the computed sameness;
+  `forensics/tools/release_gate.py` — `RG_AUTHORISATION_REFUSED` (a release
+  action refused, not run, or signed by too few distinct signers) and
+  `RG_THRESHOLD_UNMET` (the release threshold unmet or unreachable over distinct
+  established trust domains).
 - **Refused when.** A review asserts independence without a reviewer identity; the
   adjudicator is the author's party where the class requires separation; a
   threshold is met by two aliases of one party; a reproduction used this
@@ -183,7 +191,10 @@ input is a refusal, never a pass.
   `SAFE_COMPATIBLE` and `SAFETY_DISCHARGED` remain unreachable for a family whose
   adjudicator is the author. The checker does not verify that a named reviewer
   acted or that a declared organisation exists. **No release-gate item runs
-  `independence.py check`**, so Article 5 is not covered by the release gate.
+  `independence.py check`**; `gate-7` and `gate-8` run `authorisation.py` and
+  `thresholds.py` and refuse a release whose role separation or distinct-domain
+  threshold fails, which is the part of this article a release artefact can
+  evidence, while the independence check itself remains outside the gate.
 
 ### Article 6. A specification is never a restatement of the implementation
 
@@ -328,7 +339,8 @@ input is a refusal, never a pass.
   evaluation), `EG_CONTRADICTION_UNRESOLVED` (two claims at one property, scope and
   identity with different verdicts are a hard error, with no preference resolved by
   timestamp or rank), `EG_VERDICT_MODALITY`; `forensics/tools/release_gate.py` —
-  `RG_CLAIM_CONTRADICTED`, `RG_CLAIM_REFUTED`, `RG_CLAIM_WITHDRAWN`;
+  `RG_CLAIM_CONTRADICTED`, `RG_CLAIM_REFUTED`, `RG_CLAIM_WITHDRAWN`,
+  `RG_POLICY_DENIED`;
   `forensics/tools/closure_discipline.py` —
   `CD_AGGREGATE_PASS_HIDES_BLOCKED_ROW`; `forensics/tools/independence.py` —
   `IND_DISSENT_OVERRIDDEN` and `IND_AGGREGATE_MISMATCH` (the aggregate is

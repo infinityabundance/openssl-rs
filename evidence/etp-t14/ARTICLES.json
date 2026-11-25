@@ -10,7 +10,11 @@
     {"id": "gate-3", "label": "interop receipts"},
     {"id": "gate-4", "label": "instrument register"},
     {"id": "gate-5", "label": "external package"},
-    {"id": "gate-6", "label": "documentation consistency"}
+    {"id": "gate-6", "label": "documentation consistency"},
+    {"id": "gate-7", "label": "role authorisation"},
+    {"id": "gate-8", "label": "thresholds"},
+    {"id": "gate-9", "label": "release policy"},
+    {"id": "gate-10", "label": "transparency enforcement"}
   ],
   "articles": [
     {
@@ -25,7 +29,9 @@
         {"tool": "forensics/tools/etp_claims.py", "rule": "EG_SCHEMA_VIOLATION"},
         {"tool": "forensics/tools/release_gate.py", "rule": "RG_CLAIM_CONTRADICTED"},
         {"tool": "forensics/tools/release_gate.py", "rule": "RG_CLAIM_REFUTED"},
-        {"tool": "forensics/tools/release_gate.py", "rule": "RG_CLAIM_WITHDRAWN"}
+        {"tool": "forensics/tools/release_gate.py", "rule": "RG_CLAIM_WITHDRAWN"},
+        {"tool": "forensics/tools/continuous_enforcement.py", "rule": "CE_REFUSED_PUBLICATION_CLAIM"},
+        {"tool": "forensics/tools/continuous_enforcement.py", "rule": "CE_REFUSED_PROFILE_NOT_ADMITTED"}
       ],
       "refusals": [
         "EG_VERDICT_MODALITY",
@@ -34,9 +40,11 @@
         "EG_SCHEMA_VIOLATION",
         "RG_CLAIM_CONTRADICTED",
         "RG_CLAIM_REFUTED",
-        "RG_CLAIM_WITHDRAWN"
+        "RG_CLAIM_WITHDRAWN",
+        "CE_REFUSED_PUBLICATION_CLAIM",
+        "CE_REFUSED_PROFILE_NOT_ADMITTED"
       ],
-      "gate_items": ["gate-2"]
+      "gate_items": ["gate-2", "gate-10"]
     },
     {
       "id": "ET14-A02",
@@ -125,16 +133,20 @@
         {"tool": "forensics/tools/independence.py", "rule": "IND_ADJUDICATOR_IS_AUTHOR"},
         {"tool": "forensics/tools/independence.py", "rule": "IND_REVIEWERS_ALIASED"},
         {"tool": "forensics/tools/independence.py", "rule": "IND_THRESHOLD_ALIASED"},
-        {"tool": "forensics/tools/independence.py", "rule": "IND_REPRODUCER_CONTAMINATED"}
+        {"tool": "forensics/tools/independence.py", "rule": "IND_REPRODUCER_CONTAMINATED"},
+        {"tool": "forensics/tools/release_gate.py", "rule": "RG_AUTHORISATION_REFUSED"},
+        {"tool": "forensics/tools/release_gate.py", "rule": "RG_THRESHOLD_UNMET"}
       ],
       "refusals": [
         "IND_REVIEW_UNSUPPORTED",
         "IND_ADJUDICATOR_IS_AUTHOR",
         "IND_REVIEWERS_ALIASED",
         "IND_THRESHOLD_ALIASED",
-        "IND_REPRODUCER_CONTAMINATED"
+        "IND_REPRODUCER_CONTAMINATED",
+        "RG_AUTHORISATION_REFUSED",
+        "RG_THRESHOLD_UNMET"
       ],
-      "gate_items": []
+      "gate_items": ["gate-7", "gate-8"]
     },
     {
       "id": "ET14-A06",
@@ -260,7 +272,8 @@
         {"tool": "forensics/tools/release_gate.py", "rule": "RG_CLAIM_WITHDRAWN"},
         {"tool": "forensics/tools/closure_discipline.py", "rule": "CD_AGGREGATE_PASS_HIDES_BLOCKED_ROW"},
         {"tool": "forensics/tools/independence.py", "rule": "IND_DISSENT_OVERRIDDEN"},
-        {"tool": "forensics/tools/independence.py", "rule": "IND_AGGREGATE_MISMATCH"}
+        {"tool": "forensics/tools/independence.py", "rule": "IND_AGGREGATE_MISMATCH"},
+        {"tool": "forensics/tools/release_gate.py", "rule": "RG_POLICY_DENIED"}
       ],
       "refusals": [
         "EG_SELF_DECLARED_POLICY",
@@ -271,9 +284,10 @@
         "RG_CLAIM_WITHDRAWN",
         "CD_AGGREGATE_PASS_HIDES_BLOCKED_ROW",
         "IND_DISSENT_OVERRIDDEN",
-        "IND_AGGREGATE_MISMATCH"
+        "IND_AGGREGATE_MISMATCH",
+        "RG_POLICY_DENIED"
       ],
-      "gate_items": ["gate-2"]
+      "gate_items": ["gate-2", "gate-9"]
     }
   ]
 }
