@@ -37,8 +37,8 @@ BUILDER_PATH = EVIDENCE / "build_evidence.py"
 INVENTORY = EVIDENCE / "INVENTORY.json"
 TOOL = TOOLS / "sigstore_bundle.py"
 DOCUMENT = REPO / "docs/SIGSTORE-BUNDLES.md"
-FULL_COMMIT = "67187c39ee5b5e6d2f66136829295c44096ddd08"
-SHORT_COMMIT = "67187c39e"
+FULL_COMMIT = "b26552e21a7465405ad542edeaef7b9104c0298d"
+SHORT_COMMIT = "b26552e21"
 POPULATION_SELF = "evidence/a16/INVENTORY.json"
 
 
@@ -481,10 +481,14 @@ class DeterminismAndRecords(unittest.TestCase):
 class FrozenPopulation(unittest.TestCase):
     """The population is a declared member list, not a live count.
 
-    A17's six new records made the live ``evidence/**/*.json`` count 413 while the
-    committed record said 407, so the record no longer reproduced.  The population
-    is now the tracked evidence JSON at the declared candidate, bound to a digest
-    per member; later files are ``NEW_SINCE_RECORD`` and never change the count.
+    A17's six new records once made the live ``evidence/**/*.json`` count 413
+    while the committed record said 407, so the record no longer reproduced.  The
+    population is the tracked evidence JSON at the declared candidate, bound to a
+    digest per member, less the item's own inventory record and a **declared,
+    closed exclusion** (the three A11 records, which digest this item's records
+    and so cannot be digested back).  The exclusion is recorded with its reason
+    and reported as ``NEW_SINCE_RECORD``; it is never absorbed into the count and
+    cannot be widened.  Later files are ``NEW_SINCE_RECORD`` too.
     """
 
     @classmethod
@@ -528,6 +532,57 @@ class FrozenPopulation(unittest.TestCase):
         self.assertEqual(
             [member["path"] for member in self.certificates], certificate_paths
         )
+        # The cut is declared, closed and exactly the three A11 records.
+        excluded = self.population["excluded"]
+        self.assertEqual(
+            excluded["paths"],
+            [
+                "evidence/a11/CONTROLS.json",
+                "evidence/a11/DIFFERENTIAL.json",
+                "evidence/a11/SCAN.json",
+            ],
+        )
+        self.assertEqual(excluded["paths"], list(sb.POPULATION_EXCLUDED_PATHS))
+        self.assertEqual(excluded["result"], h.RESULT_NEW_SINCE_RECORD)
+        self.assertIn("mutual digest binding", excluded["reason"])
+
+    def test_the_declared_exclusion_is_reported_not_absorbed(self) -> None:
+        member_paths = {member["path"] for member in self.members}
+        growth = {
+            entry["path"]: entry
+            for entry in sb.growth_report(self.members, self.certificates)
+        }
+        for path in sb.POPULATION_EXCLUDED_PATHS:
+            with self.subTest(path=path):
+                self.assertNotIn(path, member_paths)
+                self.assertIn(path, growth)
+                self.assertEqual(growth[path]["result"], h.RESULT_NEW_SINCE_RECORD)
+                self.assertRegex(growth[path]["sha256"], r"^[0-9a-f]{64}$")
+        # Nothing else is excluded: the growth report carries every glob match
+        # that is not a member, and the frozen count does not include any of them.
+        self.assertEqual(self.record["populationFiles"], len(self.members))
+
+    def test_an_excluded_path_cannot_be_frozen_back_in(self) -> None:
+        for path in sb.POPULATION_EXCLUDED_PATHS:
+            with self.subTest(path=path):
+                with self.assertRaises(h.Refusal) as caught:
+                    sb.freeze_population([path])
+                self.assertEqual(
+                    caught.exception.code, h.PH_REFUSED_POPULATION_DRIFT
+                )
+
+    def test_a_record_that_drops_the_exclusion_is_refused(self) -> None:
+        population = dict(self.population)
+        population.pop("excluded", None)
+        drifted = dict(self.record)
+        drifted["population"] = population
+        with tempfile.TemporaryDirectory() as directory:
+            record = Path(directory) / "INVENTORY.json"
+            record.write_bytes(json.dumps(drifted).encode("utf-8"))
+            with self.assertRaises(h.Refusal) as caught:
+                sb.declared_population(record)
+        self.assertEqual(caught.exception.code, h.PH_REFUSED_POPULATION_DRIFT)
+        self.assertIn("exclusion", caught.exception.message)
 
     def test_growth_is_reported_and_never_absorbed(self) -> None:
         growth = sb.growth_report(self.members, self.certificates)

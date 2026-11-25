@@ -24,11 +24,11 @@
     },
     {
      "path": "evidence/a11/RECEIPT.md",
-     "sha256": "a548c427f9ef5fac1a0e91b1d3612547eb834e2eb8d288e5a2d3d69b207227a4"
+     "sha256": "af99fd9cab3d458a363cfd1728160a05e1c5bf40fa9502cf0e27113461a67eb9"
     },
     {
      "path": "evidence/a16/RECEIPT.md",
-     "sha256": "b0d6a67fcc9db58247eedac3686aa693be154baeff5d65ef80a8a3aabf7f73a9"
+     "sha256": "d50464cd8ffb77b5fbb37aff653ee246e9ab7e97d9d9b3f75c97197e08d51d85"
     },
     {
      "path": "evidence/gate-reliability/RECEIPT.md",
@@ -74,7 +74,7 @@
    }
   }
  },
- "digest": "d5219cea5926efbba82262517d3f02210c16e5157a5f7ef1fc48a89a1f62dcfd",
+ "digest": "624936bb3f4daa8e37c691b9032e26f6420fb194a5abbd7b4e38c2637f3cf2c5",
  "identity": "current-state",
  "model": "b6/archival/1",
  "schema": "openssl-rs/b6/current-state/1",

@@ -1,7 +1,7 @@
 {
  "applications": [
   {
-   "appliesToWorkingTree": true,
+   "appliesToWorkingTree": false,
    "id": "agents-continuous-enforcement",
    "path": "forensics/etp8/agents-patch.diff",
    "reason": "AGENTS.md is the user's standing document; a conversion batch does not edit it.",
@@ -29,7 +29,7 @@
    "target": "docs/RELEASE_GATES.md section 10"
   }
  ],
- "baseCommit": "69cccd242",
+ "baseCommit": "2ed2cd79f",
  "item": "B8",
  "schema": "openssl-rs/b8/pending/1"
 }

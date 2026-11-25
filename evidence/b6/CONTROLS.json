@@ -26,7 +26,7 @@
        "ok": true
       },
       {
-       "digest": "5d0508b3772f0d4d3c507ce3955913b2f066a73151fb16d057ff3786ed703099",
+       "digest": "c2b595a3cb7d2fd3ddbe61075e7803a3f134d7c3ba7727f8b9134f169e5d62e4",
        "name": "manifest-digest",
        "ok": true
       },
@@ -88,7 +88,7 @@
       "treeSize": 5,
       "verified": true
      },
-     "manifestDigest": "5d0508b3772f0d4d3c507ce3955913b2f066a73151fb16d057ff3786ed703099",
+     "manifestDigest": "c2b595a3cb7d2fd3ddbe61075e7803a3f134d7c3ba7727f8b9134f169e5d62e4",
      "members": 9,
      "state": {
       "state": "WITHDRAWN",
@@ -125,7 +125,7 @@
        "ok": true
       },
       {
-       "digest": "5d0508b3772f0d4d3c507ce3955913b2f066a73151fb16d057ff3786ed703099",
+       "digest": "c2b595a3cb7d2fd3ddbe61075e7803a3f134d7c3ba7727f8b9134f169e5d62e4",
        "name": "manifest-digest",
        "ok": true
       },
@@ -187,7 +187,7 @@
       "treeSize": 5,
       "verified": true
      },
-     "manifestDigest": "5d0508b3772f0d4d3c507ce3955913b2f066a73151fb16d057ff3786ed703099",
+     "manifestDigest": "c2b595a3cb7d2fd3ddbe61075e7803a3f134d7c3ba7727f8b9134f169e5d62e4",
      "members": 9,
      "state": {
       "state": "WITHDRAWN",
@@ -224,7 +224,7 @@
        "ok": true
       },
       {
-       "digest": "5d0508b3772f0d4d3c507ce3955913b2f066a73151fb16d057ff3786ed703099",
+       "digest": "c2b595a3cb7d2fd3ddbe61075e7803a3f134d7c3ba7727f8b9134f169e5d62e4",
        "name": "manifest-digest",
        "ok": true
       },
@@ -286,7 +286,7 @@
       "treeSize": 5,
       "verified": true
      },
-     "manifestDigest": "5d0508b3772f0d4d3c507ce3955913b2f066a73151fb16d057ff3786ed703099",
+     "manifestDigest": "c2b595a3cb7d2fd3ddbe61075e7803a3f134d7c3ba7727f8b9134f169e5d62e4",
      "members": 9,
      "state": {
       "state": "WITHDRAWN",
@@ -311,7 +311,7 @@
      "code": "RV_OK",
      "leafHash": "eaf725703719d1bf8d4b038eddc412e8984b4893b2d706c67f0726a127f21d41",
      "leafIndex": 1,
-     "manifestDigest": "5d0508b3772f0d4d3c507ce3955913b2f066a73151fb16d057ff3786ed703099",
+     "manifestDigest": "c2b595a3cb7d2fd3ddbe61075e7803a3f134d7c3ba7727f8b9134f169e5d62e4",
      "root": "4b9b97a480f49511bd52f57b68112fdd64d014fbb25bae6aa4cd7f07004946d6",
      "signatureName": "FIXTURE-2 test-only hmac-sha256",
      "subject": "ETP0-CLM-032/verdict",
@@ -398,7 +398,7 @@
    "code": "RV_REFUSED_STATE_CONFLICT",
    "controlOnly": true,
    "fired": true,
-   "message": "two states at version 22 carry different digests (a7e28643ad555d32437f97fb47aec53ec3a8725571339c4adb2b62f052c592ab and 31b94d5ea2dbd1dd2fc888b5242e0834d3ef77130a6c8d02aa9e29066c641671)",
+   "message": "two states at version 22 carry different digests (be6e7c328edd286a3802ff2ac925a45a89e1befe30dbc5ac6afe77b1ad88aeeb and 87e30885138d234934b0effb700d75119304041765b19e76b657126145967c9a)",
    "mutation": "a second version-22 state with a different asOf, digest recomputed",
    "name": "same-version-conflict",
    "restoration": {
@@ -506,11 +506,11 @@
         },
         {
          "path": "evidence/a11/RECEIPT.md",
-         "sha256": "a548c427f9ef5fac1a0e91b1d3612547eb834e2eb8d288e5a2d3d69b207227a4"
+         "sha256": "af99fd9cab3d458a363cfd1728160a05e1c5bf40fa9502cf0e27113461a67eb9"
         },
         {
          "path": "evidence/a16/RECEIPT.md",
-         "sha256": "b0d6a67fcc9db58247eedac3686aa693be154baeff5d65ef80a8a3aabf7f73a9"
+         "sha256": "d50464cd8ffb77b5fbb37aff653ee246e9ab7e97d9d9b3f75c97197e08d51d85"
         },
         {
          "path": "evidence/gate-reliability/RECEIPT.md",
@@ -556,7 +556,7 @@
        }
       }
      },
-     "digest": "0d323009cf2e688af31b6a1a400b1583e7d4de85b1546d279f106725e9a56e7b",
+     "digest": "097c89433a106c793f8c0e77187f00b44ed84f956abeab4b56e17e8ef02f437d",
      "identity": "current-state",
      "model": "b6/archival/1",
      "schema": "openssl-rs/b6/current-state/1",
@@ -712,11 +712,11 @@
         },
         {
          "path": "evidence/a11/RECEIPT.md",
-         "sha256": "a548c427f9ef5fac1a0e91b1d3612547eb834e2eb8d288e5a2d3d69b207227a4"
+         "sha256": "af99fd9cab3d458a363cfd1728160a05e1c5bf40fa9502cf0e27113461a67eb9"
         },
         {
          "path": "evidence/a16/RECEIPT.md",
-         "sha256": "b0d6a67fcc9db58247eedac3686aa693be154baeff5d65ef80a8a3aabf7f73a9"
+         "sha256": "d50464cd8ffb77b5fbb37aff653ee246e9ab7e97d9d9b3f75c97197e08d51d85"
         },
         {
          "path": "evidence/gate-reliability/RECEIPT.md",
@@ -762,12 +762,12 @@
        }
       }
      },
-     "digest": "31b94d5ea2dbd1dd2fc888b5242e0834d3ef77130a6c8d02aa9e29066c641671",
+     "digest": "87e30885138d234934b0effb700d75119304041765b19e76b657126145967c9a",
      "identity": "current-state",
      "model": "b6/archival/1",
      "previous": {
       "asOf": "2026-11-22T00:00:00Z",
-      "digest": "d5219cea5926efbba82262517d3f02210c16e5157a5f7ef1fc48a89a1f62dcfd",
+      "digest": "624936bb3f4daa8e37c691b9032e26f6420fb194a5abbd7b4e38c2637f3cf2c5",
       "version": 21
      },
      "schema": "openssl-rs/b6/current-state/1",

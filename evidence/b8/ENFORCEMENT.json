@@ -1,5 +1,5 @@
 {
- "baseCommit": "69cccd242",
+ "baseCommit": "2ed2cd79f",
  "digests": {
   "document": "de0218489b8fda951724be5e3050d0df877256623d06b4441e465d962e83a482",
   "gate": "cc9d0dd24ac6ccd16ad8be4d557c8cb3c6f2248cf3cc67c7c176bd659db7127b",
@@ -111,8 +111,8 @@
     "RG_POLICY_DENIED": 1,
     "RG_THRESHOLD_UNMET": 1
    },
-   "note": "observed at 69cccd242 with item 10 absent; 35, not the expected 34, because this venue has no valgrind and item 4 refuses valgrind-ctgrind with rc=127",
-   "observedAt": "69cccd242",
+   "note": "observed at 2ed2cd79f with item 10 absent; 35, not the expected 34, because this venue has no valgrind and item 4 refuses valgrind-ctgrind with rc=127",
+   "observedAt": "2ed2cd79f",
    "total": 35
   },
   "transparencyItem": {

@@ -6,11 +6,11 @@ clock and never from a result this producer invents:
 
   * ``CAMPAIGNS.json`` -- two real campaigns:
       1. the **programme campaign**: the queue in ``docs/ETP-TODO.md`` at the
-         A17 forward freeze's candidate (``731b066e2``), amended by each later
+         A17 forward freeze's candidate (``488515195``), amended by each later
          commit that changed a queue row, with **no terminator** -- so it is
          ``OPEN`` and is not presented as closed;
       2. A22's **eight experiments**, planned as eight checks, closed with
-         8 ``PASS`` / 0 ``FAIL`` from the record re-measured at ``e4029e0d5``.
+         8 ``PASS`` / 0 ``FAIL`` from the record re-measured at ``372a6644f``.
          The earlier closure (6 qualified / 1 defect / 1 partial) is preserved
          as a recorded closure history and in each outcome's history; it is not
          erased.
@@ -58,21 +58,21 @@ import campaign as ac  # noqa: E402
 
 #: The source candidate at which this record was produced.  A later evidence
 #: commit does not move it: the record is *about* this base.
-BASE_COMMIT = "1155843e6"
-BASE_COMMIT_LONG = "1155843e6fca64704183f6b7d71b2df5b60652ff"
+BASE_COMMIT = "5b2b7a73e"
+BASE_COMMIT_LONG = "5b2b7a73e7dc9c265d704f844756d3bec542eb38"
 
 #: The A17 forward freeze was recorded at this candidate and time.
-PROGRAMME_BASE = "731b066e261ebc64cf8acb909df18d23b9b11883"
+PROGRAMME_BASE = "4885151952a3342cab57311290051a65e42c0659"
 PROGRAMME_OPENED_AT = "2026-11-24T00:20:00Z"  # FREEZE-forward.json#/frozenAt
 
 #: A22's item base, and the two commits its record names.
-A22_BASE = "6e64e644ced49bf5d969e0eb56ab51f8f4f2c4fc"
-A22_OPENED_AT = "2026-11-24T09:47:33-05:00"  # commit 6e64e644c
-A22_FIRST_RECORD = "d3050312fd10e5b45053c6c3d8e9f501a3c6356b"
-A22_FIRST_RECORD_AT = "2026-11-24T10:23:59-05:00"  # commit d3050312f
-A22_RERECORD = "7c2b5f25fe55e6302b942ed124f4fbec5aff8888"
-A22_RERECORD_AT = "2026-11-24T11:20:19-05:00"  # commit 7c2b5f25f
-A22_MEASURED_AT = "e4029e0d5"  # RESULTS.json#/baseCommit (the repair commit)
+A22_BASE = "cb40caf0c503ac624f7a8336cba6ad2124ba0942"
+A22_OPENED_AT = "2026-11-24T09:47:33-05:00"  # commit cb40caf0c
+A22_FIRST_RECORD = "b3a7c079a72ab3892ca0665d61a894c29dfb89b4"
+A22_FIRST_RECORD_AT = "2026-11-24T10:23:59-05:00"  # commit b3a7c079a
+A22_RERECORD = "94e7b5f6a84f17323826eb04026482dd28059eb8"
+A22_RERECORD_AT = "2026-11-24T11:20:19-05:00"  # commit 94e7b5f6a
+A22_MEASURED_AT = "372a6644f"  # RESULTS.json#/baseCommit (the repair commit)
 
 A22_VERDICT_RESULT = {
     "QUALIFIED": ac.R_PASS,
@@ -119,7 +119,12 @@ def git_show(ref: str, path: str) -> str:
 
 
 def commit_time(ref: str) -> str:
-    return git("show", "-s", "--format=%cI", ref).strip()
+    """The author date of ``ref``.
+
+    The history rewrite reset every committer date to the rewrite instant; the
+    author date is the preserved fact an amendment's ``at`` records.
+    """
+    return git("show", "-s", "--format=%aI", ref).strip()
 
 
 def commit_author(ref: str) -> tuple[str, str]:
@@ -380,7 +385,7 @@ def a22_campaign() -> dict[str, object]:
         "source": {
             "plan": "evidence/a22/EXPERIMENTS.json",
             "base": A22_BASE,
-            "openedAtSource": "commit 6e64e644c (the item's recorded start base); the plan text is from EXPERIMENTS.json, so this opening is reconstructed, not an authenticated preregistration",
+            "openedAtSource": "commit cb40caf0c (the item's recorded start base); the plan text is from EXPERIMENTS.json, so this opening is reconstructed, not an authenticated preregistration",
             "reconstructed": True,
         },
         "opening": {

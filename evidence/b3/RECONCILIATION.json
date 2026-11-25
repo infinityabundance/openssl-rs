@@ -1,11 +1,11 @@
 {
-  "asOfCommit": "1155843e6fca64704183f6b7d71b2df5b60652ff",
-  "baseCommit": "1155843e6",
+  "asOfCommit": "5b2b7a73e7dc9c265d704f844756d3bec542eb38",
+  "baseCommit": "5b2b7a73e",
   "model": "b3/v1",
   "note": "Each record is frozen at asOfCommit and is not a closure of the A17 forward freeze, which remains OPEN. Later members are not reflected because the record is frozen, not because they are missing. A live view is campaign.py reconcile --live.",
   "records": [
     {
-      "asOfCommit": "1155843e6fca64704183f6b7d71b2df5b60652ff",
+      "asOfCommit": "5b2b7a73e7dc9c265d704f844756d3bec542eb38",
       "campaignId": "etp-programme",
       "campaignOnly": [
         "A0",
@@ -121,7 +121,7 @@
       "schema": "openssl-rs/b3/reconciliation/1"
     },
     {
-      "asOfCommit": "1155843e6fca64704183f6b7d71b2df5b60652ff",
+      "asOfCommit": "5b2b7a73e7dc9c265d704f844756d3bec542eb38",
       "campaignId": "a22-adversarial-qualification",
       "campaignOnly": [],
       "campaignPlan": {

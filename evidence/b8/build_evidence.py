@@ -40,7 +40,7 @@ sys.path.insert(0, str(TOOLS))
 import continuous_enforcement as ce  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
-BASE_COMMIT = "69cccd242"
+BASE_COMMIT = "2ed2cd79f"
 TOOL = "forensics/tools/continuous_enforcement.py"
 GATE = "forensics/tools/release_gate.py"
 DOCUMENT = "docs/CONTINUOUS-ENFORCEMENT.md"
@@ -64,7 +64,7 @@ BEFORE_BY_RULE = {
     "RG_THRESHOLD_UNMET": 1,
 }
 BEFORE_NOTE = (
-    "observed at 69cccd242 with item 10 absent; 35, not the expected 34, because "
+    "observed at 2ed2cd79f with item 10 absent; 35, not the expected 34, because "
     "this venue has no valgrind and item 4 refuses valgrind-ctgrind with rc=127"
 )
 

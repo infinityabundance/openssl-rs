@@ -1,7 +1,7 @@
 # Sigstore bundles — A16
 
-Status: normative. Delivered by item A16 of `docs/ETP-TODO.md` at candidate
-`67187c39ee5b5e6d2f66136829295c44096ddd08` (`staging`). The implementation is
+Status: normative. Delivered by item A16 of `docs/ETP-TODO.md`, re-frozen at
+candidate `b26552e21a7465405ad542edeaef7b9104c0298d` (`staging`). The implementation is
 `forensics/tools/sigstore_bundle.py`; the records are
 `evidence/a16/INVENTORY.json`, `evidence/a16/PROFILE.json` and
 `evidence/a16/CONTROLS.json`; the deterministic producer is
@@ -211,12 +211,25 @@ timestamp, and are not counted as any.
 
 The population is a **frozen member list**, not a live glob:
 `evidence/a16/INVENTORY.json` records the tracked `evidence/**/*.json` files that
-existed at the declared candidate `67187c39e…`, each bound to its `sha256`, and
-`populationFiles` is that list's length. A file that matches the glob but is not
-a member is reported as `NEW_SINCE_RECORD` with its path and digest, counted
-separately; it never changes the recorded count, and a changed or removed member
-is refused with `PH_REFUSED_POPULATION_DRIFT`. The certificate globs are frozen
-the same way (empty at that candidate). **A new bundle would appear this way**: it
+existed at the declared candidate `b26552e21a7465405ad542edeaef7b9104c0298d`
+(**505** members), each bound to its `sha256`, and `populationFiles` is that
+list's length. Four paths are outside it by declaration: this item's own
+`INVENTORY.json` (a record cannot contain its own digest) and exactly three A11
+records — `evidence/a11/{SCAN,DIFFERENTIAL,CONTROLS}.json` — which A11 digests.
+That exclusion is **declared, closed and reported**, not silent: the record
+stores the three paths and the reason (mutual digest binding: A11's scan is
+complete over `evidence/*.json` and therefore contains this item's records, so
+this population cannot contain A11's without a cycle), and the growth report
+reports them as `NEW_SINCE_RECORD` with their path and digest. An excluded path
+cannot be frozen back in, a record whose declared exclusion is any other set is
+refused, and an exclusion that names a path absent at the candidate is refused.
+
+Any *other* file that matches the glob but is not a member is reported as
+`NEW_SINCE_RECORD` with its path and digest, counted separately; it never changes
+the recorded count, and a changed or removed member is refused with
+`PH_REFUSED_POPULATION_DRIFT`. The certificate globs are frozen
+the same way (empty at that candidate: 0 members). **A new bundle would appear
+this way**: it
 would be `NEW_SINCE_RECORD` until an explicit re-freeze and a fresh inventory
 counted it, so a bundle added after this record cannot be silently included in
 the `0` above.
@@ -224,8 +237,8 @@ the `0` above.
 A file is a bundle only when its **top level** carries a Sigstore bundle media
 type. `evidence/a16/PROFILE.json` (the profile constant) and
 `evidence/a16/CONTROLS.json` (the synthetic fixtures) mention the media type and
-are not bundles; they are this item's own records, added after the declared
-candidate, so they appear in the growth report rather than in the population.
+are not bundles; they are members of the population and are counted as candidate
+files, not as bundles.
 
 This is the honest result. There is no Sigstore bundle to verify, no log public
 key, no CA root and no timestamp-authority root. Every real `validate`

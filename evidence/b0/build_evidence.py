@@ -718,8 +718,8 @@ CLIENT_SUPPORT = [
             "PH_REFUSED_SYNTAX",
         ],
         "observed": [
-            {"path": "evidence/a11/SCAN.json", "pointer": "summary/strictOk", "equals": 211},
-            {"path": "evidence/a11/SCAN.json", "pointer": "summary/files", "equals": 386},
+            {"path": "evidence/a11/SCAN.json", "pointer": "summary/strictOk", "equals": 331},
+            {"path": "evidence/a11/SCAN.json", "pointer": "summary/files", "equals": 506},
             {"path": "evidence/a11/SCAN.json", "pointer": "summary/refused", "equals": 0},
         ],
         "limits": [

@@ -1,6 +1,6 @@
 {
  "additionalProperties": false,
- "baseCommit": "69cccd242",
+ "baseCommit": "2ed2cd79f",
  "definition": "$defs/transparency",
  "fields": [
   "bundleDigest",

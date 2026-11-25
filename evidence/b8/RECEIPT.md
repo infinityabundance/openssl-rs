@@ -291,3 +291,45 @@ leaves nine pre-existing frozen-population tests refusing until their records
 are re-frozen at the commit. None of those is a `PASS`.
 
 This subagent did not commit and did not push.
+
+## 11. Correction (2026-11-25): regenerated at the rewritten HEAD
+
+**Cause.** The history was rewritten for author identity, so the declared base
+`69cccd242` no longer names a commit reachable from any ref; and this tree has
+moved since the record was written — `AGENTS.md` gained §24 (the memory-incident
+stop-work rule), so `forensics/etp8/agents-patch.diff` no longer applies. The
+record's `appliesToWorkingTree` flag said `true`; a run at this tree says `false`.
+
+**Old and new.**
+
+| field | old | new |
+|---|---|---|
+| `baseCommit` / `refusalCounts.before.observedAt` | `69cccd242` | `2ed2cd79f` |
+| `agents-continuous-enforcement.appliesToWorkingTree` | `true` | **`false`** |
+| `ci-transparency-job.appliesToWorkingTree` | `true` | `true` |
+| `release-gates-section10.appliesToWorkingTree` | `true` | `true` |
+| gate items / codes / claims / before / after / controls | 11 / 9 / 35 / 35 / 35 / 10 | unchanged |
+
+| file | old sha256 | new sha256 |
+|---|---|---|
+| `ENFORCEMENT.json` | `cab362b047280bfce2db1bf9b85cff2a4289bf249b496bf3c7709baeb13f5697` | `a57026329b3171dfadfb194829f3d8706f3a72197544924b5d099705912152f4` |
+| `SCHEMA.json` | `c855d7b9781a92d4a24b491f2d4c97d26e7701efbfe2fb4dff9cd2e7ded989d8` | `01b0513426b71b981c809cb39ec1e4683d51ca1573171f2dfc292268ba7fc1ec` |
+| `PENDING.json` | `e8a7baf84cfa0d6232791c71bdb1c234a339467ee1ff1f5a85dd15eb263cfedf` | `ee07aa60d10b69a16fceac2f8322128e8d480f6b2d1df52e91736fa5ffa7b88b` |
+
+**What the `false` means.** The flag is the actual `git apply --check` result at
+this tree, not an intention. Neither patch was applied. The application is
+therefore *not* pending merely because this batch may not edit `AGENTS.md`; it is
+pending **and currently non-applying**, which its maintainer must know before
+attempting it. The record's own reasons are unchanged and no state is upgraded.
+
+**Failing tests fixed.** At `b26552e21` the committed `PENDING.json` said
+`appliesToWorkingTree: true` while a fresh run at this tree said `false`, so
+`test_continuous_enforcement.Determinism.test_the_producer_is_byte_identical_and_reproduces_the_records`
+and `test_continuous_enforcement.Determinism.test_the_producer_check_exits_zero`
+failed. Both pass now; two fresh runs are byte-identical to the committed records
+and `build_evidence.py --check` reports `CE_OK`.
+
+**Retained.** The `PARTIAL` state stands: the §10 mapping is still a documented
+pending obligation, the schema absence check is still vacuous, and the two
+applications are still unapplied. The before/after refusal counts are historical
+observations of the gate with item 10 absent; only the commit id they name moved.

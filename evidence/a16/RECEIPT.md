@@ -358,3 +358,66 @@ inventory. No other document was touched.
   document says so. Re-freezing is a deliberate act with its own diff.
 * No independent review of this correction; the author of the change is not an
   independent adjudicator of it.
+
+## 12. Correction (2026-11-25): the population is re-frozen, with a declared exclusion
+
+**Cause.** The history was rewritten for author identity (every commit id from
+Phase 5.5 onward changed), so the declared candidate `67187c39e…` no longer names
+a commit reachable from any ref, and the evidence tree grew by every item landed
+since A15, including the claim-schema extension in
+`evidence/etp/claim.schema.json`. The population is a frozen member list, so its
+count could only move by an explicit re-freeze.
+
+**Old and new.** Produced by `evidence/a16/build_evidence.py`, not typed.
+
+| field | old | new |
+|---|---|---|
+| candidate (`population.frozenAtCandidate`, `sourceIdentity.baseCommit`) | `67187c39ee5b5e6d2f66136829295c44096ddd08` | `b26552e21a7465405ad542edeaef7b9104c0298d` |
+| frozen population members (`populationFiles`) | 404 | **505** |
+| certificate members (`certificateFiles`) | 0 | 0 |
+| bundles / transparency logs / certificates | 0 / 0 / 0 | **0 / 0 / 0** |
+| controls / codes / boundary cases | 27 / 23 / 4 | unchanged |
+
+The old `INVENTORY.json` was
+`sha256 a7e200603059828c113ad0704cd3a4b9a6e89feae5cbbd5b8b7e5dbbf03916c2`.
+**The new digest is deliberately not quoted in this receipt**: `evidence/a19`
+digests this receipt in its `sourceIdentity.inputs` and A16's population contains
+A19's records, so naming the new digest here would be an unsatisfiable hash
+fixed point. The digest is in the record.
+
+**The declared exclusion (the cut).** A11's scan population is every tracked
+evidence JSON, so it contains this item's three records; if this population also
+contained A11's three records the two records would have to contain each other's
+digest. A11 is the broader population and **absorbs** this item's records; this
+item therefore declares exactly
+
+```
+evidence/a11/CONTROLS.json
+evidence/a11/DIFFERENTIAL.json
+evidence/a11/SCAN.json
+```
+
+excluded, records the set and the reason in `population.excluded`, and reports
+them through `growth_report` as `NEW_SINCE_RECORD`. `POPULATION_SELF`
+(`evidence/a16/INVENTORY.json`) is excluded by identity and is not part of the
+declared set. The set is closed: `sigstore_bundle.freeze_population` refuses any
+of those three paths, `declared_population` refuses a record whose declared
+exclusion is not exactly this set, and `candidate_population` refuses an
+exclusion that names a path absent from the candidate. The growth report has four
+entries at this tree: the three excluded A11 records and this record itself.
+
+**Failing tests observed.** The pre-existing seed
+`test_sigstore_bundle.FrozenPopulation.test_the_frozen_population_is_the_candidate_population`
+compared the member list with the candidate's JSON paths directly; it could not
+express a cut, so it was replaced by the cut-aware assertion above plus
+`test_the_declared_exclusion_is_reported_not_absorbed`,
+`test_an_excluded_path_cannot_be_frozen_back_in` and
+`test_a_record_that_drops_the_exclusion_is_refused`. The reproduction controls
+were not relaxed. `test_two_runs_are_byte_identical_and_match_committed` passes;
+the freeze converges after two runs because this item's `PROFILE.json` and
+`CONTROLS.json` are themselves members.
+
+**Retained.** `bundles: 0` still speaks for the frozen population, not for the
+current tree; a bundle added after the freeze is `NEW_SINCE_RECORD` until an
+explicit re-freeze. No real Sigstore material exists here, every real `validate`
+is `NOT_RUN`, and no independent review was performed.

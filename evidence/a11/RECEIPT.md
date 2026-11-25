@@ -302,3 +302,72 @@ examine the 175 above-bound members, and it does not upgrade the item to
 `SAFETY_DISCHARGED` or any consumer to `SAFE_COMPATIBLE`. The `A11` row in
 `docs/ETP-TODO.md` still quotes the live 386 figure; that file is outside this
 correction's write scope and is recorded as a follow-up, not silently edited.
+
+## 13. Correction (2026-11-25): the population is re-frozen at the rewritten HEAD
+
+**Cause.** Two things moved after §12. The history was rewritten for author
+identity (every commit id from Phase 5.5 onward changed), so the declaration
+`evidence/a11/SCAN.json` carried (`f1c1a535d`) no longer names a commit reachable
+from any ref; and the evidence tree grew by every item landed since A10 (A12–A27
+and B0–B8, including the claim-schema extension in
+`evidence/etp/claim.schema.json`). The frozen member list is the mechanism that
+*must* stop absorbing growth, so the count could only move by an explicit
+re-freeze.
+
+**Old and new.** Both were produced by the tool; neither was typed.
+
+| field | old | new |
+|---|---|---|
+| candidate (`sourceIdentity.baseCommit`, `population.frozenAtCandidate`) | `f1c1a535d` | `b26552e21a7465405ad542edeaef7b9104c0298d` |
+| frozen population members | 386 | **506** |
+| examined (≤ 4 MiB) | 211 | **331** |
+| `STRICT_OK` | 211 | **331** |
+| `SKIPPED_SIZE` | 175 | 175 |
+| refusals | 0 | **0** |
+| schema | `openssl-rs/a11/scan/2` | unchanged |
+
+The old `SCAN.json` was
+`sha256 0307db34a7cbb3e253462b4b0a3ead946b3d698a6a65e8f78ec02da163cb5b5a`
+(the §12 value). **The new `SCAN.json` digest is deliberately not quoted here**:
+`evidence/a19` digests this receipt in its `sourceIdentity.inputs`, and A11's
+population contains A19's records, so a receipt that named the new digest would
+be a hash fixed point that cannot exist. The digest is in the record, and the
+reproduction gates below re-derive it.
+
+**What changed.** `evidence/a11/build_evidence.py` gained the explicit
+re-freeze path `--freeze-population CANDIDATE`, mirroring A16's: the *path set*
+is read from CANDIDATE's git tree and each member is bound to its digest at this
+tree by `harden.freeze_population`; a path in the candidate that is missing or
+changed is refused, and growth is never absorbed implicitly. `_seed_members`
+still refuses a live glob for the ordinary run, so the reproduction path is
+unchanged. The reader, its 13 codes, the 13 controls and the differential cases
+are unchanged.
+
+**The cut, and why A16 is in the population.** A11's scan stays complete over
+`evidence/*.json`: A16's three records are members, as are every other item's.
+A16 breaks the cycle from its side: its declared exclusion is exactly
+`evidence/a11/{SCAN,DIFFERENTIAL,CONTROLS}.json`, and it reports them as
+`NEW_SINCE_RECORD`. An excluded record that is declared but absent at the
+candidate is refused, so the exclusion cannot hide a missing member.
+
+**Also corrected.** `evidence/b0/SERVICE-CONFIGURATION.json` asserts three
+pointers into this record; its `summary/strictOk` and `summary/files`
+expectations were regenerated from 211/386 to 331/506 through
+`evidence/b0/build_evidence.py` (old digest
+`403531c121eb1b5849ed6d37c1dda98af23890caaf6084ee1fdc252cc716cfa8`, new digest
+`b9257332f8f99ee39b3255642c32375da74ac67d0cf3cc54b9000ac6f4f1655a`).
+
+**Failing tests observed.** The b0 producer itself refused to write with
+`PA_REFUSED_OBSERVATION_DRIFT` (`summary/strictOk is 211, the record says 331`;
+`summary/files is 386, the record says 506`), and
+`test_harden.ScanTests.test_the_frozen_record_reproduces_at_head`,
+`test_harden.CommandLine.test_the_frozen_scan_reports_growth_at_the_frozen_count`
+and `test_harden.Evidence.test_the_producer_is_deterministic_and_matches_the_committed_bytes`
+all refused with `PH_REFUSED_POPULATION_DRIFT` on
+`evidence/b0/SERVICE-CONFIGURATION.json` between the first re-freeze and the
+regeneration of b0. That refusal is the drift detector working; the order was
+re-freeze → regenerate b0 → re-freeze, and the final record reproduces.
+
+**Retained.** The 175 above-bound members are still skipped and unknown; the
+scan still says the bytes are read by this reader, not that they are true,
+current or complete; no Rust or C parser was hardened. No independent review.

@@ -177,21 +177,31 @@ its result says `population: LIVE` and is not comparable to a frozen record.
 
 | quantity | measured |
 |---|---:|
-| frozen population members | **386** |
-| examined (at or below 4 MiB) | **211** |
-| `STRICT_OK` | **211** |
+| frozen population members | **506** |
+| examined (at or below 4 MiB) | **331** |
+| `STRICT_OK` | **331** |
 | `SKIPPED_SIZE` (reported, not omitted) | **175** |
 | other skips | 0 |
 | refusals | **0** |
 
 Every examined record parses `STRICT_OK`; no tracked evidence record is refused
 at this bound. The 175 skipped files are the large records (the population is
-about 2.15 GB; the largest single file is 15,629,485 bytes). They are reported
+about 2.16 GB, 2,157,307,581 bytes; the largest single file is 15,629,485 bytes).
+They are reported
 `SKIPPED_SIZE` with their size and are not parsed, because reading them into a
 pure-Python parser would be the denial-of-service surface this item exists to
 bound; they are streamed in 1 MiB chunks only to bind their digest.
 `evidence/a11/SCAN.json` records one row per frozen member with its path, size,
 `STRICT_OK` or `SKIPPED_SIZE`, and the SHA-256 of every member.
+
+The count is the member list's length at the declaration
+(`b26552e21a7465405ad542edeaef7b9104c0298d`); it moves only through an explicit
+re-freeze (`build_evidence.py --freeze-population CANDIDATE`), never because
+another item landed. The population is complete over tracked evidence JSON:
+other items' records — including A16's three records — are members, and A16
+breaks the resulting digest cycle from its side by declaring exactly
+`evidence/a11/{SCAN,DIFFERENTIAL,CONTROLS}.json` excluded and reporting them
+`NEW_SINCE_RECORD`.
 
 The scan does not follow a symlink and does not read outside the repository
 root; such a path is reported `SKIPPED_SYMLINK` or `SKIPPED_OUTSIDE`. Enforced by
@@ -307,7 +317,9 @@ contracts are not changed by this reader.
 ## 10. Reproducing the evidence
 
 ```
-python3 evidence/a11/build_evidence.py --source-commit f1c1a535d
+python3 evidence/a11/build_evidence.py --source-commit b26552e21a7465405ad542edeaef7b9104c0298d
+python3 evidence/a11/build_evidence.py --freeze-population b26552e21a7465405ad542edeaef7b9104c0298d
+python3 forensics/tools/harden.py scan --frozen evidence/a11/SCAN.json
 python3 forensics/tools/harden.py scan 'evidence/*.json'
 python3 forensics/tools/harden.py parse evidence/a11/CONTROLS.json
 python3 -m unittest forensics.tools.tests.test_harden

@@ -19,7 +19,7 @@
   "fixture-statement",
   "prose-only-withdrawal"
  ],
- "manifestDigest": "5d0508b3772f0d4d3c507ce3955913b2f066a73151fb16d057ff3786ed703099",
+ "manifestDigest": "c2b595a3cb7d2fd3ddbe61075e7803a3f134d7c3ba7727f8b9134f169e5d62e4",
  "manifestPath": "ARCHIVE/MANIFEST.json",
  "members": [
   {
@@ -76,14 +76,14 @@
    "id": "state-earlier",
    "path": "members/state/current-state-21.json",
    "role": "the derived state at version 21, which still records the claim ACTIVE",
-   "sha256": "a883dba296a9b8306191259dcea5bdeaf3254a26bc7daa0795913052f1d6086b"
+   "sha256": "d9d352440637bbf7e5d61b060d1f755805cd3a544d42a3672367617983176dff"
   },
   {
    "bytes": 5829,
    "id": "state-current",
    "path": "members/state/current-state-22.json",
    "role": "the derived state at version 22, which records the claim WITHDRAWN",
-   "sha256": "b16aefb88f01aa53788c6c2abdb35402e1cded16def1d75ce604ee019526eccd"
+   "sha256": "0da8b4a4780ca807d84764e34bee2287bd23af0688588ec5eee6165379cc15af"
   }
  ],
  "model": "b6/archival/1",
@@ -111,7 +111,7 @@
     "ok": true
    },
    {
-    "digest": "5d0508b3772f0d4d3c507ce3955913b2f066a73151fb16d057ff3786ed703099",
+    "digest": "c2b595a3cb7d2fd3ddbe61075e7803a3f134d7c3ba7727f8b9134f169e5d62e4",
     "name": "manifest-digest",
     "ok": true
    },
@@ -173,7 +173,7 @@
    "treeSize": 5,
    "verified": true
   },
-  "manifestDigest": "5d0508b3772f0d4d3c507ce3955913b2f066a73151fb16d057ff3786ed703099",
+  "manifestDigest": "c2b595a3cb7d2fd3ddbe61075e7803a3f134d7c3ba7727f8b9134f169e5d62e4",
   "members": 9,
   "state": {
    "state": "WITHDRAWN",
@@ -186,13 +186,13 @@
  "states": {
   "current": {
    "asOf": "2026-11-23T00:00:00Z",
-   "digest": "31b94d5ea2dbd1dd2fc888b5242e0834d3ef77130a6c8d02aa9e29066c641671",
+   "digest": "87e30885138d234934b0effb700d75119304041765b19e76b657126145967c9a",
    "member": "members/state/current-state-22.json",
    "version": 22
   },
   "earlier": {
    "asOf": "2026-11-22T00:00:00Z",
-   "digest": "d5219cea5926efbba82262517d3f02210c16e5157a5f7ef1fc48a89a1f62dcfd",
+   "digest": "624936bb3f4daa8e37c691b9032e26f6420fb194a5abbd7b4e38c2637f3cf2c5",
    "member": "members/state/current-state-21.json",
    "version": 21
   }

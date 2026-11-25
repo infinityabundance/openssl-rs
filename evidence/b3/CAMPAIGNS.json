@@ -1,6 +1,6 @@
 {
-  "baseCommit": "1155843e6",
-  "baseCommitLong": "1155843e6fca64704183f6b7d71b2df5b60652ff",
+  "baseCommit": "5b2b7a73e",
+  "baseCommitLong": "5b2b7a73e7dc9c265d704f844756d3bec542eb38",
   "campaigns": [
     {
       "abandonment": null,
@@ -9,7 +9,7 @@
           "adds": [],
           "at": "2026-11-24T07:44:49-05:00",
           "by": "infinityabundance <rdebeer.infinityabundance@gmail.com>",
-          "reason": "a17: freeze what must exist before execution and close against it [commit 8185577eb]",
+          "reason": "a17: freeze what must exist before execution and close against it [commit 8d617b203]",
           "removes": [],
           "supersedes": [
             "A17"
@@ -19,7 +19,7 @@
           "adds": [],
           "at": "2026-11-24T08:17:47-05:00",
           "by": "infinityabundance <rdebeer.infinityabundance@gmail.com>",
-          "reason": "a18: an old signature never authorises a stale release [commit 6bf8c80aa]",
+          "reason": "a18: an old signature never authorises a stale release [commit 72d5d6f4b]",
           "removes": [],
           "supersedes": [
             "A18"
@@ -29,7 +29,7 @@
           "adds": [],
           "at": "2026-11-24T08:42:45-05:00",
           "by": "infinityabundance <rdebeer.infinityabundance@gmail.com>",
-          "reason": "a19: a correction is bound to the original it supersedes [commit 8c23f4571]",
+          "reason": "a19: a correction is bound to the original it supersedes [commit 12b1571e3]",
           "removes": [],
           "supersedes": [
             "A19"
@@ -39,7 +39,7 @@
           "adds": [],
           "at": "2026-11-24T09:31:32-05:00",
           "by": "infinityabundance <rdebeer.infinityabundance@gmail.com>",
-          "reason": "a20: a conjunction of obligations, denied by default [commit ad49d33f2]",
+          "reason": "a20: a conjunction of obligations, denied by default [commit 64c90b157]",
           "removes": [],
           "supersedes": [
             "A20"
@@ -49,7 +49,7 @@
           "adds": [],
           "at": "2026-11-24T09:47:33-05:00",
           "by": "infinityabundance <rdebeer.infinityabundance@gmail.com>",
-          "reason": "a21: a summary never replaces the evidence it condenses [commit 6e64e644c]",
+          "reason": "a21: a summary never replaces the evidence it condenses [commit cb40caf0c]",
           "removes": [],
           "supersedes": [
             "A21"
@@ -59,7 +59,7 @@
           "adds": [],
           "at": "2026-11-24T10:23:59-05:00",
           "by": "infinityabundance <rdebeer.infinityabundance@gmail.com>",
-          "reason": "a22: eight instruments asked to fail, and two did [commit d3050312f]",
+          "reason": "a22: eight instruments asked to fail, and two did [commit b3a7c079a]",
           "removes": [],
           "supersedes": [
             "A22"
@@ -69,7 +69,7 @@
           "adds": [],
           "at": "2026-11-24T11:20:19-05:00",
           "by": "infinityabundance <rdebeer.infinityabundance@gmail.com>",
-          "reason": "a22: re-measure the eight after the repair, and bind witnesses to behaviour [commit 7c2b5f25f]",
+          "reason": "a22: re-measure the eight after the repair, and bind witnesses to behaviour [commit 94e7b5f6a]",
           "removes": [],
           "supersedes": [
             "A22"
@@ -79,7 +79,7 @@
           "adds": [],
           "at": "2026-11-24T12:01:46-05:00",
           "by": "infinityabundance <rdebeer.infinityabundance@gmail.com>",
-          "reason": "a23: write the rules down, then check the code against them [commit b19869e22]",
+          "reason": "a23: write the rules down, then check the code against them [commit e2528eab0]",
           "removes": [],
           "supersedes": [
             "A23"
@@ -89,7 +89,7 @@
           "adds": [],
           "at": "2026-11-24T13:33:35-05:00",
           "by": "infinityabundance <rdebeer.infinityabundance@gmail.com>",
-          "reason": "a24: a package an outsider can run, and an honest external status [commit a9bcb5480]",
+          "reason": "a24: a package an outsider can run, and an honest external status [commit d03dda467]",
           "removes": [],
           "supersedes": [
             "A24"
@@ -99,7 +99,7 @@
           "adds": [],
           "at": "2026-11-24T14:26:52-05:00",
           "by": "infinityabundance <rdebeer.infinityabundance@gmail.com>",
-          "reason": "a25: the documented surface and the executable surface must agree [commit 0ea00ac4d]",
+          "reason": "a25: the documented surface and the executable surface must agree [commit fb49db5ce]",
           "removes": [],
           "supersedes": [
             "A25"
@@ -109,7 +109,7 @@
           "adds": [],
           "at": "2026-11-24T15:06:02-05:00",
           "by": "infinityabundance <rdebeer.infinityabundance@gmail.com>",
-          "reason": "a25: re-derive the surface after the repair and freeze its identity [commit 46f385772]",
+          "reason": "a25: re-derive the surface after the repair and freeze its identity [commit 0beeab38c]",
           "removes": [],
           "supersedes": [
             "A25"
@@ -119,7 +119,7 @@
           "adds": [],
           "at": "2026-11-24T15:37:53-05:00",
           "by": "infinityabundance <rdebeer.infinityabundance@gmail.com>",
-          "reason": "a26: measure the cost, state the machine, and never skip to save it [commit e3bed067c]",
+          "reason": "a26: measure the cost, state the machine, and never skip to save it [commit f3c0dc47d]",
           "removes": [],
           "supersedes": [
             "A26"
@@ -129,7 +129,7 @@
           "adds": [],
           "at": "2026-11-24T16:22:31-05:00",
           "by": "infinityabundance <rdebeer.infinityabundance@gmail.com>",
-          "reason": "a27: take one finding through every stage, and stop where it stops [commit 5015b6239]",
+          "reason": "a27: take one finding through every stage, and stop where it stops [commit 0e0587d3c]",
           "removes": [],
           "supersedes": [
             "A27"
@@ -139,7 +139,7 @@
           "adds": [],
           "at": "2026-11-24T16:39:50-05:00",
           "by": "infinityabundance <rdebeer.infinityabundance@gmail.com>",
-          "reason": "b0: a pinned version is not an admitted service [commit 54fb5085b]",
+          "reason": "b0: a pinned version is not an admitted service [commit bfd72c4d7]",
           "removes": [],
           "supersedes": [
             "B0"
@@ -149,7 +149,7 @@
           "adds": [],
           "at": "2026-11-24T17:10:08-05:00",
           "by": "infinityabundance <rdebeer.infinityabundance@gmail.com>",
-          "reason": "b1: a fixture can prove the verifier, not the service [commit ebc539869]",
+          "reason": "b1: a fixture can prove the verifier, not the service [commit a0a98ab9c]",
           "removes": [],
           "supersedes": [
             "B1"
@@ -159,7 +159,7 @@
           "adds": [],
           "at": "2026-11-24T19:50:57-05:00",
           "by": "infinityabundance <rdebeer.infinityabundance@gmail.com>",
-          "reason": "b2: nine times, one imprint verifier, and no trusted clock [commit 1155843e6]",
+          "reason": "b2: nine times, one imprint verifier, and no trusted clock [commit 5b2b7a73e]",
           "removes": [],
           "supersedes": [
             "B2"
@@ -609,7 +609,7 @@
       },
       "schema": "openssl-rs/b3/campaign/1",
       "source": {
-        "base": "731b066e261ebc64cf8acb909df18d23b9b11883",
+        "base": "4885151952a3342cab57311290051a65e42c0659",
         "openedAtSource": "evidence/a17/FREEZE-forward.json#/frozenAt",
         "plan": "docs/ETP-TODO.md",
         "reconstructed": false
@@ -629,12 +629,12 @@
             "history": [
               {
                 "at": "2026-11-24T10:23:59-05:00",
-                "evidence": "git:evidence/a22/RESULTS.json@d3050312fd10e5b45053c6c3d8e9f501a3c6356b (sha256 45098707995813c060aa802e585e5e7e0cbba66b82980408f3dbd16ca68c5dbe)",
+                "evidence": "git:evidence/a22/RESULTS.json@b3a7c079a72ab3892ca0665d61a894c29dfb89b4 (sha256 45098707995813c060aa802e585e5e7e0cbba66b82980408f3dbd16ca68c5dbe)",
                 "reason": "earlier observation, preserved rather than erased",
                 "result": "PASS"
               }
             ],
-            "reason": "re-measured at e4029e0d5 after the repair recorded in evidence/defects/e5-e6/RECEIPT.md; refusals 3/3",
+            "reason": "re-measured at 372a6644f after the repair recorded in evidence/defects/e5-e6/RECEIPT.md; refusals 3/3",
             "result": "PASS"
           },
           {
@@ -643,12 +643,12 @@
             "history": [
               {
                 "at": "2026-11-24T10:23:59-05:00",
-                "evidence": "git:evidence/a22/RESULTS.json@d3050312fd10e5b45053c6c3d8e9f501a3c6356b (sha256 45098707995813c060aa802e585e5e7e0cbba66b82980408f3dbd16ca68c5dbe)",
+                "evidence": "git:evidence/a22/RESULTS.json@b3a7c079a72ab3892ca0665d61a894c29dfb89b4 (sha256 45098707995813c060aa802e585e5e7e0cbba66b82980408f3dbd16ca68c5dbe)",
                 "reason": "earlier observation, preserved rather than erased",
                 "result": "PASS"
               }
             ],
-            "reason": "re-measured at e4029e0d5 after the repair recorded in evidence/defects/e5-e6/RECEIPT.md; refusals 3/3",
+            "reason": "re-measured at 372a6644f after the repair recorded in evidence/defects/e5-e6/RECEIPT.md; refusals 3/3",
             "result": "PASS"
           },
           {
@@ -657,12 +657,12 @@
             "history": [
               {
                 "at": "2026-11-24T10:23:59-05:00",
-                "evidence": "git:evidence/a22/RESULTS.json@d3050312fd10e5b45053c6c3d8e9f501a3c6356b (sha256 45098707995813c060aa802e585e5e7e0cbba66b82980408f3dbd16ca68c5dbe)",
+                "evidence": "git:evidence/a22/RESULTS.json@b3a7c079a72ab3892ca0665d61a894c29dfb89b4 (sha256 45098707995813c060aa802e585e5e7e0cbba66b82980408f3dbd16ca68c5dbe)",
                 "reason": "earlier observation, preserved rather than erased",
                 "result": "PASS"
               }
             ],
-            "reason": "re-measured at e4029e0d5 after the repair recorded in evidence/defects/e5-e6/RECEIPT.md; refusals 5/5",
+            "reason": "re-measured at 372a6644f after the repair recorded in evidence/defects/e5-e6/RECEIPT.md; refusals 5/5",
             "result": "PASS"
           },
           {
@@ -671,12 +671,12 @@
             "history": [
               {
                 "at": "2026-11-24T10:23:59-05:00",
-                "evidence": "git:evidence/a22/RESULTS.json@d3050312fd10e5b45053c6c3d8e9f501a3c6356b (sha256 45098707995813c060aa802e585e5e7e0cbba66b82980408f3dbd16ca68c5dbe)",
+                "evidence": "git:evidence/a22/RESULTS.json@b3a7c079a72ab3892ca0665d61a894c29dfb89b4 (sha256 45098707995813c060aa802e585e5e7e0cbba66b82980408f3dbd16ca68c5dbe)",
                 "reason": "earlier observation, preserved rather than erased",
                 "result": "PASS"
               }
             ],
-            "reason": "re-measured at e4029e0d5 after the repair recorded in evidence/defects/e5-e6/RECEIPT.md; refusals 3/3",
+            "reason": "re-measured at 372a6644f after the repair recorded in evidence/defects/e5-e6/RECEIPT.md; refusals 3/3",
             "result": "PASS"
           },
           {
@@ -685,12 +685,12 @@
             "history": [
               {
                 "at": "2026-11-24T10:23:59-05:00",
-                "evidence": "git:evidence/a22/RESULTS.json@d3050312fd10e5b45053c6c3d8e9f501a3c6356b (sha256 45098707995813c060aa802e585e5e7e0cbba66b82980408f3dbd16ca68c5dbe)",
+                "evidence": "git:evidence/a22/RESULTS.json@b3a7c079a72ab3892ca0665d61a894c29dfb89b4 (sha256 45098707995813c060aa802e585e5e7e0cbba66b82980408f3dbd16ca68c5dbe)",
                 "reason": "earlier observation, preserved rather than erased",
                 "result": "FAIL"
               }
             ],
-            "reason": "re-measured at e4029e0d5 after the repair recorded in evidence/defects/e5-e6/RECEIPT.md; refusals 3/3",
+            "reason": "re-measured at 372a6644f after the repair recorded in evidence/defects/e5-e6/RECEIPT.md; refusals 3/3",
             "result": "PASS"
           },
           {
@@ -699,12 +699,12 @@
             "history": [
               {
                 "at": "2026-11-24T10:23:59-05:00",
-                "evidence": "git:evidence/a22/RESULTS.json@d3050312fd10e5b45053c6c3d8e9f501a3c6356b (sha256 45098707995813c060aa802e585e5e7e0cbba66b82980408f3dbd16ca68c5dbe)",
+                "evidence": "git:evidence/a22/RESULTS.json@b3a7c079a72ab3892ca0665d61a894c29dfb89b4 (sha256 45098707995813c060aa802e585e5e7e0cbba66b82980408f3dbd16ca68c5dbe)",
                 "reason": "earlier observation, preserved rather than erased",
                 "result": "SKIP"
               }
             ],
-            "reason": "re-measured at e4029e0d5 after the repair recorded in evidence/defects/e5-e6/RECEIPT.md; refusals 2/2",
+            "reason": "re-measured at 372a6644f after the repair recorded in evidence/defects/e5-e6/RECEIPT.md; refusals 2/2",
             "result": "PASS"
           },
           {
@@ -713,12 +713,12 @@
             "history": [
               {
                 "at": "2026-11-24T10:23:59-05:00",
-                "evidence": "git:evidence/a22/RESULTS.json@d3050312fd10e5b45053c6c3d8e9f501a3c6356b (sha256 45098707995813c060aa802e585e5e7e0cbba66b82980408f3dbd16ca68c5dbe)",
+                "evidence": "git:evidence/a22/RESULTS.json@b3a7c079a72ab3892ca0665d61a894c29dfb89b4 (sha256 45098707995813c060aa802e585e5e7e0cbba66b82980408f3dbd16ca68c5dbe)",
                 "reason": "earlier observation, preserved rather than erased",
                 "result": "PASS"
               }
             ],
-            "reason": "re-measured at e4029e0d5 after the repair recorded in evidence/defects/e5-e6/RECEIPT.md; refusals 8/8",
+            "reason": "re-measured at 372a6644f after the repair recorded in evidence/defects/e5-e6/RECEIPT.md; refusals 8/8",
             "result": "PASS"
           },
           {
@@ -727,16 +727,16 @@
             "history": [
               {
                 "at": "2026-11-24T10:23:59-05:00",
-                "evidence": "git:evidence/a22/RESULTS.json@d3050312fd10e5b45053c6c3d8e9f501a3c6356b (sha256 45098707995813c060aa802e585e5e7e0cbba66b82980408f3dbd16ca68c5dbe)",
+                "evidence": "git:evidence/a22/RESULTS.json@b3a7c079a72ab3892ca0665d61a894c29dfb89b4 (sha256 45098707995813c060aa802e585e5e7e0cbba66b82980408f3dbd16ca68c5dbe)",
                 "reason": "earlier observation, preserved rather than erased",
                 "result": "PASS"
               }
             ],
-            "reason": "re-measured at e4029e0d5 after the repair recorded in evidence/defects/e5-e6/RECEIPT.md; refusals 4/4",
+            "reason": "re-measured at 372a6644f after the repair recorded in evidence/defects/e5-e6/RECEIPT.md; refusals 4/4",
             "result": "PASS"
           }
         ],
-        "record": "git:evidence/a22/RESULTS.json@7c2b5f25fe55e6302b942ed124f4fbec5aff8888",
+        "record": "git:evidence/a22/RESULTS.json@94e7b5f6a84f17323826eb04026482dd28059eb8",
         "summary": {
           "claimsSuccess": true,
           "counts": {
@@ -747,7 +747,7 @@
             "planned": 8,
             "skip": 0
           },
-          "text": "8 PASS / 0 FAIL / 0 SKIP / 0 NOT_RUN after the repair at e4029e0d5; the earlier 6/1/1 closure is preserved in closureHistory and in each outcome's history"
+          "text": "8 PASS / 0 FAIL / 0 SKIP / 0 NOT_RUN after the repair at 372a6644f; the earlier 6/1/1 closure is preserved in closureHistory and in each outcome's history"
         }
       },
       "closureHistory": [
@@ -756,54 +756,54 @@
           "outcomes": [
             {
               "checkId": "E1",
-              "evidence": "git:evidence/a22/RESULTS.json@d3050312fd10e5b45053c6c3d8e9f501a3c6356b (sha256 45098707995813c060aa802e585e5e7e0cbba66b82980408f3dbd16ca68c5dbe)",
+              "evidence": "git:evidence/a22/RESULTS.json@b3a7c079a72ab3892ca0665d61a894c29dfb89b4 (sha256 45098707995813c060aa802e585e5e7e0cbba66b82980408f3dbd16ca68c5dbe)",
               "reason": "recorded verdict QUALIFIED (3/3 refused witnesses)",
               "result": "PASS"
             },
             {
               "checkId": "E2",
-              "evidence": "git:evidence/a22/RESULTS.json@d3050312fd10e5b45053c6c3d8e9f501a3c6356b (sha256 45098707995813c060aa802e585e5e7e0cbba66b82980408f3dbd16ca68c5dbe)",
+              "evidence": "git:evidence/a22/RESULTS.json@b3a7c079a72ab3892ca0665d61a894c29dfb89b4 (sha256 45098707995813c060aa802e585e5e7e0cbba66b82980408f3dbd16ca68c5dbe)",
               "reason": "recorded verdict QUALIFIED (3/3 refused witnesses)",
               "result": "PASS"
             },
             {
               "checkId": "E3",
-              "evidence": "git:evidence/a22/RESULTS.json@d3050312fd10e5b45053c6c3d8e9f501a3c6356b (sha256 45098707995813c060aa802e585e5e7e0cbba66b82980408f3dbd16ca68c5dbe)",
+              "evidence": "git:evidence/a22/RESULTS.json@b3a7c079a72ab3892ca0665d61a894c29dfb89b4 (sha256 45098707995813c060aa802e585e5e7e0cbba66b82980408f3dbd16ca68c5dbe)",
               "reason": "recorded verdict QUALIFIED (5/5 refused witnesses)",
               "result": "PASS"
             },
             {
               "checkId": "E4",
-              "evidence": "git:evidence/a22/RESULTS.json@d3050312fd10e5b45053c6c3d8e9f501a3c6356b (sha256 45098707995813c060aa802e585e5e7e0cbba66b82980408f3dbd16ca68c5dbe)",
+              "evidence": "git:evidence/a22/RESULTS.json@b3a7c079a72ab3892ca0665d61a894c29dfb89b4 (sha256 45098707995813c060aa802e585e5e7e0cbba66b82980408f3dbd16ca68c5dbe)",
               "reason": "recorded verdict QUALIFIED (3/3 refused witnesses)",
               "result": "PASS"
             },
             {
               "checkId": "E5",
-              "evidence": "git:evidence/a22/RESULTS.json@d3050312fd10e5b45053c6c3d8e9f501a3c6356b (sha256 45098707995813c060aa802e585e5e7e0cbba66b82980408f3dbd16ca68c5dbe)",
+              "evidence": "git:evidence/a22/RESULTS.json@b3a7c079a72ab3892ca0665d61a894c29dfb89b4 (sha256 45098707995813c060aa802e585e5e7e0cbba66b82980408f3dbd16ca68c5dbe)",
               "reason": "recorded verdict DEFECT (0/3 refused witnesses)",
               "result": "FAIL"
             },
             {
               "checkId": "E6",
-              "evidence": "git:evidence/a22/RESULTS.json@d3050312fd10e5b45053c6c3d8e9f501a3c6356b (sha256 45098707995813c060aa802e585e5e7e0cbba66b82980408f3dbd16ca68c5dbe)",
+              "evidence": "git:evidence/a22/RESULTS.json@b3a7c079a72ab3892ca0665d61a894c29dfb89b4 (sha256 45098707995813c060aa802e585e5e7e0cbba66b82980408f3dbd16ca68c5dbe)",
               "reason": "recorded verdict PARTIAL (1/2 refused witnesses)",
               "result": "SKIP"
             },
             {
               "checkId": "E7",
-              "evidence": "git:evidence/a22/RESULTS.json@d3050312fd10e5b45053c6c3d8e9f501a3c6356b (sha256 45098707995813c060aa802e585e5e7e0cbba66b82980408f3dbd16ca68c5dbe)",
+              "evidence": "git:evidence/a22/RESULTS.json@b3a7c079a72ab3892ca0665d61a894c29dfb89b4 (sha256 45098707995813c060aa802e585e5e7e0cbba66b82980408f3dbd16ca68c5dbe)",
               "reason": "recorded verdict QUALIFIED (6/6 refused witnesses)",
               "result": "PASS"
             },
             {
               "checkId": "E8",
-              "evidence": "git:evidence/a22/RESULTS.json@d3050312fd10e5b45053c6c3d8e9f501a3c6356b (sha256 45098707995813c060aa802e585e5e7e0cbba66b82980408f3dbd16ca68c5dbe)",
+              "evidence": "git:evidence/a22/RESULTS.json@b3a7c079a72ab3892ca0665d61a894c29dfb89b4 (sha256 45098707995813c060aa802e585e5e7e0cbba66b82980408f3dbd16ca68c5dbe)",
               "reason": "recorded verdict QUALIFIED (4/4 refused witnesses)",
               "result": "PASS"
             }
           ],
-          "record": "git:evidence/a22/RESULTS.json@d3050312fd10e5b45053c6c3d8e9f501a3c6356b",
+          "record": "git:evidence/a22/RESULTS.json@b3a7c079a72ab3892ca0665d61a894c29dfb89b4",
           "summary": {
             "claimsSuccess": false,
             "counts": {
@@ -868,8 +868,8 @@
       },
       "schema": "openssl-rs/b3/campaign/1",
       "source": {
-        "base": "6e64e644ced49bf5d969e0eb56ab51f8f4f2c4fc",
-        "openedAtSource": "commit 6e64e644c (the item's recorded start base); the plan text is from EXPERIMENTS.json, so this opening is reconstructed, not an authenticated preregistration",
+        "base": "cb40caf0c503ac624f7a8336cba6ad2124ba0942",
+        "openedAtSource": "commit cb40caf0c (the item's recorded start base); the plan text is from EXPERIMENTS.json, so this opening is reconstructed, not an authenticated preregistration",
         "plan": "evidence/a22/EXPERIMENTS.json",
         "reconstructed": true
       },

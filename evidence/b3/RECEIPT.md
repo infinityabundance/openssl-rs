@@ -344,3 +344,56 @@ The programme campaign is still `OPEN` and the A22 closure still records
 **Retained.** The correction establishes that the record is reproducible from its
 declared commit; it does not authenticate that commit, close the A17 freeze, or
 make the opening a preregistration. `PARTIAL` is unchanged.
+
+## 11. Correction (2026-11-25): the record is regenerated against the rewritten history
+
+**Cause.** The history was rewritten for author identity: every commit id from
+Phase 5.5 onward changed, and each rewritten commit's **author** is now
+`infinityabundance <rdebeer.infinityabundance@gmail.com>` where it had been
+`openssl-rs <dev@openssl-rs.invalid>`. This record's amendment list is *derived*
+from those commits (author, author date, subject), so the hand edit at
+`b26552e21` that replaced sixteen `by` values was superseded by regeneration:
+a producer run reproduced `openssl-rs <dev@openssl-rs.invalid>`, which is not the
+history that now exists.
+
+**Old and new.**
+
+| field | old | new |
+|---|---|---|
+| `baseCommit` / `baseCommitLong` | `1155843e6` / `1155843e6fca64704183f6b7d71b2df5b60652ff` | `5b2b7a73e` / `5b2b7a73e7dc9c265d704f844756d3bec542eb38` |
+| `RECONCILIATION.json#/asOfCommit` | `1155843e6fca64704183f6b7d71b2df5b60652ff` | `5b2b7a73e7dc9c265d704f844756d3bec542eb38` |
+| programme `source.base` (the A17 freeze candidate) | `731b066e261ebc64cf8acb909df18d23b9b11883` | `4885151952a3342cab57311290051a65e42c0659` |
+| A22 `source.base`, first record, re-record | `6e64e644c`, `d3050312f`, `7c2b5f25f` | `cb40caf0c`, `b3a7c079a`, `94e7b5f6a` |
+| A22 repair commit (`A22_MEASURED_AT`) | `e4029e0d5` | `372a6644f` |
+| sixteen amendment `reason` commit hashes | pre-rewrite ids | the rewritten ids |
+| sixteen amendment `at` values | 2026-11-24 … | unchanged (author dates) |
+
+| file | old sha256 | new sha256 |
+|---|---|---|
+| `CAMPAIGNS.json` | `385c920c25ddfb4c4d1fcd7d1593e627780cd5f63c8da2c640bf1d3c20a433d2` | `544ba83f4d00f7677907020b51ec34521808fff8f6f0a9f3dec775667c7d2b92` |
+| `RECONCILIATION.json` | `547f3403d63662e5030e54d8de8aa5eeff70e29ae0a68743096f3b1a9c632821` | `a44cb3921ce6a884a0e94679925685413d83a3bed55b6069c11aab5e602ed933` |
+| `CONTROLS.json` | `6cd1efb5ae5f0c08dbd83364545026a7aa6982689b5f12f1a5a2c5cbb03493dd` | unchanged |
+
+**What changed in the producer.** All commit constants moved to the rewritten
+ids, and the two prose references inside the producer (`731b066e2`, `e4029e0d5`,
+`commit 6e64e644c`) moved with them. `commit_time` now reads the **author date**
+(`%aI`) rather than the committer date: the rewrite reset every committer date to
+2026-11-25T02:30:21, so `%cI` would have replaced every amendment's recorded time
+with the rewrite instant. The author dates are preserved and are exactly the
+values the record already carried. Nothing about a campaign's state, plan,
+outcomes or counts changed: both campaigns validate to `OPEN` and
+`CLOSED_CLEAN`, with 16 amendments, 86 planned rows and 8/0/0/0.
+
+**Failing tests fixed.** At `b26552e21` a fresh run of the committed producer did
+not equal the committed bytes: it wrote `by: openssl-rs <dev@openssl-rs.invalid>`
+where the hand-edited record said `infinityabundance <…>`. That made
+`test_campaign.Determinism.test_the_committed_records_equal_a_fresh_run` and
+`test_campaign.Determinism.test_the_producer_check_mode_accepts_the_committed_bytes`
+fail. Both pass now, and two fresh runs are byte-identical to the committed
+records.
+
+**Retained.** The reconciliation is still not a closure of the A17 forward freeze,
+which remains `OPEN`; `produced=14 / missing=6` is unchanged. A17's own records
+still name the pre-rewrite id `731b066e2` for the same freeze: A17 regenerates
+byte-identically and is outside this batch's write scope, so the two ids are the
+same tree under two commit objects. That is recorded as a residual, not masked.

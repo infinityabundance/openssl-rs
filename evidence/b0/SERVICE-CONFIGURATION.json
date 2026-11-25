@@ -207,12 +207,12 @@
    "module": "forensics/tools/harden.py",
    "observed": [
     {
-     "equals": 211,
+     "equals": 331,
      "path": "evidence/a11/SCAN.json",
      "pointer": "summary/strictOk"
     },
     {
-     "equals": 386,
+     "equals": 506,
      "path": "evidence/a11/SCAN.json",
      "pointer": "summary/files"
     },

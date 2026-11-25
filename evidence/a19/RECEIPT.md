@@ -290,3 +290,39 @@ present against the committed zero.
 
 No other path was modified. `docs/ETP-TODO.md` differs in exactly one row (A19);
 `git diff --stat` reports one insertion and one deletion for that file.
+
+## 13. Correction (2026-11-25): the log envelope is re-signed over moved inputs
+
+**Cause.** Two of this record's declared inputs moved in the same batch. A11's
+and A16's correction sections were appended to `evidence/a11/RECEIPT.md` and
+`evidence/a16/RECEIPT.md` (the author-identity rewrite and the claim-schema
+extension moved their candidates and populations), and this producer records the
+SHA-256 of every input in `sourceIdentity.inputs` and seals the log with a DSSE
+envelope over its canonical bytes. The envelope therefore had to be re-derived;
+it was not hand-edited.
+
+**Old and new.**
+
+| field | old | new |
+|---|---|---|
+| `sourceIdentity.inputs[3].sha256` (`evidence/a11/RECEIPT.md`) | `a548c427f9ef5fac1a0e91b1d3612547eb834e2eb8d288e5a2d3d69b207227a4` | `af99fd9cab3d458a363cfd1728160a05e1c5bf40fa9502cf0e27113461a67eb9` |
+| `sourceIdentity.inputs[4].sha256` (`evidence/a16/RECEIPT.md`) | `b0d6a67fcc9db58247eedac3686aa693be154baeff5d65ef80a8a3aabf7f73a9` | `d50464cd8ffb77b5fbb37aff653ee246e9ab7e97d9d9b3f75c97197e08d51d85` |
+| `EVENTS.json` | `f19f38ad46ff24f92d1f3a6c76c3d08db3b33e37803031cad1a66a3fa9b0e89a` | `e362777c4825ec76bd38572d9aabaaea9a969a3dbe2dd4ac61b3b58ef330f5c4` |
+| `STATUS.json`, `PROPAGATION.json`, `CONTROLS.json` | — | byte-identical |
+
+The change is confined to `sourceIdentity.inputs[3]`, `sourceIdentity.inputs[4]`,
+`logEnvelope.payload` and `logEnvelope.signatures[0].sig`
+(`5FO6liZOaVvtF0FGWe3TvHo8NZzZvE9XItpltoT2Yns=` →
+`0yaDApNytI15yeqrZSeecHpzuy+QQWp3+PhIRY0DhKQ=`). Every event, every event
+signature, `logDigest`, the 22 events, 14 dependents and 16 controls are
+unchanged: a recursive `json.loads` comparison of the two documents reports four
+differing leaves, all in the envelope or in those two input digests.
+
+**Failing tests.** None of this item's tests failed; the correction is forced by
+its inputs, and `test_corrections.Determinism.test_two_runs_are_byte_identical_and_match_committed`
+would have failed if the record had been left at the old input digests.
+
+**Retained.** The log is still `SELF_ISSUED` and unauthenticated; the signature
+still proves bytes unchanged since signing, not an independent recorder; a
+reconstruction of a prose or unsigned record is still not an assertion by the
+party it describes.

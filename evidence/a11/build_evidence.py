@@ -7,10 +7,13 @@ typed.  Re-running with the same inputs reproduces the same files.
 Usage
 -----
     python3 evidence/a11/build_evidence.py
-    python3 evidence/a11/build_evidence.py --out /tmp/a11a --source-commit f1c1a535d
+    python3 evidence/a11/build_evidence.py --out /tmp/a11a --source-commit b26552e21a7465405ad542edeaef7b9104c0298d
+    python3 evidence/a11/build_evidence.py --freeze-population CANDIDATE
 
 The default output is ``evidence/a11``.  The source identity is supplied; it is
-never read from a live ``HEAD``.
+never read from a live ``HEAD``.  ``--freeze-population CANDIDATE`` is the only
+way the population moves: it takes the path set from CANDIDATE's tree and binds
+each member to its digest at this tree.  Growth is never absorbed implicitly.
 
 SPDX-License-Identifier: Apache-2.0
 """
@@ -22,8 +25,10 @@ import sys
 sys.dont_write_bytecode = True
 
 import argparse
+import fnmatch
 import hashlib
 import json
+import subprocess
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -32,7 +37,7 @@ sys.path.insert(0, str(TOOLS))
 
 import harden as h  # noqa: E402
 
-BASE_COMMIT = "f1c1a535d"
+BASE_COMMIT = "b26552e21a7465405ad542edeaef7b9104c0298d"
 EVIDENCE = REPO_ROOT / "evidence" / "a11"
 TOOL_RELATIVE = "forensics/tools/harden.py"
 
@@ -99,8 +104,51 @@ def _seed_members() -> list[dict]:
     return frozen
 
 
-def build_scan(source_commit: str) -> dict:
-    members = _seed_members()
+def _candidate_members(commit: str) -> list[dict]:
+    """The population a re-freeze declares: the candidate's tree, hashed now.
+
+    The path set is read from ``commit``'s tree, not from a live working-tree
+    glob, so the declared candidate is the authority for *which* records are in
+    the population.  The digests come from :func:`harden.freeze_population`, which
+    re-hashes the bytes at this tree; a path in the candidate that is missing or
+    changed here is refused rather than dropped.
+    """
+    result = subprocess.run(
+        [
+            "git",
+            "-c",
+            "safe.directory=*",
+            "-C",
+            str(REPO_ROOT),
+            "ls-tree",
+            "-r",
+            "--name-only",
+            commit,
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        raise SystemExit(
+            f"cannot read the tree of {commit}: {result.stderr.strip()}"
+        )
+    excluded = tuple(h.SCAN_EXCLUDED_PREFIXES)
+    paths = sorted(
+        path
+        for path in result.stdout.splitlines()
+        if path
+        and fnmatch.fnmatchcase(path, h.SCAN_GLOB)
+        and not any(path.startswith(prefix) for prefix in excluded)
+    )
+    if not paths:
+        raise SystemExit(f"the candidate {commit} has no evidence JSON to freeze")
+    return h.freeze_population(paths)
+
+
+def build_scan(source_commit: str, members: list[dict] | None = None) -> dict:
+    if members is None:
+        members = _seed_members()
     result = h.scan_frozen_population(members)
     if result["files"] != len(members):
         raise AssertionError("the scan did not account for every population member")
@@ -441,11 +489,25 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="produce evidence/a11")
     parser.add_argument("--out", default=str(EVIDENCE))
     parser.add_argument("--source-commit", default=BASE_COMMIT)
+    parser.add_argument(
+        "--freeze-population",
+        metavar="CANDIDATE",
+        default=None,
+        help=(
+            "explicitly replace the frozen population with the tracked evidence "
+            "JSON that existed at CANDIDATE; growth is never absorbed implicitly"
+        ),
+    )
     arguments = parser.parse_args(argv)
     output = Path(arguments.out)
     output.mkdir(parents=True, exist_ok=True)
 
-    scan = build_scan(arguments.source_commit)
+    members = (
+        _candidate_members(arguments.freeze_population)
+        if arguments.freeze_population is not None
+        else None
+    )
+    scan = build_scan(arguments.source_commit, members)
     differential = build_differential(arguments.source_commit)
     controls = build_controls(arguments.source_commit)
 

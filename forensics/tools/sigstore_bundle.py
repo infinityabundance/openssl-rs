@@ -1775,6 +1775,29 @@ INVENTORY_RECORD = REPO_ROOT / "evidence/a16/INVENTORY.json"
 POPULATION_SELF = "evidence/a16/INVENTORY.json"
 POPULATION_BINDING = harden.POPULATION_FROZEN
 
+# The declared excluded set.  A11's scan population is every tracked evidence
+# JSON (``evidence/*.json``) except its own three records, so it includes this
+# item's records; if this item's population also included A11's three records,
+# each record would have to contain the other's digest.  A11 is the broader
+# population and absorbs this item's records, so this item declares the three A11
+# records excluded, records the exclusion and its reason in ``INVENTORY.json``,
+# and reports them as ``NEW_SINCE_RECORD`` through :func:`growth_report`.  The
+# set is closed and exactly these three paths: an exclusion that could silently
+# absorb an unrelated record would be a way to hide growth, not to break a cycle.
+POPULATION_EXCLUDED_PATHS = (
+    "evidence/a11/CONTROLS.json",
+    "evidence/a11/DIFFERENTIAL.json",
+    "evidence/a11/SCAN.json",
+)
+POPULATION_EXCLUDED_REASON = (
+    "mutual digest binding: A11's scan population is every tracked evidence JSON "
+    "and therefore contains this item's records, so this population cannot also "
+    "contain A11's three records without a digest cycle. A11 absorbs this item's "
+    "records; these three are declared excluded here and are reported "
+    "NEW_SINCE_RECORD by growth_report, never absorbed into the frozen count."
+)
+POPULATION_EXCLUDED_RESULT = harden.RESULT_NEW_SINCE_RECORD
+
 
 def _refuse_population(message: str) -> None:
     """Refuse with harden's stable population-drift code, never with a pass."""
@@ -1794,6 +1817,12 @@ def freeze_population(
         _refuse_population(
             f"{POPULATION_SELF} cannot be a member of its own population: "
             "its bytes would have to contain their own digest"
+        )
+    excluded = set(paths) & set(POPULATION_EXCLUDED_PATHS)
+    if excluded:
+        _refuse_population(
+            "the declared exclusion cannot be overridden: "
+            f"{', '.join(sorted(excluded))}"
         )
     return harden.freeze_population(sorted(paths), repo_root=repo_root)
 
@@ -1858,6 +1887,13 @@ def declared_population(path: Path | str = INVENTORY_RECORD) -> dict[str, Any]:
     members = population.get("members")
     if not isinstance(members, list) or not members:
         _refuse_population(f"{path}: the frozen population has no member list")
+    excluded = population.get("excluded")
+    excluded_paths = excluded.get("paths") if isinstance(excluded, dict) else None
+    if not isinstance(excluded_paths, list) or tuple(excluded_paths) != POPULATION_EXCLUDED_PATHS:
+        _refuse_population(
+            f"{path}: the declared exclusion is not the closed set "
+            f"{list(POPULATION_EXCLUDED_PATHS)}"
+        )
     certificates = document.get("certificatePopulation")
     certificate_members = (
         certificates.get("members") if isinstance(certificates, dict) else None
@@ -2023,6 +2059,11 @@ def inventory(
                 "the explicit member list below, declared at the candidate; not "
                 "a live glob"
             ),
+            "excluded": {
+                "paths": list(POPULATION_EXCLUDED_PATHS),
+                "reason": POPULATION_EXCLUDED_REASON,
+                "result": POPULATION_EXCLUDED_RESULT,
+            },
             "frozenAtCandidate": frozen_at_candidate,
             "files": len(population),
             "members": [

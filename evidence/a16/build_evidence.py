@@ -56,8 +56,8 @@ sys.path.insert(0, str(TOOLS))
 import harden as h  # noqa: E402
 import sigstore_bundle as sb  # noqa: E402
 
-BASE_COMMIT = "67187c39ee5b5e6d2f66136829295c44096ddd08"
-BASE_COMMIT_SHORT = "67187c39e"
+BASE_COMMIT = "b26552e21a7465405ad542edeaef7b9104c0298d"
+BASE_COMMIT_SHORT = "b26552e21"
 ITEM = "A16"
 AS_OF = "2026-11-24"
 TOOL_PATH = "forensics/tools/sigstore_bundle.py"
@@ -881,21 +881,33 @@ def candidate_population(commit: str) -> tuple[list[str], list[str]]:
 
     The member's bytes at this tree must still be the candidate's bytes; a
     member that changed or was removed since cannot be frozen at this candidate.
-    The inventory record itself is refused: it cannot contain its own digest.
+    The inventory record itself is excluded by identity: it cannot contain its
+    own digest, so it is never a member and is not part of the declared exclusion.
+    The declared exclusion (``sb.POPULATION_EXCLUDED_PATHS``) is removed from the
+    JSON population and must exist at the candidate, so an exclusion can never
+    hide a record that is missing rather than excluded.
     """
     candidate = _tree_blobs(commit)
     present = _tree_blobs("HEAD")
-    json_paths = sorted(path for path in candidate if path.endswith(".json"))
+    excluded = set(sb.POPULATION_EXCLUDED_PATHS)
+    missing = sorted(excluded - set(candidate))
+    if missing:
+        raise SystemExit(
+            "the declared exclusion names a path that is not in the candidate "
+            f"{commit}: {', '.join(missing)}"
+        )
+    json_paths = sorted(
+        path
+        for path in candidate
+        if path.endswith(".json")
+        and path not in excluded
+        and path != sb.POPULATION_SELF
+    )
     certificate_paths = sorted(
         path for path in candidate if path.endswith(CERTIFICATE_SUFFIXES)
     )
     if not json_paths:
         raise SystemExit(f"the candidate {commit} has no evidence JSON to freeze")
-    if sb.POPULATION_SELF in json_paths:
-        raise SystemExit(
-            f"{sb.POPULATION_SELF} is in the candidate population and cannot be a "
-            "member of its own population"
-        )
     for relative in json_paths + certificate_paths:
         if present.get(relative) != candidate[relative]:
             raise SystemExit(
@@ -939,6 +951,16 @@ def _declared_population(freeze_candidate: str | None) -> dict[str, Any]:
             f"{_shown(record)} declares no frozen population; a "
             "live glob is not a substitute (re-freeze with --freeze-population "
             "CANDIDATE)"
+        )
+    excluded = population.get("excluded")
+    excluded_paths = excluded.get("paths") if isinstance(excluded, dict) else None
+    if not isinstance(excluded_paths, list) or tuple(excluded_paths) != (
+        sb.POPULATION_EXCLUDED_PATHS
+    ):
+        raise SystemExit(
+            f"{_shown(record)} does not declare the closed exclusion "
+            f"{list(sb.POPULATION_EXCLUDED_PATHS)}; a record that drops it cannot "
+            "be reproduced (re-freeze with --freeze-population CANDIDATE)"
         )
     members = population.get("members")
     certificates = document.get("certificatePopulation")
