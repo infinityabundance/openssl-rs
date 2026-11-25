@@ -44,8 +44,8 @@ sys.path.insert(0, str(TOOLS))
 import corrections as cr  # noqa: E402
 import dsse  # noqa: E402
 
-BASE_COMMIT = "ed2143d5ac6c2266dcba60dad65be2572dc4c03f"
-BASE_COMMIT_SHORT = "ed2143d5a"
+BASE_COMMIT = "f45cacbd2ccd3b7804e16cdbc804c2cb9b373060"
+BASE_COMMIT_SHORT = "f45cacbd2"
 ITEM = "A19"
 AS_OF = "2026-11-24"
 

@@ -379,3 +379,57 @@ superseded A19 bytes. Those are the next links, not repairs made here.
 **Retained.** The log is still `SELF_ISSUED` and unauthenticated, with zero
 independent verifications; the signature still proves only bytes unchanged
 since signing.
+
+## 15. Correction (2026-11-25): the identity moves to C20 after the A0 F06/F10 repair
+
+**Cause.** Commit `f45cacbd2ccd` (C20, "A0 F06 and F10: stop presenting functional
+coverage as consumer status") rewrote `evidence/etp7/RECEIPT.md`, which A19
+records as `sourceIdentity.inputs[10]` (`b7b6edef…` → `bbac152d…`). The candidate
+moved to C20 in the same regeneration. `evidence/a7/RECEIPT.md` is unchanged at
+`9adb6775…`, so A7's own event facts are untouched. The records were re-derived
+by the producer; the envelope was not hand-edited.
+
+**Old and new.**
+
+| field | old | new |
+|---|---|---|
+| `sourceIdentity.baseCommit` | `ed2143d5ac6c2266dcba60dad65be2572dc4c03f` | `f45cacbd2ccd3b7804e16cdbc804c2cb9b373060` |
+| `sourceIdentity.baseCommitShort` | `ed2143d5a` | `f45cacbd2` |
+| `sourceIdentity.inputs[10].sha256` (`evidence/etp7/RECEIPT.md`) | `b7b6edefbe8ecd6b85742f38bfb2bb8530a3403e7ecd0d3c58f22e03e74dcf4f` | `bbac152d9235a66d380ce0a0ed2d7dbe572e81c046a80fdacce246e3c4da175b` |
+| `EVENTS.json` | `7df3ca2774ad17b823b995c6ae5ea4b79673f55b1ea4f8b73f3fe08fe305ac63` | `d779168c8786ec9bd735d66a5efc804ddd0f2104937d0fd55256c357c52e479e` |
+| `PROPAGATION.json` | `892be6ef2d394e7724f29563cb993778d844f90349c6325a0f195279e5003278` | `bc476f73e4d6ca9b3bd97b430c59c9dc60be973b43ed9db234060f0402de4dab` |
+| `STATUS.json` | `6c732e50b8b7cdda21477a761c1169c93280c5715c2b0015fe37cea620957a97` | `033880573c9529e6ff281fe5c033a720cdb44e0c4c9de48292e4a7eb327731b9` |
+| `CONTROLS.json` | `039666052b4b8d0591f026a2836df22384d35b2bbbce71e3efb0f7fec6120f79` | `3b24f73b267f2e726e40b34e8edc4447a806ac63c8a239bdbdbb7e1d96cf596c` |
+
+The four records move because each carries `candidate.baseCommit` /
+`candidate.baseCommitShort`; `EVENTS.json` also carries the input digest and
+`logEnvelope.payload` + `signatures[0].sig`
+(`NS623OleyqNP+wG9P9Q7/DNuGnUFBWSXBUEDSodKBoA=` →
+`fbAKaXKeavAncestY6MIVIR+pzmQnyS6do7tvyldVAQ=`).
+
+**Preserved as history (verified byte-equal before and after).**
+
+| subtree | digest (canonical SHA-256) |
+|---|---|
+| `EVENTS.logDigest` | `869dc595721d626848e240ebc237496dbf74156057522a0c070802617ad620fd` |
+| 22 events (and all 22 event signatures, `history`, `authentication`) | `ca2a375090c327b51e420e30a49086653cad5e02ab56f8f208783f595da120ee` |
+| `PROPAGATION.dependents` (14) | `9b9879765ea4d01e7b8a1e72f86db25a8e7648f51f5075cb5d3a6005b1a958cb` |
+| `PROPAGATION.events` | `9eba6f64b9b23ec1b6279339f648d0050a1da73700f9651ed998237f2614de2d` |
+| `CONTROLS.controls` (16) | `70276ef3f6a98d9a62ddbd088b8ec2374b6292832e27bb4a9cea37b056855598` |
+| `STATUS.subjects` | `9eb83a0468082ea370d4177d7e5b46edcf4f8aee47ae7b50d973ecbdb77f12a2` |
+| `A7/sourceIdentity` events | `3dce79e2afa7b4f06c23ffc4fed3a24eba0b75807c296806ba32fab757601cc7` |
+
+`A7_OLD_DIGEST` `f2d6e379…`, `A7_NEW_DIGEST` `2a5a3f86…` and the preservation
+`sha256` `8c00cd7a…` are unchanged event history.
+
+**Signing identity.** Unchanged: the existing A10 test-only HMAC-SHA256 signer,
+keyid `test-only:hmac-sha256:8e10a5a15d233d54`, from the fixed public
+`TEST_ONLY_SEED` in `forensics/tools/dsse.py`. `corrections.py verify` reports
+`code=CR_OK` and `corrections.py propagate` reports `code=CR_OK` (14 dependents,
+14 invalidated, 0 valid).
+
+**Downstream.** A20's `A19.retraction-propagated` obligation (which pinned
+`892be6ef…`) and A11/A16/A21's frozen populations and summaries now name
+superseded A19 bytes. Those are the next links, not repairs made here.
+
+**Retained.** `SELF_ISSUED`, unauthenticated, zero independent verifications.
