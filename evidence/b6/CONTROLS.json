@@ -26,7 +26,7 @@
        "ok": true
       },
       {
-       "digest": "d09400c474bc21a58f01bcbd6e5c55c8fefb9e3f840767a9ec29004d6cf0a586",
+       "digest": "5bd0bd6462b36a4b2b66666f8e13bba0b769d36e52255c7c9c30d1768128a6f8",
        "name": "manifest-digest",
        "ok": true
       },
@@ -88,7 +88,7 @@
       "treeSize": 5,
       "verified": true
      },
-     "manifestDigest": "d09400c474bc21a58f01bcbd6e5c55c8fefb9e3f840767a9ec29004d6cf0a586",
+     "manifestDigest": "5bd0bd6462b36a4b2b66666f8e13bba0b769d36e52255c7c9c30d1768128a6f8",
      "members": 9,
      "state": {
       "state": "WITHDRAWN",
@@ -125,7 +125,7 @@
        "ok": true
       },
       {
-       "digest": "d09400c474bc21a58f01bcbd6e5c55c8fefb9e3f840767a9ec29004d6cf0a586",
+       "digest": "5bd0bd6462b36a4b2b66666f8e13bba0b769d36e52255c7c9c30d1768128a6f8",
        "name": "manifest-digest",
        "ok": true
       },
@@ -187,7 +187,7 @@
       "treeSize": 5,
       "verified": true
      },
-     "manifestDigest": "d09400c474bc21a58f01bcbd6e5c55c8fefb9e3f840767a9ec29004d6cf0a586",
+     "manifestDigest": "5bd0bd6462b36a4b2b66666f8e13bba0b769d36e52255c7c9c30d1768128a6f8",
      "members": 9,
      "state": {
       "state": "WITHDRAWN",
@@ -224,7 +224,7 @@
        "ok": true
       },
       {
-       "digest": "d09400c474bc21a58f01bcbd6e5c55c8fefb9e3f840767a9ec29004d6cf0a586",
+       "digest": "5bd0bd6462b36a4b2b66666f8e13bba0b769d36e52255c7c9c30d1768128a6f8",
        "name": "manifest-digest",
        "ok": true
       },
@@ -286,7 +286,7 @@
       "treeSize": 5,
       "verified": true
      },
-     "manifestDigest": "d09400c474bc21a58f01bcbd6e5c55c8fefb9e3f840767a9ec29004d6cf0a586",
+     "manifestDigest": "5bd0bd6462b36a4b2b66666f8e13bba0b769d36e52255c7c9c30d1768128a6f8",
      "members": 9,
      "state": {
       "state": "WITHDRAWN",
@@ -311,7 +311,7 @@
      "code": "RV_OK",
      "leafHash": "eaf725703719d1bf8d4b038eddc412e8984b4893b2d706c67f0726a127f21d41",
      "leafIndex": 1,
-     "manifestDigest": "d09400c474bc21a58f01bcbd6e5c55c8fefb9e3f840767a9ec29004d6cf0a586",
+     "manifestDigest": "5bd0bd6462b36a4b2b66666f8e13bba0b769d36e52255c7c9c30d1768128a6f8",
      "root": "4b9b97a480f49511bd52f57b68112fdd64d014fbb25bae6aa4cd7f07004946d6",
      "signatureName": "FIXTURE-2 test-only hmac-sha256",
      "subject": "ETP0-CLM-032/verdict",
@@ -398,7 +398,7 @@
    "code": "RV_REFUSED_STATE_CONFLICT",
    "controlOnly": true,
    "fired": true,
-   "message": "two states at version 22 carry different digests (d33ac08f82e8240a4a7bccded925d545fb09a95593d0d2e5edf4023b72a5c945 and 2c95ecd35afbc4d47f7061bf5eb40fcbee9a431f9505272faa61d40de7eaabb4)",
+   "message": "two states at version 22 carry different digests (358c80902f3b845994468c0b03c410d875b5c660c9675af760fc5598bd704710 and f451f878a2f1000ec7a013b184fdf9a3410cb28112ac885f7d80a7992c79bdb3)",
    "mutation": "a second version-22 state with a different asOf, digest recomputed",
    "name": "same-version-conflict",
    "restoration": {
@@ -488,8 +488,8 @@
       "path": "evidence/a19/EVENTS.json",
       "sourceIdentity": {
        "asOf": "2026-11-24",
-       "baseCommit": "ed2143d5ac6c2266dcba60dad65be2572dc4c03f",
-       "baseCommitShort": "ed2143d5a",
+       "baseCommit": "f45cacbd2ccd3b7804e16cdbc804c2cb9b373060",
+       "baseCommitShort": "f45cacbd2",
        "branch": "staging",
        "inputs": [
         {
@@ -534,7 +534,7 @@
         },
         {
          "path": "evidence/etp7/RECEIPT.md",
-         "sha256": "b7b6edefbe8ecd6b85742f38bfb2bb8530a3403e7ecd0d3c58f22e03e74dcf4f"
+         "sha256": "bbac152d9235a66d380ce0a0ed2d7dbe572e81c046a80fdacce246e3c4da175b"
         },
         {
          "path": "docs/ADJUDICATION-RECONCILIATION.md",
@@ -556,7 +556,7 @@
        }
       }
      },
-     "digest": "7ef0f01793b99f2d8726c3c8dad83243e759293fdc39cbb791430ea16f18a3ec",
+     "digest": "94d164f4ce5aa18dcdf5d5c6c54f4f1f3ae88c9ffd15d56559c5f33bfab7aea5",
      "identity": "current-state",
      "model": "b6/archival/1",
      "schema": "openssl-rs/b6/current-state/1",
@@ -694,8 +694,8 @@
       "path": "evidence/a19/EVENTS.json",
       "sourceIdentity": {
        "asOf": "2026-11-24",
-       "baseCommit": "ed2143d5ac6c2266dcba60dad65be2572dc4c03f",
-       "baseCommitShort": "ed2143d5a",
+       "baseCommit": "f45cacbd2ccd3b7804e16cdbc804c2cb9b373060",
+       "baseCommitShort": "f45cacbd2",
        "branch": "staging",
        "inputs": [
         {
@@ -740,7 +740,7 @@
         },
         {
          "path": "evidence/etp7/RECEIPT.md",
-         "sha256": "b7b6edefbe8ecd6b85742f38bfb2bb8530a3403e7ecd0d3c58f22e03e74dcf4f"
+         "sha256": "bbac152d9235a66d380ce0a0ed2d7dbe572e81c046a80fdacce246e3c4da175b"
         },
         {
          "path": "docs/ADJUDICATION-RECONCILIATION.md",
@@ -762,12 +762,12 @@
        }
       }
      },
-     "digest": "2c95ecd35afbc4d47f7061bf5eb40fcbee9a431f9505272faa61d40de7eaabb4",
+     "digest": "f451f878a2f1000ec7a013b184fdf9a3410cb28112ac885f7d80a7992c79bdb3",
      "identity": "current-state",
      "model": "b6/archival/1",
      "previous": {
       "asOf": "2026-11-22T00:00:00Z",
-      "digest": "9ee0eeb4a3beb42cc97cea3d107244be67389d87442156ecb78c839201ab7e69",
+      "digest": "1de32afacef2e6f9784b2cd900ab25e34e2028840099e8a4497ce645859bac68",
       "version": 21
      },
      "schema": "openssl-rs/b6/current-state/1",

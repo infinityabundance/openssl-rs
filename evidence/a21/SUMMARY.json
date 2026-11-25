@@ -6,7 +6,7 @@
     "unmet": 5
   },
   "decision": "DENY",
-  "decisionDigest": "f4aebf28f8e79f0a50704df4f39e9332d670433055d007936c4588af91b3044e",
+  "decisionDigest": "af85267933550ffd0886f8c9c641db308a4a1d1cd1bf1dfb3cfe54ea34720e95",
   "obligations": [
     {
       "id": "A05.populations-admitted",
@@ -52,7 +52,7 @@
     },
     {
       "id": "A19.retraction-propagated",
-      "sourceDigest": "892be6ef2d394e7724f29563cb993778d844f90349c6325a0f195279e5003278",
+      "sourceDigest": "bc476f73e4d6ca9b3bd97b430c59c9dc60be973b43ed9db234060f0402de4dab",
       "sourcePath": "evidence/a19/PROPAGATION.json",
       "state": "MET"
     }
@@ -80,7 +80,7 @@
     },
     {
       "path": "evidence/a19/PROPAGATION.json",
-      "sha256": "892be6ef2d394e7724f29563cb993778d844f90349c6325a0f195279e5003278"
+      "sha256": "bc476f73e4d6ca9b3bd97b430c59c9dc60be973b43ed9db234060f0402de4dab"
     },
     {
       "path": "evidence/a5/ADMISSION.json",

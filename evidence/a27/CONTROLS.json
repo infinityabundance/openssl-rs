@@ -148,7 +148,7 @@
   "sha256": "6271e7a88d5aff90bf864db961d17d13d037f5d751f5bf68333025194f834f8e",
   "tool": {
    "path": "forensics/tools/vertical_slice.py",
-   "sha256": "46da8ddaa7c2410643ec34fa9ed651f2da0f56e9d1bde629d3d29a01733751ac"
+   "sha256": "c097592875d9c6a0092bab36b9ae92b0d7f28be5add109dfea5f1782fa255b21"
   }
  },
  "refusalCodes": [
@@ -163,7 +163,7 @@
  ],
  "schema": "openssl-rs/a27/controls/1",
  "slice": "evidence/a27/SLICE.json",
- "sliceSha256": "9494842c782d766c4c0c91039dc6553aa0c73efe02a323a7d8c65d20d91aeb5e",
+ "sliceSha256": "68b7b6cdd560721a8555bc6b700c6d689cb91b12a0f48cc678b68acf2f1aa608",
  "stopCodes": [
   "VS_STOP_NO_INDEPENDENT_VERIFICATION"
  ]

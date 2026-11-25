@@ -367,3 +367,42 @@ rather than overwriting the history.
 **Gates.** `python3 evidence/a27/build_evidence.py` exits 0 and prints
 `stop=A12 code=VS_STOP_NO_INDEPENDENT_VERIFICATION policy=DENY controls=9/9
 codes=NONE`; `test_vertical_slice` is 51/51 OK.
+
+## 13. Correction (2026-11-25): rebind the slice to C22
+
+**Cause.** A20's `evidence/a20/DECISION.json` was regenerated at
+`8354cf346262` (C22); the counterfactual's digest moved `f4aebf28…` → `af852679…`
+and its candidate `f34e429f…` → `a1c3fa61b…`. The slice's own declared candidate
+moved from `e3bed067c…` to C22, and `forensics/tools/vertical_slice.py` was edited
+only for those two constants. `SLICE.json`, `STOPS.json` and `CONTROLS.json` were
+re-derived by `evidence/a27/build_evidence.py`, not hand-edited; the producer
+reads the working tree and does not inspect git.
+
+**Old and new.**
+
+| field | old | new |
+|---|---|---|
+| `candidate.baseCommit` | `e3bed067cf9a28786952152fb2e55883c6405a22` | `8354cf34626292474b3d28203b8478f69ee1f634` |
+| `candidate.baseCommitShort` | `e3bed067c` | `8354cf346` |
+| `wouldBe.policy.sha256` | `f4aebf28f8e79f0a50704df4f39e9332d670433055d007936c4588af91b3044e` | `af85267933550ffd0886f8c9c641db308a4a1d1cd1bf1dfb3cfe54ea34720e95` |
+| `wouldBe.policy.candidate.commit` | `f34e429f13aa3cc1566e1ecebc185a466765f321` | `a1c3fa61b4c225ea002e321e0ab50937253101e0` |
+| `producedBy.tool.sha256` (`vertical_slice.py`, the constants edit) | `46da8ddaa7c2410643ec34fa9ed651f2da0f56e9d1bde629d3d29a01733751ac` | `c097592875d9c6a0092bab36b9ae92b0d7f28be5add109dfea5f1782fa255b21` |
+| `SLICE.json` | `9494842c782d766c4c0c91039dc6553aa0c73efe02a323a7d8c65d20d91aeb5e` | `68b7b6cdd560721a8555bc6b700c6d689cb91b12a0f48cc678b68acf2f1aa608` |
+| `STOPS.json` | `cf65e0f55ed53c7b1ad0f3f5f65401fbe86e34448f24c5d123735031088e465a` | `b3bcafcbeea169ad35e96d3009df725e7956f57ff41b1076f0cd8ba72524c865` |
+| `CONTROLS.json` | `cb16d928b02be4c07de8b714f9198674001797a07a4c970c0adb4d8ac8e24f2e` | `8690d1fe3cc47c2149a4051e19b3347e7ed38fd5882dc055a5394d9a3fe1f993` |
+
+**Outcome unchanged.** The chain still stops at `A12` with
+`VS_STOP_NO_INDEPENDENT_VERIFICATION`, 0 of 4 envelopes independently verified;
+`counts` is still `stages=17 passed=8 stopped=1 notReached=8`; the artefact
+(`a1-run3-result-2390`, exact `9387bcba07a0`) is identical; the decision is still
+`DENY` with the same five unmet obligations; `trace`, `stop` and `artefact` are
+byte-identical. Only the declared candidate, the tool identity (the two-constant
+edit) and the A20 counterfactual binding moved. The slice does **not** pass A12;
+it stops there.
+
+**History.** The values in §5 and §12 remain the earlier batches' record; §13
+supersedes them by naming both values rather than overwriting the history.
+
+**Gates.** `python3 evidence/a27/build_evidence.py` exits 0 and prints
+`stop=A12 code=VS_STOP_NO_INDEPENDENT_VERIFICATION policy=DENY controls=9/9
+codes=NONE`; `test_vertical_slice` is 51/51 OK.

@@ -54,7 +54,7 @@
  ],
  "replay": {
   "earlierVersion": {
-   "digest": "9ee0eeb4a3beb42cc97cea3d107244be67389d87442156ecb78c839201ab7e69",
+   "digest": "1de32afacef2e6f9784b2cd900ab25e34e2028840099e8a4497ce645859bac68",
    "member": "members/state/current-state-21.json",
    "state": "ACTIVE",
    "version": 21

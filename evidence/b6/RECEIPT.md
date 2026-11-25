@@ -309,6 +309,49 @@ state digests computed over it, and the members that record those digests moved.
 this batch's original values; §10 supersedes them by naming both values rather
 than overwriting the history.
 
+## 11. Correction (2026-11-25): re-derive at C22 after the C21 A19 re-freeze
+
+**Cause.** A19 was re-frozen at `a1c3fa61b4c2` (C21, at candidate
+`f45cacbd2ccd`), moving `sourceIdentity.baseCommit` from `ed2143d5ac6c…` to
+`f45cacbd2ccd…` and its `evidence/etp7/RECEIPT.md` input from `b7b6edef…` to
+`bbac152d…`. `archival.derive_state` embeds `log["sourceIdentity"]` in
+`derivedFrom`, so both state members moved and every record that digests those
+members followed. The producer reads `evidence/a19/EVENTS.json` from the working
+tree and does not inspect git; the records and archive were re-derived, not
+hand-edited.
+
+**Old and new.**
+
+| file / field | old (HEAD before this correction) | new |
+|---|---|---|
+| `ARCHIVE/members/state/current-state-21.json` | `187dd9bcee6570d1fbf75f4c8f7d53c1a6eb11177bd67bfb37b90c15341920ab` | `38caea3607f9151c7f533fdf039bb5b0968929c05c764681753e09fb264bc8ee` |
+| `ARCHIVE/members/state/current-state-22.json` | `dfb56e6dd992d6e0ac08fc8e821b1cb9c620c3e4875e389f707d4c8153a054da` | `3d19787c1cdef88d293c6accb1ff0c5ea38d80bfc843d9fa3b267a6c5d264d21` |
+| `ARCHIVE/MANIFEST.json` | `93b7bd4d0e76d484c47327d3daadd5d0a9d7a0ebd1e02bd741494f8843c9072f` | `f825bbea618d3a3873ace30815717b9c8f5394ec065b57f345680d0c1674e115` |
+| `manifestDigest` | `d09400c474bc21a58f01bcbd6e5c55c8fefb9e3f840767a9ec29004d6cf0a586` | `5bd0bd6462b36a4b2b66666f8e13bba0b769d36e52255c7c9c30d1768128a6f8` |
+| `state.earlier.digest` | `9ee0eeb4a3beb42cc97cea3d107244be67389d87442156ecb78c839201ab7e69` | `1de32afacef2e6f9784b2cd900ab25e34e2028840099e8a4497ce645859bac68` |
+| `state.current.digest` | `2c95ecd35afbc4d47f7061bf5eb40fcbee9a431f9505272faa61d40de7eaabb4` | `f451f878a2f1000ec7a013b184fdf9a3410cb28112ac885f7d80a7992c79bdb3` |
+| `ARCHIVE.json` | `35f34ddfd3a26c075946774b436253492c0981650271f020d7e3af7a8405eee3` | `965ae5b099a7cd5c97a2aec57c9f9e80aca3fe6c989c4bf69d1ed9efee6197ef` |
+| `CURRENT-STATE.json` | `dfb56e6dd992d6e0ac08fc8e821b1cb9c620c3e4875e389f707d4c8153a054da` | `3d19787c1cdef88d293c6accb1ff0c5ea38d80bfc843d9fa3b267a6c5d264d21` |
+| `DEMONSTRATION.json` | `cfce2b8e96badabab1870c8b30cf3dc542e84713af9ab65b22a0d985fbc2a6f7` | `3554db0fb06ea87536d1c660018cbcf6bc211c7d5246cedf619f4814f0f9ec61` |
+| `CONTROLS.json` | `de074a99efda4ab42db9572cb391d8ebcac0c608fdfac420e76bafb06d837300` | `153af2942fb78e5f70c1653c813f3f8962d3da45feea76fd6ece34dbcadb1177` |
+| `FIXTURE-2.json` | `a1552329f10ae6a897dacbff02d658aa85ed6cf2dca819cca6b101dfa251de02` | byte-identical |
+
+**Outcome unchanged.** The state is still version 22, the earlier state still
+version 21, `ETP0-CLM-032/verdict` is still `ACTIVE` then `WITHDRAWN`, all 11
+subject entries and their histories are identical, the inclusion proof is still
+leaf 1 of a size-5 tree with root `4b9b97a4…4946d6`, all 9 reconstruction checks
+pass, and all 15 controls still fire. The log members (checkpoint, inclusion
+proof, leaf list, publication, both statements and the A19 binding) are
+byte-identical. Only `derivedFrom.sourceIdentity`, the state digests computed over
+it and the records that cite those digests moved.
+
+**History.** The digests in §3–§6 and §10 remain the earlier batches' record; §11
+supersedes them by naming both values rather than overwriting the history.
+
+**Gates.** `python3 evidence/b6/build_evidence.py` exits 0 with `version=22
+state=WITHDRAWN leafIndex=1 root=4b9b97a4…4946d6 members=9 checks=9`;
+`test_archival` is 59/59 OK.
+
 **Gates.** `python3 evidence/b6/build_evidence.py` reproduces the committed
 bytes and prints `code=RV_OK b6: version=22 earlier=21 state=WITHDRAWN`;
 `test_archival` is 59/59 OK. The archive is still a fixture derivation (see §7),

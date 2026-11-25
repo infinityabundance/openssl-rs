@@ -50,8 +50,8 @@
   "why": "It has a recorded exact identity (A1), a recorded location rule (A4 L3-md32-update locates the same path, line and symbol), a containing population with identified members (A5 a1-sarif-results, COMPLETE, 4245 distinct), a delta disposition (A7 STILL_PRESENT) and a shard membership at the same run and result index (A8). No stage had to be given a different artefact to make it consume one."
  },
  "candidate": {
-  "baseCommit": "e3bed067cf9a28786952152fb2e55883c6405a22",
-  "baseCommitShort": "e3bed067c",
+  "baseCommit": "8354cf34626292474b3d28203b8478f69ee1f634",
+  "baseCommitShort": "8354cf346",
   "branch": "staging",
   "recordedAt": "2026-11-24"
  },
@@ -275,7 +275,7 @@
   "sha256": "6271e7a88d5aff90bf864db961d17d13d037f5d751f5bf68333025194f834f8e",
   "tool": {
    "path": "forensics/tools/vertical_slice.py",
-   "sha256": "46da8ddaa7c2410643ec34fa9ed651f2da0f56e9d1bde629d3d29a01733751ac"
+   "sha256": "c097592875d9c6a0092bab36b9ae92b0d7f28be5add109dfea5f1782fa255b21"
   }
  },
  "schema": "openssl-rs/a27/slice/1",
@@ -1011,7 +1011,7 @@
     "state": "UNMET"
    },
    "candidate": {
-    "commit": "f34e429f13aa3cc1566e1ecebc185a466765f321",
+    "commit": "a1c3fa61b4c225ea002e321e0ab50937253101e0",
     "producedBy": {
      "identity": "P-CAMPAIGN",
      "locator": "/actions/release/context/evidenceProducer",
@@ -1034,7 +1034,7 @@
    "policySha256": "2575ca0edc5d861baee9668ca647fc04addd06508ec0ad31bfed925ccb0ce15c",
    "policyVersion": 1,
    "record": "evidence/a20/DECISION.json",
-   "sha256": "f4aebf28f8e79f0a50704df4f39e9332d670433055d007936c4588af91b3044e",
+   "sha256": "af85267933550ffd0886f8c9c641db308a4a1d1cd1bf1dfb3cfe54ea34720e95",
    "sourceRecordsMatchCurrentTree": true,
    "sourceRecordsMismatched": [],
    "unknown": [],

@@ -6,8 +6,8 @@
   "path": "evidence/a19/EVENTS.json",
   "sourceIdentity": {
    "asOf": "2026-11-24",
-   "baseCommit": "ed2143d5ac6c2266dcba60dad65be2572dc4c03f",
-   "baseCommitShort": "ed2143d5a",
+   "baseCommit": "f45cacbd2ccd3b7804e16cdbc804c2cb9b373060",
+   "baseCommitShort": "f45cacbd2",
    "branch": "staging",
    "inputs": [
     {
@@ -52,7 +52,7 @@
     },
     {
      "path": "evidence/etp7/RECEIPT.md",
-     "sha256": "b7b6edefbe8ecd6b85742f38bfb2bb8530a3403e7ecd0d3c58f22e03e74dcf4f"
+     "sha256": "bbac152d9235a66d380ce0a0ed2d7dbe572e81c046a80fdacce246e3c4da175b"
     },
     {
      "path": "docs/ADJUDICATION-RECONCILIATION.md",
@@ -74,7 +74,7 @@
    }
   }
  },
- "digest": "9ee0eeb4a3beb42cc97cea3d107244be67389d87442156ecb78c839201ab7e69",
+ "digest": "1de32afacef2e6f9784b2cd900ab25e34e2028840099e8a4497ce645859bac68",
  "identity": "current-state",
  "model": "b6/archival/1",
  "schema": "openssl-rs/b6/current-state/1",

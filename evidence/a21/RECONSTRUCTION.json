@@ -12,7 +12,7 @@
     "unknown": 0,
     "unmet": 5
   },
-  "decisionDigest": "f4aebf28f8e79f0a50704df4f39e9332d670433055d007936c4588af91b3044e",
+  "decisionDigest": "af85267933550ffd0886f8c9c641db308a4a1d1cd1bf1dfb3cfe54ea34720e95",
   "equal": true,
   "obligations": [
     {
@@ -83,7 +83,7 @@
       "id": "A19.retraction-propagated",
       "matches": true,
       "recomputedState": "MET",
-      "sourceDigest": "892be6ef2d394e7724f29563cb993778d844f90349c6325a0f195279e5003278",
+      "sourceDigest": "bc476f73e4d6ca9b3bd97b430c59c9dc60be973b43ed9db234060f0402de4dab",
       "sourcePath": "evidence/a19/PROPAGATION.json",
       "summaryState": "MET"
     }
@@ -113,7 +113,7 @@
     },
     {
       "path": "evidence/a19/PROPAGATION.json",
-      "sha256": "892be6ef2d394e7724f29563cb993778d844f90349c6325a0f195279e5003278"
+      "sha256": "bc476f73e4d6ca9b3bd97b430c59c9dc60be973b43ed9db234060f0402de4dab"
     },
     {
       "path": "evidence/a5/ADMISSION.json",
@@ -134,7 +134,7 @@
     "unknown": 0,
     "unmet": 5
   },
-  "summaryDigest": "e1d3c8a9bb490901ca85533466d73437081fbef9b7aa2194ee2f80c8229b068f",
+  "summaryDigest": "2eeafc3582e7d5f14fd5bc636b924fa89a331ad0761e65028ad5a42c6b1bbba3",
   "unmet": [
     "A06.suppression-member-identities",
     "A12.independent-attestation",
