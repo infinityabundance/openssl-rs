@@ -1,0 +1,429 @@
+{
+  "base_commit": "829483c8121381e0a035f6d0cd08613b2755f7f8",
+  "beyond_frontier_claims": 0,
+  "entries": [
+    {
+      "additional_theorem": "An independently written, machine-checked functional specification for each shipped P-256 kernel, tied to the named standard clause, so specification error is a checked property rather than an assumption.",
+      "assumes": "The functional specification itself is correct. A typo, a wrong constant or a wrong definition is invisible to the proof.",
+      "beyond_frontier": {
+        "added_property": null,
+        "claim": false,
+        "matched_entry": null,
+        "matched_property": null
+      },
+      "classification": "REFERENCE_PROOF",
+      "id": "FG-S2N-A1",
+      "proves": "An instruction sequence satisfies a HOL Light Hoare triple relating it to a functional specification, over the object-code bytes the build produces.",
+      "reference": "s2n-bignum (as transcribed in the programme's section 1.1, read 2026-11-22)",
+      "this_project": {
+        "basis": "No P-256 kernel in this project has a functional specification, a machine-checked correctness theorem or a source-to-binary correspondence. ETP-T5 supplies a differential reference; a differential is not a proof.",
+        "evidence": [
+          "evidence/etp-t5/RESULTS.json",
+          "evidence/etp-t4/SAFETY-SITES.json",
+          "evidence/etp-t3/REFINEMENT.json"
+        ],
+        "proof_artefact": null,
+        "state": "NONE"
+      },
+      "verification": {
+        "settling_method": "Re-read s2n-bignum/SOUNDNESS.md at a pinned commit, record the exact clause and its digest, and record the date it was read.",
+        "state": "UNVERIFIED",
+        "witness": "docs/FORMAL-REFINEMENT-CERTIFICATION.md"
+      }
+    },
+    {
+      "additional_theorem": "The FRC-5 obligation for each kernel: every reachable call site, including FFI and callback reachability, establishes Pre(c), and the postcondition Q is sufficient for the next consumer.",
+      "assumes": "Callers satisfy those preconditions. There is no complete machine-checked link between the public header and the formal statements.",
+      "beyond_frontier": {
+        "added_property": null,
+        "claim": false,
+        "matched_entry": null,
+        "matched_property": null
+      },
+      "classification": "REFERENCE_RESIDUAL_RISK",
+      "id": "FG-S2N-A2",
+      "proves": "Functional correctness of a routine under stated preconditions (aliasing, reduced operands, excluded degenerate points).",
+      "reference": "s2n-bignum (as transcribed in the programme's section 1.1, read 2026-11-22)",
+      "this_project": {
+        "basis": "No P-256 kernel in this project has a functional specification, a machine-checked correctness theorem or a source-to-binary correspondence. ETP-T5 supplies a differential reference; a differential is not a proof.",
+        "evidence": [
+          "evidence/etp-t5/RESULTS.json",
+          "evidence/etp-t4/SAFETY-SITES.json",
+          "evidence/etp-t3/REFINEMENT.json"
+        ],
+        "proof_artefact": null,
+        "state": "NONE"
+      },
+      "verification": {
+        "settling_method": "Re-read s2n-bignum/SOUNDNESS.md at a pinned commit, record the exact clause and its digest, and record the date it was read.",
+        "state": "UNVERIFIED",
+        "witness": "docs/FORMAL-REFINEMENT-CERTIFICATION.md"
+      }
+    },
+    {
+      "additional_theorem": "A relational timing theorem for the exact compiled artefact under a declared leakage model, plus separately measured physical-channel evidence for the declared platform.",
+      "assumes": "Hardware executes those instructions in constant time (Hertzbleed-class and variable-latency instructions are excluded by assumption); DIT/DOITM help where present; power and frequency channels are out of scope.",
+      "beyond_frontier": {
+        "added_property": null,
+        "claim": false,
+        "matched_entry": null,
+        "matched_property": null
+      },
+      "classification": "REFERENCE_ENVIRONMENT_ASSUMPTION",
+      "id": "FG-S2N-A3",
+      "proves": "The instruction sequence and all memory addresses are independent of secret inputs, and no variable-timing microarchitectural event occurs, under the model recorded in SOUNDNESS.md.",
+      "reference": "s2n-bignum (as transcribed in the programme's section 1.1, read 2026-11-22)",
+      "this_project": {
+        "basis": "Bounded instrument evidence exists at named DSOs (dudect, ctgrind, a binary branch audit), and every such result states that it is not a physical guarantee and not a proof about the binary's semantics.",
+        "evidence": [
+          "courts/phase18/timing/RECEIPT-timing-unified.json",
+          "evidence/etp-t7/DUDECT-ETP-T7.json"
+        ],
+        "proof_artefact": null,
+        "state": "BOUNDED_EVIDENCE"
+      },
+      "verification": {
+        "settling_method": "Re-read s2n-bignum/SOUNDNESS.md at a pinned commit, record the exact clause and its digest, and record the date it was read.",
+        "state": "UNVERIFIED",
+        "witness": "docs/FORMAL-REFINEMENT-CERTIFICATION.md"
+      }
+    },
+    {
+      "additional_theorem": "A whole-path memory-safety argument (FRC-2) with per-boundary contracts and a refusal control for each contract class, including transient and stack accesses.",
+      "assumes": "Out-of-bounds reads, transient writes and stack discipline below the stack pointer are not excluded by functional correctness alone; they rely on discipline and external memory checking.",
+      "beyond_frontier": {
+        "added_property": null,
+        "claim": false,
+        "matched_entry": null,
+        "matched_property": null
+      },
+      "classification": "REFERENCE_RESIDUAL_RISK",
+      "id": "FG-S2N-A4",
+      "proves": "The functional Hoare triple constrains the specified memory; frame conditions state what may change.",
+      "reference": "s2n-bignum (as transcribed in the programme's section 1.1, read 2026-11-22)",
+      "this_project": {
+        "basis": "No proof excludes out-of-bounds reads or transient writes. ETP-T4 classifies the unsafe population and records that no site is SAFETY_DISCHARGED; ETP-4 records bounded cleansing and REDC observations.",
+        "evidence": [
+          "evidence/etp-t4/SAFETY-SITES.json",
+          "evidence/etp4/VERIFICATION-RECEIPT.md"
+        ],
+        "proof_artefact": null,
+        "state": "NONE"
+      },
+      "verification": {
+        "settling_method": "Re-read s2n-bignum/SOUNDNESS.md at a pinned commit, record the exact clause and its digest, and record the date it was read.",
+        "state": "UNVERIFIED",
+        "witness": "docs/FORMAL-REFINEMENT-CERTIFICATION.md"
+      }
+    },
+    {
+      "additional_theorem": "An independently validated ISA model, or translation validation against the produced object code, with a stated co-simulation population.",
+      "assumes": "The instruction-set model is correct; co-simulation is a mitigation and is inherently incomplete.",
+      "beyond_frontier": {
+        "added_property": null,
+        "claim": false,
+        "matched_entry": null,
+        "matched_property": null
+      },
+      "classification": "REFERENCE_ENVIRONMENT_ASSUMPTION",
+      "id": "FG-S2N-B1",
+      "proves": "The routine's behaviour under the hand-written instruction-set model.",
+      "reference": "s2n-bignum (as transcribed in the programme's section 1.1, read 2026-11-22)",
+      "this_project": {
+        "basis": "No instruction-set model is used or validated by this project.",
+        "evidence": [
+          "evidence/etp-t6/TCB.json"
+        ],
+        "proof_artefact": null,
+        "state": "NONE"
+      },
+      "verification": {
+        "settling_method": "Re-read s2n-bignum/SOUNDNESS.md at a pinned commit, record the exact clause and its digest, and record the date it was read.",
+        "state": "UNVERIFIED",
+        "witness": "docs/FORMAL-REFINEMENT-CERTIFICATION.md"
+      }
+    },
+    {
+      "additional_theorem": "A check that the shipped bytes are the proved bytes, with the extraction tool content-addressed and controlled (FRC-4).",
+      "assumes": "The loader extracts the intended bytes.",
+      "beyond_frontier": {
+        "added_property": null,
+        "claim": false,
+        "matched_entry": null,
+        "matched_property": null
+      },
+      "classification": "REFERENCE_ENVIRONMENT_ASSUMPTION",
+      "id": "FG-S2N-B2",
+      "proves": "The proof is about the bytes the ELF loader extracts from the object file.",
+      "reference": "s2n-bignum (as transcribed in the programme's section 1.1, read 2026-11-22)",
+      "this_project": {
+        "basis": "No ELF extraction step is part of any proof here; ETP-T6 records the object-code correspondence as absent.",
+        "evidence": [
+          "evidence/etp-t6/CLAIM-MATRIX.json"
+        ],
+        "proof_artefact": null,
+        "state": "NONE"
+      },
+      "verification": {
+        "settling_method": "Re-read s2n-bignum/SOUNDNESS.md at a pinned commit, record the exact clause and its digest, and record the date it was read.",
+        "state": "UNVERIFIED",
+        "witness": "docs/FORMAL-REFINEMENT-CERTIFICATION.md"
+      }
+    },
+    {
+      "additional_theorem": "A threat model that states each excluded mechanism explicitly, so absence of a proof about it is visible (FRC-3).",
+      "assumes": "No caches, interrupts, virtual memory, speculation, privilege levels or physical faults are modelled.",
+      "beyond_frontier": {
+        "added_property": null,
+        "claim": false,
+        "matched_entry": null,
+        "matched_property": null
+      },
+      "classification": "REFERENCE_ENVIRONMENT_ASSUMPTION",
+      "id": "FG-S2N-B3",
+      "proves": "A sequential, user-mode, single-core execution model.",
+      "reference": "s2n-bignum (as transcribed in the programme's section 1.1, read 2026-11-22)",
+      "this_project": {
+        "basis": "No model of any kind is claimed here; timing instruments observe one machine and state their limits.",
+        "evidence": [
+          "evidence/etp-t7/DUDECT-ETP-T7.json"
+        ],
+        "proof_artefact": null,
+        "state": "NONE"
+      },
+      "verification": {
+        "settling_method": "Re-read s2n-bignum/SOUNDNESS.md at a pinned commit, record the exact clause and its digest, and record the date it was read.",
+        "state": "UNVERIFIED",
+        "witness": "docs/FORMAL-REFINEMENT-CERTIFICATION.md"
+      }
+    },
+    {
+      "additional_theorem": "A recorded TCB with each component identified by version and digest, and an independent proof-trace checker where one exists (FRC-7).",
+      "assumes": "The proof kernel and the OCaml runtime are correct and are trusted.",
+      "beyond_frontier": {
+        "added_property": null,
+        "claim": false,
+        "matched_entry": null,
+        "matched_property": null
+      },
+      "classification": "REFERENCE_ENVIRONMENT_ASSUMPTION",
+      "id": "FG-S2N-C1",
+      "proves": "The theorem is checked by the HOL Light kernel running on OCaml.",
+      "reference": "s2n-bignum (as transcribed in the programme's section 1.1, read 2026-11-22)",
+      "this_project": {
+        "basis": "No trusted proof kernel is used by this project.",
+        "evidence": [
+          "evidence/etp-t6/TCB.json"
+        ],
+        "proof_artefact": null,
+        "state": "NONE"
+      },
+      "verification": {
+        "settling_method": "Re-read s2n-bignum/SOUNDNESS.md at a pinned commit, record the exact clause and its digest, and record the date it was read.",
+        "state": "UNVERIFIED",
+        "witness": "docs/FORMAL-REFINEMENT-CERTIFICATION.md"
+      }
+    },
+    {
+      "additional_theorem": "Per-target, per-profile claims with the TCB recorded for each, and no claim inherited across targets (FRC-4).",
+      "assumes": "The deployment environment matches those assumptions.",
+      "beyond_frontier": {
+        "added_property": null,
+        "claim": false,
+        "matched_entry": null,
+        "matched_property": null
+      },
+      "classification": "REFERENCE_ENVIRONMENT_ASSUMPTION",
+      "id": "FG-S2N-D1",
+      "proves": "The proof applies to a 64-bit, little-endian target with alignment checking off and mapped memory.",
+      "reference": "s2n-bignum (as transcribed in the programme's section 1.1, read 2026-11-22)",
+      "this_project": {
+        "basis": "ETP-T6 records one target (x86_64-unknown-linux-gnu) and no cross-target inheritance; this is an identity result, not a correspondence proof.",
+        "evidence": [
+          "evidence/etp-t6/CLAIM-MATRIX.json"
+        ],
+        "proof_artefact": null,
+        "state": "NONE"
+      },
+      "verification": {
+        "settling_method": "Re-read s2n-bignum/SOUNDNESS.md at a pinned commit, record the exact clause and its digest, and record the date it was read.",
+        "state": "UNVERIFIED",
+        "witness": "docs/FORMAL-REFINEMENT-CERTIFICATION.md"
+      }
+    },
+    {
+      "additional_theorem": "A machine-checked signature agreement between the public declaration and the proved routine, closing D2.",
+      "assumes": "The C header and the assembly signature agree; the check is heuristic and not machine-checked.",
+      "beyond_frontier": {
+        "added_property": null,
+        "claim": false,
+        "matched_entry": null,
+        "matched_property": null
+      },
+      "classification": "REFERENCE_RESIDUAL_RISK",
+      "id": "FG-S2N-D2",
+      "proves": "The assembly routine's signature agrees with the C header used by the build.",
+      "reference": "s2n-bignum (as transcribed in the programme's section 1.1, read 2026-11-22)",
+      "this_project": {
+        "basis": "No header/assembly signature agreement is machine-checked; the exported ABI is checked separately at the ABI layer only.",
+        "evidence": [
+          "docs/ABI_POLICY.md",
+          "evidence/etp-t6/CLAIM-MATRIX.json"
+        ],
+        "proof_artefact": null,
+        "state": "NONE"
+      },
+      "verification": {
+        "settling_method": "Re-read s2n-bignum/SOUNDNESS.md at a pinned commit, record the exact clause and its digest, and record the date it was read.",
+        "state": "UNVERIFIED",
+        "witness": "docs/FORMAL-REFINEMENT-CERTIFICATION.md"
+      }
+    },
+    {
+      "additional_theorem": "An end-to-end machine-checked chain from the OpenSSL-compatible API to the cryptographic specification, which is the FRC-5 and FRC-10 campaign, not a single routine proof.",
+      "assumes": "There is no end-to-end machine-checked proof from the C API through assembly to the cryptographic specification; the mlkem-native bridge is manual.",
+      "beyond_frontier": {
+        "added_property": null,
+        "claim": false,
+        "matched_entry": null,
+        "matched_property": null
+      },
+      "classification": "PROJECT_GAP",
+      "id": "FG-S2N-D3",
+      "proves": "Each routine in isolation, from its own specification to its object code.",
+      "reference": "s2n-bignum (as transcribed in the programme's section 1.1, read 2026-11-22)",
+      "this_project": {
+        "basis": "This is also this project's gap: ETP-T3 records no discharged refinement edge, and ETP-T6 records no source-to-binary correspondence.",
+        "evidence": [
+          "evidence/etp-t3/REFINEMENT.json",
+          "evidence/etp-t6/CLAIM-MATRIX.json"
+        ],
+        "proof_artefact": null,
+        "state": "NONE"
+      },
+      "verification": {
+        "settling_method": "Re-read s2n-bignum/SOUNDNESS.md at a pinned commit, record the exact clause and its digest, and record the date it was read.",
+        "state": "UNVERIFIED",
+        "witness": "docs/FORMAL-REFINEMENT-CERTIFICATION.md"
+      }
+    },
+    {
+      "additional_theorem": "A check that a downstream build reproduces the proved instruction bytes, or a proof of the imported source rather than the reference bytes (FRC-4).",
+      "assumes": "Downstream projects that import the assembly and assemble it elsewhere produce the same bytes; this is not checked by the upstream proof.",
+      "beyond_frontier": {
+        "added_property": null,
+        "claim": false,
+        "matched_entry": null,
+        "matched_property": null
+      },
+      "classification": "REFERENCE_ENVIRONMENT_ASSUMPTION",
+      "id": "FG-S2N-REASSEMBLY",
+      "proves": "The proof covers the bytes produced by the reference build of the reference toolchain.",
+      "reference": "s2n-bignum (as transcribed in the programme's section 1.1, read 2026-11-22)",
+      "this_project": {
+        "basis": "No reassembly check exists for this project; nothing is imported as assembly, so the gap is inherited rather than reproduced.",
+        "evidence": [
+          "evidence/etp-t6/TCB.json"
+        ],
+        "proof_artefact": null,
+        "state": "NONE"
+      },
+      "verification": {
+        "settling_method": "Re-read s2n-bignum/SOUNDNESS.md at a pinned commit, record the exact clause and its digest, and record the date it was read.",
+        "state": "UNVERIFIED",
+        "witness": "docs/FORMAL-REFINEMENT-CERTIFICATION.md"
+      }
+    },
+    {
+      "additional_theorem": "Stronger applicable end-to-end correctness and security properties through the complete API, not only the assembly kernels (the programme's 'beyond AWS-LC' requirement).",
+      "assumes": "The C and API layers around those routines, and their composition into an operation, are outside the per-routine proof.",
+      "beyond_frontier": {
+        "added_property": null,
+        "claim": false,
+        "matched_entry": null,
+        "matched_property": null
+      },
+      "classification": "FRONTIER_DIMENSION",
+      "id": "FG-AWSLC-END-TO-END",
+      "proves": "Machine-checked arithmetic, constant-time and memory-safety proofs for the assembly routines AWS-LC uses, on the stated platforms.",
+      "reference": "AWS-LC (programme section 1.1 and 1.4)",
+      "this_project": {
+        "basis": "This project proves no end-to-end correctness or security property through the complete crypto API; only bounded differential and instrument evidence exists.",
+        "evidence": [
+          "evidence/etp-t5/RESULTS.json",
+          "evidence/etp-t3/REFINEMENT.json"
+        ],
+        "proof_artefact": null,
+        "state": "NONE"
+      },
+      "verification": {
+        "settling_method": "Read the AWS-LC published verification statement at a pinned revision and record the exact scope and assumptions it states.",
+        "state": "UNVERIFIED",
+        "witness": "docs/FORMAL-REFINEMENT-CERTIFICATION.md"
+      }
+    },
+    {
+      "additional_theorem": "The shape of the argument -- specification, implementation, binary -- applied to a declared configuration of this crate, not the size of the proof.",
+      "assumes": "A declared configuration, a small trusted kernel and a specification written independently of the implementation.",
+      "beyond_frontier": {
+        "added_property": null,
+        "claim": false,
+        "matched_entry": null,
+        "matched_property": null
+      },
+      "classification": "FRONTIER_DIMENSION",
+      "id": "FG-SEL4-REFINEMENT",
+      "proves": "Refinement from an abstract specification to an implementation, binary correctness connecting the executable to the proof, and confidentiality and integrity theorems for supported configurations.",
+      "reference": "seL4 (programme section 1.2)",
+      "this_project": {
+        "basis": "No refinement, binary-correctness, confidentiality or integrity theorem exists for this project.",
+        "evidence": [
+          "evidence/etp-t3/REFINEMENT.json",
+          "evidence/etp-t6/CLAIM-MATRIX.json"
+        ],
+        "proof_artefact": null,
+        "state": "NONE"
+      },
+      "verification": {
+        "settling_method": "Read the seL4 verification statement for the named release and record which configurations and properties it covers.",
+        "state": "UNVERIFIED",
+        "witness": "docs/FORMAL-REFINEMENT-CERTIFICATION.md"
+      }
+    },
+    {
+      "additional_theorem": "An objective-by-objective matrix with the evidence for each objective, the required independence, and every missing qualification or target-execution item named (FRC-8).",
+      "assumes": "A declared system context and a system safety assessment. Satisfying objectives is not certification, and constant-time behaviour is not worst-case execution time.",
+      "beyond_frontier": {
+        "added_property": null,
+        "claim": false,
+        "matched_entry": null,
+        "matched_property": null
+      },
+      "certification_claimed": false,
+      "classification": "DO_178C_OBJECTIVE",
+      "id": "FG-DO178C-OBJECTIVES",
+      "objective_satisfaction_only": true,
+      "proves": "Objective-based assurance tied to a system's assigned safety level: planning, requirements, architecture, requirements-based verification, structural coverage, robustness, configuration management, quality assurance, tool qualification and formal-methods justification.",
+      "reference": "DO-178C, DO-330 and DO-333 (programme section 1.3)",
+      "this_project": {
+        "basis": "No objective-by-objective matrix for a declared system context exists yet; FRC-8 is open.",
+        "evidence": [
+          "docs/ETP-TODO.md"
+        ],
+        "proof_artefact": null,
+        "state": "NONE"
+      },
+      "verification": {
+        "settling_method": "Read AC 20-115D and the DO-178C objective tables at their published revisions and record the exact objective set for the declared assurance level.",
+        "state": "UNVERIFIED",
+        "witness": "docs/FORMAL-REFINEMENT-CERTIFICATION.md"
+      }
+    }
+  ],
+  "item": "FRC-0 of docs/FRC-TODO.md",
+  "kind": "frontier-gap-register",
+  "programme": "docs/FORMAL-REFINEMENT-CERTIFICATION.md",
+  "recorded_at": "2026-11-25",
+  "schema": "openssl-rs/frc/frontier-gaps/1",
+  "typing_rule": "Every entry is classified and every external claim is UNVERIFIED with a settling method. this_project.state NONE means this project proves nothing for that dimension; BOUNDED_EVIDENCE means bounded observations exist that are not a proof. No entry claims to exceed the frontier."
+}

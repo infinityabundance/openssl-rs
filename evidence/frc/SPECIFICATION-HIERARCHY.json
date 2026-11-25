@@ -1,0 +1,309 @@
+{
+  "base_commit": "829483c8121381e0a035f6d0cd08613b2755f7f8",
+  "discharged_edges": 0,
+  "edges": [
+    {
+      "evidence": [
+        "evidence/etp-t5/RESULTS.json",
+        "evidence/etp-t3/REFINEMENT.json"
+      ],
+      "from": "LVL-L1",
+      "id": "RFE-1",
+      "obligation": "a separately written abstract specification, and a proof that the executable reference refines it",
+      "proof": null,
+      "reason": "ETP-T5 supplies an executable reference written from the normative documents, so the substrate exists, but no separate abstract-specification artefact is defined for it to refine. The obligation is undischarged.",
+      "status": "NONE",
+      "to": "LVL-L2"
+    },
+    {
+      "evidence": [
+        "evidence/etp-t5/RESULTS.json",
+        "evidence/etp4/VERIFICATION-RECEIPT.md"
+      ],
+      "from": "LVL-L2",
+      "id": "RFE-2",
+      "obligation": "a refinement proof from the executable reference to the crate",
+      "proof": null,
+      "reason": "ETP-T5 records 0 differences over 4,326 sampled cases, which is differential evidence and not a refinement proof. The ETP-4 REDC congruence is an internal cross-check.",
+      "status": "NONE",
+      "to": "LVL-L3"
+    },
+    {
+      "evidence": [
+        "evidence/etp-t3/REFINEMENT.json",
+        "docs/ABI_POLICY.md"
+      ],
+      "from": "LVL-L3",
+      "id": "RFE-3",
+      "obligation": "the crate preserves the declared ABI contract",
+      "proof": null,
+      "reason": "symbols, versions and layouts are checked; ownership, error-queue ordering and callback semantics are not established.",
+      "status": "PARTIAL",
+      "to": "LVL-L4"
+    },
+    {
+      "evidence": [
+        "evidence/etp-t6/TCB.json",
+        "evidence/etp-t6/CLAIM-MATRIX.json"
+      ],
+      "from": "LVL-L4",
+      "id": "RFE-4",
+      "obligation": "the machine code preserves the verified source properties",
+      "proof": null,
+      "reason": "ETP-2's byte-identical builds are a build-identity result, not source-to-binary correspondence. No object-code correspondence exists.",
+      "status": "NONE",
+      "to": "LVL-L5"
+    },
+    {
+      "evidence": [
+        "evidence/etp-t6/CLAIM-MATRIX.json",
+        "docs/OPENSSH-COHORT.md"
+      ],
+      "from": "LVL-L5",
+      "id": "RFE-5",
+      "obligation": "the real caller establishes every precondition of the machine-code path",
+      "proof": null,
+      "reason": "bounded consumer closures exist, but none establishes Pre(c) => P, both report safe_compatible false, and the OpenSSH adjudication is NOT ESTABLISHED.",
+      "status": "PARTIAL",
+      "to": "LVL-L6"
+    }
+  ],
+  "item": "FRC-0 of docs/FRC-TODO.md",
+  "kind": "specification-hierarchy",
+  "levels": [
+    {
+      "constrains": "the functional statement a kernel must satisfy",
+      "frc_scope": "the P-256 mathematical object and the field, scalar, group and signing operations stated abstractly, with no representation",
+      "id": "LVL-L1",
+      "implementation_derived": false,
+      "name": "abstract specification",
+      "normative_sources": [
+        {
+          "clause": "Appendix D.1.2.3 (Curve P-256)",
+          "document": "FIPS 186-4",
+          "edition": "FIPS 186-4 (2013)",
+          "verification": {
+            "settling_method": "Read the named clause of the named edition, record its exact text, edition and digest, and the date it was read. This session did not read it; the locator is stated so the reading is checkable.",
+            "state": "UNVERIFIED",
+            "witness": null
+          }
+        },
+        {
+          "clause": "Section 6.4 (ECDSA)",
+          "document": "FIPS 186-4",
+          "edition": "FIPS 186-4 (2013)",
+          "verification": {
+            "settling_method": "Read the named clause of the named edition, record its exact text, edition and digest, and the date it was read. This session did not read it; the locator is stated so the reading is checkable.",
+            "state": "UNVERIFIED",
+            "witness": null
+          }
+        },
+        {
+          "clause": "the P-256 domain-parameter table",
+          "document": "NIST SP 800-186",
+          "edition": "SP 800-186 (2023)",
+          "verification": {
+            "settling_method": "Read the named clause of the named edition, record its exact text, edition and digest, and the date it was read. This session did not read it; the locator is stated so the reading is checkable.",
+            "state": "UNVERIFIED",
+            "witness": null
+          }
+        },
+        {
+          "clause": "Section 2.4 (elliptic curve arithmetic) and Section 4.1 (ECDSA)",
+          "document": "SEC 1",
+          "edition": "SEC 1 version 2.0",
+          "verification": {
+            "settling_method": "Read the named clause of the named edition, record its exact text, edition and digest, and the date it was read. This session did not read it; the locator is stated so the reading is checkable.",
+            "state": "UNVERIFIED",
+            "witness": null
+          }
+        },
+        {
+          "clause": "Section 3.2 (generation of k)",
+          "document": "RFC 6979",
+          "edition": "RFC 6979 (2013)",
+          "verification": {
+            "settling_method": "Read the named clause of the named edition, record its exact text, edition and digest, and the date it was read. This session did not read it; the locator is stated so the reading is checkable.",
+            "state": "UNVERIFIED",
+            "witness": null
+          }
+        }
+      ],
+      "realisation": "no separate artefact exists; the standard clauses are the only statement of this level"
+    },
+    {
+      "constrains": "the reference an implementation is compared with",
+      "frc_scope": "a P-256 implementation readable without the crate, written from the L1 clauses",
+      "id": "LVL-L2",
+      "implementation_derived": false,
+      "name": "executable reference",
+      "normative_sources": [
+        {
+          "clause": "Section 6.4 (ECDSA)",
+          "document": "FIPS 186-4",
+          "edition": "FIPS 186-4 (2013)",
+          "verification": {
+            "settling_method": "Read the named clause of the named edition, record its exact text, edition and digest, and the date it was read. This session did not read it; the locator is stated so the reading is checkable.",
+            "state": "UNVERIFIED",
+            "witness": null
+          }
+        },
+        {
+          "clause": "Section 3.2 (generation of k)",
+          "document": "RFC 6979",
+          "edition": "RFC 6979 (2013)",
+          "verification": {
+            "settling_method": "Read the named clause of the named edition, record its exact text, edition and digest, and the date it was read. This session did not read it; the locator is stated so the reading is checkable.",
+            "state": "UNVERIFIED",
+            "witness": null
+          }
+        }
+      ],
+      "realisation": "forensics/etp5_crypto/ (P-256 field and order arithmetic, affine and Jacobian group law, supplied-nonce ECDSA)"
+    },
+    {
+      "constrains": "must refine LVL-L2 under stated Rust semantics, including every unsafe contract on the path",
+      "frc_scope": "the crate's P-256 field, scalar and signing path",
+      "id": "LVL-L3",
+      "implementation_derived": false,
+      "name": "Rust implementation",
+      "normative_sources": [
+        {
+          "clause": "Section 6.4 (ECDSA)",
+          "document": "FIPS 186-4",
+          "edition": "FIPS 186-4 (2013)",
+          "verification": {
+            "settling_method": "Read the named clause of the named edition, record its exact text, edition and digest, and the date it was read. This session did not read it; the locator is stated so the reading is checkable.",
+            "state": "UNVERIFIED",
+            "witness": null
+          }
+        },
+        {
+          "clause": "the P-256 domain-parameter table",
+          "document": "NIST SP 800-186",
+          "edition": "SP 800-186 (2023)",
+          "verification": {
+            "settling_method": "Read the named clause of the named edition, record its exact text, edition and digest, and the date it was read. This session did not read it; the locator is stated so the reading is checkable.",
+            "state": "UNVERIFIED",
+            "witness": null
+          }
+        }
+      ],
+      "realisation": "the crate implementation; its identifiers are deliberately not named here, because a specification that names them is implementation-shaped"
+    },
+    {
+      "constrains": "the observable behaviour a C caller may rely on",
+      "frc_scope": "the exported symbols, buffer contracts, ownership rules and error behaviour of the P-256 and ECDSA entry points",
+      "id": "LVL-L4",
+      "implementation_derived": false,
+      "name": "ABI contract",
+      "normative_sources": [
+        {
+          "clause": "the SubjectPublicKeyInfo encoding of elliptic-curve public keys",
+          "document": "RFC 5480",
+          "edition": "RFC 5480 (2009)",
+          "verification": {
+            "settling_method": "Read the named clause of the named edition, record its exact text, edition and digest, and the date it was read. This session did not read it; the locator is stated so the reading is checkable.",
+            "state": "UNVERIFIED",
+            "witness": null
+          }
+        },
+        {
+          "clause": "the exported-symbol and ownership rules",
+          "document": "docs/ABI_POLICY.md",
+          "edition": "the tracked revision",
+          "verification": {
+            "settling_method": "Read the named clause of the named edition, record its exact text, edition and digest, and the date it was read. This session did not read it; the locator is stated so the reading is checkable.",
+            "state": "UNVERIFIED",
+            "witness": null
+          }
+        }
+      ],
+      "realisation": "docs/ABI_POLICY.md is this project's declared contract"
+    },
+    {
+      "constrains": "must preserve the LVL-L4 properties, including the timing discipline where one is claimed",
+      "frc_scope": "the instructions and object code the pinned toolchain emits for the P-256 and ECDSA path",
+      "id": "LVL-L5",
+      "implementation_derived": false,
+      "name": "machine code",
+      "normative_sources": [
+        {
+          "clause": "the calling convention and ELF object format",
+          "document": "System V Application Binary Interface, AMD64 Architecture Processor Supplement",
+          "edition": "the revision named in ETP-T6",
+          "verification": {
+            "settling_method": "Read the named clause of the named edition, record its exact text, edition and digest, and the date it was read. This session did not read it; the locator is stated so the reading is checkable.",
+            "state": "UNVERIFIED",
+            "witness": null
+          }
+        },
+        {
+          "clause": "the pinned compiler channel",
+          "document": "rust-toolchain.toml",
+          "edition": "the tracked revision",
+          "verification": {
+            "settling_method": "Read the named clause of the named edition, record its exact text, edition and digest, and the date it was read. This session did not read it; the locator is stated so the reading is checkable.",
+            "state": "UNVERIFIED",
+            "witness": null
+          }
+        }
+      ],
+      "realisation": "the release artefact; ETP-T6 records its TCB and the absence of a correspondence claim"
+    },
+    {
+      "constrains": "the real caller must respect every precondition and boundary",
+      "frc_scope": "the P-256 and ECDSA signing path executed by OpenSSH",
+      "id": "LVL-L6",
+      "implementation_derived": false,
+      "name": "consumer composition",
+      "normative_sources": [
+        {
+          "clause": "the SSH transport layer",
+          "document": "RFC 4253",
+          "edition": "RFC 4253 (2006)",
+          "verification": {
+            "settling_method": "Read the named clause of the named edition, record its exact text, edition and digest, and the date it was read. This session did not read it; the locator is stated so the reading is checkable.",
+            "state": "UNVERIFIED",
+            "witness": null
+          }
+        },
+        {
+          "clause": "the ECDSA host-key and user-authentication algorithms",
+          "document": "RFC 5656",
+          "edition": "RFC 5656 (2009)",
+          "verification": {
+            "settling_method": "Read the named clause of the named edition, record its exact text, edition and digest, and the date it was read. This session did not read it; the locator is stated so the reading is checkable.",
+            "state": "UNVERIFIED",
+            "witness": null
+          }
+        },
+        {
+          "clause": "the consumer cohort rule",
+          "document": "docs/OPENSSH-COHORT.md",
+          "edition": "the tracked revision",
+          "verification": {
+            "settling_method": "Read the named clause of the named edition, record its exact text, edition and digest, and the date it was read. This session did not read it; the locator is stated so the reading is checkable.",
+            "state": "UNVERIFIED",
+            "witness": null
+          }
+        }
+      ],
+      "realisation": "docs/OPENSSH-COHORT.md is the declared consumer cohort"
+    }
+  ],
+  "recorded_at": "2026-11-25",
+  "schema": "openssl-rs/frc/specification-hierarchy/1",
+  "status_vocabulary": [
+    "NONE",
+    "PARTIAL",
+    "NOT_ESTABLISHED",
+    "DISCHARGED"
+  ],
+  "target": {
+    "name": "P-256 field and scalar arithmetic",
+    "not_in_scope": "key generation, verification-only paths, other curves, TLS record protection and every non-arithmetic concern",
+    "scope": "the prime field of the P-256 base point, the scalar field modulo the group order, point arithmetic, scalar multiplication and ECDSA signing with a deterministic nonce"
+  },
+  "typing_rule": "The level identifiers are the ETP-T3 refinement levels; FRC-0 instantiates them for P-256 rather than inventing a second taxonomy. The edge identifiers and statuses are the recorded ETP-T3 edge statuses and are checked against that record. No edge is DISCHARGED."
+}

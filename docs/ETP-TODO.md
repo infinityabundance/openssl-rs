@@ -337,3 +337,16 @@ assurance track, not an interleaved one, because its frontier-gap register and
 specification hierarchy consume their outputs. The FRC queue therefore starts
 empty of execution and is picked up when sections D, E, F and J are complete.
 The curl consumer remains the final consumer item.
+
+**FRC-0 status (2026-11-25, base `829483c8`).** The FRC-0 registers exist:
+`evidence/frc/FRONTIER-GAPS.json` (15 classified frontier entries),
+`docs/SPECIFICATION-HIERARCHY.md` with its machine projection
+`evidence/frc/SPECIFICATION-HIERARCHY.json` (the ETP-T3 levels instantiated for
+P-256), and `forensics/frc/TOOLS.json` (15 candidate tools, 0 admitted). They
+cite ETP-T3, ETP-T4, ETP-T5, ETP-T6 and ETP-T7 evidence and **upgrade no ETP
+verdict**: the refinement edges remain the three `NONE` and two `PARTIAL` that
+ETP-T3 records, `this_project.state` is `NONE` for 14 of the 15 frontier
+dimensions, and no unsafe site, hazard barrier, consumer family or claim changes
+state. They supply evidence a verdict may cite; they do not supply a verdict.
+Every external anchor and every untested tool is recorded as `UNVERIFIED` with a
+named settling method, and no admission test was run.

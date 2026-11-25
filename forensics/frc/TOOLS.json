@@ -1,0 +1,362 @@
+{
+  "admission_rule": "Admission requires a pinned version and digest, the theorem class it is entitled to establish, its TCB, a positive and a negative control, and the rustc range it actually supports. A tool that was not tested is refused, not admitted by default. No tool is admitted in this record.",
+  "base_commit": "829483c8121381e0a035f6d0cd08613b2755f7f8",
+  "item": "FRC-0 of docs/FRC-TODO.md",
+  "kind": "tool-admission-register",
+  "pinned_toolchain": {
+    "channel": "1.98.1",
+    "rule": "A tool that cannot process the pinned compiler is not admitted, and this is not a reason to change the pinned compiler without a separate decision.",
+    "source": "rust-toolchain.toml"
+  },
+  "recorded_at": "2026-11-25",
+  "schema": "openssl-rs/frc/tool-admission/1",
+  "selection": {
+    "Rust source verification": [
+      "Verus",
+      "Kani",
+      "Creusot",
+      "Aeneas",
+      "Lean",
+      "Rocq (Coq)"
+    ],
+    "cryptographic specification and symbolic equivalence": [
+      "Cryptol",
+      "SAW"
+    ],
+    "independent kernel checking": [
+      "Candle",
+      "Proof-trace checkers"
+    ],
+    "machine-code proof": [
+      "HOL Light",
+      "Isabelle/HOL",
+      "Translation validation"
+    ]
+  },
+  "tools": [
+    {
+      "admission": "REFUSED",
+      "digests": [
+        {
+          "path": "/usr/local/cargo/bin/kani",
+          "recorded_in": "evidence/etp4/VERIFICATION-RECEIPT.md",
+          "sha256": "1bbdab14d231b24474e7ccbc306d619cb4205601ac7db71eb9f3cd4bbe364ca0"
+        },
+        {
+          "path": "/usr/local/cargo/bin/cargo-kani",
+          "recorded_in": "evidence/etp4/VERIFICATION-RECEIPT.md",
+          "sha256": "a262fbecf63abb280c87bbe5cb772b24786f58cb0dc2b0cce148c16a0214dcf6"
+        }
+      ],
+      "name": "Kani",
+      "negative_control": {
+        "command": "kani --harness admission_negative_must_fail",
+        "observed": "exit 1, VERIFICATION:- FAILED, Status: FAILURE at the assertion"
+      },
+      "pinned_version": "0.68.0",
+      "positive_control": {
+        "command": "kani --harness admission_positive",
+        "observed": "exit 0, VERIFICATION:- SUCCESSFUL, 1 successfully verified harness"
+      },
+      "purpose": "Rust source verification (bounded model checking)",
+      "refusal_reason": "It does not support the pinned rustc 1.98.1: it runs on its bundled nightly-2026-08-21 (rustc 1.100.0-nightly), so a Kani result describes a different compilation unit from the pinned candidate. The programme forbids citing it for the binary.",
+      "source": "evidence/etp4/VERIFICATION-RECEIPT.md",
+      "supported_rustc": {
+        "pinned": "1.98.1",
+        "supported": "nightly-2026-08-21 / rustc 1.100.0-nightly",
+        "supports_pinned": false
+      },
+      "tcb": [
+        "Kani 0.68.0 frontend",
+        "CBMC 6.11.0 backend",
+        "bundled nightly-2026-08-21 (rustc 1.100.0-nightly)",
+        "the harness and its declared bounds"
+      ],
+      "theorem_class": "bounded model checking of a Rust harness under declared unwind and size bounds; a SUCCESSFUL result is a theorem about that harness and those bounds, not a universal statement",
+      "verification": {
+        "settling_method": "Re-run the recorded positive and negative controls in the court if a Kani release supports the pinned toolchain; until then it is admitted for nothing.",
+        "state": "RECORDED_BY_THIS_PROJECT",
+        "witness": "evidence/etp4/VERIFICATION-RECEIPT.md"
+      }
+    },
+    {
+      "admission": "REFUSED",
+      "digests": [
+        {
+          "path": "/usr/bin/z3",
+          "recorded_in": "evidence/etp4/VERIFICATION-RECEIPT.md",
+          "sha256": "5def71f04f8df16e633c084f611a7cd9fbe633cd87d5016e980ee18949e769b5"
+        }
+      ],
+      "name": "z3",
+      "negative_control": null,
+      "pinned_version": "4.8.12",
+      "positive_control": null,
+      "purpose": "cryptographic specification and symbolic equivalence (SMT backend)",
+      "refusal_reason": "It has no Rust front-end and no verified encoding of the crate's semantics was built, so it can establish nothing about the crate by itself. ETP-4 admitted it for nothing.",
+      "source": "evidence/etp4/VERIFICATION-RECEIPT.md",
+      "supported_rustc": {
+        "pinned": "1.98.1",
+        "supported": "(no Rust front-end)",
+        "supports_pinned": false
+      },
+      "tcb": [
+        "Z3 4.8.12",
+        "the encoding, which does not exist"
+      ],
+      "theorem_class": "SMT decision procedure over an externally supplied encoding; it has no Rust semantics of its own",
+      "verification": {
+        "settling_method": "Add a separately verified encoding of the property and re-run; the solver alone remains unadmitted for Rust claims.",
+        "state": "RECORDED_BY_THIS_PROJECT",
+        "witness": "evidence/etp4/VERIFICATION-RECEIPT.md"
+      }
+    },
+    {
+      "admission": "REFUSED",
+      "digests": [],
+      "name": "SAW",
+      "negative_control": null,
+      "pinned_version": null,
+      "positive_control": null,
+      "purpose": "cryptographic specification and symbolic equivalence",
+      "refusal_reason": "The reported SAW 1.5 support for Rust MIR beyond experimental status, and its supported rustc range, were not read, and no admission test was run. The programme records the claim as UNVERIFIED. A tool that cannot process the pinned 1.98.1 is not admitted.",
+      "source": "docs/FORMAL-REFINEMENT-CERTIFICATION.md",
+      "supported_rustc": null,
+      "tcb": [],
+      "theorem_class": "symbolic execution and equivalence checking over LLVM or MIR against a Cryptol specification",
+      "verification": {
+        "settling_method": "Read the SAW 1.5 release notes at a pinned version, record the supported rustc range and digest, and run a positive and a negative admission control against rustc 1.98.1 in the court.",
+        "state": "UNVERIFIED",
+        "witness": "docs/FORMAL-REFINEMENT-CERTIFICATION.md"
+      }
+    },
+    {
+      "admission": "REFUSED",
+      "digests": [],
+      "name": "Verus",
+      "negative_control": null,
+      "pinned_version": null,
+      "positive_control": null,
+      "purpose": "Rust source verification",
+      "refusal_reason": "not installed in the pinned environment and no admission test was run in this session, so nothing about it was measured; denial by default",
+      "source": "docs/ETP-TODO.md",
+      "supported_rustc": null,
+      "tcb": [],
+      "theorem_class": "deductive verification of Rust source with machine-checked preconditions and postconditions",
+      "verification": {
+        "settling_method": "Install the tool at a pinned version, record its digest and TCB, read its supported rustc range, and run a positive control (a true theorem it proves) and a negative control (a false near-miss it refuses) against the pinned 1.98.1 in the court.",
+        "state": "UNVERIFIED",
+        "witness": "docs/FORMAL-REFINEMENT-CERTIFICATION.md"
+      }
+    },
+    {
+      "admission": "REFUSED",
+      "digests": [],
+      "name": "Creusot",
+      "negative_control": null,
+      "pinned_version": null,
+      "positive_control": null,
+      "purpose": "Rust source verification",
+      "refusal_reason": "not installed in the pinned environment and no admission test was run in this session, so nothing about it was measured; denial by default",
+      "source": "docs/ETP-TODO.md",
+      "supported_rustc": null,
+      "tcb": [],
+      "theorem_class": "deductive verification by translation to Why3",
+      "verification": {
+        "settling_method": "Install the tool at a pinned version, record its digest and TCB, read its supported rustc range, and run a positive control (a true theorem it proves) and a negative control (a false near-miss it refuses) against the pinned 1.98.1 in the court.",
+        "state": "UNVERIFIED",
+        "witness": "docs/FORMAL-REFINEMENT-CERTIFICATION.md"
+      }
+    },
+    {
+      "admission": "REFUSED",
+      "digests": [],
+      "name": "Aeneas",
+      "negative_control": null,
+      "pinned_version": null,
+      "positive_control": null,
+      "purpose": "Rust source verification",
+      "refusal_reason": "not installed in the pinned environment and no admission test was run in this session, so nothing about it was measured; denial by default",
+      "source": "docs/ETP-TODO.md",
+      "supported_rustc": null,
+      "tcb": [],
+      "theorem_class": "functional translation of Rust to a proof assistant's model",
+      "verification": {
+        "settling_method": "Install the tool at a pinned version, record its digest and TCB, read its supported rustc range, and run a positive control (a true theorem it proves) and a negative control (a false near-miss it refuses) against the pinned 1.98.1 in the court.",
+        "state": "UNVERIFIED",
+        "witness": "docs/FORMAL-REFINEMENT-CERTIFICATION.md"
+      }
+    },
+    {
+      "admission": "REFUSED",
+      "digests": [],
+      "name": "Charon",
+      "negative_control": null,
+      "pinned_version": null,
+      "positive_control": null,
+      "purpose": "Rust source verification (Aeneas frontend)",
+      "refusal_reason": "not installed in the pinned environment and no admission test was run in this session, so nothing about it was measured; denial by default",
+      "source": "docs/ETP-TODO.md",
+      "supported_rustc": null,
+      "tcb": [],
+      "theorem_class": "extraction of a Rust program into Aeneas' intermediate representation",
+      "verification": {
+        "settling_method": "Install the tool at a pinned version, record its digest and TCB, read its supported rustc range, and run a positive control (a true theorem it proves) and a negative control (a false near-miss it refuses) against the pinned 1.98.1 in the court.",
+        "state": "UNVERIFIED",
+        "witness": "docs/FORMAL-REFINEMENT-CERTIFICATION.md"
+      }
+    },
+    {
+      "admission": "REFUSED",
+      "digests": [],
+      "name": "Lean",
+      "negative_control": null,
+      "pinned_version": null,
+      "positive_control": null,
+      "purpose": "Rust source verification and mathematical formalisation",
+      "refusal_reason": "not installed in the pinned environment and no admission test was run in this session, so nothing about it was measured; denial by default",
+      "source": "docs/ETP-TODO.md",
+      "supported_rustc": null,
+      "tcb": [],
+      "theorem_class": "dependent type theory with a small trusted kernel; a proof is about the formalised model",
+      "verification": {
+        "settling_method": "Install the tool at a pinned version, record its digest and TCB, read its supported rustc range, and run a positive control (a true theorem it proves) and a negative control (a false near-miss it refuses) against the pinned 1.98.1 in the court.",
+        "state": "UNVERIFIED",
+        "witness": "docs/FORMAL-REFINEMENT-CERTIFICATION.md"
+      }
+    },
+    {
+      "admission": "REFUSED",
+      "digests": [],
+      "name": "Rocq (Coq)",
+      "negative_control": null,
+      "pinned_version": null,
+      "positive_control": null,
+      "purpose": "Rust source verification and mathematical formalisation",
+      "refusal_reason": "not installed in the pinned environment and no admission test was run in this session, so nothing about it was measured; denial by default",
+      "source": "docs/ETP-TODO.md",
+      "supported_rustc": null,
+      "tcb": [],
+      "theorem_class": "dependent type theory with a small trusted kernel; a proof is about the formalised model",
+      "verification": {
+        "settling_method": "Install the tool at a pinned version, record its digest and TCB, read its supported rustc range, and run a positive control (a true theorem it proves) and a negative control (a false near-miss it refuses) against the pinned 1.98.1 in the court.",
+        "state": "UNVERIFIED",
+        "witness": "docs/FORMAL-REFINEMENT-CERTIFICATION.md"
+      }
+    },
+    {
+      "admission": "REFUSED",
+      "digests": [],
+      "name": "Cryptol",
+      "negative_control": null,
+      "pinned_version": null,
+      "positive_control": null,
+      "purpose": "cryptographic specification and symbolic equivalence",
+      "refusal_reason": "not installed in the pinned environment and no admission test was run in this session, so nothing about it was measured; denial by default",
+      "source": "docs/ETP-TODO.md",
+      "supported_rustc": null,
+      "tcb": [],
+      "theorem_class": "an executable specification language with a symbolic evaluator; it specifies, it does not prove the implementation",
+      "verification": {
+        "settling_method": "Install the tool at a pinned version, record its digest and TCB, read its supported rustc range, and run a positive control (a true theorem it proves) and a negative control (a false near-miss it refuses) against the pinned 1.98.1 in the court.",
+        "state": "UNVERIFIED",
+        "witness": "docs/FORMAL-REFINEMENT-CERTIFICATION.md"
+      }
+    },
+    {
+      "admission": "REFUSED",
+      "digests": [],
+      "name": "HOL Light",
+      "negative_control": null,
+      "pinned_version": null,
+      "positive_control": null,
+      "purpose": "machine-code proof",
+      "refusal_reason": "not installed in the pinned environment and no admission test was run in this session, so nothing about it was measured; denial by default",
+      "source": "docs/ETP-TODO.md",
+      "supported_rustc": null,
+      "tcb": [],
+      "theorem_class": "a Hoare triple over an instruction sequence checked by a small LCF kernel; it says nothing about whether the model matches the hardware",
+      "verification": {
+        "settling_method": "Install the tool at a pinned version, record its digest and TCB, read its supported rustc range, and run a positive control (a true theorem it proves) and a negative control (a false near-miss it refuses) against the pinned 1.98.1 in the court.",
+        "state": "UNVERIFIED",
+        "witness": "docs/FORMAL-REFINEMENT-CERTIFICATION.md"
+      }
+    },
+    {
+      "admission": "REFUSED",
+      "digests": [],
+      "name": "Isabelle/HOL",
+      "negative_control": null,
+      "pinned_version": null,
+      "positive_control": null,
+      "purpose": "machine-code proof",
+      "refusal_reason": "not installed in the pinned environment and no admission test was run in this session, so nothing about it was measured; denial by default",
+      "source": "docs/ETP-TODO.md",
+      "supported_rustc": null,
+      "tcb": [],
+      "theorem_class": "higher-order logic with a small trusted kernel; a proof is about the formalised model",
+      "verification": {
+        "settling_method": "Install the tool at a pinned version, record its digest and TCB, read its supported rustc range, and run a positive control (a true theorem it proves) and a negative control (a false near-miss it refuses) against the pinned 1.98.1 in the court.",
+        "state": "UNVERIFIED",
+        "witness": "docs/FORMAL-REFINEMENT-CERTIFICATION.md"
+      }
+    },
+    {
+      "admission": "REFUSED",
+      "digests": [],
+      "name": "Translation validation",
+      "negative_control": null,
+      "pinned_version": null,
+      "positive_control": null,
+      "purpose": "machine-code proof",
+      "refusal_reason": "not installed in the pinned environment and no admission test was run in this session, so nothing about it was measured; denial by default",
+      "source": "docs/ETP-TODO.md",
+      "supported_rustc": null,
+      "tcb": [],
+      "theorem_class": "a per-run check that the produced code preserves the source semantics; it is a mechanism, not a tool, and no implementation was selected",
+      "verification": {
+        "settling_method": "Install the tool at a pinned version, record its digest and TCB, read its supported rustc range, and run a positive control (a true theorem it proves) and a negative control (a false near-miss it refuses) against the pinned 1.98.1 in the court.",
+        "state": "UNVERIFIED",
+        "witness": "docs/FORMAL-REFINEMENT-CERTIFICATION.md"
+      }
+    },
+    {
+      "admission": "REFUSED",
+      "digests": [],
+      "name": "Candle",
+      "negative_control": null,
+      "pinned_version": null,
+      "positive_control": null,
+      "purpose": "independent kernel checking",
+      "refusal_reason": "not installed in the pinned environment and no admission test was run in this session, so nothing about it was measured; denial by default",
+      "source": "docs/ETP-TODO.md",
+      "supported_rustc": null,
+      "tcb": [],
+      "theorem_class": "an independent HOL Light proof-trace checker; it checks a proof, not the property's relevance",
+      "verification": {
+        "settling_method": "Install the tool at a pinned version, record its digest and TCB, read its supported rustc range, and run a positive control (a true theorem it proves) and a negative control (a false near-miss it refuses) against the pinned 1.98.1 in the court.",
+        "state": "UNVERIFIED",
+        "witness": "docs/FORMAL-REFINEMENT-CERTIFICATION.md"
+      }
+    },
+    {
+      "admission": "REFUSED",
+      "digests": [],
+      "name": "Proof-trace checkers",
+      "negative_control": null,
+      "pinned_version": null,
+      "positive_control": null,
+      "purpose": "independent kernel checking",
+      "refusal_reason": "not installed in the pinned environment and no admission test was run in this session, so nothing about it was measured; denial by default",
+      "source": "docs/ETP-TODO.md",
+      "supported_rustc": null,
+      "tcb": [],
+      "theorem_class": "independent re-checking of a proof trace against a small kernel",
+      "verification": {
+        "settling_method": "Install the tool at a pinned version, record its digest and TCB, read its supported rustc range, and run a positive control (a true theorem it proves) and a negative control (a false near-miss it refuses) against the pinned 1.98.1 in the court.",
+        "state": "UNVERIFIED",
+        "witness": "docs/FORMAL-REFINEMENT-CERTIFICATION.md"
+      }
+    }
+  ]
+}
