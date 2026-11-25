@@ -1,7 +1,7 @@
 {
   "action": "release",
   "candidate": {
-    "commit": "58aeb2ee01000638cc545e4cad7c9ec3b5ff9672",
+    "commit": "f34e429f13aa3cc1566e1ecebc185a466765f321",
     "producedBy": {
       "identity": "P-CAMPAIGN",
       "locator": "/actions/release/context/evidenceProducer",
@@ -250,7 +250,7 @@
         "unevaluable": 0,
         "vacuous": false
       },
-      "recordSha256": "982054f9fb76777e6672137006c0b9388bc0d8c0245eda5638859cdd3d6d78f3",
+      "recordSha256": "892be6ef2d394e7724f29563cb993778d844f90349c6325a0f195279e5003278",
       "required": true,
       "source": {
         "locator": "/events",
@@ -271,7 +271,7 @@
     "A17.forward-freeze-closed",
     "A19.retraction-propagated"
   ],
-  "pinDigest": "68f4618f0e0dd13c080435f69a801e3d751bdeed1f895d89818ee683071aa0ba",
+  "pinDigest": "a0dd033f67a8a45665bee0569ae728c9c00e975bd3ba2d7e9a1169ebdbb0fa2f",
   "policyDigest": "a3fcce8f195216c714f7d7cca228ee4cbca001d986b8104b6d168ee9152afacf",
   "policyId": "release-policy",
   "policyVersion": 1,

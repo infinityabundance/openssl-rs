@@ -280,3 +280,53 @@ No other path was modified. `docs/ETP-TODO.md` differs in exactly one row (A20),
 and `git diff --stat` reports one insertion and one deletion for that file; the
 gate change is 125 added lines and one replaced docstring line, and its test file
 adds 42 lines.
+
+## 13. Correction (2026-11-25): rebind the decision to C8 after the A19 re-freeze
+
+**Cause.** A19 was re-frozen at `f34e429f13aa` (C8) because its
+`evidence/a7/RECEIPT.md` input moved; that re-freeze also moved
+`evidence/a19/PROPAGATION.json` from `982054f9…` to `892be6ef…`. The producer
+records each obligation's source digest, so `A19.retraction-propagated` had to be
+rebound; the candidate moved to C8 in the same regeneration. The records were
+re-derived by the producer, not hand-edited.
+
+**Old and new.**
+
+| field | old | new |
+|---|---|---|
+| `candidate.commit` (`DECISION.json`, `POLICY-PIN.json`) | `58aeb2ee01000638cc545e4cad7c9ec3b5ff9672` | `f34e429f13aa3cc1566e1ecebc185a466765f321` |
+| `DECISION.obligations[A19.retraction-propagated].recordSha256` | `982054f9fb76777e6672137006c0b9388bc0d8c0245eda5638859cdd3d6d78f3` | `892be6ef2d394e7724f29563cb993778d844f90349c6325a0f195279e5003278` |
+| `DECISION.pinDigest` | `68f4618f0e0dd13c080435f69a801e3d751bdeed1f895d89818ee683071aa0ba` | `a0dd033f67a8a45665bee0569ae728c9c00e975bd3ba2d7e9a1169ebdbb0fa2f` |
+| `POLICY-PIN.json` | `4dead25e470149e3e22f09e3a2e1e786eabfb4d8ff8f6237fce1b8fe8b4c5553` | `a4e6e5268080ec0603a48ca777b1a5dd1261540d5a270e8d6caa72ca0fd3d58e` |
+| `DECISION.json` | `7f5a3cb88972ecfe7506173ee25125b9be513f74c7ccf6ed801fe73076f40495` | `f4aebf28f8e79f0a50704df4f39e9332d670433055d007936c4588af91b3044e` |
+| `POLICY.json` | `2575ca0e…` | byte-identical |
+| `CONTROLS.json` | `e310ea2b…` | byte-identical |
+
+**Outcome unchanged.** The decision is still `DENY`, `codes=NONE`,
+`met=3 unmet=5 unknown=0 notApplicable=0`, with the same unmet set
+(`A06`, `A12`, `A14`, `A15`, `A17`); every obligation's `state`, `observed` block
+and `detail` is identical. `POLICY.json` is byte-identical, so no obligation was
+added, removed, softened or re-predicated, and no decision was made more
+permissive. The only changed leaves in `DECISION.json` are `candidate.commit`,
+the one `recordSha256` and `pinDigest`.
+
+**Preserved as history.** The record digests in §2 and the candidate
+`58aeb2ee…` remain the batch's original record; §13 supersedes them by naming
+the old and new values rather than overwriting the history. The prior
+`recordSha256` `982054f9…` and prior `pinDigest` `68f4618f…` are recorded above.
+
+**Gates.** `python3 evidence/a20/build_evidence.py` reproduces the committed
+bytes and prints `decision=DENY codes=NONE met=3 unmet=5 unknown=0
+notApplicable=0 candidate=f34e429f1`; `policy_engine.py evaluate` exits 1 (DENY),
+`verify-pin` and `verify-decision` exit 0 with `code=PE_OK`;
+`test_policy_engine` is 40/40 OK. `test_vertical_slice` clears
+`test_the_policy_names_the_same_source_records` and still fails only the
+committed-slice comparison on the A7 `baselinesSha256` (and the A20 candidate and
+decision digest that A27 will bind). `test_corrections` stays 51/51 OK;
+`test_harden` remains red on the A11 frozen population. `spec_guard.py check` and
+`docs_consistency.py` exit 0.
+
+**Downstream.** `evidence/a21/SUMMARY.json` cites this `DECISION.json` digest
+(`7f5a3cb8…`) and the old A19 `PROPAGATION.json` digest; `docs/VERIFICATION-SUMMARIES.md`
+and `docs/VERTICAL-SLICE.md` quote them, and A11/A16's frozen populations name
+`7f5a3cb8…`. Those are the next links, not repairs made here.
