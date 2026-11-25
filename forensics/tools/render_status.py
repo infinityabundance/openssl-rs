@@ -149,11 +149,19 @@ def _runtime_functional() -> dict | None:
 
     reuse_block = body.get("evidence_reuse") or {}
     atlas_identity = (body.get("candidate_identity") or {}).get("libcrypto_so_3_sha256")
+    campaign_consumers = (load(CAMPAIGN_STATUS) or {}).get("consumers") or {}
     figures: dict[str, object] = {
         "families": counts.get("p1000"),
         "candidate": candidate,
         "authority": authority,
         "candidate_identity": atlas_identity,
+        "consumers": {
+            "safe_compatible": campaign_consumers.get("safe_compatible"),
+            "families_total": campaign_consumers.get("families_total"),
+            "risk_accepted": campaign_consumers.get("risk_accepted"),
+            "risk_accepted_families":
+                campaign_consumers.get("risk_accepted_families") or [],
+        },
     }
     if membership and len(levels) == len(membership):
         figures["cohort"] = {
@@ -181,6 +189,27 @@ def _runtime_functional() -> dict | None:
 def _identity_short(digest: object) -> str:
     """The 8-character digest prefix used to name an identity in prose."""
     return f"`{digest[:8]}\u2026`" if isinstance(digest, str) and digest else "an unrecorded identity"
+
+
+def _consumer_figure_clause(consumers: dict) -> str:
+    """The committed consumer figure, read from the campaign claim record.
+
+    A `33/33` at `L7-functional` is a functional-level count. The section 7
+    consumer counter is a different measure and is read from
+    `CAMPAIGN-STATUS.json` (`consumers`), never inferred from the atlas.
+    """
+    total = consumers.get("families_total")
+    safe = consumers.get("safe_compatible")
+    risk = consumers.get("risk_accepted") or 0
+    names = ", ".join(f"`{n}`" for n in consumers.get("risk_accepted_families") or [])
+    label = "family" if risk == 1 else "families"
+    clause = (f"The cohort's committed consumer figure is {safe}/{total} "
+              "`SAFE_COMPATIBLE`")
+    if risk:
+        clause += f" with {risk} risk-accepted {label}" + (f" ({names})" if names else "")
+    clause += ("; a `33/33` at `L7-functional` is a functional-level count, not a "
+               "`SAFE_COMPATIBLE` count (`ETP0-CLM-032` `SUPERSEDED`).")
+    return clause
 
 
 def _downstream_sentence(figures: dict | None, frozen: tuple[int, int]) -> str:
@@ -218,10 +247,13 @@ def _downstream_sentence(figures: dict | None, frozen: tuple[int, int]) -> str:
                 + " and are carried forward, not re-measured;"
                 f" `body.evidence_reuse.candidate_identity_match` reads "
                 f"{str((cohort.get('evidence_reuse') or {}).get('candidate_identity_match')).lower()},"
-                " so the total is a mixture and not a count at one identity;")
+                " so the total is a mixture and not a count at one identity.")
     else:
         sentence += (" the atlas carries no cohort membership and no cohort verdict is "
                      "rendered from it;")
+    consumers = figures.get("consumers") or {}
+    if consumers.get("safe_compatible") is not None and consumers.get("families_total"):
+        sentence += " " + _consumer_figure_clause(consumers)
     return sentence
 
 
@@ -508,6 +540,11 @@ def main() -> int:
             L.append("families carried forward with the identity they name. The split is read")
             L.append("from the per-row `reused_from_candidate_identity` marker in `body.runs`,")
             L.append("never from an aggregate (A0-F10).")
+            consumers = (load(CAMPAIGN_STATUS) or {}).get("consumers") or {}
+            if (consumers.get("safe_compatible") is not None
+                    and consumers.get("families_total")):
+                L.append("")
+                L.append(_consumer_figure_clause(consumers))
             L.append("")
             L.append("| plane | functional candidate runs | p1000 cohort `DROP_IN_PASS` "
                      "families | source |")
@@ -530,7 +567,8 @@ def main() -> int:
                     ) or "an unrecorded identity"
                     runs = runtime["candidate"]["functional"]
                     L.append(
-                        f"| current (mixed identity) | {runs} "
+                        f"| current (mixed identity; `L7-functional`, not "
+                        f"`SAFE_COMPATIBLE`) | {runs} "
                         f"| {cohort['at_l7']}/{cohort['total']} at `L7-functional`, of which "
                         f"{measured.get('families', 0)}/{cohort['total']} measured at the atlas "
                         f"candidate and {carried['families']}/{cohort['total']} carried forward "

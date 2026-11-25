@@ -285,6 +285,15 @@ runs are recorded verbatim in that receipt (§3 at `8a697aa7e`, §9 at
 `2d31a23fb`). Either way the refusal is the gate working, not a defect in it,
 and neither run is a pass.
 
+**Currency at the current head (2026-11-25).** The `2d31a23fb` run is history
+too: that commit is on no branch and is not an ancestor of the current head
+`f5d9515cf` (merge-base `6eb619dfb`). The full gate is `NOT_RUN` at
+`f5d9515cf`; `evidence/etp7/RECEIPT.md` §10 records the provenance, the
+unchanged claim-set digest (`2968ffd…`), the current `conjoin` scalars
+(`SUPERSEDED`, 33 blocked members, 37 open obligations) and the exact commands
+that would regenerate the gate. No reader should take §3 or §9 as a result at
+this head.
+
 `--self-test` proves the gate refuses each failure class it claims to cover: a
 contradicted claim, a positive verdict over withdrawn evidence, an uncertifiable
 dependency, a historical dependency, a missing triage, a stale triage, a failing

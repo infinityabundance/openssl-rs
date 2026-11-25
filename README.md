@@ -35,13 +35,13 @@ Source identity: candidate commit `1e7c221f0229ea7ae7d3a55ff2ce8aa9db242134`; bu
 
 | Dimension | Result | Evidence |
 |---|---|---|
-| **Downstream drop-in, Safe-33 cohort** | **33 / 33 families at `L7-functional`**, candidate and authority; **carried forward** — 27/33 cohort rows are in `evidence_reuse.reused_families` and `candidate_identity_match=false` | `forensics/downstream/runtime-functional-atlas.json` (`body.runs`); `CAMPAIGN-STATUS.json` (`consumers`) |
+| **Downstream drop-in, Safe-33 cohort** | **33 / 33 families at `L7-functional`**, candidate and authority; **carried forward** — 27/33 cohort rows are in `evidence_reuse.reused_families` and `candidate_identity_match=false`; the consumer counter is 0/33 `SAFE_COMPATIBLE` with 1 risk-accepted family (`openssh`) (a functional-level count is not a consumer graduation) | `forensics/downstream/runtime-functional-atlas.json` (`body.runs`); `CAMPAIGN-STATUS.json` (`consumers`) |
 | **Downstream drop-in, 1000-family corpus** | **207 / 1000 at `L7-functional`**; candidate 207 / authority 209 `L7-functional`; measured asymmetry: authority-only `ewftools`, `xilinx-bootgen`; **307 recipes, 253 built, 245 linked**; 223 loaded, 22 `L4-linked`, 7 failed, 755 not attempted (693 with no recipe); 301 of 307 recipe-backed rows carried forward | same atlas, `body.counts.by_subject`, `body.evidence_reuse`; `forensics/downstream/build-link-atlas.json` |
 | **Library test suite** | **2,231 passing, 0 failing, 52 ignored** at `cc7762e5d` — a **floor**, not the current count: later commits add tests without a further full run | `atlas-refresh/test-baseline.json` (`full-library-run`) |
 | **Memory safety: mechanisms** | **6 mechanisms discharged at mechanism scope** — RC-1 refcounting, OB-1 OwnedBuf release state, OB-2 OwnedStr string ownership, OB-3 OwnedCtx/RawCtx context ownership, ERR-1 ERR error-queue ownership and allocator file-coordinate seam, GEN-1 GENERAL_NAME selected-arm representation | `CAMPAIGN-STATUS.json` (`mechanism_discharges`) |
 | **Memory safety: boundaries** | 19 scoped boundary discharges (B23, B25, B27, B29, B45, B48, B49, B50, B51, B52, B53, B54, B55, B56, B57, B60, B67, B69, B70); 4 proposals not applied (B28, B46, B47, B71); **B39–B40 independently checked**; B41–B43 batch-checked; B44 author-evidenced | `atlas-refresh/boundary-sweep-*.json` |
 | **Memory safety: files converted / partial** | **877 files**: 92 `ZERO_UNSAFE`, 18 `BOUNDARY_COVERED`, 761 `PARTIAL` (audited 761/761), 6 `TEST_ONLY`, **0 unaccounted** | `atlas-refresh/unsafe-census.json`, `atlas-refresh/post-census-delta.json` |
-| **`SAFE_COMPATIBLE` consumers** | **1 / 33** — the admitted `openssh` family graduated at b85c via its consumer binaries `ssh`, `sshd`; every other admitted family still has no proven dependency closure | `CAMPAIGN-STATUS.json` (`consumers`) |
+| **`SAFE_COMPATIBLE` consumers** | **0 / 33** — no family has a proven dependency closure; 1 risk-accepted family (`openssh`) is not a graduation | `CAMPAIGN-STATUS.json` (`consumers`) |
 | **BOUNDARY / SEAL gates** | **`NOT_RUN` / `NOT_RUN`** — no independent caller/dependency-closure audit, Miri/ASan/Loom/mutation control, authority differential, full forensic regeneration or held-out compatibility for the S16–S61 cluster | `CAMPAIGN-STATUS.json` (`gates.boundary_gate`, `gates.seal_gate`) |
 | **Allocator / ABI invariants** | **preserved** — recorded invariant planes: `abi_courts`, `allocator_seam`, `exported_symbols`, `repr_c_layouts`, `unsafe_lints` | `CAMPAIGN-STATUS.json` (`structural_invariants`) |
 | **Known gaps** | `CLOSURE-NON-MONOTONE` REPAIRED; `S21-O1` CLOSED; `S22-RETAINED` RETAINED; `DOWNSTREAM-IMPLEMENTATION` 0 OPEN AT THE MEASURED IDENTITY; `DOWNSTREAM-h2o` CLOSED; `DOWNSTREAM-charybdis` CLOSED IN S61 (carried forward); `DOWNSTREAM-fastd` ENVIRONMENT; `DOWNSTREAM-HARNESS-FIXTURE` 76 CARRIED S59-S60 BLOCKERS + 25 NEW VENUE/BUILD BLOCKERS; `DOWNSTREAM-BELOW-L7` 100 FAMILIES; `DOWNSTREAM-S42-SYMMETRIC-LOSSES` CLOSED IN S44; `DOWNSTREAM-partclone` CLOSED; `DOWNSTREAM-perl-net-ssleay` CLOSED; `DOWNSTREAM-NO-RECIPE` 693 UNMEASURED; `DOWNSTREAM-MEDUSA` HARNESS; `DOWNSTREAM-S53-YIELD` 2 NEW L7 / 35 ADMITTED; `DOWNSTREAM-S60-YIELD` 7 NEW L7 / 30 ADMITTED; `S56-RESIDUALS` RETAINED; `S57-RACE` DATA-RACE FREEDOM NOT ESTABLISHED; `S58-SECURITY-CALLBACK` PERMISSIVE ARMS RETAINED; `S61-RESIDUALS` OTHER CALLBACK ARMS REMAIN PERMISSIVE; `ELEMENT-7-PRECISION` OPEN — FAIL; `CONTRACTED-OBLIGATIONS-BLOCKED` 215 BLOCKED at the applied v1u closure (222 at the historical v1r closure); `RELEASE-EVIDENCE-DEBT` OPEN; `SSL-CONF-WITNESS` OPEN — blocks 18 SSL_SESSION sites | `CAMPAIGN-STATUS.json` (`known_gaps`) |
@@ -78,7 +78,11 @@ above, and every carried row names that superseded identity. The last full
 no-reuse run (S52, 196 of 200 at `cd71d401`/`efd460de`) and the S59
 re-measurement (198 of 216 at `c8a99c59`/`5992c29d`) remain history. The three
 families lost in S42 (`dma`, `libssh`, `sslscan`) were recovered in S44, so the
-Safe-33 cohort is 33/33. On the candidate side **100** of the 307 recipe-backed
+Safe-33 cohort is 33/33 at `L7-functional` — a functional-level count, not a
+consumer count: 27 of the 33 families are carried forward from `26ba36ff…`, 6
+are measured at `1c03ec0a…`, and the committed consumer figure is **0/33
+`SAFE_COMPATIBLE`** with 1 risk-accepted family (`openssh`), `ETP0-CLM-032`
+`SUPERSEDED`. On the candidate side **100** of the 307 recipe-backed
 families are below L7 (307 − 207), against **98** on the authority side; the
 difference is the measured authority-only asymmetry `ewftools` and
 `xilinx-bootgen`. `fdm` was repaired from ENVIRONMENT in S53, three fixtures
@@ -99,10 +103,10 @@ derived from the receipts:
 | **Uninitialised-storage class** | **5 UNSOUND fixed** (4 owner-shaped + 1 frame-local), from 32 owner-shaped entries examined; 16 safe-by-construction and 12 misuse-resistant. CLOSED for the typed-accessor-over-uninitialised-storage class: both ml_dsa allocation surfaces and the scratch partition initialise before publication; the pkcs12 and bn owning-buffer accessors and the ssl t1_lib peer-sigalgs write no longer form a typed view over uninitialised storage. Retained: ml_dsa Vector::init / matrix_init remain safe constructors over caller raw pointers; they do not dereference, so no UB is reachable alone. Making them unsafe fn is the AGENTS.md section 1 end state, deferred because it touches about 20 call sites; x509::pcy_lib::tree_levels aliasing obligation (owner-derived borrow) remains retained; provider::cipher_gcm out-buffer slice formation was retained here in S22 and is now reconstructed: S40 eliminated getivgen's and gcm_tls_cipher's whole-extent typed slices over caller-writable output (OWNERSHIP_RECONSTRUCTED, not SAFETY_DISCHARGED) |
 | **STOP-class defects** | **0 open** — `B27-X2` (`STOP-CLASS`, B27) **closed by B28**; `NEO-ERR-1` (`STOP_LEVEL`, B33) **fixed in B33**. |
 | **Audited but not converted** | **761 `PARTIAL` files**; 761/761 audited, 0 remaining. Audit completion is not discharge. |
-| **Not discharged** | Receipt-backed mechanisms still open: `BIO`, `RUNTIME_ALLOC_OWNERSHIP`; `SAFE_COMPATIBLE` remains 1/33. |
+| **Not discharged** | Receipt-backed mechanisms still open: `BIO`, `RUNTIME_ALLOC_OWNERSHIP`; `SAFE_COMPATIBLE` remains 0/33. |
 | **BOUNDARY / SEAL gates** | **`NOT_RUN` / `NOT_RUN`** — the S16–S61 cluster has no independent caller/dependency-closure audit, Miri/ASan/Loom/mutation control, authority differential, full forensic regeneration or held-out compatibility. |
 | **Known gaps** | `CLOSURE-NON-MONOTONE` REPAIRED; `S21-O1` CLOSED; `S22-RETAINED` RETAINED; `DOWNSTREAM-IMPLEMENTATION` 0 OPEN AT THE MEASURED IDENTITY; `DOWNSTREAM-h2o` CLOSED; `DOWNSTREAM-charybdis` CLOSED IN S61 (carried forward); `DOWNSTREAM-fastd` ENVIRONMENT; `DOWNSTREAM-HARNESS-FIXTURE` 76 CARRIED S59-S60 BLOCKERS + 25 NEW VENUE/BUILD BLOCKERS; `DOWNSTREAM-BELOW-L7` 100 FAMILIES; `DOWNSTREAM-S42-SYMMETRIC-LOSSES` CLOSED IN S44; `DOWNSTREAM-partclone` CLOSED; `DOWNSTREAM-perl-net-ssleay` CLOSED; `DOWNSTREAM-NO-RECIPE` 693 UNMEASURED; `DOWNSTREAM-MEDUSA` HARNESS; `DOWNSTREAM-S53-YIELD` 2 NEW L7 / 35 ADMITTED; `DOWNSTREAM-S60-YIELD` 7 NEW L7 / 30 ADMITTED; `S56-RESIDUALS` RETAINED; `S57-RACE` DATA-RACE FREEDOM NOT ESTABLISHED; `S58-SECURITY-CALLBACK` PERMISSIVE ARMS RETAINED; `S61-RESIDUALS` OTHER CALLBACK ARMS REMAIN PERMISSIVE; `ELEMENT-7-PRECISION` OPEN — FAIL; `CONTRACTED-OBLIGATIONS-BLOCKED` 215 BLOCKED at the applied v1u closure (222 at the historical v1r closure); `RELEASE-EVIDENCE-DEBT` OPEN; `SSL-CONF-WITNESS` OPEN — blocks 18 SSL_SESSION sites |
-| **`SAFE_COMPATIBLE` consumers** | **1 / 33** — the admitted `openssh` family graduated at b85c via its consumer binaries `ssh`, `sshd`; every other admitted family still has no proven dependency closure. |
+| **`SAFE_COMPATIBLE` consumers** | **0 / 33** — no family has a proven dependency closure; 1 risk-accepted family (`openssh`) is not a graduation. |
 <!-- END GENERATED: readme-memory-safety -->
 
 The planned conversion order is attacker exposure × eliminability: TLS state
@@ -137,6 +141,14 @@ and verification, then ML-DSA, then the remaining provider and algorithm cores.
 > graduation record (`ssh` and `sshd` are that family's two consumer binaries).
 > It read `0 / 33` before that graduation. The bullets below remain the
 > 2026-10-30 record.
+>
+> **Superseded 2026-11-23 by ETP-T15 (recorded here 2026-11-25).** The b85c
+> record was reconciled as a principal **risk acceptance**, not a
+> `SAFE_COMPATIBLE` graduation. The counter therefore reads **0 / 33
+> `SAFE_COMPATIBLE` with 1 risk-accepted family (`openssh`)**, and
+> `ETP0-CLM-032` is `SUPERSEDED`. The `1 / 33` sentences above are retained as
+> the 2026-11-17 history; they are not the current figure. The generated rows
+> in this document were regenerated from `CAMPAIGN-STATUS.json` on 2026-11-25.
 
 Apart from the b85c record above, receipts only: no other graduation is claimed,
 and nothing here claims constant-time behaviour or that the BOUNDARY/SEAL gates

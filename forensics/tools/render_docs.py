@@ -644,6 +644,17 @@ class Evidence:
         family has a proven closure.
         """
         if not self.consumers["safe_compatible"]:
+            accepted = self.consumers.get("risk_accepted") or 0
+            families = self.consumers.get("risk_accepted_families") or []
+            if accepted:
+                names = ", ".join(f"`{family}`" for family in families)
+                label = "family" if accepted == 1 else "families"
+                return (
+                    "no family has a proven dependency closure; "
+                    f"{accepted} risk-accepted {label}"
+                    + (f" ({names})" if names else "")
+                    + " is not a graduation"
+                )
             return "no family has a proven dependency closure"
         grad = self.status.get("safe_compatible_graduation") or {}
         family = grad.get("admitted_family")
@@ -656,6 +667,25 @@ class Evidence:
                 "still has no proven dependency closure"
             )
         return "a family has a proven dependency closure"
+
+    def consumer_counter_text(self) -> str:
+        """The section 7 consumer counter, read from the claim record.
+
+        The Safe-33 row reports `L7-functional`, which is a functional-level
+        count. This note keeps the committed `SAFE_COMPATIBLE` figure beside it
+        so the two measures cannot be read as one (A0-F10).
+        """
+        consumers = self.consumers
+        text = (f"the consumer counter is {consumers['safe_compatible']}/"
+                f"{consumers['families_total']} `SAFE_COMPATIBLE`")
+        accepted = consumers.get("risk_accepted") or 0
+        if accepted:
+            names = ", ".join(
+                f"`{family}`" for family in consumers.get("risk_accepted_families") or []
+            )
+            label = "family" if accepted == 1 else "families"
+            text += f" with {accepted} risk-accepted {label}" + (f" ({names})" if names else "")
+        return text
 
     def evidence_reuse(self) -> dict:
         """The atlas's carried-forward disclosure, with the names as a set.
@@ -884,7 +914,9 @@ class Evidence:
                 "|---|---|---|",
                 "| **Downstream drop-in, Safe-33 cohort** | "
                 f"**{self.consumers['l7_functional']} / {self.consumers['families_total']} "
-                f"families at `L7-functional`**, candidate and authority; {freshness} | "
+                f"families at `L7-functional`**, candidate and authority; {freshness}; "
+                f"{self.consumer_counter_text()} (a functional-level count is not a "
+                "consumer graduation) | "
                 f"`{ATLAS_S}` (`body.runs`); `{STATUS_S}` (`consumers`) |",
                 "| **Downstream drop-in, 1000-family corpus** | "
                 f"**{corpus['candidate']} / {corpus['total']} at `L7-functional`**; "

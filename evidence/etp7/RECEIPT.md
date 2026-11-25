@@ -14,8 +14,12 @@ run; they are **superseded** and are preserved unedited as history. §9 records
 the same gate at candidate `2d31a23fb`, where the claim set conjoins to
 `SUPERSEDED` with 37 open obligations and where the refusals are identity-triage
 and package refusals, not the four `RG_CLAIM_CONTRADICTED` items. A reader who
-needs the current result reads §9; a reader who needs the run that introduced the
-gate reads §3.
+needs the run that introduced the gate reads §3. **Superseded 2026-11-25
+(A0-F06):** the sentence that stood here — "a reader who needs the current result
+reads §9" — was itself a stale currency claim. §9 is bound to `2d31a23fb`, which
+is on no branch and is not an ancestor of the current head `f5d9515cf`; §9 is
+history too. §10 records `NOT_RUN` at `f5d9515cf` and the exact commands that
+would regenerate the gate.
 
 **Venue:** `openssl-rs-court-tools:1`, existing container, 8 GiB memory cap,
 8 CPUs. Host `free -g` before the first command: total 45, used 17, free 20,
@@ -103,7 +107,9 @@ the same decision for retention. `--self-test` is the negative-control suite.
 
 **Superseded (A0-F06, 2026-11-23).** The command and output below are the run
 at `8a697aa7e`. The numbers in them are not edited: they record what the gate
-produced at that identity. The live run is §9.
+produced at that identity. The live run is §9. **Superseded again 2026-11-25
+(A0-F06):** §9 is bound to `2d31a23fb` and is not a result at the current head
+`f5d9515cf`; see §10.
 
 Package: built from HEAD by
 `python3 forensics/tools/etp6_package.py --out /tmp/etp6-drift-check`, unpacked
@@ -221,7 +227,8 @@ to it.
 
 **Recorded at `8a697aa7e`.** The table below is the run at the identity in the
 header, at which the claim set conjoined to `CONTRADICTED` with 42 open
-obligations. It is history; §9 records the run at `2d31a23fb`.
+obligations. It is history; §9 records the run at `2d31a23fb` (§9 is also history of a
+divergent lineage; see §10).
 
 All in `openssl-rs-court-tools:1`; the container's 8 GiB cap was already applied.
 
@@ -335,6 +342,11 @@ then be executed and its first run recorded here.
 ---
 
 ## 9. Re-run at `2d31a23fb` (2026-11-23, A0-F06)
+
+**History (A0-F06, 2026-11-25).** This section is bound to `2d31a23fb`. That
+commit is on no branch and is not an ancestor of the current head `f5d9515cf`
+(merge-base `6eb619dfb`), so this is not a current result. It is retained
+unedited as the run at that identity; §10 records the current provenance.
 
 **Why this section exists.** §3 and §5 are the run at `8a697aa7e` and are
 superseded; this section records the same gate at the repaired candidate, with
@@ -492,3 +504,52 @@ its remedy is
 `python3 forensics/tools/closure_discipline.py emit --commit <commit containing the repair>`,
 which cannot run before the repair is committed. Record:
 `evidence/a0/REPAIRS-2.md`.
+
+---
+
+## 10. Current provenance at `f5d9515cf` (2026-11-25, A0-F06): `NOT_RUN`
+
+**This section does not record a gate run.** It records that the full gate has
+not been run at the current head, what the claim set says there, and the exact
+commands that would regenerate the gate. §3, §5 and §9 above remain the runs at
+their own identities; none of them is a result at this head.
+
+| field | value |
+|---|---|
+| current source HEAD | `f5d9515cf0d31914dff2df6784f2c911314ce7f7` (branch `staging`) |
+| current `evidence/etp/claims.json` sha256 | `2968ffd6976f19bd701c58636b51cceed192e42c928dd2116217449a7b85a1bb` |
+| that digest equals the §9 run's claim-set digest | yes — the claim set did not move between `2d31a23fb` and this head |
+| `python3 forensics/tools/etp_claims.py validate` at this head | `35 claims, 0 refusals, valid` (exit 0) |
+| `python3 forensics/tools/etp_claims.py conjoin` at this head | verdict `SUPERSEDED`, 33 blocked members, 37 open obligations (same scalars as §9) |
+| full release gate at this head | **`NOT_RUN`** |
+
+**Why it is not run here.** The "full gate" of §5 is not one command. It is
+`cargo fmt --all -- --check`, `cargo clippy --all-targets -- -D warnings`,
+`cargo test --lib -- --test-threads=4`, and an ETP-6 package built by
+`python3 forensics/tools/etp6_package.py` and verified by its `verify.sh --full`
+(two-build reproducibility), beside the Python gates and the court-venue
+instrument register. Reproducing it therefore requires a Rust build and the court
+venue. This batch is records-only and forbids both. A no-package
+`release_gate.py` run would omit the package item and would run on a dirty
+working tree, so it would not be the full gate either.
+
+**Exact commands that would regenerate it**, from a committed, clean tree at the
+candidate:
+
+```
+CARGO_BUILD_JOBS=4 cargo fmt --all -- --check
+CARGO_BUILD_JOBS=4 cargo clippy --all-targets -- -D warnings
+CARGO_BUILD_JOBS=4 cargo test --lib -- --test-threads=4
+python3 forensics/tools/etp6_package.py --out /tmp/etp6-drift-check
+python3 forensics/tools/release_gate.py --candidate <commit> --require-clean --package /tmp/pkg-etp7
+python3 forensics/tools/etp_claims.py validate
+python3 forensics/tools/etp_claims.py conjoin
+python3 courts/phase18/interop/check_receipts.py --summary
+python3 forensics/tools/instrument_qualify.py check
+python3 forensics/tools/docs_consistency.py
+python3 forensics/tools/release_gate.py --self-test
+```
+
+The result must be appended here with its candidate identity, the claim-set
+digest it read and its exit code. Until then the finding stays open: the false
+currency claim is removed, but the gate itself is unrun at this head.
