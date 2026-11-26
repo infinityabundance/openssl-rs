@@ -1,0 +1,113 @@
+{
+  "log": "court/tmp/ctgrind-repro/base-2.out",
+  "contexts": 123,
+  "per_class": {
+    "C": 69,
+    "E": 52,
+    "D": 2
+  },
+  "engine_on_path": 4,
+  "origin_in_engine": 0,
+  "top_origins": [
+    {
+      "contexts": 22,
+      "loc": "limbs.rs:42",
+      "fn": "openssl_rs::bn::limbs::normalise"
+    },
+    {
+      "contexts": 12,
+      "loc": "in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so",
+      "fn": "memmove"
+    },
+    {
+      "contexts": 4,
+      "loc": "limbs.rs:321",
+      "fn": "openssl_rs::bn::limbs::bit_len"
+    },
+    {
+      "contexts": 4,
+      "loc": "limbs.rs:299",
+      "fn": "openssl_rs::bn::limbs::cmp"
+    },
+    {
+      "contexts": 4,
+      "loc": "limbs.rs:309",
+      "fn": "openssl_rs::bn::limbs::cmp"
+    },
+    {
+      "contexts": 4,
+      "loc": "limbs.rs:481",
+      "fn": "openssl_rs::bn::limbs::add_fallible"
+    },
+    {
+      "contexts": 4,
+      "loc": "limbs.rs:504",
+      "fn": "openssl_rs::bn::limbs::sub_fallible"
+    },
+    {
+      "contexts": 4,
+      "loc": "library/core/src/intrinsics/mod.rs:459",
+      "fn": "unlikely"
+    },
+    {
+      "contexts": 2,
+      "loc": "library/core/src/slice/iter/macros.rs:407",
+      "fn": "<core::slice::iter::Iter<u64> as core::iter::traits::iterator::Iterator>::rposition::<openssl_rs::bn::limbs::bit_len::{closure#0}>"
+    },
+    {
+      "contexts": 2,
+      "loc": "limbs.rs:569",
+      "fn": "openssl_rs::bn::limbs::mul_fallible"
+    },
+    {
+      "contexts": 2,
+      "loc": "limbs.rs:835",
+      "fn": "openssl_rs::bn::limbs::divide_fallible"
+    },
+    {
+      "contexts": 2,
+      "loc": "limbs.rs:846",
+      "fn": "openssl_rs::bn::limbs::divide_fallible"
+    },
+    {
+      "contexts": 2,
+      "loc": "limbs.rs:852",
+      "fn": "openssl_rs::bn::limbs::divide_fallible"
+    },
+    {
+      "contexts": 2,
+      "loc": "asymmetric.rs:31",
+      "fn": "UnknownInlinedFun"
+    },
+    {
+      "contexts": 2,
+      "loc": "arith.rs:113",
+      "fn": "openssl_rs::bn::arith::BN_sub::{closure#0}::{closure#0}"
+    },
+    {
+      "contexts": 2,
+      "loc": "library/alloc/src/raw_vec/mod.rs:726",
+      "fn": "<alloc::raw_vec::RawVecInner>::try_reserve_exact"
+    },
+    {
+      "contexts": 2,
+      "loc": "in /work/court/tmp/pfp2-ct/target/debug/deps/openssl_rs-672100dcc99e32ac",
+      "fn": "<alloc::raw_vec::RawVecInner>::finish_grow"
+    },
+    {
+      "contexts": 2,
+      "loc": "library/core/src/hint.rs:208",
+      "fn": "core::hint::assert_unchecked::precondition_check"
+    },
+    {
+      "contexts": 2,
+      "loc": "library/alloc/src/raw_vec/mod.rs:674",
+      "fn": "reserve<alloc::alloc::Global>"
+    },
+    {
+      "contexts": 2,
+      "loc": "in /work/court/tmp/pfp2-ct/target/debug/deps/openssl_rs-672100dcc99e32ac",
+      "fn": "<alloc::raw_vec::RawVecInner>::deallocate"
+    }
+  ]
+}

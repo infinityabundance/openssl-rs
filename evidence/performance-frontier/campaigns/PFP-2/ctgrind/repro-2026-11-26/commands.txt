@@ -1,0 +1,39 @@
+Recorded PFP-2 command (verbatim from ecdsa-sign.out):
+  valgrind --tool=memcheck --error-exitcode=99 \
+    /work/court/tmp/pfp2-ct/target/debug/deps/openssl_rs-672100dcc99e32ac \
+    --exact ec::ecdsa_ossl::tests::ctgrind_ecdsa_sign_taints_nonce_and_key --nocapture
+Control: same with CTGRIND_CONTROL=1 in the environment.
+Re-runs: the same command, unchanged, from /work (base-1..base-3.out);
+         with -s (base-s.out); with --xml=yes (xml/base.xml).
+
+PFP-1 recorded command (verbatim from PFP-1/ctgrind/ecdsa-sign.out):
+  valgrind --tool=memcheck --error-exitcode=99 \
+    target/debug/deps/openssl_rs-672100dcc99e32ac \
+    --exact ec::ecdsa_ossl::tests::ctgrind_ecdsa_sign_taints_nonce_and_key \
+    --test-threads=1 --nocapture
+
+Minimal populations, one process per DSO:
+  gcc -D_GNU_SOURCE -O1 -g -I/work/artifacts/phase2/install/include minimal_mul.c \
+      -L<DSO dir> -l:libcrypto.so.3 -Wl,-rpath,<DSO dir> -ldl -o minimal_mul4
+  LD_LIBRARY_PATH=<DSO dir> valgrind --tool=memcheck --error-exitcode=99 \
+      --num-callers=24 ./minimal_mul4 taint-value
+Modes: defined (population negative control), taint-value (the admitted
+population: the four scalar limb values are marked undefined, the limb count
+stays defined), taint-bytes (comparison; also taints the count), sign-taint
+(the generated private key's limb values are marked undefined, then one
+ECDSA_do_sign), sign-defined (the sign negative control).
+DSO dirs: MONT  court/tmp/pfp2-recheck/distribution
+          generic court/tmp/pfp2-build/before
+          SOLINAS court/tmp/pfp2-build/solinas (secondary)
+
+Line-tables-only identity build (from HEAD d2d93c7d1):
+  CARGO_BUILD_JOBS=4 RUSTFLAGS="-C debuginfo=1" \
+    CARGO_TARGET_DIR=/work/court/tmp/pfp2-dbgrel/target \
+    cargo build --release --lib --offline
+  cc -shared -o court/tmp/pfp2-dbgrel/libcrypto.so.3 \
+    -Wl,--whole-archive court/tmp/pfp2-dbgrel/target/release/libopenssl_rs.a \
+    -Wl,--no-whole-archive -Wl,--version-script=artifacts/phase2/libcrypto.ld \
+    -Wl,-soname,libcrypto.so.3 -Wl,--as-needed -lpthread -ldl -lm -lrt -lutil
+  LD_LIBRARY_PATH=/work/court/tmp/pfp2-dbgrel \
+    valgrind --tool=memcheck --error-exitcode=99 --num-callers=24 \
+    ./minimal_mul4 taint-value

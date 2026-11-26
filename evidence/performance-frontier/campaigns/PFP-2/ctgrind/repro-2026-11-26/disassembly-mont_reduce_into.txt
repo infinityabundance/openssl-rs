@@ -1,0 +1,64 @@
+mont_reduce_into in the recorded PFP-2 distribution DSO
+========================================================
+DSO sha256 : 467527ae6a61fb217facd6f50bd1187fc25ce2dea3817d0b37c71bdd0ada9bf8
+symbol      : _RNvNtNtCsfBoMNNx3tZr_10openssl_rs2ec4p25616mont_reduce_into
+address     : 0x189bc0, size 939 (readelf -sW)
+dso_base    : 0x4852000 (dladdr(EC_POINT_mul) from the same process)
+valgrind PC : 0x49DBF0D and 0x49DBF21  ->  function offsets +0x34D and +0x361
+
+The faulting instructions (objdump -d, GNU binutils 2.40):
+
+  189f0a: 48 85 c9    test   %rcx,%rcx
+  189f0d: 75 b1       jne    189ec0 <...mont_reduce_into+0x300>   <-- reported
+  189f0f: 41 20 d1    and    %dl,%r9b
+  189f12: 44 08 cd    or     %r9b,%bpl
+  189f15: 40 20 ef    and    %bpl,%dil
+  189f18: 40 08 fe    or     %dil,%sil
+  189f1b: 41 20 f6    and    %sil,%r14b
+  189f1e: 44 08 f3    or     %r14b,%bl
+  189f21: 74 9d       je     189ec0 <...mont_reduce_into+0x300>   <-- reported
+  189f23: 31 f6       xor    %esi,%esi
+  189f25: 48 01 f1    add    %rsi,%rcx
+  189f28: 49 ff c8    dec    %r8
+  189f2b: 75 b3       jne    189ee0 <...mont_reduce_into+0x320>
+
+%rcx is the borrow accumulated by the 4-limb subtraction sequence at 189ec0
+(`sub/sbb`, then `sbb %rsi,%rsi; add %rsi,%rcx`), i.e. the borrow of
+`t[LIMBS+i] - (m[i] & subtract)` from src/ec/p256.rs:683-701.  It is
+secret-derived: only the scalar's limb values were marked undefined, the
+ladder's cswap/step carries that taint into the projective coordinates, and
+Mont::mul feeds them to mont_reduce_into.  Both branches are real conditional
+jumps (`jne`/`je`), not cmov or setcc.
+
+Source line, pinned by a line-tables-only release build from HEAD d2d93c7d1
+(DSO sha256 b55b6ea86058a3dcfe0371a9736f0fb09be17bf5171c387604f2cb4c72040101,
+same PCs 0x49DBF0D / 0x49DBF21, base 0x4852000):
+
+  at 0x49DBF0D: overflowing_sub (library/core/src/num/uint_macros.rs:3049)
+  by 0x49DBF0D: openssl_rs::ec::p256::mont_reduce_into (p256.rs:690)
+  by 0x4A04BF5: mont_mul<FieldDomain> (p256.rs:733)
+  by 0x4A04BF5: Mont::mul (p256.rs:755)
+  by 0x49C5FDA: mul_into<Mont> (p256.rs:1208)
+  by 0x49C5FDA: P256Ladder::step (p256.rs:1523)
+  by 0x49C5FDA: p256_ladder_run::<Mont> (mult.rs:685)
+  by 0x49DAD06: ossl_ec_scalar_mul_ladder (mult.rs:566)
+  by 0x4D5125E: EC_POINT_mul (lib.rs:2237)
+
+  src/ec/p256.rs:690  let (_, b) = t[2 * LIMBS].overflowing_sub(borrow);
+
+The second PC (0x49DBF21) is the adjacent `je` in the same inlined borrow
+sequence; its line record is `uint_macros.rs:0`.
+
+Surrounding source (branchless by intent; the leak is compiler-introduced):
+  src/ec/p256.rs:683  for _ in 0..subtractions {
+  src/ec/p256.rs:684      let mut borrow = 0u64;
+  src/ec/p256.rs:685-689  overflowing_sub chain, borrow = b1 | b2;
+  src/ec/p256.rs:690      let (_, b) = t[2*LIMBS].overflowing_sub(borrow);
+  src/ec/p256.rs:691      let subtract = Limb::from(!b).wrapping_neg();
+  src/ec/p256.rs:692-700  masked subtraction, c = c1 | c2;
+
+Profile dependence: the same function in the recorded debug test binary
+(0x13c2780, size 0xacb) has no conditional jump on the borrow; at -O0 the
+sub/setb sequence stores each bit and the sign case reports zero
+mont_reduce_into contexts.  The leak appears in the release artefact, which is
+the one that ships.

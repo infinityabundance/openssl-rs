@@ -1,0 +1,43 @@
+ctgrind re-measurement identities (2026-11-26)
+
+Recorded PFP-2 candidate (MONT default), release distribution DSO
+  path    court/tmp/pfp2-recheck/distribution/libcrypto.so.3
+  sha256  467527ae6a61fb217facd6f50bd1187fc25ce2dea3817d0b37c71bdd0ada9bf8
+  size    17038280
+  source  PFP-2 engine worktree on head 2004ea2430b8f04ed0aa1762768299e2bc6093ac
+          (PFP-2/authority/build-identity.json), committed as 34754764fd2c;
+          `git diff 34754764f HEAD -- src/ec src/bn` is empty.
+
+Pre-engine generic control, release distribution DSO
+  path    court/tmp/pfp2-build/before/libcrypto.so.3
+  sha256  675955dbe52e368a1b8108da56cfe2a7d20f36234609eef23e4a448807b16a58
+  size    16975336
+  source  court/tmp/pfp2-build/before-src.  git hash-object of
+          src/ec/{mult,mod,smpl,ecdsa_ossl}.rs and src/bn/limbs.rs equals
+          git rev-parse 2004ea243:<path>; src/ec/p256.rs is absent there and
+          absent in 2004ea243.  This is the same test's generic path.
+
+Campaign kernel variant (secondary only; build recipe not re-derived here)
+  path    court/tmp/pfp2-build/solinas/libcrypto.so.3
+  sha256  7ba04c714c9f565382d9a4895b84464f91f7b15ab8c7581effcfae8ef13372c7
+  Not used for the verdict; recorded in v3-value-solinas.out only.
+
+Debug lib test binary (the recorded 3,023/123 population)
+  path    court/tmp/pfp2-ct/target/debug/deps/openssl_rs-672100dcc99e32ac
+  sha256  e5ef938ab3b76e285f790ccf7a0b9132360bc301993d63f846774f9ae89e3347
+  matches evidence/performance-frontier/campaigns/PFP-2/ctgrind/testbin.sha256
+  profile dev (cargo test --lib --no-run)
+
+Line-tables-only release rebuild from the committed source (identity check)
+  path    court/tmp/pfp2-dbgrel/libcrypto.so.3
+  sha256  b55b6ea86058a3dcfe0371a9736f0fb09be17bf5171c387604f2cb4c72040101
+  size    36225528
+  source  HEAD d2d93c7d1; src/ec/p256.rs sha256
+          869ec59e933913fbb06bd4891a0004648d9debe5fe2b329ae59d736288dc9b05.
+          Built with RUSTFLAGS="-C debuginfo=1", release profile, then the
+          Phase-2 version-script link.  The relevant code PCs are the same as
+          the recorded DSO (0x49DBF0D / 0x49DBF21, base 0x4852000), and the
+          line tables name src/ec/p256.rs:690.  The DSO itself is not stored
+          here (36 MB); the log is repro-2026-11-26/dbgrel-min.out.
+
+Tools: valgrind 3.19.0, gcc 12.2.0, rustc 1.98.1.

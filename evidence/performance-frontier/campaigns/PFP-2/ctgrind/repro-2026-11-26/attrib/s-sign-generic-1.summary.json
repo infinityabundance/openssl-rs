@@ -1,0 +1,113 @@
+{
+  "log": "court/tmp/ctgrind-repro/s-sign-generic-1.out",
+  "contexts": 82,
+  "per_class": {
+    "E": 76,
+    "C": 4,
+    "D": 2
+  },
+  "engine_on_path": 0,
+  "origin_in_engine": 0,
+  "top_origins": [
+    {
+      "contexts": 24,
+      "loc": "in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so",
+      "fn": "memmove"
+    },
+    {
+      "contexts": 11,
+      "loc": "in /work/court/tmp/pfp2-build/before/libcrypto.so.3",
+      "fn": "BN_nnmod"
+    },
+    {
+      "contexts": 9,
+      "loc": "in /work/court/tmp/pfp2-build/before/libcrypto.so.3",
+      "fn": "BN_consttime_swap"
+    },
+    {
+      "contexts": 6,
+      "loc": "in /work/court/tmp/pfp2-build/before/libcrypto.so.3",
+      "fn": "BN_mod_mul_montgomery"
+    },
+    {
+      "contexts": 5,
+      "loc": "in /work/court/tmp/pfp2-build/before/libcrypto.so.3",
+      "fn": "BN_add"
+    },
+    {
+      "contexts": 4,
+      "loc": "in /work/court/tmp/pfp2-build/before/libcrypto.so.3",
+      "fn": "BN_to_montgomery"
+    },
+    {
+      "contexts": 4,
+      "loc": "in /work/court/tmp/pfp2-build/before/libcrypto.so.3",
+      "fn": "<alloc::raw_vec::RawVecInner>::finish_grow"
+    },
+    {
+      "contexts": 3,
+      "loc": "in /work/court/tmp/pfp2-build/before/libcrypto.so.3",
+      "fn": "BN_bn2binpad"
+    },
+    {
+      "contexts": 2,
+      "loc": "in /work/court/tmp/pfp2-build/before/libcrypto.so.3",
+      "fn": "BN_ucmp"
+    },
+    {
+      "contexts": 2,
+      "loc": "in /work/court/tmp/pfp2-build/before/libcrypto.so.3",
+      "fn": "BN_num_bits"
+    },
+    {
+      "contexts": 2,
+      "loc": "unix.rs:13",
+      "fn": "alloc"
+    },
+    {
+      "contexts": 2,
+      "loc": "in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so",
+      "fn": "malloc"
+    },
+    {
+      "contexts": 1,
+      "loc": "in /work/court/tmp/pfp2-build/before/libcrypto.so.3",
+      "fn": "openssl_rs::bn::limbs::and_fallible"
+    },
+    {
+      "contexts": 1,
+      "loc": "in /work/court/tmp/pfp2-build/before/libcrypto.so.3",
+      "fn": "openssl_rs::bn::bignum::ossl_bn_mask_bits_fixed_top"
+    },
+    {
+      "contexts": 1,
+      "loc": "in /work/court/tmp/pfp2-build/before/libcrypto.so.3",
+      "fn": "openssl_rs::bn::rand::ossl_bn_gen_dsa_nonce_fixed_top"
+    },
+    {
+      "contexts": 1,
+      "loc": "in /work/court/tmp/pfp2-build/before/libcrypto.so.3",
+      "fn": "openssl_rs::ec::ecdsa_ossl::ecdsa_sign_setup"
+    },
+    {
+      "contexts": 1,
+      "loc": "in /work/court/tmp/pfp2-build/before/libcrypto.so.3",
+      "fn": "openssl_rs::ec::mult::ossl_ec_scalar_mul_ladder"
+    },
+    {
+      "contexts": 1,
+      "loc": "in /work/court/tmp/pfp2-build/before/libcrypto.so.3",
+      "fn": "BN_sub"
+    },
+    {
+      "contexts": 1,
+      "loc": "in /work/court/tmp/pfp2-build/before/libcrypto.so.3",
+      "fn": "openssl_rs::bn::arith::mod_add_reduced_ct"
+    },
+    {
+      "contexts": 1,
+      "loc": "in /work/court/tmp/pfp2-build/before/libcrypto.so.3",
+      "fn": "ossl_ecdsa_simple_sign_sig"
+    }
+  ]
+}

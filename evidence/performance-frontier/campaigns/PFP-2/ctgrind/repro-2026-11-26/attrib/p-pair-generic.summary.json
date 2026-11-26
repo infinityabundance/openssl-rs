@@ -1,0 +1,42 @@
+{
+  "log": "court/tmp/ctgrind-repro/p-pair-generic.out",
+  "contexts": 29,
+  "per_class": {
+    "E": 28,
+    "D": 1
+  },
+  "engine_on_path": 0,
+  "origin_in_engine": 0,
+  "top_origins": [
+    {
+      "contexts": 11,
+      "loc": "in /work/court/tmp/pfp2-build/before/libcrypto.so.3",
+      "fn": "BN_nnmod"
+    },
+    {
+      "contexts": 9,
+      "loc": "in /work/court/tmp/pfp2-build/before/libcrypto.so.3",
+      "fn": "BN_consttime_swap"
+    },
+    {
+      "contexts": 5,
+      "loc": "in /work/court/tmp/pfp2-build/before/libcrypto.so.3",
+      "fn": "BN_add"
+    },
+    {
+      "contexts": 2,
+      "loc": "in /work/court/tmp/pfp2-build/before/libcrypto.so.3",
+      "fn": "BN_num_bits"
+    },
+    {
+      "contexts": 1,
+      "loc": "in /work/court/tmp/pfp2-build/before/libcrypto.so.3",
+      "fn": "openssl_rs::ec::mult::ossl_ec_scalar_mul_ladder"
+    },
+    {
+      "contexts": 1,
+      "loc": "in /work/court/tmp/pfp2-build/before/libcrypto.so.3",
+      "fn": "BN_sub"
+    }
+  ]
+}

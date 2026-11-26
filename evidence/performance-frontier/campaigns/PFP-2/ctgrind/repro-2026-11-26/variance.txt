@@ -1,0 +1,36 @@
+Run-to-run counts (the test draws a fresh EC key each run)
+
+sign case, debug lib test binary e5ef938a..., 3,023/123 recorded
+  first unchanged re-run      3025 errors / 129 contexts
+  base-1                      3047 / 128
+  base-2                      3023 / 123   <-- exact reproduction
+  base-3                      3033 / 121
+  base-s (-s)                 3013 / 123
+  CTGRIND_CONTROL=1           3039 / 130   (recorded 3029 / 130)
+  --xml=yes                   3025 / 136   (uninit kinds only; 32 leak
+                                             contexts excluded)
+
+Minimal populations, release DSOs, --num-callers=24
+  defined, MONT               0 / 0
+  defined, generic            0 / 0
+  taint-value, MONT           12371 / 203   (mont_reduce_into 48 contexts)
+  taint-value, generic        794 / 29
+  taint-value, SOLINAS        13893 / 203   (secondary)
+  sign-taint, MONT            12494 / 250 ; 12515 / 259
+  sign-taint, generic         847 / 82 ; 847 / 82
+  sign-defined, MONT          0 / 0
+
+Per-class error counts from --xml=yes (uninitialised kinds only)
+  recorded sign (3,025 errors): generic bn 2,765 (78 ctx); generic EC/ECDSA
+    driver 2 (2); runtime/other 258 (56); new engine 0.
+  minimal MONT (12,480): new engine 10,865 (58 ctx); generic bn 1,400 (258);
+    driver 7 (7); runtime/other 208 (129).
+  minimal generic (794): new engine 0; generic bn 0; driver 1; runtime 793 (28).
+
+Line-tables-only release build from HEAD d2d93c7d1 (DSO b55b6ea8..., same
+code PCs):
+  taint-value, MONT           12396 / 212
+  the faulting instruction is reported as
+    at 0x49DBF0D: overflowing_sub (uint_macros.rs:3049)
+    by 0x49DBF0D: mont_reduce_into (p256.rs:690)
+  which pins the site to src/ec/p256.rs:690.

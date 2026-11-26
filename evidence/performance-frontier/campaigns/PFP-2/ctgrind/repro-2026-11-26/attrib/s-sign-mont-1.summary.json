@@ -1,0 +1,114 @@
+{
+  "log": "court/tmp/ctgrind-repro/s-sign-mont-1.out",
+  "contexts": 250,
+  "per_class": {
+    "E": 133,
+    "C": 50,
+    "D": 9,
+    "B": 58
+  },
+  "engine_on_path": 62,
+  "origin_in_engine": 58,
+  "top_origins": [
+    {
+      "contexts": 48,
+      "loc": "in /work/court/tmp/pfp2-recheck/distribution/libcrypto.so.3",
+      "fn": "openssl_rs::ec::p256::mont_reduce_into"
+    },
+    {
+      "contexts": 30,
+      "loc": "in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so",
+      "fn": "memmove"
+    },
+    {
+      "contexts": 29,
+      "loc": "in /work/court/tmp/pfp2-recheck/distribution/libcrypto.so.3",
+      "fn": "openssl_rs::bn::limbs::divide_fallible"
+    },
+    {
+      "contexts": 21,
+      "loc": "in /work/court/tmp/pfp2-recheck/distribution/libcrypto.so.3",
+      "fn": "BN_nnmod"
+    },
+    {
+      "contexts": 14,
+      "loc": "in /work/court/tmp/pfp2-recheck/distribution/libcrypto.so.3",
+      "fn": "BN_add"
+    },
+    {
+      "contexts": 11,
+      "loc": "in /work/court/tmp/pfp2-recheck/distribution/libcrypto.so.3",
+      "fn": "openssl_rs::bn::limbs::mul_fallible"
+    },
+    {
+      "contexts": 11,
+      "loc": "in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so",
+      "fn": "memset"
+    },
+    {
+      "contexts": 10,
+      "loc": "in /work/court/tmp/pfp2-recheck/distribution/libcrypto.so.3",
+      "fn": "BN_sub"
+    },
+    {
+      "contexts": 8,
+      "loc": "in /work/court/tmp/pfp2-recheck/distribution/libcrypto.so.3",
+      "fn": "<alloc::raw_vec::RawVecInner>::finish_grow"
+    },
+    {
+      "contexts": 6,
+      "loc": "in /work/court/tmp/pfp2-recheck/distribution/libcrypto.so.3",
+      "fn": "BN_mod_mul_montgomery"
+    },
+    {
+      "contexts": 5,
+      "loc": "in /work/court/tmp/pfp2-recheck/distribution/libcrypto.so.3",
+      "fn": "BN_mod_add_quick"
+    },
+    {
+      "contexts": 5,
+      "loc": "in /work/court/tmp/pfp2-recheck/distribution/libcrypto.so.3",
+      "fn": "openssl_rs::bn::limbs::sub_fallible"
+    },
+    {
+      "contexts": 5,
+      "loc": "in /work/court/tmp/pfp2-recheck/distribution/libcrypto.so.3",
+      "fn": "BN_to_montgomery"
+    },
+    {
+      "contexts": 4,
+      "loc": "in /work/court/tmp/pfp2-recheck/distribution/libcrypto.so.3",
+      "fn": "openssl_rs::ec::mult::p256_ladder_run::<openssl_rs::ec::p256::Mont<openssl_rs::ec::p256::FieldDomain>>"
+    },
+    {
+      "contexts": 4,
+      "loc": "in /work/court/tmp/pfp2-recheck/distribution/libcrypto.so.3",
+      "fn": "<openssl_rs::ec::p256::P256Field<openssl_rs::ec::p256::Mont<openssl_rs::ec::p256::FieldDomain>>>::double_assign"
+    },
+    {
+      "contexts": 4,
+      "loc": "in /work/court/tmp/pfp2-recheck/distribution/libcrypto.so.3",
+      "fn": "openssl_rs::ec::smpl::store_coordinate"
+    },
+    {
+      "contexts": 4,
+      "loc": "in /work/court/tmp/pfp2-recheck/distribution/libcrypto.so.3",
+      "fn": "BN_mul"
+    },
+    {
+      "contexts": 3,
+      "loc": "in /work/court/tmp/pfp2-recheck/distribution/libcrypto.so.3",
+      "fn": "BN_bn2binpad"
+    },
+    {
+      "contexts": 3,
+      "loc": "in /work/court/tmp/pfp2-recheck/distribution/libcrypto.so.3",
+      "fn": "BN_consttime_swap"
+    },
+    {
+      "contexts": 3,
+      "loc": "in /work/court/tmp/pfp2-recheck/distribution/libcrypto.so.3",
+      "fn": "BN_uadd"
+    }
+  ]
+}
