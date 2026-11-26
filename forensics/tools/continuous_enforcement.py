@@ -148,7 +148,10 @@ NONCLAIMS_CLAUSE = "§B.29"
 
 #: The release gate's items, in the order the queue defines.  A missing function
 #: is a missing item; a symbol that is not called from ``evaluate`` is a
-#: disconnected item.  The last row is B8's own item.
+#: disconnected item.  Item 10 is B8's own item; item 11 (PFP-34's branch
+#: audit) was added to the gate after B8 and is retained in this baseline so its
+#: removal is also refused.  A new gate item is added here when it appears, so
+#: the enforcement record enumerates the gate rather than a snapshot of it.
 GATE_ITEMS: tuple[tuple[str, str, str], ...] = (
     ("1", "candidate identity", "resolve_candidate"),
     ("2", "claim set", "check_claims"),
@@ -161,6 +164,7 @@ GATE_ITEMS: tuple[tuple[str, str, str], ...] = (
     ("8", "thresholds", "check_thresholds"),
     ("9", "release policy", "check_policy"),
     ("10", "transparency enforcement", "check_transparency"),
+    ("11", "branch audit", "check_branch_audit"),
 )
 TRANSPARENCY_ITEM = "10"
 

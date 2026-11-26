@@ -44,7 +44,7 @@ The tool reads:
 | `evidence/etp/claims.json` | every claim's optional `transparency` field |
 | `evidence/etp/claim.schema.json` | the field's definition, its closed enum and when it is required |
 | `docs/TRANSPARENCY-NON-CLAIMS.md` | the public statement of what is not established |
-| `forensics/tools/release_gate.py` | that items 1–10 exist and item 10 is called |
+| `forensics/tools/release_gate.py` | that items 1–11 exist and items 10 and 11 are called |
 | `evidence/b8/ENFORCEMENT.json` | the baseline of checked codes and the before/after counts |
 | `docs/CONTINUOUS-ENFORCEMENT.md` | this document, which must still name every code |
 
@@ -127,13 +127,17 @@ The document is an input to item 10, not a comment on it. Deleting a row is
 
 `check_enforcement` treats the enforcement itself as data:
 
-1. every gate item 1–10 must still have its function, and every function must
+1. every gate item 1–11 must still have its function, and every function must
    still be called from `evaluate()`;
 2. the release gate must still name `continuous_enforcement` and item
    "10. transparency";
 3. the B8 enforcement record must still exist and must still list every refusal
    code the tool emits;
 4. this document must still exist and must still name every refusal code.
+
+Item 10 is B8's own item; item 11 (PFP-34's branch audit) was added to the gate
+after B8 and is now part of the same baseline, so removing it is also refused.
+The enumeration tracks the gate as it grows rather than freezing at ten items.
 
 Any of those failing is `CE_REFUSED_ENFORCEMENT_REGRESSION`. The control renames
 `def check_transparency(` in a copy of the gate and observes the refusal; a

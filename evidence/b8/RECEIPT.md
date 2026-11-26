@@ -333,3 +333,80 @@ and `build_evidence.py --check` reports `CE_OK`.
 pending obligation, the schema absence check is still vacuous, and the two
 applications are still unapplied. The before/after refusal counts are historical
 observations of the gate with item 10 absent; only the commit id they name moved.
+
+## 12. Correction (2026-11-26): the record followed the gate to item 11
+
+**Cause.** `forensics/tools/release_gate.py` gained item 11 (branch audit,
+`check_branch_audit`, PFP-34) at `cebb10fae`, after the record was last
+regenerated at `0054ee1e9`. The pinned `digests.gate` was the bytes of
+`release_gate.py` at `0054ee1e9` (`cc9d0dd2…`); the current file is
+`b162b583…`. The record's `gateItems` also enumerated the eleven items that
+existed then, so it asserted the gate's item set while omitting item 11. The two
+`ProducerAndRecords` determinism tests failed (41/43) on exactly that pinned
+digest. The gate at the pinned digest already had items 1–10; the only item
+added since is 11, not 7–11.
+
+**What the record is for.** It states that item 10 exists, is wired after item 9,
+and refuses; that every gate item in its baseline still has its function and is
+called from `evaluate()`; that the transparency codes are unchanged; and that
+item 10 adds zero refusals at the base. The first three remain true. The item
+enumeration was incomplete, which is a false claim about the gate, not merely a
+stale digest, so item 11 was added to the baseline rather than the claim being
+dropped.
+
+**Old and new (superseded values preserved).**
+
+| field | old | new |
+|---|---|---|
+| `gateItems` | 11 (`1,2,2b,3,4,5,6,7,8,9,10`) | **12** (adds `11` branch audit / `check_branch_audit`) |
+| `digests.gate` | `cc9d0dd24ac6ccd16ad8be4d557c8cb3c6f2248cf3cc67c7c176bd659db7127b` | `b162d583dcea592134009b1ef2464942ca3cefa87bbdb0131d860e26db1ef7da` |
+| `digests.tool` | `d64063271d798cd261c2b586e7f905abff19c478d4577f85e4b284aa99a5871a` | `026495781c1f2da3c540221e2aa6e47f6804f28367df117f27639e47a98bd0a7` |
+| `digests.document` | `de0218489b8fda951724be5e3050d0df877256623d06b4441e465d962e83a482` | `626a1059d320fba50a2df70580bea6449d971cc8cd996760d0531d6063af3d76` |
+| `digests.schema` / `digests.nonClaims` | `3064ccbf…` / `7c8f1caf…` | unchanged |
+| `baseCommit`, `gateItem`, `refusalCodes`, `refusalCounts`, `wiring` | — | unchanged |
+
+| file | old sha256 | new sha256 |
+|---|---|---|
+| `ENFORCEMENT.json` | `a57026329b3171dfadfb194829f3d8706f3a72197544924b5d099705912152f4` | `add8b0b6bad41c0e75dd2ba4f21720d01d9c5d431f7a5d937947f87e9fcbdf11` |
+| `SCHEMA.json` | `01b0513426b71b981c809cb39ec1e4683d51ca1573171f2dfc292268ba7fc1ec` | unchanged |
+| `PENDING.json` | `63581cd161831246836e2e3da3464d0a88551bc7bf8e6ea23a33174e2f60c5f5` | unchanged |
+| `CONTROLS.json` | `4c858ab1867cfc14e5394daecd092f9247035e81c23575cfb96eb1fd253878db` | unchanged |
+
+The tool and document digests move because `continuous_enforcement.py` gained
+the item-11 baseline row and `docs/CONTINUOUS-ENFORCEMENT.md` §2 and §6 now name
+items 1–11. No digest is hard-coded in `build_evidence.py`: every one is derived
+by `_sha` at generation time, so re-running the producer is the only step a gate
+change requires; no producer path or digest fix was needed. The previous §11
+PENDING hash `ee07aa60…` was itself superseded at `919360368`; the current value
+`63581cd1…` is recorded here.
+
+**Scope of the refusal counts.** `refusalCounts.before` (35 at `2ed2cd79f`) and
+`refusalCounts.after` (35 = before + item 10's 0 measured findings) are B8's
+historical, item-10-scoped observations and are unchanged. They are **not** a
+count of the current gate: with item 11 present the gate observed here reports
+**36** refusals — the same eight rows plus `RG_AUDIT_IDENTITY_MISMATCH` 1
+(`RG_CLAIM_UNCERTIFIABLE_EVIDENCE` 19, `RG_CLAIM_HISTORICAL_EVIDENCE` 11,
+`RG_AUTHORISATION_REFUSED`, `RG_INSTRUMENT`, `RG_PACKAGE_MISSING`,
+`RG_POLICY_DENIED`, `RG_THRESHOLD_UNMET`, `RG_AUDIT_IDENTITY_MISMATCH` each 1).
+
+**Finding not repaired here (false, not merely stale).** `PENDING.json`'s
+`release-gates-section10` entry still says the §10 rows were refused because
+`evidence/etp-t14/ARTICLES.json` registers `gate-1..gate-6` only. That is now
+false: at `cebb10fae` `docs/RELEASE_GATES.md` §10 gained `gate-7..gate-11` and
+`ARTICLES.json` registers `gate-1..gate-11`; `earned_trust.py check` and
+`docs_consistency.py` both accept the mapping, and the attempt diff no longer
+applies. The application is therefore superseded, not pending. `docs/ETP-TODO.md`
+row B8 repeats the same now-false statement. Both are recorded here as open
+rather than regenerated: changing a pending state and another item's ledger row
+is outside this enforcement-record correction, and the producer's `state`,
+`reason` and `checkerOutput` for that entry are pinned observations, not derived
+ones. The §8 and §11 statements that the §10 mapping is pending are superseded
+by this section.
+
+**Retained.** `AGENTS.md` was not opened or changed; the two applications remain
+unapplied; the schema absence check remains vacuous; the enforcement-regression
+rule remains a single-edit tripwire.
+
+**Tests.** `test_continuous_enforcement` 43/43, `test_release_gate` 34/34,
+`test_etp_claims` 95/95; `spec_guard.py check`, `docs_consistency.py`,
+`earned_trust.py check` clean; the gate itself REFUSED with 36 rows as above.

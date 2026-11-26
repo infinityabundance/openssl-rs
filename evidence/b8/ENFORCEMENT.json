@@ -1,11 +1,11 @@
 {
  "baseCommit": "2ed2cd79f",
  "digests": {
-  "document": "de0218489b8fda951724be5e3050d0df877256623d06b4441e465d962e83a482",
-  "gate": "cc9d0dd24ac6ccd16ad8be4d557c8cb3c6f2248cf3cc67c7c176bd659db7127b",
+  "document": "626a1059d320fba50a2df70580bea6449d971cc8cd996760d0531d6063af3d76",
+  "gate": "b162d583dcea592134009b1ef2464942ca3cefa87bbdb0131d860e26db1ef7da",
   "nonClaims": "7c8f1caf85ac2edd76f146bf0a03effdaa17c785e7903cfec9c131987ad6d204",
   "schema": "3064ccbfbb887eebfc32856eadfb8224f4127524e4e59188f0e0c09493aaec72",
-  "tool": "d64063271d798cd261c2b586e7f905abff19c478d4577f85e4b284aa99a5871a"
+  "tool": "026495781c1f2da3c540221e2aa6e47f6804f28367df117f27639e47a98bd0a7"
  },
  "document": "docs/CONTINUOUS-ENFORCEMENT.md",
  "gate": "forensics/tools/release_gate.py",
@@ -71,6 +71,11 @@
    "id": "10",
    "label": "transparency enforcement",
    "symbol": "check_transparency"
+  },
+  {
+   "id": "11",
+   "label": "branch audit",
+   "symbol": "check_branch_audit"
   }
  ],
  "item": "B8",
