@@ -4321,8 +4321,8 @@
   "schema": "openssl-rs/a16/controls/1",
   "sourceIdentity": {
     "asOf": "2026-11-24",
-    "baseCommit": "50974780e47c190da2f202acc24b4ac3899f8e01",
-    "baseCommitShort": "50974780e",
+    "baseCommit": "cebb10fae3ad0a9249968b6981268c5104d72c44",
+    "baseCommitShort": "cebb10fae",
     "delegatedTools": [
       {
         "path": "forensics/tools/harden.py",

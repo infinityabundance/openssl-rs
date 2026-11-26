@@ -1,7 +1,7 @@
 # Sigstore bundles — A16
 
 Status: normative. Delivered by item A16 of `docs/ETP-TODO.md`, re-frozen at
-candidate `50974780e47c190da2f202acc24b4ac3899f8e01` (`staging`). The implementation is
+candidate `cebb10fae3ad0a9249968b6981268c5104d72c44` (`staging`). The implementation is
 `forensics/tools/sigstore_bundle.py`; the records are
 `evidence/a16/INVENTORY.json`, `evidence/a16/PROFILE.json` and
 `evidence/a16/CONTROLS.json`; the deterministic producer is
@@ -214,14 +214,17 @@ The population is a **frozen member list**, not a live glob:
 existed at the declared candidate, each bound to its `sha256` read from that
 candidate's blobs (never the working tree), and `populationFiles` is the list's
 length. The record is frozen at
-`50974780e47c190da2f202acc24b4ac3899f8e01` (**594** members; C35 added 68 JSON
-records under `evidence/performance-frontier/campaigns/PFP-2/` and `PFP-6/`,
-and moved `performance-frontier/admission/ARMS.json` and
-`claims/PFP-2.claim.json`). This item's three own
+`cebb10fae3ad0a9249968b6981268c5104d72c44` (**753** members; this re-freeze
+added 159 JSON records — 31 under `evidence/performance-frontier/campaigns/PFP-2/`,
+31 under `PFP-29/`, 37 under `PFP-31/`, 2 under `PFP-34/`, 56 under `PFP-6/`
+and 2 `*.raw-manifest.json` under `claims/` — and moved
+`performance-frontier/admission/ARMS.json`, `claims/PFP-2.claim.json` and
+`etp-t14/ARTICLES.json`). This item's three own
 records are not members: the record declares them separately as
-`identityExcluded`, outside the declared cut. Ten prior freezes are preserved
+`identityExcluded`, outside the declared cut. Eleven prior freezes are preserved
 inside it with their record digests, rather than overwritten: the immediately
-preceding freeze at `34754764fd2cae3117535b741263c48e3df6cf37` (526 members),
+preceding freeze at `50974780e47c190da2f202acc24b4ac3899f8e01` (594 members),
+then the freeze at `34754764fd2cae3117535b741263c48e3df6cf37` (526 members),
 then the freeze at `c047cd6ca49782d939c7790a24c1cc6d50e678c0` (516 members),
 then the freeze at `38f179275913adbb320eeba698759f8086a95d36` (510 members),
 then the freeze at `2dc0b37da07c661597d28199f550a38b4e1a03c7` (510 members),
