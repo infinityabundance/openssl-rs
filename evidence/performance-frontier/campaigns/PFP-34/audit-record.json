@@ -1,0 +1,428 @@
+{
+  "schema": "openssl-rs/pfp/branch-audit-record/1",
+  "campaign": "PFP-31 (repair) / PFP-34 (admission)",
+  "candidate": {
+    "commit": "c34cfe62f107f6f28f2939772485e7d5ac1fcd5a",
+    "tree": "fee211d0685938cc9281f8d79e50a7b24fc21617",
+    "source_fingerprint_sha256": "1587dcca275eb2f54d53398a9f5250ec9653092a2264bc9871ca3cf9754e3553"
+  },
+  "dso": {
+    "sha256": "43a23e9b7b4628cb236d75bb8bc4b73583a035f3335bd0244f1771e81b773557",
+    "build_id": "e4025832eb16152a4697680391b0c4be6297d967",
+    "bytes": 17102040,
+    "reproducible_builds": 2,
+    "target_triple": "x86_64-unknown-linux-gnu"
+  },
+  "audit_tool": {
+    "path": "courts/phase18/timing/binary_branch_audit.py",
+    "sha256": "5d54f3a1995263032fbdd23f9ccd533b50fa53b283199b2e1f43a3002cd1dfd4",
+    "objdump": "GNU objdump (GNU Binutils for Debian) 2.40"
+  },
+  "inventory": {
+    "path": "evidence/performance-frontier/campaigns/PFP-31/targets-pfp31.json",
+    "sha256": "3a7f569736053267fb55e20b290158608c96d9fe8ce35d382c969cce5eef86c6"
+  },
+  "coverage": {
+    "path": "evidence/performance-frontier/campaigns/PFP-34/coverage.json",
+    "sha256": "02d92c104d94a2017627793c768ab2fb3231590b3c9fd84fa39f4f394d55992a"
+  },
+  "recorded_from": [
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-31/repair-raw/audit-repaired.md",
+      "sha256": "dfc18cd0ea18f0ab3c346235f0d48b88a93cef9bace65f23d020e20091f27d1f"
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-31/repair-raw/audit-repaired.stderr",
+      "sha256": "5869fc630e1fc5064dac5a747ab69d4db97675ed02202b47cf401851887452df"
+    }
+  ],
+  "region": {
+    "audit_exit": 0,
+    "inventory_expected": 31,
+    "resolved": 31,
+    "inline_resolved": 1,
+    "llvm_suffix_resolved": 2,
+    "refused": 0
+  },
+  "targets": {
+    "mont_mul_sos_into": {
+      "family": "Montgomery multiply (SOS kernel; the schedule LADDER_SCHEDULE selects)",
+      "module": null,
+      "symbol": "mont_mul_sos_into",
+      "classification": "inventory-and-source-review",
+      "observed": {"jcc": 19, "cmov": 0, "setcc": 10},
+      "secret_derived_jcc": 0,
+      "secret_derived_memory_address": false,
+      "secret_derived_setcc": [],
+      "secret_derived_cmov": []
+    },
+    "run_mont_ladder": {
+      "family": "Montgomery ladder carrier (ladder multiplies inlined here)",
+      "module": null,
+      "symbol": "run_mont_ladder",
+      "classification": "inventory-and-source-review",
+      "observed": {"jcc": 51, "cmov": 2, "setcc": 11},
+      "secret_derived_jcc": 0,
+      "secret_derived_memory_address": false,
+      "secret_derived_setcc": [],
+      "secret_derived_cmov": []
+    },
+    "mont_mul_fallible": {
+      "family": "Montgomery multiply (allocating wrapper)",
+      "module": null,
+      "symbol": "mont_mul_fallible",
+      "classification": "inventory-and-source-review",
+      "observed": {"jcc": 17, "cmov": 0, "setcc": 0},
+      "secret_derived_jcc": 0,
+      "secret_derived_memory_address": false,
+      "secret_derived_setcc": [],
+      "secret_derived_cmov": []
+    },
+    "mod_exp_core_consttime_from_parts": {
+      "family": "Constant-time ladder core",
+      "module": null,
+      "symbol": "mod_exp_core_consttime_from_parts",
+      "resolved_symbol": "mod_exp_core_consttime_from_parts_prepared",
+      "inline_mapping": true,
+      "classification": "inventory-and-source-review",
+      "observed": {"jcc": 42, "cmov": 2, "setcc": 4},
+      "secret_derived_jcc": 0,
+      "secret_derived_memory_address": false,
+      "secret_derived_setcc": [],
+      "secret_derived_cmov": []
+    },
+    "mod_inverse_consttime": {
+      "family": "Constant-time inversion",
+      "module": null,
+      "symbol": "mod_inverse_consttime",
+      "classification": "inventory-and-source-review",
+      "observed": {"jcc": 217, "cmov": 3, "setcc": 24},
+      "secret_derived_jcc": 0,
+      "secret_derived_memory_address": false,
+      "secret_derived_setcc": [],
+      "secret_derived_cmov": []
+    },
+    "ossl_ec_scalar_mul_ladder": {
+      "family": "ECDSA scalar ladder (driver)",
+      "module": null,
+      "symbol": "ossl_ec_scalar_mul_ladder",
+      "classification": "inventory-and-source-review",
+      "observed": {"jcc": 125, "cmov": 5, "setcc": 7},
+      "secret_derived_jcc": 0,
+      "secret_derived_memory_address": false,
+      "secret_derived_setcc": [],
+      "secret_derived_cmov": []
+    },
+    "ossl_ec_GFp_simple_ladder_step": {
+      "family": "EC ladder step (secret core)",
+      "module": null,
+      "symbol": "ossl_ec_GFp_simple_ladder_step",
+      "classification": "inventory-and-source-review",
+      "observed": {"jcc": 61, "cmov": 0, "setcc": 0},
+      "secret_derived_jcc": 0,
+      "secret_derived_memory_address": false,
+      "secret_derived_setcc": [],
+      "secret_derived_cmov": []
+    },
+    "rsa_ossl_mod_exp": {
+      "family": "RSA CRT arms",
+      "module": null,
+      "symbol": "rsa_ossl_mod_exp",
+      "classification": "inventory-and-source-review",
+      "observed": {"jcc": 155, "cmov": 0, "setcc": 8},
+      "secret_derived_jcc": 0,
+      "secret_derived_memory_address": false,
+      "secret_derived_setcc": [],
+      "secret_derived_cmov": []
+    },
+    "p256::mont_reduce_into": {
+      "family": "P-256 Montgomery reduction",
+      "module": "p256",
+      "symbol": "mont_reduce_into",
+      "classification": "inventory-and-source-review",
+      "observed": {"jcc": 2, "cmov": 0, "setcc": 2},
+      "secret_derived_jcc": 0,
+      "secret_derived_memory_address": false,
+      "secret_derived_setcc": [],
+      "secret_derived_cmov": []
+    },
+    "p256::wide_mul_x86": {
+      "family": "P-256 x86-64 multiply",
+      "module": "p256",
+      "symbol": "wide_mul_x86",
+      "classification": "inventory-and-source-review",
+      "observed": {"jcc": 0, "cmov": 0, "setcc": 9},
+      "secret_derived_jcc": 0,
+      "secret_derived_memory_address": false,
+      "secret_derived_setcc": [],
+      "secret_derived_cmov": []
+    },
+    "ossl_dh_compute_key": {
+      "family": "DH key agreement (driver)",
+      "module": "key",
+      "symbol": "ossl_dh_compute_key",
+      "classification": "inventory-and-source-review",
+      "observed": {"jcc": 36, "cmov": 1, "setcc": 0},
+      "secret_derived_jcc": 0,
+      "secret_derived_memory_address": false,
+      "secret_derived_setcc": [],
+      "secret_derived_cmov": []
+    },
+    "ossl_ec_wNAF_mul": {
+      "family": "EC wNAF multiply (verification / public-scalar core)",
+      "module": "mult",
+      "symbol": "ossl_ec_wNAF_mul",
+      "classification": "inventory-and-source-review",
+      "observed": {"jcc": 147, "cmov": 34, "setcc": 3},
+      "secret_derived_jcc": 0,
+      "secret_derived_memory_address": false,
+      "secret_derived_setcc": [],
+      "secret_derived_cmov": []
+    },
+    "ossl_ml_kem_decap": {
+      "family": "ML-KEM decapsulation (provider driver)",
+      "module": "key",
+      "symbol": "ossl_ml_kem_decap",
+      "classification": "inventory-and-source-review",
+      "observed": {"jcc": 15, "cmov": 1, "setcc": 4},
+      "secret_derived_jcc": 0,
+      "secret_derived_memory_address": false,
+      "secret_derived_setcc": [],
+      "secret_derived_cmov": []
+    },
+    "decrypt_cpa": {
+      "family": "ML-KEM K-PKE decrypt",
+      "module": "arith",
+      "symbol": "decrypt_cpa",
+      "classification": "inventory-and-source-review",
+      "observed": {"jcc": 37, "cmov": 0, "setcc": 6},
+      "secret_derived_jcc": 0,
+      "secret_derived_memory_address": false,
+      "secret_derived_setcc": [],
+      "secret_derived_cmov": []
+    },
+    "encrypt_cpa": {
+      "family": "ML-KEM K-PKE encrypt (re-encryption / implicit reject)",
+      "module": "arith",
+      "symbol": "encrypt_cpa",
+      "classification": "inventory-and-source-review",
+      "observed": {"jcc": 44, "cmov": 6, "setcc": 46},
+      "secret_derived_jcc": 0,
+      "secret_derived_memory_address": false,
+      "secret_derived_setcc": [],
+      "secret_derived_cmov": []
+    },
+    "scalar_inverse_ntt": {
+      "family": "ML-KEM inverse NTT",
+      "module": "arith",
+      "symbol": "scalar_inverse_ntt",
+      "classification": "inventory-and-source-review",
+      "observed": {"jcc": 12, "cmov": 13, "setcc": 0},
+      "secret_derived_jcc": 0,
+      "secret_derived_memory_address": false,
+      "secret_derived_setcc": [],
+      "secret_derived_cmov": []
+    },
+    "inner_product": {
+      "family": "ML-KEM inner product",
+      "module": "arith",
+      "symbol": "inner_product",
+      "classification": "inventory-and-source-review",
+      "observed": {"jcc": 11, "cmov": 2, "setcc": 12},
+      "secret_derived_jcc": 0,
+      "secret_derived_memory_address": false,
+      "secret_derived_setcc": [],
+      "secret_derived_cmov": []
+    },
+    "matrix_mult_transpose_add": {
+      "family": "ML-KEM matrix transpose-multiply-add",
+      "module": "arith",
+      "symbol": "matrix_mult_transpose_add",
+      "classification": "inventory-and-source-review",
+      "observed": {"jcc": 10, "cmov": 3, "setcc": 12},
+      "secret_derived_jcc": 0,
+      "secret_derived_memory_address": false,
+      "secret_derived_setcc": [],
+      "secret_derived_cmov": []
+    },
+    "matrix_expand": {
+      "family": "ML-KEM matrix expansion (public)",
+      "module": "arith",
+      "symbol": "matrix_expand",
+      "classification": "inventory-and-source-review",
+      "observed": {"jcc": 16, "cmov": 0, "setcc": 0},
+      "secret_derived_jcc": 0,
+      "secret_derived_memory_address": false,
+      "secret_derived_setcc": [],
+      "secret_derived_cmov": []
+    },
+    "vector_decode_12": {
+      "family": "ML-KEM vector decode 12-bit",
+      "module": "arith",
+      "symbol": "vector_decode_12",
+      "classification": "inventory-and-source-review",
+      "observed": {"jcc": 5, "cmov": 0, "setcc": 0},
+      "secret_derived_jcc": 0,
+      "secret_derived_memory_address": false,
+      "secret_derived_setcc": [],
+      "secret_derived_cmov": []
+    },
+    "vector_encode": {
+      "family": "ML-KEM vector encode",
+      "module": "arith",
+      "symbol": "vector_encode",
+      "classification": "inventory-and-source-review",
+      "observed": {"jcc": 10, "cmov": 0, "setcc": 0},
+      "secret_derived_jcc": 0,
+      "secret_derived_memory_address": false,
+      "secret_derived_setcc": [],
+      "secret_derived_cmov": []
+    },
+    "cbd_2": {
+      "family": "ML-KEM CBD sampling eta=2",
+      "module": "arith",
+      "symbol": "cbd_2",
+      "classification": "inventory-and-source-review",
+      "observed": {"jcc": 3, "cmov": 0, "setcc": 0},
+      "secret_derived_jcc": 0,
+      "secret_derived_memory_address": false,
+      "secret_derived_setcc": [],
+      "secret_derived_cmov": []
+    },
+    "cbd_3": {
+      "family": "ML-KEM CBD sampling eta=3",
+      "module": "arith",
+      "symbol": "cbd_3",
+      "classification": "inventory-and-source-review",
+      "observed": {"jcc": 3, "cmov": 0, "setcc": 0},
+      "secret_derived_jcc": 0,
+      "secret_derived_memory_address": false,
+      "secret_derived_setcc": [],
+      "secret_derived_cmov": []
+    },
+    "gencbd_vector_ntt": {
+      "family": "ML-KEM CBD vector sampling then NTT",
+      "module": "arith",
+      "symbol": "gencbd_vector_ntt",
+      "classification": "inventory-and-source-review",
+      "observed": {"jcc": 3, "cmov": 0, "setcc": 1},
+      "secret_derived_jcc": 0,
+      "secret_derived_memory_address": false,
+      "secret_derived_setcc": [],
+      "secret_derived_cmov": []
+    },
+    "hash_h": {
+      "family": "ML-KEM hash H",
+      "module": "arith",
+      "symbol": "hash_h",
+      "classification": "inventory-and-source-review",
+      "observed": {"jcc": 5, "cmov": 0, "setcc": 2},
+      "secret_derived_jcc": 0,
+      "secret_derived_memory_address": false,
+      "secret_derived_setcc": [],
+      "secret_derived_cmov": []
+    },
+    "hash_g": {
+      "family": "ML-KEM hash G",
+      "module": "arith",
+      "symbol": "hash_g",
+      "classification": "inventory-and-source-review",
+      "observed": {"jcc": 5, "cmov": 0, "setcc": 2},
+      "secret_derived_jcc": 0,
+      "secret_derived_memory_address": false,
+      "secret_derived_setcc": [],
+      "secret_derived_cmov": []
+    },
+    "hash_h_pubkey": {
+      "family": "ML-KEM public-key hash",
+      "module": "arith",
+      "symbol": "hash_h_pubkey",
+      "classification": "inventory-and-source-review",
+      "observed": {"jcc": 7, "cmov": 0, "setcc": 2},
+      "secret_derived_jcc": 0,
+      "secret_derived_memory_address": false,
+      "secret_derived_setcc": [],
+      "secret_derived_cmov": []
+    },
+    "kdf": {
+      "family": "ML-KEM KDF",
+      "module": "arith",
+      "symbol": "kdf",
+      "classification": "inventory-and-source-review",
+      "observed": {"jcc": 3, "cmov": 0, "setcc": 0},
+      "secret_derived_jcc": 0,
+      "secret_derived_memory_address": false,
+      "secret_derived_setcc": [],
+      "secret_derived_cmov": []
+    },
+    "prf": {
+      "family": "ML-KEM PRF",
+      "module": "arith",
+      "symbol": "prf",
+      "classification": "inventory-and-source-review",
+      "observed": {"jcc": 5, "cmov": 0, "setcc": 2},
+      "secret_derived_jcc": 0,
+      "secret_derived_memory_address": false,
+      "secret_derived_setcc": [],
+      "secret_derived_cmov": []
+    },
+    "key::decap": {
+      "family": "ML-KEM decapsulation carrier (implicit-rejection comparison + select)",
+      "module": "key",
+      "symbol": "decap",
+      "llvm_suffix_symbol": "3key5decap.llvm.8141794212082648356",
+      "classification": "comparison-contract",
+      "observed": {"jcc": 16, "cmov": 1, "setcc": 1},
+      "secret_derived_jcc": 0,
+      "secret_derived_memory_address": false,
+      "secret_derived_setcc": [
+        {
+          "addr": "0x1d3675",
+          "insn": "setne %al",
+          "condition_source": "0x1d3673: test %dl,%dl",
+          "consumer": "arithmetic",
+          "note": "the accumulator's r != 0 normalisation; written to a register, not a transfer"
+        }
+      ],
+      "secret_derived_cmov": [
+        {
+          "addr": "0x1d3696",
+          "insn": "cmovne %rcx,%rdx",
+          "condition_source": "0x1d3689: cmpl $0x0,0xa0(%rsp)",
+          "operands": "register",
+          "address": "fixed",
+          "transfer_free": true,
+          "note": "mask = 0xff (equal) / 0 (unequal); register move, condition read from a fixed stack slot, not a data-dependent address"
+        }
+      ]
+    },
+    "arith::scalar_ntt": {
+      "family": "ML-KEM forward NTT (used by re-encryption on secret-derived data)",
+      "module": "arith",
+      "symbol": "scalar_ntt",
+      "llvm_suffix_symbol": "5arith10scalar_ntt.llvm.8914366393463869599",
+      "classification": "comparison-independent-source-review",
+      "observed": {"jcc": 10, "cmov": 14, "setcc": 0},
+      "secret_derived_jcc": 0,
+      "secret_derived_memory_address": false,
+      "secret_derived_setcc": [],
+      "secret_derived_cmov": [
+        {"addr": "0x2962ec", "insn": "cmova %rbx,%r8", "operands": "register", "address": "fixed", "transfer_free": true},
+        {"addr": "0x296302", "insn": "cmovb %r9,%r12", "operands": "register", "address": "fixed", "transfer_free": true},
+        {"addr": "0x296314", "insn": "cmovb %r8,%r12", "operands": "register", "address": "fixed", "transfer_free": true},
+        {"addr": "0x296321", "insn": "cmovb %r9,%r8", "operands": "register", "address": "fixed", "transfer_free": true},
+        {"addr": "0x296328", "insn": "cmovb %r12,%r8", "operands": "register", "address": "fixed", "transfer_free": true},
+        {"addr": "0x296335", "insn": "cmova %rbx,%r15", "operands": "register", "address": "fixed", "transfer_free": true},
+        {"addr": "0x296345", "insn": "cmovb %r9,%r13", "operands": "register", "address": "fixed", "transfer_free": true},
+        {"addr": "0x296350", "insn": "cmovb %r15,%r13", "operands": "register", "address": "fixed", "transfer_free": true},
+        {"addr": "0x29635d", "insn": "cmovb %r9,%r12", "operands": "register", "address": "fixed", "transfer_free": true},
+        {"addr": "0x296364", "insn": "cmovb %r13,%r12", "operands": "register", "address": "fixed", "transfer_free": true},
+        {"addr": "0x29639f", "insn": "cmove %rdx,%r12", "operands": "register", "address": "fixed", "transfer_free": true},
+        {"addr": "0x2965aa", "insn": "cmovle %r9d,%r15d", "operands": "register", "address": "fixed", "transfer_free": true},
+        {"addr": "0x2965cf", "insn": "cmovle %r9d,%r11d", "operands": "register", "address": "fixed", "transfer_free": true},
+        {"addr": "0x2965fd", "insn": "cmovle %r9d,%edx", "operands": "register", "address": "fixed", "transfer_free": true}
+      ],
+      "note": "the value-dependent NTT reductions; every cmov is register-to-register with no memory operand, so it is a conditional move, not a transfer and not a data-dependent address"
+    }
+  }
+}

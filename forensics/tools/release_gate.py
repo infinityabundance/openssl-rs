@@ -64,6 +64,20 @@ one refused item refuses the release.
                           has disappeared.  Each refusal is reported with the
                           tool's `CE_REFUSED_*` code, and an absent tool is
                           `RG_TRANSPARENCY_TOOL_MISSING`, never a skip.
+ 11. branch audit        a recorded binary branch-audit result bound to the
+                          candidate's source and DSO is present; every
+                          secret-bearing path the project claims audited has a
+                          target in the record; and no audited target retains a
+                          secret-derived conditional transfer or a secret-derived
+                          memory address.  A `setcc` consumed arithmetically is
+                          not a transfer; a secret-derived `cmov` is accepted
+                          only when the record states register or fixed-address
+                          operands.  The record is read, not regenerated: a
+                          result measured at another DSO is
+                          `RG_AUDIT_IDENTITY_MISMATCH`, an unaudited path is
+                          `RG_AUDIT_UNCOVERED_PATH`, an unresolved transfer is
+                          `RG_AUDIT_SECRET_BRANCH`, and an absent record is a
+                          refusal, never a skip.
 
 Every item is required.  A tool that cannot be found, a package that was not
 supplied, or a checker that cannot run is a refusal with a named rule, never a
@@ -130,7 +144,9 @@ SPDX-License-Identifier: Apache-2.0
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
+import re
 import subprocess
 import sys
 import tarfile
@@ -174,6 +190,13 @@ TRANSPARENCY_NONCLAIMS = ROOT / "docs/TRANSPARENCY-NON-CLAIMS.md"
 TRANSPARENCY_GATE = ROOT / "forensics/tools/release_gate.py"
 TRANSPARENCY_ENFORCEMENT = ROOT / "evidence/b8/ENFORCEMENT.json"
 TRANSPARENCY_DOCUMENT = ROOT / "docs/CONTINUOUS-ENFORCEMENT.md"
+BRANCH_AUDIT_RECORD = ROOT / "evidence/performance-frontier/campaigns/PFP-34/audit-record.json"
+BRANCH_AUDIT_COVERAGE = ROOT / "evidence/performance-frontier/campaigns/PFP-34/coverage.json"
+BRANCH_AUDIT_SCHEMA = "openssl-rs/pfp/branch-audit-record/1"
+BRANCH_AUDIT_COVERAGE_SCHEMA = "openssl-rs/pfp/audit-coverage/1"
+SETCC_CONSUMERS = {"arithmetic", "control"}
+CMOV_OPERANDS = {"register", "fixed-address", "memory"}
+CMOV_ADDRESSES = {"fixed", "variable"}
 
 # Verdict states that forbid a release outright.  `SUPERSEDED` is not one: the
 # claim was current and has been replaced, which is a history fact, not a
@@ -1062,6 +1085,334 @@ def check_transparency(
 
 
 # ---------------------------------------------------------------------------
+# 11. Recorded binary branch audit (PFP-34)
+# ---------------------------------------------------------------------------
+def _file_sha256(path: Path) -> str | None:
+    try:
+        return hashlib.sha256(path.read_bytes()).hexdigest()
+    except OSError:
+        return None
+
+
+def check_branch_audit(
+    root: Path,
+    candidate: str | None,
+    candidate_tree: str | None,
+    record: Path | None = None,
+    coverage: Path | None = None,
+    expected_dso_sha256: str | None = None,
+) -> Results:
+    """A recorded, digest-bound branch audit must admit the candidate.
+
+    The gate reads a recorded audit result rather than rebuilding or
+    disassembling inside the gate: the record names the candidate commit, its
+    tree and the DSO sha256 that was measured, and binds the audit tool, the
+    target inventory and the coverage requirement by digest.  A result measured
+    at another source or DSO is refused, never reinterpreted for this candidate.
+
+    The refusal rules distinguish the three flag readers.  A secret-derived
+    ``jcc`` is a conditional transfer (``RG_AUDIT_SECRET_BRANCH``).  A
+    secret-derived ``setcc`` is accepted when the record says it is consumed
+    arithmetically, because it then writes a value rather than choosing a path.
+    A secret-derived ``cmov`` is accepted only when the record states register or
+    fixed-address operands and a fixed condition address; otherwise it is an
+    unqualified conditional move or a secret-derived address.  A path the
+    project claims audited but which has no target in the record is refused as
+    uncovered: absence of coverage is not cleanliness.
+    """
+    record_path = Path(record).resolve() if record else BRANCH_AUDIT_RECORD
+    coverage_path = Path(coverage).resolve() if coverage else BRANCH_AUDIT_COVERAGE
+    if not record_path.is_file():
+        return Results([Refusal(
+            "RG_AUDIT_RECORD_MISSING", str(record_path),
+            "no recorded branch-audit result; an unaudited candidate is refused, "
+            "not assumed clean",
+        )], [])
+    try:
+        document = json.loads(record_path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        return Results([Refusal("RG_AUDIT_RECORD_INVALID", str(record_path), str(exc))], [])
+    if not isinstance(document, dict) or document.get("schema") != BRANCH_AUDIT_SCHEMA:
+        return Results([Refusal(
+            "RG_AUDIT_RECORD_INVALID", str(record_path),
+            f"schema must be {BRANCH_AUDIT_SCHEMA!r}",
+        )], [])
+
+    refusals: list[Refusal] = []
+    recorded: list[str] = []
+
+    identity = document.get("candidate") if isinstance(document.get("candidate"), dict) else {}
+    rec_commit = identity.get("commit")
+    rec_tree = identity.get("tree")
+    dso = document.get("dso") if isinstance(document.get("dso"), dict) else {}
+    dso_sha = dso.get("sha256")
+    if not isinstance(dso_sha, str) or not re.fullmatch(r"[0-9a-f]{64}", dso_sha):
+        return Results([Refusal(
+            "RG_AUDIT_RECORD_INVALID", str(record_path),
+            "the record names no 64-hex DSO sha256, so its measurement has no identity",
+        )], [])
+
+    # Identity binding.  A measurement at another source or DSO cannot evidence
+    # this candidate; the record is not reinterpreted.
+    identity_problems: list[str] = []
+    if not isinstance(rec_commit, str) or not rec_commit:
+        identity_problems.append("the record names no candidate.commit")
+    elif candidate is None:
+        identity_problems.append("the gate resolved no candidate to compare with")
+    elif rec_commit != candidate:
+        identity_problems.append(
+            f"the record was measured at source {rec_commit} / DSO {dso_sha}; the "
+            f"release candidate is {candidate} / tree {candidate_tree or '?'}; a "
+            "result measured at another DSO cannot evidence this candidate"
+        )
+    if not isinstance(rec_tree, str) or not rec_tree:
+        identity_problems.append("the record names no candidate.tree")
+    elif candidate_tree is not None and rec_tree != candidate_tree:
+        identity_problems.append(
+            f"the record names tree {rec_tree}; the candidate has tree {candidate_tree}"
+        )
+    if expected_dso_sha256 is not None and expected_dso_sha256 != dso_sha:
+        identity_problems.append(
+            f"the record measured DSO {dso_sha}; the caller declares the candidate "
+            f"DSO {expected_dso_sha256}"
+        )
+    if identity_problems:
+        refusals.append(Refusal(
+            "RG_AUDIT_IDENTITY_MISMATCH", rec_commit or "-",
+            "; ".join(identity_problems),
+        ))
+        return Results(refusals, recorded)
+
+    # The coverage requirement and the tool/inventory digests are bound to the
+    # record, so a narrowed coverage list or a different instrument is stale.
+    if not coverage_path.is_file():
+        return Results([Refusal(
+            "RG_AUDIT_UNCOVERED_PATH", str(coverage_path),
+            "the coverage requirement is absent; absence of coverage is not "
+            "cleanliness",
+        )], recorded)
+    try:
+        coverage_doc = json.loads(coverage_path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        return Results([Refusal("RG_AUDIT_RECORD_INVALID", str(coverage_path), str(exc))], recorded)
+    if not isinstance(coverage_doc, dict) or coverage_doc.get("schema") != BRANCH_AUDIT_COVERAGE_SCHEMA:
+        return Results([Refusal(
+            "RG_AUDIT_RECORD_INVALID", str(coverage_path),
+            f"schema must be {BRANCH_AUDIT_COVERAGE_SCHEMA!r}",
+        )], recorded)
+
+    coverage_sha = _file_sha256(coverage_path)
+    bound = document.get("coverage") if isinstance(document.get("coverage"), dict) else {}
+    if bound.get("sha256") != coverage_sha:
+        refusals.append(Refusal(
+            "RG_AUDIT_STALE_BINDING", str(record_path),
+            f"the record binds coverage {bound.get('sha256')!r}; the committed "
+            f"requirement is {coverage_sha}",
+        ))
+    for label, key in (("audit tool", "audit_tool"), ("target inventory", "inventory")):
+        entry = document.get(key) if isinstance(document.get(key), dict) else {}
+        relative = entry.get("path")
+        if not isinstance(relative, str) or not relative:
+            refusals.append(Refusal(
+                "RG_AUDIT_STALE_BINDING", str(record_path),
+                f"the record names no {label} path",
+            ))
+            continue
+        actual = _file_sha256(root / relative)
+        if actual is None:
+            refusals.append(Refusal(
+                "RG_AUDIT_STALE_BINDING", relative, f"the recorded {label} is absent",
+            ))
+        elif actual != entry.get("sha256"):
+            refusals.append(Refusal(
+                "RG_AUDIT_STALE_BINDING", relative,
+                f"the recorded {label} digest {entry.get('sha256')!r} does not match "
+                f"the committed {actual}",
+            ))
+    for source in coverage_doc.get("sources") or []:
+        if not isinstance(source, dict) or not isinstance(source.get("path"), str):
+            refusals.append(Refusal(
+                "RG_AUDIT_RECORD_INVALID", str(coverage_path),
+                "a coverage source names no path",
+            ))
+            continue
+        actual = _file_sha256(root / source["path"])
+        if actual is None or actual != source.get("sha256"):
+            refusals.append(Refusal(
+                "RG_AUDIT_STALE_BINDING", source["path"],
+                f"the coverage requirement cites {source.get('sha256')!r}; the "
+                f"committed file is {actual or 'absent'}",
+            ))
+
+    region = document.get("region") if isinstance(document.get("region"), dict) else {}
+    if region.get("audit_exit") != 0 or region.get("refused") != 0:
+        refusals.append(Refusal(
+            "RG_AUDIT_RECORD_INVALID", str(record_path),
+            f"the recorded audit exited {region.get('audit_exit')!r} with "
+            f"{region.get('refused')!r} refused target(s); an incomplete audit is "
+            "not a clean result",
+        ))
+
+    targets = document.get("targets")
+    if not isinstance(targets, dict) or not targets:
+        return Results(refusals + [Refusal(
+            "RG_AUDIT_RECORD_INVALID", str(record_path),
+            "the record enumerates no audited target",
+        )], recorded)
+
+    # Coverage: every path the project claims audited must have a target.
+    required: set[str] = set()
+    for path_entry in coverage_doc.get("paths") or []:
+        if not isinstance(path_entry, dict):
+            refusals.append(Refusal(
+                "RG_AUDIT_RECORD_INVALID", str(coverage_path),
+                "a coverage path entry is not an object",
+            ))
+            continue
+        name = path_entry.get("path")
+        ids = path_entry.get("targets")
+        if not isinstance(name, str) or not name or not isinstance(ids, list) or not ids:
+            refusals.append(Refusal(
+                "RG_AUDIT_UNCOVERED_PATH", str(name or "-"),
+                "the coverage requirement names a path with no target; absence of "
+                "coverage is not cleanliness",
+            ))
+            continue
+        for target_id in ids:
+            if not isinstance(target_id, str) or not target_id:
+                continue
+            required.add(target_id)
+            if target_id not in targets:
+                refusals.append(Refusal(
+                    "RG_AUDIT_UNCOVERED_PATH", f"{name}/{target_id}",
+                    "the path is claimed audited but the record has no target for "
+                    "it; absence of coverage is not cleanliness",
+                ))
+
+    # Finding classification.  Every target the record lists is examined, so an
+    # extra target cannot hide a finding outside the required set.
+    for target_id in sorted(targets):
+        entry = targets[target_id]
+        if not isinstance(entry, dict):
+            refusals.append(Refusal(
+                "RG_AUDIT_RECORD_INVALID", target_id, "the target entry is not an object",
+            ))
+            continue
+        jcc = entry.get("secret_derived_jcc")
+        if not isinstance(jcc, int) or isinstance(jcc, bool) or jcc < 0:
+            refusals.append(Refusal(
+                "RG_AUDIT_RECORD_INVALID", target_id,
+                "secret_derived_jcc must be a non-negative integer; the record must "
+                "state the count",
+            ))
+        elif jcc:
+            first = entry.get("secret_derived_jcc_addr", "?")
+            refusals.append(Refusal(
+                "RG_AUDIT_SECRET_BRANCH", target_id,
+                f"{jcc} secret-derived conditional transfer(s) survive in the "
+                f"audited region (first at {first}); record {record_path.name} at "
+                f"DSO {dso_sha}",
+            ))
+
+        address_flag = entry.get("secret_derived_memory_address")
+        if not isinstance(address_flag, bool):
+            refusals.append(Refusal(
+                "RG_AUDIT_RECORD_INVALID", target_id,
+                "secret_derived_memory_address must be a boolean; the record must "
+                "state it",
+            ))
+        elif address_flag:
+            refusals.append(Refusal(
+                "RG_AUDIT_SECRET_ADDRESS", target_id,
+                f"a secret-derived memory address survives in the audited region; "
+                f"record {record_path.name} at DSO {dso_sha}",
+            ))
+
+        readers = entry.get("secret_derived_setcc", [])
+        if not isinstance(readers, list):
+            refusals.append(Refusal(
+                "RG_AUDIT_RECORD_INVALID", target_id,
+                "secret_derived_setcc must be a list",
+            ))
+            readers = []
+        for reader in readers:
+            if not isinstance(reader, dict):
+                refusals.append(Refusal(
+                    "RG_AUDIT_RECORD_INVALID", target_id,
+                    "a secret_derived_setcc entry is not an object",
+                ))
+                continue
+            where = f"{target_id}/{reader.get('addr', '?')}"
+            consumer = reader.get("consumer")
+            if consumer not in SETCC_CONSUMERS:
+                refusals.append(Refusal(
+                    "RG_AUDIT_RECORD_INVALID", where,
+                    "a secret-derived setcc must record whether it is consumed "
+                    "arithmetically or as control",
+                ))
+            elif consumer == "control":
+                refusals.append(Refusal(
+                    "RG_AUDIT_SECRET_BRANCH", where,
+                    f"secret-derived setcc {reader.get('insn', '?')} is consumed as a "
+                    f"transfer condition; record {record_path.name} at DSO {dso_sha}",
+                ))
+
+        moves = entry.get("secret_derived_cmov", [])
+        if not isinstance(moves, list):
+            refusals.append(Refusal(
+                "RG_AUDIT_RECORD_INVALID", target_id,
+                "secret_derived_cmov must be a list",
+            ))
+            moves = []
+        for move in moves:
+            if not isinstance(move, dict):
+                refusals.append(Refusal(
+                    "RG_AUDIT_RECORD_INVALID", target_id,
+                    "a secret_derived_cmov entry is not an object",
+                ))
+                continue
+            where = f"{target_id}/{move.get('addr', '?')}"
+            operands = move.get("operands")
+            address = move.get("address")
+            if operands not in CMOV_OPERANDS:
+                refusals.append(Refusal(
+                    "RG_AUDIT_CMOV_UNQUALIFIED", where,
+                    f"a secret-derived cmov must record its operands "
+                    f"(register/fixed-address/memory); got {operands!r}",
+                ))
+                continue
+            if address not in CMOV_ADDRESSES:
+                refusals.append(Refusal(
+                    "RG_AUDIT_CMOV_UNQUALIFIED", where,
+                    f"a secret-derived cmov must record whether the condition "
+                    f"address is fixed or variable; got {address!r}",
+                ))
+                continue
+            if operands == "memory" or address == "variable":
+                refusals.append(Refusal(
+                    "RG_AUDIT_SECRET_ADDRESS", where,
+                    f"secret-derived cmov {move.get('insn', '?')} acts on a variable "
+                    f"memory address; record {record_path.name} at DSO {dso_sha}",
+                ))
+                continue
+            if move.get("transfer_free") is not True:
+                refusals.append(Refusal(
+                    "RG_AUDIT_CMOV_UNQUALIFIED", where,
+                    f"secret-derived cmov {move.get('insn', '?')} is accepted only "
+                    "when the record states that it is transfer-free",
+                ))
+
+    if not refusals:
+        paths = coverage_doc.get("paths") or []
+        recorded.append(
+            f"branch audit {record_path.name}: candidate {rec_commit}, DSO {dso_sha}, "
+            f"{len(paths)} secret-bearing path(s), {len(required)} required target(s), "
+            "0 secret-derived transfer or address in the audited region"
+        )
+    return Results(refusals, recorded)
+
+
+# ---------------------------------------------------------------------------
 # Composition
 # ---------------------------------------------------------------------------
 def evaluate(args: argparse.Namespace) -> Results:
@@ -1163,6 +1514,19 @@ def evaluate(args: argparse.Namespace) -> Results:
     recorded.extend(result.recorded)
 
     result = check_transparency(root)
+    refusals.extend(result.refusals)
+    recorded.extend(result.recorded)
+
+    result = check_branch_audit(
+        root,
+        candidate,
+        candidate_tree,
+        Path(args.branch_audit_record).resolve()
+        if getattr(args, "branch_audit_record", None) else None,
+        Path(args.branch_audit_coverage).resolve()
+        if getattr(args, "branch_audit_coverage", None) else None,
+        getattr(args, "branch_audit_dso_sha256", None),
+    )
     refusals.extend(result.refusals)
     recorded.extend(result.recorded)
 
@@ -1652,6 +2016,72 @@ def self_test() -> int:
             "CE_REFUSED_ENFORCEMENT_REGRESSION",
         )
 
+        # Item 11: the recorded branch-audit admission. The repaired record is
+        # the positive control; the deliberately branchy canary is the same
+        # record with the pre-repair secret-derived jcc restored in key::decap.
+        # If a later change stops refusing the canary, this self-test fails.
+        if BRANCH_AUDIT_RECORD.is_file():
+            audit_document = json.loads(BRANCH_AUDIT_RECORD.read_text(encoding="utf-8"))
+            audit_commit = audit_document["candidate"]["commit"]
+            audit_tree = audit_document["candidate"]["tree"]
+
+            repaired_audit = check_branch_audit(ROOT, audit_commit, audit_tree)
+            cases.append(("repaired branch-audit record (positive control)", "no refusal"))
+            if repaired_audit.refusals:
+                failures.append(
+                    "repaired branch-audit record (positive control): unexpected "
+                    f"refusals {[(r.rule, r.detail) for r in repaired_audit.refusals]}"
+                )
+
+            canary = json.loads(json.dumps(audit_document))
+            canary["targets"]["key::decap"]["secret_derived_jcc"] = 1
+            canary["targets"]["key::decap"]["secret_derived_jcc_addr"] = "0x300613"
+            canary_record = tmp / "audit-canary-record.json"
+            canary_record.write_text(json.dumps(canary), encoding="utf-8")
+            expect(
+                "branchy canary audit record",
+                check_branch_audit(ROOT, audit_commit, audit_tree, record=canary_record),
+                "RG_AUDIT_SECRET_BRANCH",
+            )
+
+            other_record = tmp / "audit-other-candidate.json"
+            other_record.write_text(json.dumps(audit_document), encoding="utf-8")
+            expect(
+                "audit record for another DSO",
+                check_branch_audit(ROOT, "0" * 40, "0" * 40, record=other_record),
+                "RG_AUDIT_IDENTITY_MISMATCH",
+            )
+
+            uncovered = json.loads(json.dumps(audit_document))
+            del uncovered["targets"]["arith::scalar_ntt"]
+            uncovered_record = tmp / "audit-uncovered-record.json"
+            uncovered_record.write_text(json.dumps(uncovered), encoding="utf-8")
+            expect(
+                "uncovered secret-bearing path",
+                check_branch_audit(ROOT, audit_commit, audit_tree, record=uncovered_record),
+                "RG_AUDIT_UNCOVERED_PATH",
+            )
+
+            unqualified = json.loads(json.dumps(audit_document))
+            unqualified["targets"]["key::decap"]["secret_derived_cmov"][0].pop("operands")
+            unqualified_record = tmp / "audit-unqualified-cmov-record.json"
+            unqualified_record.write_text(json.dumps(unqualified), encoding="utf-8")
+            expect(
+                "secret-derived cmov without recorded operands",
+                check_branch_audit(ROOT, audit_commit, audit_tree, record=unqualified_record),
+                "RG_AUDIT_CMOV_UNQUALIFIED",
+            )
+
+            secret_address = json.loads(json.dumps(audit_document))
+            secret_address["targets"]["key::decap"]["secret_derived_memory_address"] = True
+            secret_address_record = tmp / "audit-secret-address-record.json"
+            secret_address_record.write_text(json.dumps(secret_address), encoding="utf-8")
+            expect(
+                "secret-derived memory address",
+                check_branch_audit(ROOT, audit_commit, audit_tree, record=secret_address_record),
+                "RG_AUDIT_SECRET_ADDRESS",
+            )
+
     for name, rule in cases:
         status = "ok" if not any(f.startswith(name + ":") for f in failures) else "FAIL"
         print(f"  {status:4s} {name}: expected {rule}")
@@ -1703,6 +2133,14 @@ def main(argv: list[str]) -> int:
                         help="A20 policy (default evidence/a20/POLICY.json)")
     parser.add_argument("--policy-pin", default=None,
                         help="A20 policy pin (default evidence/a20/POLICY-PIN.json)")
+    parser.add_argument("--branch-audit-record", default=None,
+                        help="recorded binary branch-audit result "
+                             "(default evidence/performance-frontier/campaigns/PFP-34/audit-record.json)")
+    parser.add_argument("--branch-audit-coverage", default=None,
+                        help="secret-bearing path coverage requirement "
+                             "(default evidence/performance-frontier/campaigns/PFP-34/coverage.json)")
+    parser.add_argument("--branch-audit-dso-sha256", default=None,
+                        help="optional claimed DSO sha256 the record must match")
     parser.add_argument("--json", action="store_true", help="emit one machine-readable decision")
     parser.add_argument("--self-test", action="store_true",
                         help="prove the gate refuses each named failure class")
@@ -1730,7 +2168,8 @@ def main(argv: list[str]) -> int:
             print(f"release-gate: REFUSED ({len(results.refusals)} item(s))")
         else:
             print("release-gate: PASS (candidate, claims, receipts, instruments, "
-                  "package, docs, authorisation, thresholds, policy, transparency)")
+                  "package, docs, authorisation, thresholds, policy, transparency, "
+                  "branch audit)")
 
     return EXIT_REFUSED if results.refused() else EXIT_PASS
 

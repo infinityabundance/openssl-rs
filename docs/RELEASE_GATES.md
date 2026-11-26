@@ -218,7 +218,7 @@ required to pass. It is standard-library Python and refuses by default: an item
 whose checker cannot run, whose package was not supplied, or whose evidence does
 not exist is a refusal with a named rule, never a skip.
 
-A release candidate passes only when all six items pass:
+A release candidate passes only when all eleven items pass:
 
 1. **candidate identity** — `HEAD` is the commit named by `--candidate`, and
    under `--require-clean` the worktree has no uncommitted tracked or untracked
@@ -255,6 +255,30 @@ A release candidate passes only when all six items pass:
    root or the `.tar.gz`, and an absent package is `RG_PACKAGE_MISSING` rather
    than "not applicable";
 6. **documentation consistency** — `forensics/tools/docs_consistency.py` holds.
+7. **role authorisation** — the `release` action is `AUTHORISED` under
+   `forensics/tools/authorisation.py` over its role record and action policy; a
+   refused or not-run decision is `RG_AUTHORISATION_REFUSED`.
+8. **thresholds** — the `release` threshold is `MET` over distinct established
+   trust domains; an unmet, unreachable or not-run threshold is
+   `RG_THRESHOLD_UNMET`.
+9. **release policy** — the pinned A20 policy is `ADMIT`; a `DENY` decision is
+   `RG_POLICY_DENIED`.
+10. **transparency** — `forensics/tools/continuous_enforcement.py check` holds;
+    an absent tool or record is `RG_TRANSPARENCY_TOOL_MISSING` or a
+    `CE_REFUSED_*` refusal, never a skip.
+11. **branch audit** — a recorded binary branch-audit result bound to the
+    candidate's source and DSO is present, every secret-bearing path the project
+    claims audited has a target in the record, and no audited target retains a
+    secret-derived conditional transfer or secret-derived memory address. The
+    record is read, not regenerated. An unresolved `jcc` is
+    `RG_AUDIT_SECRET_BRANCH`; a secret-derived `setcc` consumed arithmetically is
+    not a transfer; a secret-derived `cmov` is accepted only with register or
+    fixed-address operands and a fixed condition address
+    (`RG_AUDIT_CMOV_UNQUALIFIED`, `RG_AUDIT_SECRET_ADDRESS`); a path with no
+    target is `RG_AUDIT_UNCOVERED_PATH`; a result measured at another DSO is
+    `RG_AUDIT_IDENTITY_MISMATCH`; and an absent or unbound record is
+    `RG_AUDIT_RECORD_MISSING`, `RG_AUDIT_RECORD_INVALID` or
+    `RG_AUDIT_STALE_BINDING`, never a skip.
 
 ```bash
 python3 forensics/tools/release_gate.py \
@@ -297,10 +321,14 @@ this head.
 `--self-test` proves the gate refuses each failure class it claims to cover: a
 contradicted claim, a positive verdict over withdrawn evidence, an uncertifiable
 dependency, a historical dependency, a missing triage, a stale triage, a failing
-receipt, an invalid register, a missing package, a failing package verifier and a
-documentation inconsistency, plus positive controls for a derived dependency and
-the real documentation checker. The self-test calls the real checkers on
-constructed fixtures; it does not assert against the current evidence state.
+receipt, an invalid register, a missing package, a failing package verifier, a
+documentation inconsistency, an unresolved secret-derived branch in the
+branch-audit record, a record measured at another DSO, an uncovered
+secret-bearing path, a secret-derived `cmov` without recorded operands and a
+secret-derived memory address, plus positive controls for a derived dependency,
+the real documentation checker and the repaired branch-audit record. The
+self-test calls the real checkers on constructed fixtures; it does not assert
+against the current evidence state.
 
 ### Release policy
 
@@ -360,6 +388,7 @@ not covered by an item that merely mentions the same subject.
 | `gate-8` — thresholds (`release_gate.py` item 8) | Article 5 | the release threshold is unmet or unreachable over distinct trust domains (`RG_THRESHOLD_UNMET`), which is how a threshold met by two aliases of one party is refused |
 | `gate-9` — release policy (`release_gate.py` item 9) | Article 11 | the pinned policy denies the release or cannot be evaluated (`RG_POLICY_DENIED`), including a policy a candidate supplies for itself or a self-waiver, so a record cannot declare its own acceptance rule |
 | `gate-10` — transparency enforcement (`release_gate.py` item 10) | Article 1 | a claim asserts publication or admission the B4 record does not support (`CE_REFUSED_PUBLICATION_CLAIM`, `CE_REFUSED_PROFILE_NOT_ADMITTED`), or the checker or its record is absent (`RG_TRANSPARENCY_TOOL_MISSING`, `RG_TRANSPARENCY_ERROR`), so the claim exceeds its evidence |
+| `gate-11` — branch audit (`release_gate.py` item 11) | Article 2, Article 3, Article 4 | no recorded branch-audit result is bound to the candidate (`RG_AUDIT_RECORD_MISSING`, `RG_AUDIT_RECORD_INVALID`, `RG_AUDIT_STALE_BINDING`) or the result was measured at another source or DSO (`RG_AUDIT_IDENTITY_MISMATCH`); a secret-bearing path the project claims audited has no target in the record (`RG_AUDIT_UNCOVERED_PATH`), so an omission is not a pass; an audited target retains a secret-derived conditional transfer (`RG_AUDIT_SECRET_BRANCH`) or a secret-derived memory address (`RG_AUDIT_SECRET_ADDRESS`), and a secret-derived `cmov` is refused unless the record states register or fixed-address operands (`RG_AUDIT_CMOV_UNQUALIFIED`) |
 
 `gate-6` is the meta-item: it refuses a broken or miscited mapping. It does not
 evidence any article's substance, so it covers no article.
