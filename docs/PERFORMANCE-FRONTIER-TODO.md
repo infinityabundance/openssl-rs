@@ -167,3 +167,28 @@ Binding notes for this section:
   not by prose discipline alone.
 - `PFP-29` is the only row whose result could be cited as a library-level
   constant-time statement, and only if every path in it is covered.
+
+## Review-driven queue (2026-11-26, third assessment)
+
+The third assessment of head `1750419b3` named five priorities. Four map to
+existing rows and are not restated: `PFP-29` is the milestone, `PFP-26` the
+threat model, `PFP-28` the executable identity check, `ETP-CI-2` the mandatory
+venue gate. Two things are new.
+
+| id | work package | status |
+|---|---|---|
+| PFP-30 | **Generic BIGNUM bottleneck, profiler-led.** PFP-24 accounts for all 254 blocks per signature and shows that removing 8.4 percent of them buys no latency; the ladder is 69.8 percent of the allocation count and the residual is generic division, multiplication and temporary `BIGNUM` operations. Acceptance: attack the profile rather than the count — in-place result arithmetic so the ~80 result-vector blocks disappear, the narrowing/division path the ladder actually takes, and the reduction in `mont_mul` — each change measured at the artefact with the same instrument and each carrying its own differential; a change that removes allocations without moving latency is recorded as such, as PFP-24's was; no constant-time or correctness property traded. The order is set by measured cost, not by plausibility. | TODO |
+
+Corrections carried with this section:
+
+- **PFP-24 attribution.** The `ALLOCATIONS.md` receipt attributes the movement
+  from 19.22x to 18.83x to PFP-6. PFP-27 establishes that the production DSO
+  selects SOS, so CIOS does not execute in that measurement; a refactor can
+  change generated SOS code without activating CIOS. The attribution must be
+  rewritten to state what moved (generated code for the selected schedule) and
+  must not name CIOS execution as the cause.
+- **Scope reminder for PFP-29.** A zero in the engine population is not a
+  zero on the signing path: PFP-21's signing runs still produce hundreds of
+  ctgrind contexts in the EC and BIGNUM stack. Per-path results are reported
+  separately, and an overall verdict is never assembled from engine-local
+  zeroes.
