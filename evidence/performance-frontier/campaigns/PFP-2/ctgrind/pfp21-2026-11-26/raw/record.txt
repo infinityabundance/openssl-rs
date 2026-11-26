@@ -1,0 +1,48 @@
+populations (3 repetitions per tainted mode; control once)
+  tag/mode          errors                         contexts
+  a/control        [0]                            [0]
+  a/mul-g          [3606, 3645, 3596]             [196, 225, 185]
+  a/mul-g-bytes    [3597, 3632, 3661]             [186, 211, 225]
+  a/mul-p          [3635, 3631, 3635]             [216, 212, 216]
+  a/sign           [3723, 3723, 3684]             [274, 275, 248]
+  a/sign-ex        [24, 24, 24]                   [24, 24, 24]
+  a/sign-ex-k      [33007, 33003, 33017]          [442, 438, 450]
+  b/control        [0]                            [0]
+  b/mul-g          [3631, 3606, 3645]             [211, 196, 224]
+  b/mul-g-bytes    [3632, 3622, 3607]             [212, 201, 196]
+  b/mul-p          [3670, 3606, 3645]             [233, 197, 224]
+  b/sign           [3669, 3669, 3694]             [244, 244, 258]
+  b/sign-ex        [24, 24, 24]                   [24, 24, 24]
+  b/sign-ex-k      [33017, 33042, 33017]          [449, 460, 450]
+  c/mul-g          [1605, 1615, 1605]             [199, 204, 199]
+per-class union and engine attribution
+  a/control        class={}                       engine_on_path=0 engine_origins=0
+  a/mul-g          class={'C': 175, 'D': 15, 'E': 416} engine_on_path=0 engine_origins=0
+  a/mul-g-bytes    class={'C': 194, 'D': 15, 'E': 413} engine_on_path=0 engine_origins=0
+  a/mul-p          class={'C': 190, 'D': 15, 'E': 439} engine_on_path=0 engine_origins=0
+  a/sign           class={'C': 217, 'D': 21, 'E': 559} engine_on_path=0 engine_origins=0
+  a/sign-ex        class={'C': 3, 'E': 69}        engine_on_path=0 engine_origins=0
+  a/sign-ex-k      class={'C': 655, 'D': 15, 'E': 660} engine_on_path=0 engine_origins=0
+  b/control        class={}                       engine_on_path=0 engine_origins=0
+  b/mul-g          class={'C': 185, 'D': 15, 'E': 431} engine_on_path=0 engine_origins=0
+  b/mul-g-bytes    class={'C': 188, 'D': 15, 'E': 406} engine_on_path=0 engine_origins=0
+  b/mul-p          class={'C': 190, 'D': 15, 'E': 449} engine_on_path=0 engine_origins=0
+  b/sign           class={'C': 191, 'D': 21, 'E': 534} engine_on_path=0 engine_origins=0
+  b/sign-ex        class={'C': 3, 'E': 69}        engine_on_path=0 engine_origins=0
+  b/sign-ex-k      class={'C': 659, 'D': 15, 'E': 685} engine_on_path=0 engine_origins=0
+  c/mul-g          class={'C': 299, 'D': 21, 'E': 282} engine_on_path=12 engine_origins=0
+context-set comparison A vs B
+  control      identical=True only_a=0 only_b=0 [] []
+  mul-g        identical=False only_a=0 only_b=4 [] [('Conditional jump or move', '<alloc::raw_vec::RawVecInner>::finish_grow'), ('Conditional jump or move', 'memset'), ('Use of uninitialised value', 'BN_usub')]
+  mul-g-bytes  identical=False only_a=3 only_b=0 [('Conditional jump or move', 'BN_mod_sub_quick'), ('Conditional jump or move', 'memset'), ('Use of uninitialised value', 'openssl_rs::bn::limbs::sub_fallible')] []
+  mul-p        identical=True only_a=0 only_b=0 [] []
+  sign         identical=False only_a=3 only_b=0 [('Conditional jump or move', 'BN_mod_sub_quick'), ('Conditional jump or move', 'memset'), ('Use of uninitialised value', 'openssl_rs::bn::limbs::sub_fallible')] []
+  sign-ex      identical=True only_a=0 only_b=0 [] []
+  sign-ex-k    identical=True only_a=0 only_b=0 [] []
+mutation
+  mul-g a wall median 227820 ns/op [225994, 246246] n=9 ir/op 4891699
+  mul-g b wall median 536866 ns/op [533578, 574727] n=9 ir/op 11375102
+  mul-g B/A wall 2.357  B/A ir 2.325
+  sign a wall median 250605 ns/op [247552, 256497] n=9 ir/op 5427886
+  sign b wall median 563650 ns/op [555453, 627066] n=9 ir/op 11809873
+  sign B/A wall 2.249  B/A ir 2.176

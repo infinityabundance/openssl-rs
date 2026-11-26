@@ -1,0 +1,7 @@
+source_commit c1d25e10d16bc197e03446619a5330842b411c5c
+source_note HEAD 20972901d with src/bn/arith.rs restored to c1d25e10d; fp identical after
+a 553e1b8ce1eb7e03a0d92a5614b566b88e49e55d2c2a3f7ba28fc6d78eecc4e4 17032672
+b 86bc63a6746e2e7bad628f7e7e6df477c3355759582e0611109af3e08156765e 17040592
+p256_a 75a2dd1de88139b9b050b09f0dbcb1b694c7e7185240c6d519baac999019b0c5
+p256_b 676f4bff460ff46584273f3b945d65455b22fcaf2e6cafba07ef7e04043659f3
+difference single_line src/ec/p256.rs default_kernel_id Mont->Solinas

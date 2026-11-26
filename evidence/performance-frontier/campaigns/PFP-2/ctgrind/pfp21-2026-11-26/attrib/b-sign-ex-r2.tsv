@@ -1,0 +1,25 @@
+idx	kind	class	origin_loc	origin_fn	engine_on_path	bn_on_path	nearest_loc	nearest_fn	stack
+1	Conditional jump or move	E	in /work/court/tmp/pfp21/b/distribution/libcrypto.so.3	BN_mod_mul_montgomery	0	0			BN_mod_mul_montgomery <- ossl_ecdsa_simple_sign_sig <- op_sign <- main
+2	Conditional jump or move	C	in /work/court/tmp/pfp21/b/distribution/libcrypto.so.3	openssl_rs::bn::arith::mod_add_reduced_ct	0	1	in /work/court/tmp/pfp21/b/distribution/libcrypto.so.3	openssl_rs::bn::arith::mod_add_reduced_ct	openssl_rs::bn::arith::mod_add_reduced_ct <- ossl_ecdsa_simple_sign_sig <- op_sign <- main
+3	Conditional jump or move	E	in /work/court/tmp/pfp21/b/distribution/libcrypto.so.3	BN_to_montgomery	0	0			BN_to_montgomery <- ossl_ecdsa_simple_sign_sig <- op_sign <- main
+4	Conditional jump or move	E	in /work/court/tmp/pfp21/b/distribution/libcrypto.so.3	<alloc::raw_vec::RawVecInner>::finish_grow	0	0			<alloc::raw_vec::RawVecInner>::finish_grow <- BN_to_montgomery <- ossl_ecdsa_simple_sign_sig <- op_sign <- main
+5	Conditional jump or move	E	in /work/court/tmp/pfp21/b/distribution/libcrypto.so.3	<alloc::raw_vec::RawVecInner>::finish_grow	0	0			<alloc::raw_vec::RawVecInner>::finish_grow <- BN_to_montgomery <- ossl_ecdsa_simple_sign_sig <- op_sign <- main
+6	Conditional jump or move	E	unix.rs:13	alloc	0	0			alloc <- __rustc::__rdl_alloc <- <alloc::raw_vec::RawVecInner>::finish_grow <- BN_to_montgomery <- ossl_ecdsa_simple_sign_sig <- op_sign <- main
+7	Conditional jump or move	E	in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so	malloc	0	0			malloc <- <alloc::raw_vec::RawVecInner>::finish_grow <- BN_to_montgomery <- ossl_ecdsa_simple_sign_sig <- op_sign <- main
+8	Conditional jump or move	E	in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so	memmove	0	0			memmove <- BN_to_montgomery <- ossl_ecdsa_simple_sign_sig <- op_sign <- main
+9	Conditional jump or move	E	in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so	memmove	0	0			memmove <- BN_to_montgomery <- ossl_ecdsa_simple_sign_sig <- op_sign <- main
+10	Conditional jump or move	E	in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so	memmove	0	0			memmove <- BN_to_montgomery <- ossl_ecdsa_simple_sign_sig <- op_sign <- main
+11	Conditional jump or move	E	in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so	memmove	0	0			memmove <- BN_to_montgomery <- ossl_ecdsa_simple_sign_sig <- op_sign <- main
+12	Conditional jump or move	E	in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so	memmove	0	0			memmove <- BN_to_montgomery <- ossl_ecdsa_simple_sign_sig <- op_sign <- main
+13	Conditional jump or move	E	in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so	memmove	0	0			memmove <- BN_to_montgomery <- ossl_ecdsa_simple_sign_sig <- op_sign <- main
+14	Conditional jump or move	E	in /work/court/tmp/pfp21/b/distribution/libcrypto.so.3	BN_to_montgomery	0	0			BN_to_montgomery <- ossl_ecdsa_simple_sign_sig <- op_sign <- main
+15	Conditional jump or move	E	in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so	memmove	0	0			memmove <- BN_to_montgomery <- ossl_ecdsa_simple_sign_sig <- op_sign <- main
+16	Conditional jump or move	E	in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so	memmove	0	0			memmove <- BN_to_montgomery <- ossl_ecdsa_simple_sign_sig <- op_sign <- main
+17	Conditional jump or move	E	in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so	memmove	0	0			memmove <- BN_to_montgomery <- ossl_ecdsa_simple_sign_sig <- op_sign <- main
+18	Conditional jump or move	E	in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so	memmove	0	0			memmove <- BN_to_montgomery <- ossl_ecdsa_simple_sign_sig <- op_sign <- main
+19	Conditional jump or move	E	in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so	memmove	0	0			memmove <- BN_to_montgomery <- ossl_ecdsa_simple_sign_sig <- op_sign <- main
+20	Conditional jump or move	E	in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so	memmove	0	0			memmove <- BN_to_montgomery <- ossl_ecdsa_simple_sign_sig <- op_sign <- main
+21	Conditional jump or move	E	in /work/court/tmp/pfp21/b/distribution/libcrypto.so.3	BN_to_montgomery	0	0			BN_to_montgomery <- ossl_ecdsa_simple_sign_sig <- op_sign <- main
+22	Conditional jump or move	E	in /work/court/tmp/pfp21/b/distribution/libcrypto.so.3	BN_to_montgomery	0	0			BN_to_montgomery <- ossl_ecdsa_simple_sign_sig <- op_sign <- main
+23	Conditional jump or move	E	in /work/court/tmp/pfp21/b/distribution/libcrypto.so.3	BN_mod_mul_montgomery	0	0			BN_mod_mul_montgomery <- ossl_ecdsa_simple_sign_sig <- op_sign <- main
+24	Conditional jump or move	E	in /work/court/tmp/pfp21/b/distribution/libcrypto.so.3	ossl_ecdsa_simple_sign_sig	0	0			ossl_ecdsa_simple_sign_sig <- op_sign <- main

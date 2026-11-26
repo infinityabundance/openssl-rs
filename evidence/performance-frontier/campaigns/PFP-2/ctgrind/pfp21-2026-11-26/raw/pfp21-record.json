@@ -1,0 +1,1286 @@
+{
+  "item": "PFP-21",
+  "candidate_a": {
+    "sha256": "553e1b8ce1eb7e03a0d92a5614b566b88e49e55d2c2a3f7ba28fc6d78eecc4e4",
+    "size": 17032672
+  },
+  "control_b": {
+    "sha256": "86bc63a6746e2e7bad628f7e7e6df477c3355759582e0611109af3e08156765e",
+    "size": 17040592
+  },
+  "sensitivity_control_c": {
+    "sha256": "83f67826e2ca53dd8e014fe5442d2e77ba96ee7af35eeb78a312112a4e0a7c4f",
+    "size": 17041264
+  },
+  "run_meta": {
+    "candidate_a_path": "/work/court/tmp/pfp21/a/distribution/libcrypto.so.3",
+    "candidate_a_sha256": "553e1b8ce1eb7e03a0d92a5614b566b88e49e55d2c2a3f7ba28fc6d78eecc4e4",
+    "control_b_path": "/work/court/tmp/pfp21/b/distribution/libcrypto.so.3",
+    "control_b_sha256": "86bc63a6746e2e7bad628f7e7e6df477c3355759582e0611109af3e08156765e",
+    "harness_source_sha256": "ef1374120b29649ea8537ffcf58d9b01acd05b3bc9dcaeb0184a60c7977d3c51",
+    "harness_binary_sha256": "3a385537cc286cb7c19e0bbbb468c4033ffabb8edc74ac69df29237fc3d2aea1",
+    "harness_cc": "cc (Debian 12.2.0-14+deb12u1) 12.2.0",
+    "valgrind": "valgrind-3.19.0",
+    "court_image": "openssl-rs-court-tools:1",
+    "kernel": "7.3.5-2-cachyos",
+    "machine": "x86_64"
+  },
+  "populations": {
+    "a/control": {
+      "dso_sha256": "553e1b8ce1eb7e03a0d92a5614b566b88e49e55d2c2a3f7ba28fc6d78eecc4e4",
+      "runs": [
+        {
+          "rep": 1,
+          "errors": 0,
+          "contexts": 0
+        }
+      ],
+      "errors": [
+        0
+      ],
+      "contexts": [
+        0
+      ],
+      "per_class_union": {},
+      "engine_on_path_union": 0,
+      "engine_origins_union": 0,
+      "top_origins": []
+    },
+    "a/mul-g": {
+      "dso_sha256": "553e1b8ce1eb7e03a0d92a5614b566b88e49e55d2c2a3f7ba28fc6d78eecc4e4",
+      "runs": [
+        {
+          "rep": 1,
+          "errors": 3606,
+          "contexts": 196
+        },
+        {
+          "rep": 2,
+          "errors": 3645,
+          "contexts": 225
+        },
+        {
+          "rep": 3,
+          "errors": 3596,
+          "contexts": 185
+        }
+      ],
+      "errors": [
+        3606,
+        3645,
+        3596
+      ],
+      "contexts": [
+        196,
+        225,
+        185
+      ],
+      "per_class_union": {
+        "C": 175,
+        "D": 15,
+        "E": 416
+      },
+      "engine_on_path_union": 0,
+      "engine_origins_union": 0,
+      "top_origins": [
+        {
+          "contexts": 96,
+          "fn": "BN_nnmod"
+        },
+        {
+          "contexts": 87,
+          "fn": "openssl_rs::bn::limbs::divide_fallible"
+        },
+        {
+          "contexts": 66,
+          "fn": "openssl_rs::bn::limbs::mul_fallible"
+        },
+        {
+          "contexts": 49,
+          "fn": "memset"
+        },
+        {
+          "contexts": 46,
+          "fn": "BN_add"
+        },
+        {
+          "contexts": 39,
+          "fn": "BN_mul"
+        },
+        {
+          "contexts": 39,
+          "fn": "BN_mod_add_quick"
+        },
+        {
+          "contexts": 39,
+          "fn": "BN_sub"
+        },
+        {
+          "contexts": 36,
+          "fn": "BN_uadd"
+        },
+        {
+          "contexts": 20,
+          "fn": "<alloc::raw_vec::RawVecInner>::finish_grow"
+        },
+        {
+          "contexts": 19,
+          "fn": "openssl_rs::bn::limbs::sub_fallible"
+        },
+        {
+          "contexts": 18,
+          "fn": "memmove"
+        }
+      ]
+    },
+    "a/mul-g-bytes": {
+      "dso_sha256": "553e1b8ce1eb7e03a0d92a5614b566b88e49e55d2c2a3f7ba28fc6d78eecc4e4",
+      "runs": [
+        {
+          "rep": 1,
+          "errors": 3597,
+          "contexts": 186
+        },
+        {
+          "rep": 2,
+          "errors": 3632,
+          "contexts": 211
+        },
+        {
+          "rep": 3,
+          "errors": 3661,
+          "contexts": 225
+        }
+      ],
+      "errors": [
+        3597,
+        3632,
+        3661
+      ],
+      "contexts": [
+        186,
+        211,
+        225
+      ],
+      "per_class_union": {
+        "C": 194,
+        "D": 15,
+        "E": 413
+      },
+      "engine_on_path_union": 0,
+      "engine_origins_union": 0,
+      "top_origins": [
+        {
+          "contexts": 96,
+          "fn": "BN_nnmod"
+        },
+        {
+          "contexts": 84,
+          "fn": "openssl_rs::bn::limbs::divide_fallible"
+        },
+        {
+          "contexts": 66,
+          "fn": "openssl_rs::bn::limbs::mul_fallible"
+        },
+        {
+          "contexts": 55,
+          "fn": "memset"
+        },
+        {
+          "contexts": 39,
+          "fn": "BN_mul"
+        },
+        {
+          "contexts": 39,
+          "fn": "BN_sub"
+        },
+        {
+          "contexts": 38,
+          "fn": "openssl_rs::bn::limbs::sub_fallible"
+        },
+        {
+          "contexts": 37,
+          "fn": "BN_add"
+        },
+        {
+          "contexts": 31,
+          "fn": "BN_uadd"
+        },
+        {
+          "contexts": 29,
+          "fn": "BN_mod_add_quick"
+        },
+        {
+          "contexts": 22,
+          "fn": "<alloc::raw_vec::RawVecInner>::finish_grow"
+        },
+        {
+          "contexts": 18,
+          "fn": "memmove"
+        }
+      ]
+    },
+    "a/mul-p": {
+      "dso_sha256": "553e1b8ce1eb7e03a0d92a5614b566b88e49e55d2c2a3f7ba28fc6d78eecc4e4",
+      "runs": [
+        {
+          "rep": 1,
+          "errors": 3635,
+          "contexts": 216
+        },
+        {
+          "rep": 2,
+          "errors": 3631,
+          "contexts": 212
+        },
+        {
+          "rep": 3,
+          "errors": 3635,
+          "contexts": 216
+        }
+      ],
+      "errors": [
+        3635,
+        3631,
+        3635
+      ],
+      "contexts": [
+        216,
+        212,
+        216
+      ],
+      "per_class_union": {
+        "C": 190,
+        "D": 15,
+        "E": 439
+      },
+      "engine_on_path_union": 0,
+      "engine_origins_union": 0,
+      "top_origins": [
+        {
+          "contexts": 96,
+          "fn": "BN_nnmod"
+        },
+        {
+          "contexts": 87,
+          "fn": "openssl_rs::bn::limbs::divide_fallible"
+        },
+        {
+          "contexts": 66,
+          "fn": "openssl_rs::bn::limbs::mul_fallible"
+        },
+        {
+          "contexts": 57,
+          "fn": "memset"
+        },
+        {
+          "contexts": 50,
+          "fn": "BN_add"
+        },
+        {
+          "contexts": 42,
+          "fn": "BN_sub"
+        },
+        {
+          "contexts": 41,
+          "fn": "BN_mod_add_quick"
+        },
+        {
+          "contexts": 39,
+          "fn": "BN_mul"
+        },
+        {
+          "contexts": 34,
+          "fn": "BN_uadd"
+        },
+        {
+          "contexts": 34,
+          "fn": "openssl_rs::bn::limbs::sub_fallible"
+        },
+        {
+          "contexts": 24,
+          "fn": "<alloc::raw_vec::RawVecInner>::finish_grow"
+        },
+        {
+          "contexts": 18,
+          "fn": "memmove"
+        }
+      ]
+    },
+    "a/sign": {
+      "dso_sha256": "553e1b8ce1eb7e03a0d92a5614b566b88e49e55d2c2a3f7ba28fc6d78eecc4e4",
+      "runs": [
+        {
+          "rep": 1,
+          "errors": 3723,
+          "contexts": 274
+        },
+        {
+          "rep": 2,
+          "errors": 3723,
+          "contexts": 275
+        },
+        {
+          "rep": 3,
+          "errors": 3684,
+          "contexts": 248
+        }
+      ],
+      "errors": [
+        3723,
+        3723,
+        3684
+      ],
+      "contexts": [
+        274,
+        275,
+        248
+      ],
+      "per_class_union": {
+        "C": 217,
+        "D": 21,
+        "E": 559
+      },
+      "engine_on_path_union": 0,
+      "engine_origins_union": 0,
+      "top_origins": [
+        {
+          "contexts": 99,
+          "fn": "BN_nnmod"
+        },
+        {
+          "contexts": 90,
+          "fn": "memmove"
+        },
+        {
+          "contexts": 87,
+          "fn": "openssl_rs::bn::limbs::divide_fallible"
+        },
+        {
+          "contexts": 63,
+          "fn": "openssl_rs::bn::limbs::mul_fallible"
+        },
+        {
+          "contexts": 61,
+          "fn": "memset"
+        },
+        {
+          "contexts": 52,
+          "fn": "openssl_rs::bn::limbs::sub_fallible"
+        },
+        {
+          "contexts": 42,
+          "fn": "BN_sub"
+        },
+        {
+          "contexts": 41,
+          "fn": "BN_add"
+        },
+        {
+          "contexts": 36,
+          "fn": "<alloc::raw_vec::RawVecInner>::finish_grow"
+        },
+        {
+          "contexts": 31,
+          "fn": "BN_mod_add_quick"
+        },
+        {
+          "contexts": 30,
+          "fn": "BN_uadd"
+        },
+        {
+          "contexts": 27,
+          "fn": "BN_mul"
+        }
+      ]
+    },
+    "a/sign-ex": {
+      "dso_sha256": "553e1b8ce1eb7e03a0d92a5614b566b88e49e55d2c2a3f7ba28fc6d78eecc4e4",
+      "runs": [
+        {
+          "rep": 1,
+          "errors": 24,
+          "contexts": 24
+        },
+        {
+          "rep": 2,
+          "errors": 24,
+          "contexts": 24
+        },
+        {
+          "rep": 3,
+          "errors": 24,
+          "contexts": 24
+        }
+      ],
+      "errors": [
+        24,
+        24,
+        24
+      ],
+      "contexts": [
+        24,
+        24,
+        24
+      ],
+      "per_class_union": {
+        "C": 3,
+        "E": 69
+      },
+      "engine_on_path_union": 0,
+      "engine_origins_union": 0,
+      "top_origins": [
+        {
+          "contexts": 36,
+          "fn": "memmove"
+        },
+        {
+          "contexts": 12,
+          "fn": "BN_to_montgomery"
+        },
+        {
+          "contexts": 6,
+          "fn": "BN_mod_mul_montgomery"
+        },
+        {
+          "contexts": 6,
+          "fn": "<alloc::raw_vec::RawVecInner>::finish_grow"
+        },
+        {
+          "contexts": 3,
+          "fn": "openssl_rs::bn::arith::mod_add_reduced_ct"
+        },
+        {
+          "contexts": 3,
+          "fn": "alloc"
+        },
+        {
+          "contexts": 3,
+          "fn": "malloc"
+        },
+        {
+          "contexts": 3,
+          "fn": "ossl_ecdsa_simple_sign_sig"
+        }
+      ]
+    },
+    "a/sign-ex-k": {
+      "dso_sha256": "553e1b8ce1eb7e03a0d92a5614b566b88e49e55d2c2a3f7ba28fc6d78eecc4e4",
+      "runs": [
+        {
+          "rep": 1,
+          "errors": 33007,
+          "contexts": 442
+        },
+        {
+          "rep": 2,
+          "errors": 33003,
+          "contexts": 438
+        },
+        {
+          "rep": 3,
+          "errors": 33017,
+          "contexts": 450
+        }
+      ],
+      "errors": [
+        33007,
+        33003,
+        33017
+      ],
+      "contexts": [
+        442,
+        438,
+        450
+      ],
+      "per_class_union": {
+        "C": 655,
+        "D": 15,
+        "E": 660
+      },
+      "engine_on_path_union": 0,
+      "engine_origins_union": 0,
+      "top_origins": [
+        {
+          "contexts": 321,
+          "fn": "openssl_rs::bn::limbs::divide_fallible"
+        },
+        {
+          "contexts": 119,
+          "fn": "memset"
+        },
+        {
+          "contexts": 105,
+          "fn": "memmove"
+        },
+        {
+          "contexts": 96,
+          "fn": "BN_nnmod"
+        },
+        {
+          "contexts": 76,
+          "fn": "openssl_rs::bn::limbs::sub_fallible"
+        },
+        {
+          "contexts": 75,
+          "fn": "openssl_rs::bn::limbs::mul_fallible"
+        },
+        {
+          "contexts": 66,
+          "fn": "<alloc::raw_vec::RawVecInner>::finish_grow"
+        },
+        {
+          "contexts": 66,
+          "fn": "openssl_rs::bn::limbs::mod_inverse"
+        },
+        {
+          "contexts": 59,
+          "fn": "BN_add"
+        },
+        {
+          "contexts": 42,
+          "fn": "openssl_rs::bn::limbs::shr_fallible"
+        },
+        {
+          "contexts": 42,
+          "fn": "BN_sub"
+        },
+        {
+          "contexts": 36,
+          "fn": "openssl_rs::bn::limbs::div_rem_small_fallible"
+        }
+      ]
+    },
+    "b/control": {
+      "dso_sha256": "86bc63a6746e2e7bad628f7e7e6df477c3355759582e0611109af3e08156765e",
+      "runs": [
+        {
+          "rep": 1,
+          "errors": 0,
+          "contexts": 0
+        }
+      ],
+      "errors": [
+        0
+      ],
+      "contexts": [
+        0
+      ],
+      "per_class_union": {},
+      "engine_on_path_union": 0,
+      "engine_origins_union": 0,
+      "top_origins": []
+    },
+    "b/mul-g": {
+      "dso_sha256": "86bc63a6746e2e7bad628f7e7e6df477c3355759582e0611109af3e08156765e",
+      "runs": [
+        {
+          "rep": 1,
+          "errors": 3631,
+          "contexts": 211
+        },
+        {
+          "rep": 2,
+          "errors": 3606,
+          "contexts": 196
+        },
+        {
+          "rep": 3,
+          "errors": 3645,
+          "contexts": 224
+        }
+      ],
+      "errors": [
+        3631,
+        3606,
+        3645
+      ],
+      "contexts": [
+        211,
+        196,
+        224
+      ],
+      "per_class_union": {
+        "C": 185,
+        "D": 15,
+        "E": 431
+      },
+      "engine_on_path_union": 0,
+      "engine_origins_union": 0,
+      "top_origins": [
+        {
+          "contexts": 96,
+          "fn": "BN_nnmod"
+        },
+        {
+          "contexts": 87,
+          "fn": "openssl_rs::bn::limbs::divide_fallible"
+        },
+        {
+          "contexts": 66,
+          "fn": "openssl_rs::bn::limbs::mul_fallible"
+        },
+        {
+          "contexts": 55,
+          "fn": "BN_add"
+        },
+        {
+          "contexts": 53,
+          "fn": "memset"
+        },
+        {
+          "contexts": 39,
+          "fn": "BN_mul"
+        },
+        {
+          "contexts": 39,
+          "fn": "BN_sub"
+        },
+        {
+          "contexts": 35,
+          "fn": "BN_mod_add_quick"
+        },
+        {
+          "contexts": 34,
+          "fn": "BN_uadd"
+        },
+        {
+          "contexts": 29,
+          "fn": "openssl_rs::bn::limbs::sub_fallible"
+        },
+        {
+          "contexts": 22,
+          "fn": "<alloc::raw_vec::RawVecInner>::finish_grow"
+        },
+        {
+          "contexts": 18,
+          "fn": "memmove"
+        }
+      ]
+    },
+    "b/mul-g-bytes": {
+      "dso_sha256": "86bc63a6746e2e7bad628f7e7e6df477c3355759582e0611109af3e08156765e",
+      "runs": [
+        {
+          "rep": 1,
+          "errors": 3632,
+          "contexts": 212
+        },
+        {
+          "rep": 2,
+          "errors": 3622,
+          "contexts": 201
+        },
+        {
+          "rep": 3,
+          "errors": 3607,
+          "contexts": 196
+        }
+      ],
+      "errors": [
+        3632,
+        3622,
+        3607
+      ],
+      "contexts": [
+        212,
+        201,
+        196
+      ],
+      "per_class_union": {
+        "C": 188,
+        "D": 15,
+        "E": 406
+      },
+      "engine_on_path_union": 0,
+      "engine_origins_union": 0,
+      "top_origins": [
+        {
+          "contexts": 96,
+          "fn": "BN_nnmod"
+        },
+        {
+          "contexts": 84,
+          "fn": "openssl_rs::bn::limbs::divide_fallible"
+        },
+        {
+          "contexts": 66,
+          "fn": "openssl_rs::bn::limbs::mul_fallible"
+        },
+        {
+          "contexts": 53,
+          "fn": "memset"
+        },
+        {
+          "contexts": 39,
+          "fn": "BN_mul"
+        },
+        {
+          "contexts": 36,
+          "fn": "BN_sub"
+        },
+        {
+          "contexts": 33,
+          "fn": "BN_add"
+        },
+        {
+          "contexts": 33,
+          "fn": "BN_mod_add_quick"
+        },
+        {
+          "contexts": 32,
+          "fn": "BN_uadd"
+        },
+        {
+          "contexts": 32,
+          "fn": "openssl_rs::bn::limbs::sub_fallible"
+        },
+        {
+          "contexts": 22,
+          "fn": "<alloc::raw_vec::RawVecInner>::finish_grow"
+        },
+        {
+          "contexts": 18,
+          "fn": "memmove"
+        }
+      ]
+    },
+    "b/mul-p": {
+      "dso_sha256": "86bc63a6746e2e7bad628f7e7e6df477c3355759582e0611109af3e08156765e",
+      "runs": [
+        {
+          "rep": 1,
+          "errors": 3670,
+          "contexts": 233
+        },
+        {
+          "rep": 2,
+          "errors": 3606,
+          "contexts": 197
+        },
+        {
+          "rep": 3,
+          "errors": 3645,
+          "contexts": 224
+        }
+      ],
+      "errors": [
+        3670,
+        3606,
+        3645
+      ],
+      "contexts": [
+        233,
+        197,
+        224
+      ],
+      "per_class_union": {
+        "C": 190,
+        "D": 15,
+        "E": 449
+      },
+      "engine_on_path_union": 0,
+      "engine_origins_union": 0,
+      "top_origins": [
+        {
+          "contexts": 96,
+          "fn": "BN_nnmod"
+        },
+        {
+          "contexts": 87,
+          "fn": "openssl_rs::bn::limbs::divide_fallible"
+        },
+        {
+          "contexts": 68,
+          "fn": "BN_add"
+        },
+        {
+          "contexts": 66,
+          "fn": "openssl_rs::bn::limbs::mul_fallible"
+        },
+        {
+          "contexts": 55,
+          "fn": "memset"
+        },
+        {
+          "contexts": 42,
+          "fn": "BN_sub"
+        },
+        {
+          "contexts": 39,
+          "fn": "BN_mul"
+        },
+        {
+          "contexts": 35,
+          "fn": "BN_mod_add_quick"
+        },
+        {
+          "contexts": 34,
+          "fn": "openssl_rs::bn::limbs::sub_fallible"
+        },
+        {
+          "contexts": 33,
+          "fn": "BN_uadd"
+        },
+        {
+          "contexts": 22,
+          "fn": "<alloc::raw_vec::RawVecInner>::finish_grow"
+        },
+        {
+          "contexts": 18,
+          "fn": "memmove"
+        }
+      ]
+    },
+    "b/sign": {
+      "dso_sha256": "86bc63a6746e2e7bad628f7e7e6df477c3355759582e0611109af3e08156765e",
+      "runs": [
+        {
+          "rep": 1,
+          "errors": 3669,
+          "contexts": 244
+        },
+        {
+          "rep": 2,
+          "errors": 3669,
+          "contexts": 244
+        },
+        {
+          "rep": 3,
+          "errors": 3694,
+          "contexts": 258
+        }
+      ],
+      "errors": [
+        3669,
+        3669,
+        3694
+      ],
+      "contexts": [
+        244,
+        244,
+        258
+      ],
+      "per_class_union": {
+        "C": 191,
+        "D": 21,
+        "E": 534
+      },
+      "engine_on_path_union": 0,
+      "engine_origins_union": 0,
+      "top_origins": [
+        {
+          "contexts": 99,
+          "fn": "BN_nnmod"
+        },
+        {
+          "contexts": 90,
+          "fn": "memmove"
+        },
+        {
+          "contexts": 87,
+          "fn": "openssl_rs::bn::limbs::divide_fallible"
+        },
+        {
+          "contexts": 63,
+          "fn": "openssl_rs::bn::limbs::mul_fallible"
+        },
+        {
+          "contexts": 49,
+          "fn": "memset"
+        },
+        {
+          "contexts": 42,
+          "fn": "BN_add"
+        },
+        {
+          "contexts": 36,
+          "fn": "BN_sub"
+        },
+        {
+          "contexts": 35,
+          "fn": "BN_mod_add_quick"
+        },
+        {
+          "contexts": 34,
+          "fn": "BN_uadd"
+        },
+        {
+          "contexts": 32,
+          "fn": "<alloc::raw_vec::RawVecInner>::finish_grow"
+        },
+        {
+          "contexts": 27,
+          "fn": "BN_mul"
+        },
+        {
+          "contexts": 26,
+          "fn": "openssl_rs::bn::limbs::sub_fallible"
+        }
+      ]
+    },
+    "b/sign-ex": {
+      "dso_sha256": "86bc63a6746e2e7bad628f7e7e6df477c3355759582e0611109af3e08156765e",
+      "runs": [
+        {
+          "rep": 1,
+          "errors": 24,
+          "contexts": 24
+        },
+        {
+          "rep": 2,
+          "errors": 24,
+          "contexts": 24
+        },
+        {
+          "rep": 3,
+          "errors": 24,
+          "contexts": 24
+        }
+      ],
+      "errors": [
+        24,
+        24,
+        24
+      ],
+      "contexts": [
+        24,
+        24,
+        24
+      ],
+      "per_class_union": {
+        "C": 3,
+        "E": 69
+      },
+      "engine_on_path_union": 0,
+      "engine_origins_union": 0,
+      "top_origins": [
+        {
+          "contexts": 36,
+          "fn": "memmove"
+        },
+        {
+          "contexts": 12,
+          "fn": "BN_to_montgomery"
+        },
+        {
+          "contexts": 6,
+          "fn": "BN_mod_mul_montgomery"
+        },
+        {
+          "contexts": 6,
+          "fn": "<alloc::raw_vec::RawVecInner>::finish_grow"
+        },
+        {
+          "contexts": 3,
+          "fn": "openssl_rs::bn::arith::mod_add_reduced_ct"
+        },
+        {
+          "contexts": 3,
+          "fn": "alloc"
+        },
+        {
+          "contexts": 3,
+          "fn": "malloc"
+        },
+        {
+          "contexts": 3,
+          "fn": "ossl_ecdsa_simple_sign_sig"
+        }
+      ]
+    },
+    "b/sign-ex-k": {
+      "dso_sha256": "86bc63a6746e2e7bad628f7e7e6df477c3355759582e0611109af3e08156765e",
+      "runs": [
+        {
+          "rep": 1,
+          "errors": 33017,
+          "contexts": 449
+        },
+        {
+          "rep": 2,
+          "errors": 33042,
+          "contexts": 460
+        },
+        {
+          "rep": 3,
+          "errors": 33017,
+          "contexts": 450
+        }
+      ],
+      "errors": [
+        33017,
+        33042,
+        33017
+      ],
+      "contexts": [
+        449,
+        460,
+        450
+      ],
+      "per_class_union": {
+        "C": 659,
+        "D": 15,
+        "E": 685
+      },
+      "engine_on_path_union": 0,
+      "engine_origins_union": 0,
+      "top_origins": [
+        {
+          "contexts": 321,
+          "fn": "openssl_rs::bn::limbs::divide_fallible"
+        },
+        {
+          "contexts": 119,
+          "fn": "memset"
+        },
+        {
+          "contexts": 105,
+          "fn": "memmove"
+        },
+        {
+          "contexts": 96,
+          "fn": "BN_nnmod"
+        },
+        {
+          "contexts": 81,
+          "fn": "BN_add"
+        },
+        {
+          "contexts": 80,
+          "fn": "openssl_rs::bn::limbs::sub_fallible"
+        },
+        {
+          "contexts": 75,
+          "fn": "openssl_rs::bn::limbs::mul_fallible"
+        },
+        {
+          "contexts": 66,
+          "fn": "<alloc::raw_vec::RawVecInner>::finish_grow"
+        },
+        {
+          "contexts": 66,
+          "fn": "openssl_rs::bn::limbs::mod_inverse"
+        },
+        {
+          "contexts": 45,
+          "fn": "BN_sub"
+        },
+        {
+          "contexts": 42,
+          "fn": "openssl_rs::bn::limbs::shr_fallible"
+        },
+        {
+          "contexts": 36,
+          "fn": "openssl_rs::bn::limbs::div_rem_small_fallible"
+        }
+      ]
+    },
+    "c/mul-g": {
+      "dso_sha256": "83f67826e2ca53dd8e014fe5442d2e77ba96ee7af35eeb78a312112a4e0a7c4f",
+      "runs": [
+        {
+          "rep": 1,
+          "errors": 1605,
+          "contexts": 199
+        },
+        {
+          "rep": 2,
+          "errors": 1615,
+          "contexts": 204
+        },
+        {
+          "rep": 3,
+          "errors": 1605,
+          "contexts": 199
+        }
+      ],
+      "errors": [
+        1605,
+        1615,
+        1605
+      ],
+      "contexts": [
+        199,
+        204,
+        199
+      ],
+      "per_class_union": {
+        "C": 299,
+        "D": 21,
+        "E": 282
+      },
+      "engine_on_path_union": 12,
+      "engine_origins_union": 0,
+      "top_origins": [
+        {
+          "contexts": 192,
+          "fn": "openssl_rs::bn::limbs::divide_fallible"
+        },
+        {
+          "contexts": 90,
+          "fn": "openssl_rs::bn::limbs::mul_fallible"
+        },
+        {
+          "contexts": 60,
+          "fn": "BN_nnmod"
+        },
+        {
+          "contexts": 51,
+          "fn": "BN_add"
+        },
+        {
+          "contexts": 33,
+          "fn": "memset"
+        },
+        {
+          "contexts": 30,
+          "fn": "BN_sub"
+        },
+        {
+          "contexts": 24,
+          "fn": "BN_mul"
+        },
+        {
+          "contexts": 18,
+          "fn": "memmove"
+        },
+        {
+          "contexts": 17,
+          "fn": "BN_mod_add_quick"
+        },
+        {
+          "contexts": 14,
+          "fn": "openssl_rs::bn::limbs::sub_fallible"
+        },
+        {
+          "contexts": 12,
+          "fn": "openssl_rs::ec::smpl::store_coordinate"
+        },
+        {
+          "contexts": 12,
+          "fn": "<alloc::raw_vec::RawVecInner>::finish_grow"
+        }
+      ]
+    }
+  },
+  "context_set_comparison": {
+    "control": {
+      "identical_context_sets": true,
+      "only_a": [],
+      "only_b": []
+    },
+    "mul-g": {
+      "identical_context_sets": false,
+      "only_a": [],
+      "only_b": [
+        [
+          "Conditional jump or move",
+          "<alloc::raw_vec::RawVecInner>::finish_grow"
+        ],
+        [
+          "Conditional jump or move",
+          "memset"
+        ],
+        [
+          "Use of uninitialised value",
+          "BN_usub"
+        ],
+        [
+          "Use of uninitialised value",
+          "openssl_rs::bn::limbs::sub_fallible"
+        ]
+      ]
+    },
+    "mul-g-bytes": {
+      "identical_context_sets": false,
+      "only_a": [
+        [
+          "Conditional jump or move",
+          "BN_mod_sub_quick"
+        ],
+        [
+          "Conditional jump or move",
+          "memset"
+        ],
+        [
+          "Use of uninitialised value",
+          "openssl_rs::bn::limbs::sub_fallible"
+        ]
+      ],
+      "only_b": []
+    },
+    "mul-p": {
+      "identical_context_sets": true,
+      "only_a": [],
+      "only_b": []
+    },
+    "sign": {
+      "identical_context_sets": false,
+      "only_a": [
+        [
+          "Conditional jump or move",
+          "BN_mod_sub_quick"
+        ],
+        [
+          "Conditional jump or move",
+          "memset"
+        ],
+        [
+          "Use of uninitialised value",
+          "openssl_rs::bn::limbs::sub_fallible"
+        ]
+      ],
+      "only_b": []
+    },
+    "sign-ex": {
+      "identical_context_sets": true,
+      "only_a": [],
+      "only_b": []
+    },
+    "sign-ex-k": {
+      "identical_context_sets": true,
+      "only_a": [],
+      "only_b": []
+    }
+  },
+  "mutation": {
+    "mul-g": {
+      "a": {
+        "median_ns_per_op": 227819.5,
+        "min": 225994.1,
+        "max": 246246.1,
+        "reps": 9,
+        "ir_per_op": 4891698.796875
+      },
+      "b": {
+        "median_ns_per_op": 536866.4,
+        "min": 533578.3,
+        "max": 574726.6,
+        "reps": 9,
+        "ir_per_op": 11375101.765625
+      },
+      "wall_ratio_b_over_a": 2.356542789357364,
+      "ir_ratio_b_over_a": 2.325388834834197
+    },
+    "sign": {
+      "a": {
+        "median_ns_per_op": 250604.6,
+        "min": 247551.5,
+        "max": 256497.3,
+        "reps": 9,
+        "ir_per_op": 5427885.5
+      },
+      "b": {
+        "median_ns_per_op": 563650.3,
+        "min": 555453.1,
+        "max": 627065.9,
+        "reps": 9,
+        "ir_per_op": 11809872.828125
+      },
+      "wall_ratio_b_over_a": 2.2491618270374927,
+      "ir_ratio_b_over_a": 2.1757778103692496
+    }
+  },
+  "note": "DSO-level taint counts and a two-DSO mutation control. The mutation difference establishes that the selected kernel is on the executed path; it is not a constant-time proof. A clean control population is an instrument/population check, not a safety result. Memcheck reports conditional jumps and memory uses of undefined data; it cannot see value-independent-but-secret-dependent arithmetic."
+}

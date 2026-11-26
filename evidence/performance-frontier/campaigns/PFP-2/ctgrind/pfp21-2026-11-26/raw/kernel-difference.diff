@@ -1,0 +1,11 @@
+--- /work/court/tmp/pfp21/p256.restore.rs	2026-11-26 06:49:57.903148126 +0000
++++ src/ec/p256.rs	2026-11-26 06:50:20.185441810 +0000
+@@ -1111,7 +1111,7 @@
+     if cached != u8::MAX {
+         return kernel_from_u8(cached);
+     }
+-    let id = KernelId::Mont;
++    let id = KernelId::Solinas;
+     SELECTED.store(kernel_to_u8(id), Ordering::Relaxed);
+     id
+ }

@@ -1,0 +1,7 @@
+LOADED realpath=/work/court/tmp/pfp21/a/distribution/libcrypto.so.3 dev=57 ino=1985086 size=17032672
+MAPS realpath=/work/court/tmp/pfp21/a/distribution/libcrypto.so.3 entries=5
+FOREIGN libcrypto=0
+HARNESS mode=sign-ex iters=0 taint=1
+TAINT what=kinv limbs=4 bits=256
+TAINT what=d limbs=4 bits=256
+RESULT mode=sign-ex ok=1 marked=1

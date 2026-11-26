@@ -1,0 +1,113 @@
+{
+  "log": "/work/evidence/performance-frontier/campaigns/PFP-2/ctgrind/pfp21-2026-11-26/raw/b-sign-ex-k-r1.out",
+  "contexts": 449,
+  "per_class": {
+    "C": 217,
+    "E": 227,
+    "D": 5
+  },
+  "engine_on_path": 0,
+  "origin_in_engine": 0,
+  "top_origins": [
+    {
+      "contexts": 107,
+      "loc": "in /work/court/tmp/pfp21/b/distribution/libcrypto.so.3",
+      "fn": "openssl_rs::bn::limbs::divide_fallible"
+    },
+    {
+      "contexts": 39,
+      "loc": "in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so",
+      "fn": "memset"
+    },
+    {
+      "contexts": 35,
+      "loc": "in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so",
+      "fn": "memmove"
+    },
+    {
+      "contexts": 32,
+      "loc": "in /work/court/tmp/pfp21/b/distribution/libcrypto.so.3",
+      "fn": "BN_nnmod"
+    },
+    {
+      "contexts": 27,
+      "loc": "in /work/court/tmp/pfp21/b/distribution/libcrypto.so.3",
+      "fn": "BN_add"
+    },
+    {
+      "contexts": 25,
+      "loc": "in /work/court/tmp/pfp21/b/distribution/libcrypto.so.3",
+      "fn": "openssl_rs::bn::limbs::mul_fallible"
+    },
+    {
+      "contexts": 24,
+      "loc": "in /work/court/tmp/pfp21/b/distribution/libcrypto.so.3",
+      "fn": "openssl_rs::bn::limbs::sub_fallible"
+    },
+    {
+      "contexts": 22,
+      "loc": "in /work/court/tmp/pfp21/b/distribution/libcrypto.so.3",
+      "fn": "<alloc::raw_vec::RawVecInner>::finish_grow"
+    },
+    {
+      "contexts": 22,
+      "loc": "in /work/court/tmp/pfp21/b/distribution/libcrypto.so.3",
+      "fn": "openssl_rs::bn::limbs::mod_inverse"
+    },
+    {
+      "contexts": 15,
+      "loc": "in /work/court/tmp/pfp21/b/distribution/libcrypto.so.3",
+      "fn": "BN_sub"
+    },
+    {
+      "contexts": 14,
+      "loc": "in /work/court/tmp/pfp21/b/distribution/libcrypto.so.3",
+      "fn": "openssl_rs::bn::limbs::shr_fallible"
+    },
+    {
+      "contexts": 12,
+      "loc": "in /work/court/tmp/pfp21/b/distribution/libcrypto.so.3",
+      "fn": "openssl_rs::bn::limbs::div_rem_small_fallible"
+    },
+    {
+      "contexts": 12,
+      "loc": "in /work/court/tmp/pfp21/b/distribution/libcrypto.so.3",
+      "fn": "BN_uadd"
+    },
+    {
+      "contexts": 11,
+      "loc": "in /work/court/tmp/pfp21/b/distribution/libcrypto.so.3",
+      "fn": "BN_mod_add_quick"
+    },
+    {
+      "contexts": 10,
+      "loc": "in /work/court/tmp/pfp21/b/distribution/libcrypto.so.3",
+      "fn": "openssl_rs::bn::limbs::shl_fallible"
+    },
+    {
+      "contexts": 9,
+      "loc": "in /work/court/tmp/pfp21/b/distribution/libcrypto.so.3",
+      "fn": "BN_mul"
+    },
+    {
+      "contexts": 4,
+      "loc": "unix.rs:13",
+      "fn": "alloc"
+    },
+    {
+      "contexts": 4,
+      "loc": "in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so",
+      "fn": "malloc"
+    },
+    {
+      "contexts": 4,
+      "loc": "in /work/court/tmp/pfp21/b/distribution/libcrypto.so.3",
+      "fn": "openssl_rs::ec::smpl::ossl_ec_GFp_simple_ladder_post"
+    },
+    {
+      "contexts": 4,
+      "loc": "in /work/court/tmp/pfp21/b/distribution/libcrypto.so.3",
+      "fn": "BN_to_montgomery"
+    }
+  ]
+}
