@@ -10,6 +10,36 @@ the instrument reports but does not treat as a failure and which is not a
 secret-conditional transfer. This is a control-flow result, not a timing claim:
 no dudect/PMU measurement is made here.
 
+## Committed-source identity supplement (added 2026-11-26, PFP-28)
+
+The identity statement in §1 is superseded on one point: the repair described here **is
+committed**. It landed in `c34cfe62f107f6f28f2939772485e7d5ac1fcd5a` — "PFP-31 repair: the
+implicit-rejection mask is branch-free in the release artefact" (2026-11-26) — whose parent is
+`5c29d5e71`, the base the repaired DSO was built from.
+
+The committed source is the measured source. At `c34cfe62f` the `src` tree fingerprint (886
+`.rs` files, `find src -name '*.rs' -print0 | LC_ALL=C sort -z | xargs -0 sha256sum`) is
+`1587dcca275eb2f54d53398a9f5250ec9653092a2264bc9871ca3cf9754e3553`, byte-for-byte the value in
+`repair-raw/build-inputs.txt`; `src/runtime/constant_time.rs` is
+`503f0a7dfbc5f219f75170327f772df5caffff1e23d3d41596dca64f6c6e0403`, `Cargo.lock` is
+`95e8fd837792b69a69798c3884dfc4000bee28d87c58fd3bf4cd5f597e62c2d9`, and the `src` diff against
+`5c29d5e71` is `d0fa299ed196081a61ca49f93694193eff2fad1c4dbe33b86190ec0975ec6bfc` — the other
+digests the build record carries. (`LC_ALL=C` is load-bearing: the manifest sha256 depends on
+path collation, and the host's default locale yields a different, equally well-formed digest
+from the same bytes.)
+
+The artefact measured for PFP-31 is therefore DSO
+`43a23e9b7b4628cb236d75bb8bc4b73583a035f3335bd0244f1771e81b773557` (build-id
+`e4025832eb16152a4697680391b0c4be6297d967`, 17,102,040 B) from source `c34cfe62f`. The
+artefact-audit tool is `courts/phase18/timing/binary_branch_audit.py` at sha256
+`5d54f3a1995263032fbdd23f9ccd533b50fa53b283199b2e1f43a3002cd1dfd4` (1,692 lines), unchanged
+between the audit and `c34cfe62f`.
+
+**Not transferred.** Nothing measured on the PFP-31 finding DSO `5e75b694…` is cited for
+`43a23e9b`; the audit and taint runs in `repair-raw/` were executed with
+`--expect-sha256 43a23e9b…` against the repaired DSO. A source, compiler or target change
+requires the audit to be re-run.
+
 ---
 
 ## 1. Artefacts and venue

@@ -3978,15 +3978,31 @@ mod tests {
                 ext,
                 RSA_PKCS1_PADDING,
             );
+            // `>= 0`, not `> 0`: the synthetic length is drawn from the candidate lengths and
+            // can be zero, in which case the check copies nothing and the authority answers 0
+            // with the error cleared (`rsa_pk1.c:393-405,454-465,509-522`). Zero is the empty
+            // synthetic message, not a refusal.
             assert!(
-                r_bad > 0,
-                "an invalid block answers a synthetic message, not -1"
+                r_bad >= 0,
+                "an invalid block answers a synthetic message, not a refusal: {r_bad}"
             );
-            assert_ne!(
-                out_bad,
-                vec![0xAAu8; num],
-                "the synthetic message is written"
+            assert!(
+                r_bad <= num as c_int - crate::rsa::RSA_PKCS1_PADDING_SIZE,
+                "the synthetic answer cannot exceed the largest message: {r_bad}"
             );
+            if r_bad > 0 {
+                assert_ne!(
+                    out_bad,
+                    vec![0xAAu8; num],
+                    "a non-empty synthetic message is written"
+                );
+            } else {
+                assert_eq!(
+                    out_bad,
+                    vec![0xAAu8; num],
+                    "a zero-length synthetic answer writes nothing"
+                );
+            }
             assert_eq!(
                 ERR_peek_error(),
                 0,
@@ -4016,8 +4032,12 @@ mod tests {
                 RSA_PKCS1_PADDING,
             );
             assert!(
-                r_short > 0,
-                "a short padding string is answered, not refused"
+                r_short >= 0,
+                "a short padding string is answered, not refused: {r_short}"
+            );
+            assert!(
+                r_short <= num as c_int - crate::rsa::RSA_PKCS1_PADDING_SIZE,
+                "the synthetic answer cannot exceed the largest message: {r_short}"
             );
             assert_eq!(ERR_peek_error(), 0);
 
@@ -4127,7 +4147,10 @@ mod tests {
                 ext,
                 RSA_PKCS1_PADDING,
             );
-            assert!(r_a > 0);
+            // The synthetic length may be zero (an empty synthetic message); see the note in
+            // `internal_key_pkcs1_decryption_is_unchanged`.
+            assert!(r_a >= 0);
+            assert!(r_a <= num as c_int - crate::rsa::RSA_PKCS1_PADDING_SIZE);
             assert_eq!(ERR_peek_error(), 0);
 
             // Deterministic for one ciphertext and one key.
@@ -4674,16 +4697,44 @@ mod tests {
             let bad_ct = ciphertext_for_block(rsa, &bad_block);
             let mut bad_out = vec![0xAAu8; num];
             ERR_clear_error();
+            let bad_ret = RSA_private_decrypt(
+                num as c_int,
+                bad_ct.as_ptr(),
+                bad_out.as_mut_ptr(),
+                rsa,
+                RSA_PKCS1_PADDING,
+            );
+            // The authority's `ossl_rsa_padding_check_PKCS1_type_2` answers `ret = j`, the
+            // number of synthetic-message octets it copied, and `j` is **zero** whenever the
+            // candidate-length draw selects an empty message (`rsa_pk1.c:393-405,454-465,
+            // 509-522`: `synthetic_length` starts at 0 and the copy loop runs from
+            // `flen - synthetic_length`). `rsa_ossl_private_decrypt` then clears the last error
+            // for every non-negative `r` (`rsa_ossl.c:691-699`), so the implicit-rejection
+            // contract is `ret >= 0` with an empty queue -- not `ret > 0`. A positive-only
+            // assertion therefore fails on roughly one key in 118, which is how this test
+            // flaked.
+            assert!(
+                bad_ret >= 0,
+                "an invalid block is answered by the implicit-rejection arm, not refused: {bad_ret}"
+            );
+            assert!(
+                bad_ret <= num as c_int - crate::rsa::RSA_PKCS1_PADDING_SIZE,
+                "the synthetic answer cannot exceed the largest message: {bad_ret}"
+            );
+            assert_eq!(ERR_peek_error(), 0);
+
+            // The same block *is* refused by the explicit selector, which is what shows the arm
+            // above answered instead of the block being accepted.
             assert!(
                 RSA_private_decrypt(
                     num as c_int,
                     bad_ct.as_ptr(),
                     bad_out.as_mut_ptr(),
                     rsa,
-                    RSA_PKCS1_PADDING
-                ) > 0
+                    RSA_PKCS1_NO_IMPLICIT_REJECT_PADDING,
+                ) < 0
             );
-            assert_eq!(ERR_peek_error(), 0);
+            ERR_clear_error();
 
             RSA_free(rsa);
             BN_free(e);

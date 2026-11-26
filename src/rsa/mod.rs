@@ -2162,6 +2162,12 @@ unsafe fn ossl_rsa_prf(
 /// an allocation failure), which is why the error is raised on the way out rather than in constant
 /// time.
 ///
+/// **`ret == 0` is a defined success, not a refusal.** The candidate-length draw can select an
+/// empty synthetic message (`synthetic_length` starts at 0 and the copy loop runs from
+/// `flen - synthetic_length`), so the check copies nothing and answers 0. The authority's caller
+/// clears the error for every non-negative `r` (`rsa_ossl.c:691-699`), and a zero-length plaintext
+/// is itself a valid PKCS#1 v1.5 message, so a caller must treat 0 as answered rather than refused.
+///
 /// # Safety
 /// `ctx` is NULL or live; `to` is writable for `tlen` bytes; `from` is readable for `flen` bytes;
 /// `kdk` is readable for `SHA256_DIGEST_LENGTH` bytes.
@@ -3716,7 +3722,13 @@ mod tests {
                 32,
                 kdk.as_ptr().cast_mut(),
             );
-            assert!(r_bad > 0, "implicit rejection answers a synthetic message");
+            // The synthetic length can be zero (an empty synthetic message, `rsa_pk1.c:399-405,
+            // 454-465`), which is still an answer and not a refusal.
+            assert!(r_bad >= 0, "implicit rejection answers a synthetic message");
+            assert!(
+                r_bad <= 32 - crate::rsa::RSA_PKCS1_PADDING_SIZE,
+                "the synthetic answer cannot exceed the largest message"
+            );
             assert_eq!(
                 ERR_peek_error(),
                 0,
@@ -3764,6 +3776,50 @@ mod tests {
             );
             assert_ne!(ERR_peek_error(), 0);
         }
+    }
+
+    /// **A zero-length synthetic answer is a defined success, not a refusal.**
+    ///
+    /// The candidate-length draw can select an empty synthetic message. The check then copies
+    /// nothing and answers 0, and the authority clears the error for every non-negative return
+    /// (`rsa_pk1.c:399-405,454-465,509-522`; `rsa_ossl.c:691-699`). A zero-octet plaintext is also
+    /// a valid PKCS#1 v1.5 message, so an implicit-rejection caller cannot distinguish it from
+    /// one. This pins the contract the key-based decryption tests must state as `>= 0`.
+    #[test]
+    fn a_zero_length_synthetic_answer_is_a_defined_success() {
+        // A 20-octet block: `max_sep_offset = flen - 10 = 10`, the candidate mask is 15, and the
+        // selected candidate is 0 whenever the last accepted draw is 0. The search over fixed
+        // KDKs is deterministic; the first match is the same on every run.
+        let mut bad = [0u8; 20];
+        bad[0] = 0x00;
+        bad[1] = 0x03; // wrong block type, so `good == 0` and the synthetic path is copied
+        let mut found = false;
+
+        for seed in 0u8..=255 {
+            let kdk = [seed; 32];
+            let mut out = [0u8; 20];
+            // SAFETY: every buffer is its own length and every call passes the block and KDK it
+            // reads.
+            unsafe {
+                ERR_clear_error();
+                let ret = ossl_rsa_padding_check_PKCS1_type_2(
+                    ptr::null_mut(),
+                    out.as_mut_ptr(),
+                    bad.len() as c_int,
+                    bad.as_ptr(),
+                    bad.len() as c_int,
+                    bad.len() as c_int,
+                    kdk.as_ptr().cast_mut(),
+                );
+                if ret == 0 {
+                    assert_eq!(ERR_peek_error(), 0, "a zero-length answer raises nothing");
+                    assert_eq!(out, [0u8; 20], "nothing is copied for an empty answer");
+                    found = true;
+                    break;
+                }
+            }
+        }
+        assert!(found, "some fixed KDK selects an empty synthetic message");
     }
 
     /// **The OAEP adds round-trip through the already-landed OAEP checks.**
