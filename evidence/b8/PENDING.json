@@ -21,11 +21,31 @@
   {
    "appliesToWorkingTree": false,
    "checkerOutput": "docs/RELEASE_GATES.md: ET_GATE_ITEM_DRIFT the gate table lists ['gate-1', 'gate-10', 'gate-2', 'gate-2b', 'gate-3', 'gate-4', 'gate-5', 'gate-6', 'gate-7', 'gate-8', 'gate-9'] but the record registers ['gate-1', 'gate-2', 'gate-2b', 'gate-3', 'gate-4', 'gate-5', 'gate-6']",
+   "checkerOutputObserved": {
+    "exit": 0,
+    "output": "earned-trust: ok: every article is enforced or declares none, every citation resolves, and the release mapping is complete"
+   },
    "id": "release-gates-section10",
    "path": "forensics/etp8/release-gates-section10-attempt.diff",
    "reason": "forensics/tools/earned_trust.py refused the mapping with ET_GATE_ITEM_DRIFT because evidence/etp-t14/ARTICLES.json registers gate-1..gate-6 only; editing that record is outside this item's write scope, and the checker was not weakened. The edit was reverted with `git checkout`.",
+   "reasonIsHistory": true,
+   "registeredGateItems": [
+    "gate-1",
+    "gate-2",
+    "gate-2b",
+    "gate-3",
+    "gate-4",
+    "gate-5",
+    "gate-6",
+    "gate-7",
+    "gate-8",
+    "gate-9",
+    "gate-10",
+    "gate-11"
+   ],
    "sha256": "792b252e1bb896592219e1c98ad36c59e25545bec2aade93c6122babb414b17b",
-   "state": "PENDING_MAINTAINER_APPLICATION",
+   "state": "SUPERSEDED",
+   "supersededBecause": "the refusal this entry records no longer reproduces: forensics/tools/earned_trust.py check exits 0, evidence/etp-t14/ARTICLES.json registers ['gate-1', 'gate-2', 'gate-2b', 'gate-3', 'gate-4', 'gate-5', 'gate-6', 'gate-7', 'gate-8', 'gate-9', 'gate-10', 'gate-11'], and forensics/etp8/release-gates-section10-attempt.diff no longer applies (git apply --check exits 1) because docs/RELEASE_GATES.md section 10 already names the gate items the attempt added. Nothing remains for a maintainer to apply; the attempt and its refusal are kept as history.",
    "target": "docs/RELEASE_GATES.md section 10"
   }
  ],

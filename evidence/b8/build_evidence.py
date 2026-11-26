@@ -9,7 +9,8 @@ records:
     ENFORCEMENT.json   the gate item, what it refuses, where it is wired, the
                        before/after refusal counts;
     SCHEMA.json        the schema field, its closed enum and the population;
-    PENDING.json       the two pending applications and the refused section-10 edit;
+    PENDING.json       the applications this batch may not make, each with the
+                       state a live check derives and the reason it was written;
     CONTROLS.json      one control per refusal code.
 
     python3 evidence/b8/build_evidence.py [--out DIR] [--check]
@@ -47,6 +48,9 @@ DOCUMENT = "docs/CONTINUOUS-ENFORCEMENT.md"
 NONCLAIMS = "docs/TRANSPARENCY-NON-CLAIMS.md"
 SCHEMA = "evidence/etp/claim.schema.json"
 CLAIMS = "evidence/etp/claims.json"
+ARTICLES = "evidence/etp-t14/ARTICLES.json"
+EARNED_TRUST = "forensics/tools/earned_trust.py"
+RELEASE_GATES = "docs/RELEASE_GATES.md"
 
 #: The gate's refusals at ``BASE_COMMIT``, before item 10 existed, observed with
 #: ``python3 forensics/tools/release_gate.py --json``.  The count is 35 rather
@@ -82,6 +86,18 @@ def _git_apply_check(patch: Path) -> bool:
         timeout=120,
     )
     return run.returncode == 0
+
+
+def _run_check(tool: str) -> tuple[int, str]:
+    """Run a checker in-process-adjacent and return its exit status and output."""
+    run = subprocess.run(
+        [sys.executable, str(REPO / tool), "check"],
+        cwd=str(REPO),
+        text=True,
+        capture_output=True,
+        timeout=300,
+    )
+    return run.returncode, (run.stdout + run.stderr).strip()
 
 
 def enforcement_record() -> dict[str, Any]:
@@ -218,11 +234,86 @@ def schema_record() -> dict[str, Any]:
     }
 
 
+def _section10_state(applies: bool) -> dict[str, Any]:
+    """Derive the section-10 entry's state from the check that refused it.
+
+    The entry was written because ``earned_trust.py`` refused the mapping with
+    ``ET_GATE_ITEM_DRIFT``.  That refusal is the blocker, so the state is
+    derived from the checker rather than hand-set: while it still refuses, the
+    entry is pending and its recorded reason is current; once it passes, a diff
+    that still applies is an edit that has not been made (pending), and a diff
+    that no longer applies describes a tree that already carries the mapping
+    (superseded, with the recorded reason kept as history).
+    """
+    checker_exit, checker_output = _run_check(EARNED_TRUST)
+    registered = [entry["id"] for entry in ce.load_json(REPO / ARTICLES)["gate_items"]]
+    if checker_exit != 0:
+        state = "PENDING_MAINTAINER_APPLICATION"
+        reason_is_history = False
+        because_field = None
+        because = None
+    elif applies:
+        state = "PENDING_MAINTAINER_APPLICATION"
+        reason_is_history = True
+        because_field = "pendingBecause"
+        because = (
+            "the refusal this entry records no longer reproduces because "
+            f"forensics/tools/{EARNED_TRUST.rsplit('/', 1)[-1]} check exits 0 "
+            f"and {ARTICLES} registers {registered}, but "
+            "forensics/etp8/release-gates-section10-attempt.diff still applies "
+            "(git apply --check exits 0) and has not been applied"
+        )
+    else:
+        state = "SUPERSEDED"
+        reason_is_history = True
+        because_field = "supersededBecause"
+        because = (
+            "the refusal this entry records no longer reproduces: "
+            f"forensics/tools/{EARNED_TRUST.rsplit('/', 1)[-1]} check exits 0, "
+            f"{ARTICLES} registers {registered}, and "
+            "forensics/etp8/release-gates-section10-attempt.diff no longer applies "
+            f"(git apply --check exits 1) because {RELEASE_GATES} section 10 already "
+            "names the gate items the attempt added. Nothing remains for a maintainer "
+            "to apply; the attempt and its refusal are kept as history."
+        )
+    derived: dict[str, Any] = {
+        "state": state,
+        "reasonIsHistory": reason_is_history,
+        "checkerOutputObserved": {"exit": checker_exit, "output": checker_output},
+        "registeredGateItems": registered,
+        "appliesToWorkingTree": applies,
+    }
+    if because is not None and because_field is not None:
+        derived[because_field] = because
+    return derived
+
+
 def pending_record() -> dict[str, Any]:
     """The applications this batch may not make, with their state and reason."""
     agents = REPO / "forensics/etp8/agents-patch.diff"
     ci = REPO / "forensics/etp8/ci-transparency-job.patch"
     release_gates = REPO / "forensics/etp8/release-gates-section10-attempt.diff"
+    section10 = _section10_state(_git_apply_check(release_gates))
+    section10.update({
+        "id": "release-gates-section10",
+        "target": "docs/RELEASE_GATES.md section 10",
+        "path": "forensics/etp8/release-gates-section10-attempt.diff",
+        "reason": (
+            "forensics/tools/earned_trust.py refused the mapping with "
+            "ET_GATE_ITEM_DRIFT because evidence/etp-t14/ARTICLES.json "
+            "registers gate-1..gate-6 only; editing that record is "
+            "outside this item's write scope, and the checker was not "
+            "weakened. The edit was reverted with `git checkout`."
+        ),
+        "checkerOutput": (
+            "docs/RELEASE_GATES.md: ET_GATE_ITEM_DRIFT the gate table lists "
+            "['gate-1', 'gate-10', 'gate-2', 'gate-2b', 'gate-3', 'gate-4', "
+            "'gate-5', 'gate-6', 'gate-7', 'gate-8', 'gate-9'] but the record "
+            "registers ['gate-1', 'gate-2', 'gate-2b', 'gate-3', 'gate-4', "
+            "'gate-5', 'gate-6']"
+        ),
+        "sha256": _sha(release_gates),
+    })
     return {
         "schema": "openssl-rs/b8/pending/1",
         "item": "B8",
@@ -254,28 +345,7 @@ def pending_record() -> dict[str, Any]:
                 "appliesToWorkingTree": _git_apply_check(ci),
                 "sha256": _sha(ci),
             },
-            {
-                "id": "release-gates-section10",
-                "target": "docs/RELEASE_GATES.md section 10",
-                "path": "forensics/etp8/release-gates-section10-attempt.diff",
-                "state": "PENDING_MAINTAINER_APPLICATION",
-                "reason": (
-                    "forensics/tools/earned_trust.py refused the mapping with "
-                    "ET_GATE_ITEM_DRIFT because evidence/etp-t14/ARTICLES.json "
-                    "registers gate-1..gate-6 only; editing that record is "
-                    "outside this item's write scope, and the checker was not "
-                    "weakened. The edit was reverted with `git checkout`."
-                ),
-                "checkerOutput": (
-                    "docs/RELEASE_GATES.md: ET_GATE_ITEM_DRIFT the gate table lists "
-                    "['gate-1', 'gate-10', 'gate-2', 'gate-2b', 'gate-3', 'gate-4', "
-                    "'gate-5', 'gate-6', 'gate-7', 'gate-8', 'gate-9'] but the record "
-                    "registers ['gate-1', 'gate-2', 'gate-2b', 'gate-3', 'gate-4', "
-                    "'gate-5', 'gate-6']"
-                ),
-                "appliesToWorkingTree": _git_apply_check(release_gates),
-                "sha256": _sha(release_gates),
-            },
+            section10,
         ],
     }
 
@@ -311,6 +381,7 @@ def summary(records: dict[str, dict[str, Any]]) -> str:
     enforcement = records["ENFORCEMENT.json"]
     schema = records["SCHEMA.json"]
     controls = records["CONTROLS.json"]
+    applications = records["PENDING.json"]["applications"]
     counts = enforcement["refusalCounts"]
     return (
         f"code={ce.CODE_OK} b8: gateItems={len(enforcement['gateItems'])} "
@@ -321,7 +392,9 @@ def summary(records: dict[str, dict[str, Any]]) -> str:
         f"controls={len(controls['controls'])} "
         f"codesCovered={len(controls['codesCovered'])} "
         f"coversEveryCode={str(controls['coversEveryCode']).lower()} "
-        f"pending={len(records['PENDING.json']['applications'])}"
+        f"applications={len(applications)} "
+        f"pending={sum(1 for row in applications if str(row['state']).startswith('PENDING'))} "
+        f"superseded={sum(1 for row in applications if row['state'] == 'SUPERSEDED')}"
     )
 
 
