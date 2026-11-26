@@ -1,0 +1,152 @@
+{
+  "artefacts": {
+    "authority_dso": {
+      "build_id": "5b4871ce9d78edeafc96f143d7d6697d943ad804",
+      "path": "/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+      "sha256": "611e511db4273c4b6b522031fd171efce71b80661bb8310c2a21dfd18ec0efd2",
+      "size_bytes": 7295816
+    },
+    "crate_archive": {
+      "build_id": null,
+      "path": "/work/court/tmp/pfp21/a/target/release/libopenssl_rs.a",
+      "sha256": "b7c22e863b4508423b4c4a7be8efad7790aff14a8ecf366c24ca59e8788ad3f9",
+      "size_bytes": 44845878
+    },
+    "distribution_dso": {
+      "build_id": "408dafd2f611bb8fa095ed760e7eaafc59ebb39e",
+      "path": "/work/court/tmp/pfp21/a/distribution/libcrypto.so.3",
+      "sha256": "553e1b8ce1eb7e03a0d92a5614b566b88e49e55d2c2a3f7ba28fc6d78eecc4e4",
+      "size_bytes": 17032672
+    },
+    "measurement_dso": {
+      "build_id": "9df0d94c579ccfd755ed64cac3b96cb0bde0e479",
+      "path": "/work/court/tmp/pfp2-timing-553e1b8c/measurement/libcrypto.so.3",
+      "sha256": "049d71eb586cfe3abe42e65891ee751d2b77cd006ad1d00dfa3d65088e527556",
+      "size_bytes": 17413128
+    }
+  },
+  "build_recipe": [
+    "cargo build --release --lib --offline (CARGO_BUILD_JOBS=4, fresh CARGO_TARGET_DIR) \u2014 performed by the campaign that produced the frozen DSO, not by this timing run",
+    "python3 forensics/tools/implemented_surface.py --archive <archive> --out <fresh-surface>",
+    "python3 courts/performance-frontier/baseline/emit_shell.py --surface <fresh-surface> --out <shell>",
+    "rustc --edition 2021 --emit=obj --crate-type lib -O --crate-name libcrypto_shell -o <shell>/libcrypto.shell.o <shell>/libcrypto.shell.rs",
+    "cc -shared -o <distribution>/libcrypto.so.3 -Wl,--whole-archive <archive> -Wl,--no-whole-archive <shell>/libcrypto.shell.o -Wl,--version-script=artifacts/phase2/libcrypto.ld -Wl,-soname,libcrypto.so.3 -Wl,--as-needed -lpthread -ldl -lm -lrt -lutil"
+  ],
+  "campaign": "PFP-2",
+  "dh_fixtures": {
+    "groups": {
+      "ffdhe2048": {
+        "bits": 2048,
+        "file": "ffdhe2048.hex",
+        "file_sha256": "282f234f613de65db40d34eab8a6bd44b643b1dd066f371d6e39baab569f1ada",
+        "p_array": "OSSL_BIGNUM_FFDHE2048_P_BYTES",
+        "p_bytes": 256,
+        "p_sha256": "9cd3b7f336872f46c09428d1bbc19877a4d440512cda8d1c1cf0cd6e33698966",
+        "q_array": "OSSL_BIGNUM_FFDHE2048_Q_BYTES",
+        "q_bytes": 256,
+        "q_sha256": "3072ed775345bbd8721aeb890833aa381bf5a19a889fb8c2b71ebd5cead60fe1"
+      },
+      "ffdhe3072": {
+        "bits": 3072,
+        "file": "ffdhe3072.hex",
+        "file_sha256": "6bf9255618857cf8fef1dedff475e7b3c4d9b80ab3b98302c586492a04e1546d",
+        "p_array": "OSSL_BIGNUM_FFDHE3072_P_BYTES",
+        "p_bytes": 384,
+        "p_sha256": "0eaf67db3a839156d5013494a5318a772b5697d270d721f37f092efc69ea5a17",
+        "q_array": "OSSL_BIGNUM_FFDHE3072_Q_BYTES",
+        "q_bytes": 384,
+        "q_sha256": "181f68e06ad73585303cbcab43a6ac96ce2ce8e4927e8dbf2251a469108b72a3"
+      },
+      "modp2048": {
+        "bits": 2048,
+        "file": "modp2048.hex",
+        "file_sha256": "36ac9d9a9a8b3b943d4ebec1f280770b2a6ebef425140ac77a7db1675ddbc352",
+        "p_array": "OSSL_BIGNUM_MODP_2048_P_BYTES",
+        "p_bytes": 256,
+        "p_sha256": "d66436f79bbd6b2e38c0ffbd079be904d2641415e2e67140e09448be9a60890e",
+        "q_array": "OSSL_BIGNUM_MODP_2048_Q_BYTES",
+        "q_bytes": 256,
+        "q_sha256": "a638f55d63c78f6d9ca04f0de138b1699fd6ff9737d926f4c24f318fc1d0f572"
+      }
+    },
+    "schema": "openssl-rs/performance/dh-fixtures/v1",
+    "source": "/work/src/bn/dh_data.rs",
+    "source_sha256": "1887a18b15c7eda2caee4956905fc0d3a8d37d7b2d4c26e6995a14f904a22505"
+  },
+  "harness": [
+    {
+      "build_id": null,
+      "path": "/work/courts/phase18/timing/bench_api.c",
+      "sha256": "e1add483b9bee3158e93e2f7d84296441bb2fc5d715cbf27cfd13f80cfde263f",
+      "size_bytes": 32614
+    },
+    {
+      "build_id": null,
+      "path": "/work/courts/phase18/timing/alloc_probe.c",
+      "sha256": "76b432fd428322e75f068c2d70569a281671207469348628012a389bdae1f446",
+      "size_bytes": 5638
+    },
+    {
+      "build_id": null,
+      "path": "/work/courts/phase18/timing/run_bench_api.sh",
+      "sha256": "653994bf2e8eba9b39bdd64c73b518a8d86aca048e2ddea2c47b69c5924ebf44",
+      "size_bytes": 19567
+    },
+    {
+      "build_id": null,
+      "path": "/work/courts/performance-frontier/baseline/extract_dh_fixtures.py",
+      "sha256": "bbff92ec3d06e948434a8ffa871d60fef43cdc7b8abb5b61bf02490e6413384b",
+      "size_bytes": 4090
+    },
+    {
+      "build_id": null,
+      "path": "/work/courts/performance-frontier/baseline/analyse_bench_api.py",
+      "sha256": "5182354dfa750d8d0e8949790163f6a02f1f8aad7a6276765d8f1fce5d1d9ab7",
+      "size_bytes": 37452
+    },
+    {
+      "build_id": null,
+      "path": "/work/evidence/performance-frontier/campaigns/PFP-2/timing-553e1b8c/run_timing.sh",
+      "sha256": "554b4a52b2392321869647a5b826b02ef474c154e1a72eb2f834ba48dfb21d0a",
+      "size_bytes": 18563
+    },
+    {
+      "build_id": null,
+      "path": "/work/evidence/performance-frontier/campaigns/PFP-2/timing-553e1b8c/make_build_identity.py",
+      "sha256": "3233e65b672a145b39977847c3f3d1bf3db57de01d02fb35fc37e4cde57aa6bd",
+      "size_bytes": 7129
+    }
+  ],
+  "recorded_at_utc": "2026-11-26T07:02:35.051835+00:00",
+  "schema": "openssl-rs/performance/build-identity/v1",
+  "source": {
+    "branch": "staging (recorded candidate source)",
+    "build_relevant_clean": true,
+    "build_relevant_paths": [
+      "src",
+      "Cargo.toml",
+      "Cargo.lock",
+      "build.rs",
+      "rust-toolchain.toml"
+    ],
+    "build_relevant_status": "",
+    "current_head": "c1d25e10d16bc197e03446619a5330842b411c5c",
+    "current_head_src_matches_recorded": true,
+    "current_head_src_tree": "613b4eee1bdfad91e67e6810b7f59cd274c2e00c",
+    "derivation": "This timing run benchmarks the frozen distribution DSO; it does not rebuild. source.head is the commit whose build-relevant tree produced that DSO, not the current checkout HEAD.",
+    "head": "c1d25e10d16bc197e03446619a5330842b411c5c",
+    "recorded_source_src_tree": "613b4eee1bdfad91e67e6810b7f59cd274c2e00c",
+    "worktree_status": []
+  },
+  "tools": {
+    "cargo": "cargo 1.98.1 (797e8a9bc 2026-08-05)",
+    "cc": "cc (Debian 12.2.0-14+deb12u1) 12.2.0",
+    "readelf": "GNU readelf (GNU Binutils for Debian) 2.40",
+    "rustc": "rustc 1.98.1 (48a229cea 2026-09-01)"
+  },
+  "venue": {
+    "court_image": "openssl-rs-court-tools:1",
+    "kernel": "7.3.5-2-cachyos",
+    "machine": "x86_64"
+  }
+}

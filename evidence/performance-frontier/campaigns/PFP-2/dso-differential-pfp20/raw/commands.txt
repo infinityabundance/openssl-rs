@@ -1,0 +1,4 @@
+/work/evidence/performance-frontier/campaigns/PFP-2/dso-differential-pfp20/build/pfp2_dso_differential --lib <dso> --seed 0x5046503250485032 --mode mul-g --count 4096
+/work/evidence/performance-frontier/campaigns/PFP-2/dso-differential-pfp20/build/pfp2_dso_differential --lib <dso> --seed 0x5046503250485032 --mode mul-p --count 4096
+/work/evidence/performance-frontier/campaigns/PFP-2/dso-differential-pfp20/build/pfp2_dso_differential --lib <dso> --seed 0x5046503250485032 --mode sign --count 256 --sigfile <file>
+/work/evidence/performance-frontier/campaigns/PFP-2/dso-differential-pfp20/build/pfp2_dso_differential --lib <dso> --seed 0x5046503250485032 --mode verify --count 256 --sigfile <file>

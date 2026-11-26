@@ -1,0 +1,87 @@
+--- evidence/performance-frontier/campaigns/PFP-2/timing-83f67826/run_timing.sh	2026-11-26 00:55:47.944692753 -0500
++++ evidence/performance-frontier/campaigns/PFP-2/timing-553e1b8c/run_timing.sh	2026-11-26 02:02:21.283662275 -0500
+@@ -1,26 +1,24 @@
+ #!/usr/bin/env bash
+ #
+-# run_timing.sh — PFP-2 timing at the frozen post-fix DSO digest.
++# run_timing.sh — PFP-2 timing at the frozen PFP-20 candidate DSO digest.
+ #
+-# This re-runs the *existing* bench harness (courts/phase18/timing/bench_api.c
+-# and courts/performance-frontier/baseline/analyse_bench_api.py, both used
+-# unchanged) with the recorded conventions: 15 paired repetitions, one process
+-# per subject per repetition, balanced pseudo-random order seeded 0x50465030,
+-# taskset -c 1, median of paired candidate/authority ratios and a percentile
+-# bootstrap.
++# Bound copy of timing-83f67826/run_timing.sh.  The harness, analyser,
++# repetition count, ordering seed, CPU pin, statistic and bootstrap are
++# unchanged; only the subject identity and paths differ, because the 83f67826
++# copy pins EXPECT_CAND and refuses any other DSO.  The diff against the parent
++# copy is recorded in REPORT.md.
+ #
+-# The one deliberate difference from run_bench_api.sh is that it does **not**
+-# rebuild: the subject is the frozen distribution DSO at
+-#   83f67826e2ca53dd8e014fe5442d2e77ba96ee7af35eeb78a312112a4e0a7c4f
+-# built by the campaign from staging 790685a0aa's src.  Rebuilding now would
+-# produce a different artefact and the measurement would not be at the audit's
+-# digest.  Every process still proves which file it mapped (LOADED vs stat) and
+-# the DSO digest is checked before and after.
++# It does **not** rebuild: the subject is the frozen distribution DSO at
++#   553e1b8ce1eb7e03a0d92a5614b566b88e49e55d2c2a3f7ba28fc6d78eecc4e4
++# built by the PFP-20/PFP-21 campaign from staging c1d25e10d's src.  Rebuilding
++# now would produce a different artefact and the measurement would not be at
++# the audit's and ctgrind's digest.  Every process still proves which file it
++# mapped (LOADED vs stat) and the DSO digest is checked before and after.
+ #
+ #   OPENSSL_RS_COURT_MEM=8g OPENSSL_RS_COURT_MEMSWAP=8g \
+ #     bash docker/openssl-rs-court.sh exec \
+ #       env CARGO_BUILD_JOBS=4 PFP0_COURT_IMAGE=openssl-rs-court-tools:1 \
+-#       bash evidence/performance-frontier/campaigns/PFP-2/timing-83f67826/run_timing.sh
++#       bash evidence/performance-frontier/campaigns/PFP-2/timing-553e1b8c/run_timing.sh
+ 
+ set -euo pipefail
+ 
+@@ -33,19 +31,19 @@
+ AUTH_INC="$AUTH_PREFIX/include"
+ AUTH_DSO="$AUTH_LIB/libcrypto.so.3"
+ 
+-CAND_DSO="${PFP2_CAND_DSO:-$ROOT/court/tmp/pfp2-fix/distribution/libcrypto.so.3}"
+-ARCHIVE="${PFP2_ARCHIVE:-$ROOT/court/tmp/pfp2-fix/target/release/libopenssl_rs.a}"
+-SOURCE_COMMIT="${PFP2_SOURCE_COMMIT:-790685a0aa0aba5dc655dee9fd33904f7350cf53}"
++CAND_DSO="${PFP2_CAND_DSO:-$ROOT/court/tmp/pfp21/a/distribution/libcrypto.so.3}"
++ARCHIVE="${PFP2_ARCHIVE:-$ROOT/court/tmp/pfp21/a/target/release/libopenssl_rs.a}"
++SOURCE_COMMIT="${PFP2_SOURCE_COMMIT:-c1d25e10d16bc197e03446619a5330842b411c5c}"
+ 
+-WORK="${PFP2_TIMING_WORK:-$ROOT/evidence/performance-frontier/campaigns/PFP-2/timing-83f67826}"
+-BUILD="${PFP2_TIMING_BUILD:-$ROOT/court/tmp/pfp2-timing-83f67826}"
++WORK="${PFP2_TIMING_WORK:-$ROOT/evidence/performance-frontier/campaigns/PFP-2/timing-553e1b8c}"
++BUILD="${PFP2_TIMING_BUILD:-$ROOT/court/tmp/pfp2-timing-553e1b8c}"
+ WORKLOADS="$ROOT/forensics/performance/WORKLOADS.json"
+ FIX_SRC="$ROOT/src/bn/dh_data.rs"
+ RSA_DER="${RSA_DER:-$ROOT/courts/phase18/timing/fixtures/rsa2048.der}"
+ 
+-EXPECT_CAND=83f67826e2ca53dd8e014fe5442d2e77ba96ee7af35eeb78a312112a4e0a7c4f
++EXPECT_CAND=553e1b8ce1eb7e03a0d92a5614b566b88e49e55d2c2a3f7ba28fc6d78eecc4e4
+ EXPECT_AUTH=611e511db4273c4b6b522031fd171efce71b80661bb8310c2a21dfd18ec0efd2
+-EXPECT_ARCHIVE=b56eba463eb50818a8fa5baf75c9fa11e0b8ce2e21c4e9870900a8b6cd4b9166
++EXPECT_ARCHIVE=b7c22e863b4508423b4c4a7be8efad7790aff14a8ecf366c24ca59e8788ad3f9
+ 
+ REPS=15
+ ORDER_SEED=0x50465030
+@@ -105,7 +103,7 @@
+     "cross_verification_repetitions": cross,
+     "exclusions": "none may be introduced after execution",
+     "exhaustion_policy": "a failed or resource-exhausted run is BLOCKED, never PASS",
+-    "frozen_subject": "the existing distribution DSO at 83f67826; no rebuild",
++    "frozen_subject": "the distribution DSO at 553e1b8c built by the PFP-20/21 campaign from c1d25e10d; no rebuild",
+ }
+ open(path, "w").write(json.dumps(doc, indent=2, sort_keys=True) + "\n")
+ PY
+@@ -146,7 +144,7 @@
+ # --- identity --------------------------------------------------------------
+ 
+ python3 "$WORK/make_build_identity.py" \
+-    --repo "$ROOT" --out "$WORK/build-identity.json" \
++    --repo "${PFP2_SOURCE_REPO:-$ROOT}" --out "$WORK/build-identity.json" \
+     --source-commit "$SOURCE_COMMIT" \
+     --archive "$ARCHIVE" --measurement-dso "$BUILD/measurement/libcrypto.so.3" \
+     --distribution-dso "$CAND_DSO" --authority-dso "$AUTH_DSO" \

@@ -1,0 +1,20 @@
+source_commit c1d25e10d16bc197e03446619a5330842b411c5c
+worktree /work/court/tmp/pfp23-src
+head_src_tree 613b4eee1bdfad91e67e6810b7f59cd274c2e00c
+source_tree_fingerprint 290ea3aa8587229bb8a8eb303fa2c90c68d40afb0881fead88d39f2c176dcfdb
+source_files 886
+cargo_lock_sha256 95e8fd837792b69a69798c3884dfc4000bee28d87c58fd3bf4cd5f597e62c2d9
+rustc rustc 1.98.1 (48a229cea 2026-09-01)
+cargo cargo 1.98.1 (797e8a9bc 2026-08-05)
+cc cc (Debian 12.2.0-14+deb12u1) 12.2.0
+target_triple x86_64-unknown-linux-gnu
+profile release
+flags cargo build --release --lib --offline; CARGO_BUILD_JOBS=4
+shell_source /work/court/tmp/pfp2-fix/shell/libcrypto.shell.rs sha256=efa0fbce5c0e96ab7ddd539f7b798f4ad893f5c120c99cb44077f7c74ea65606
+version_script /work/artifacts/phase2/libcrypto.ld sha256=75fb6eff05e5cf7677f46f03fb8ed6e7bbaa24a96f1e20702f74c524e1b51275
+archive /work/court/tmp/pfp23/target/release/libopenssl_rs.a sha256=b7c22e863b4508423b4c4a7be8efad7790aff14a8ecf366c24ca59e8788ad3f9
+dso /work/court/tmp/pfp23/distribution/libcrypto.so.3 sha256=553e1b8ce1eb7e03a0d92a5614b566b88e49e55d2c2a3f7ba28fc6d78eecc4e4 size=17032672 build_id=408dafd2f611bb8fa095ed760e7eaafc59ebb39e
+expected_dso 553e1b8ce1eb7e03a0d92a5614b566b88e49e55d2c2a3f7ba28fc6d78eecc4e4
+expected_archive b7c22e863b4508423b4c4a7be8efad7790aff14a8ecf366c24ca59e8788ad3f9
+archive_matches_previous yes
+dso_matches_previous yes
