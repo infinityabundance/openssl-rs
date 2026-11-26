@@ -192,3 +192,16 @@ Corrections carried with this section:
   ctgrind contexts in the EC and BIGNUM stack. Per-path results are reported
   separately, and an overall verdict is never assembled from engine-local
   zeroes.
+
+## Review-driven queue (2026-11-26, fourth assessment)
+
+The fourth assessment of head `57ea9cc0a` named three security priorities and
+asked for one high-risk failure path closed end to end rather than a wider
+framework. `PFP-26`, `PFP-28` and `PFP-17` (independent reproduction) already
+carry its fourth and fifth priorities and are not restated.
+
+| id | work package | status |
+|---|---|---|
+| PFP-31 | **ML-KEM implicit-rejection security, end to end.** `key::decap` holds the implicit-rejection `CRYPTO_memcmp` plus `constant_time_select_8` and is **outside the branch audit**, because it and `arith::scalar_ntt` exist only as LLVM-suffixed local symbols. Acceptance: the audit inventory covers those symbols (an LLVM-suffixed local copy is resolved only with the same re-derived inline discipline used for the inlined BIGNUM wrapper, never by loosening the exact-identifier rule to a substring match); the rejection select is audited in the release DSO; a mutation control that deliberately introduces a secret-dependent branch in the select makes the audit fail; all three parameter sets, ML-KEM-512, -768 and -1024, are exercised; and malformed ciphertexts are compared with the authority for indistinguishability of the observable surface — return code, output length, and whether any branch or address depends on the decapsulation outcome. A correctness result is never presented as a constant-time result. | TODO |
+| PFP-32 | **RSA padding-failure court against the exact candidate DSO.** PFP-29's successful-decryption comparisons do not establish resistance to a padding oracle. Acceptance: the court exercises malformed PKCS#1 v1.5 padding, wrong lengths, out-of-range representatives and invalid ciphertexts through the shipped artefact; **three separate verdicts** are issued — decryption correctness on valid inputs, compatibility of the failure surface with the authority (return code, error-queue state, output-buffer state, implicit-rejection length distribution), and constant-time behaviour of the failure path under taint; a distinguishable failure surface is recorded as a finding with the observable that distinguishes it, not smoothed into the compatibility row. This extends, and does not replace, the earlier HAZ-15 work. | TODO |
+| PFP-33 | **Generic BIGNUM context classification.** PFP-29 reports hundreds of taint contexts in `divide_fallible`, `BN_nnmod`, `BN_mul`, `BN_sub`, `BN_cmp`, `BN_bn2binpad` and the variable-length conversions on secret paths. These are instrumentation findings, not vulnerabilities, and they are currently unclassified. Acceptance: every context on a secret path is attributed to a site and classified as (i) secret-value-independent padding or length, (ii) a public-bound loop, (iii) a genuine value-dependent branch or address, or (iv) not yet determined; the release-mode codegen is examined for class (iii) rather than inferring from source; each class (iii) finding is either fixed with a mask barrier or recorded as a named obligation with the path and the observable; and the classification is per path, never collapsed. Absence of a classification is a refusal, not a pass. | TODO |
