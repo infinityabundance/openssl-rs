@@ -1,0 +1,41 @@
+[
+  {"family": "Montgomery multiply (SOS kernel; the schedule LADDER_SCHEDULE selects)", "module": "arith", "symbol": "mont_mul_sos_into"},
+  {"family": "Montgomery ladder carrier (ladder multiplies inlined here)", "module": "arith", "symbol": "run_mont_ladder"},
+  {"family": "Montgomery multiply (allocating wrapper)", "symbol": "mont_mul_fallible"},
+  {"family": "Constant-time ladder core", "symbol": "mod_exp_core_consttime_from_parts",
+   "resolves_to": "mod_exp_core_consttime_from_parts_prepared",
+   "inlining": {
+     "suffix": "_prepared",
+     "caller": "BN_mod_exp",
+     "constant_argument": "push $0x0",
+     "producer": "clang LLVM (rustc version 1.98.1 (48a229cea 2026-09-01))",
+     "check": "mod_exp_core_consttime_from_parts(ad, pd, md, n) is the one-line forwarder to mod_exp_core_consttime_from_parts_prepared(ad, pd, md, n, None); in the release DSO its only non-test caller BN_mod_exp calls the prepared entry directly with the None tag, so no out-of-line body of the wrapper is emitted"
+   }},
+  {"family": "Constant-time inversion", "module": "limbs", "symbol": "mod_inverse_consttime"},
+  {"family": "ECDSA scalar ladder (driver)", "symbol": "ossl_ec_scalar_mul_ladder"},
+  {"family": "EC ladder step (secret core)", "symbol": "ossl_ec_GFp_simple_ladder_step"},
+  {"family": "RSA CRT arms", "symbol": "rsa_ossl_mod_exp"},
+  {"family": "P-256 Montgomery reduction", "module": "p256", "symbol": "mont_reduce_into"},
+  {"family": "P-256 x86-64 multiply", "module": "p256", "symbol": "wide_mul_x86"},
+
+  {"family": "DH key agreement (driver)", "module": "key", "symbol": "ossl_dh_compute_key"},
+  {"family": "EC wNAF multiply (verification / public-scalar core)", "module": "mult", "symbol": "ossl_ec_wNAF_mul"},
+
+  {"family": "ML-KEM decapsulation (provider driver)", "module": "key", "symbol": "ossl_ml_kem_decap"},
+  {"family": "ML-KEM K-PKE decrypt", "module": "arith", "symbol": "decrypt_cpa"},
+  {"family": "ML-KEM K-PKE encrypt (re-encryption / implicit reject)", "module": "arith", "symbol": "encrypt_cpa"},
+  {"family": "ML-KEM inverse NTT", "module": "arith", "symbol": "scalar_inverse_ntt"},
+  {"family": "ML-KEM inner product", "module": "arith", "symbol": "inner_product"},
+  {"family": "ML-KEM matrix transpose-multiply-add", "module": "arith", "symbol": "matrix_mult_transpose_add"},
+  {"family": "ML-KEM matrix expansion (public)", "module": "arith", "symbol": "matrix_expand"},
+  {"family": "ML-KEM vector decode 12-bit", "module": "arith", "symbol": "vector_decode_12"},
+  {"family": "ML-KEM vector encode", "module": "arith", "symbol": "vector_encode"},
+  {"family": "ML-KEM CBD sampling eta=2", "module": "arith", "symbol": "cbd_2"},
+  {"family": "ML-KEM CBD sampling eta=3", "module": "arith", "symbol": "cbd_3"},
+  {"family": "ML-KEM CBD vector sampling then NTT", "module": "arith", "symbol": "gencbd_vector_ntt"},
+  {"family": "ML-KEM hash H", "module": "arith", "symbol": "hash_h"},
+  {"family": "ML-KEM hash G", "module": "arith", "symbol": "hash_g"},
+  {"family": "ML-KEM public-key hash", "module": "arith", "symbol": "hash_h_pubkey"},
+  {"family": "ML-KEM KDF", "module": "arith", "symbol": "kdf"},
+  {"family": "ML-KEM PRF", "module": "arith", "symbol": "prf"}
+]

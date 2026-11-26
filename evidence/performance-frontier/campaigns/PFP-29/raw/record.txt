@@ -1,0 +1,17 @@
+path            runs  errors(med/max)  contexts(med/max)  engine bn ec driver runtime  engine-on-path
+ecdsa-sign         3    33007/33032       442/452       0  446  155      0     452  0
+ecdsa-sign-default    3     3723/3733        274/280       0  272  239      0     280  0
+ecdsa-verify       3        0/0             0/0         0    0    0      0       0  0
+ecdh               3     3795/3795        253/256       0  245  256      0     256  0
+rsa-crt            3    48472/48515       244/244       0  241    0    244     244  0
+rsa-nocrt          3       37/37           23/23        0   23    0     23      23  0
+rsa-crt-pkcs1      3    48622/48623       252/252       0  244    0    252     252  0
+dh                 3      277/277          23/23        0   21    0     23      23  0
+mlkem-decaps       3     2832/2832          5/5         0    0    0      5       5  0
+
+sensitivity control (ecdh on 83f67826): engine_on_path=4 contexts=218
+differential: ECDSA_R(32B)=equal, ECDSA_S(32B)=equal, ECDH_SS(32B)=equal, RSA_PT(256B)=equal, DH_SS(256B)=equal, MLKEM_CT(1088B)=equal, MLKEM_ENCAP_SS(32B)=equal, MLKEM_DECAP_SS(32B)=equal
+cross-verify: {'verify-cand-of-auth': True, 'verify-auth-of-cand': True}
+64-case sweep: identical=True rows=384 paths={'ECDSA': 64, 'ECDH': 64, 'RSA': 64, 'DH': 64, 'KEM_CT': 64, 'KEM_SS': 64}
+sweep cross-verify: VERIFY_SWEEP ok=64 cases=64 / VERIFY_SWEEP ok=64 cases=64
+timing (median ns/op): ecdsa-sign=684.9, ecdsa-sign-default=250736.8, ecdsa-verify=601225.0, ecdh=226065.0, rsa-crt=1723092.1, rsa-nocrt=5527859.5, dh=5054656.7, mlkem-decaps=25557.3

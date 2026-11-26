@@ -1,0 +1,47 @@
+{
+  "log": "/work/evidence/performance-frontier/campaigns/PFP-29/raw/a-rsa-nocrt-r1.out",
+  "contexts": 23,
+  "origin_by_bucket": {
+    "bn": 7,
+    "runtime": 16
+  },
+  "contexts_with_bucket_on_path": {
+    "bn": 23,
+    "driver": 23,
+    "runtime": 23
+  },
+  "engine_on_path": 0,
+  "origin_in_engine": 0,
+  "top_origins": [
+    {
+      "contexts": 12,
+      "loc": "in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so",
+      "fn": "memmove"
+    },
+    {
+      "contexts": 4,
+      "loc": "in /work/court/tmp/pfp29/a/distribution/libcrypto.so.3",
+      "fn": "BN_mod_mul_montgomery"
+    },
+    {
+      "contexts": 3,
+      "loc": "in /work/court/tmp/pfp29/a/distribution/libcrypto.so.3",
+      "fn": "BN_bn2binpad"
+    },
+    {
+      "contexts": 2,
+      "loc": "in /work/court/tmp/pfp29/a/distribution/libcrypto.so.3",
+      "fn": "<alloc::raw_vec::RawVecInner>::finish_grow"
+    },
+    {
+      "contexts": 1,
+      "loc": "unix.rs:13",
+      "fn": "alloc"
+    },
+    {
+      "contexts": 1,
+      "loc": "in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so",
+      "fn": "malloc"
+    }
+  ]
+}

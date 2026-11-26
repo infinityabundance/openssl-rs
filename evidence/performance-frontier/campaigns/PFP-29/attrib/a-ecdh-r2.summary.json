@@ -1,0 +1,118 @@
+{
+  "log": "/work/evidence/performance-frontier/campaigns/PFP-29/raw/a-ecdh-r2.out",
+  "contexts": 244,
+  "origin_by_bucket": {
+    "bn": 195,
+    "ec": 5,
+    "runtime": 44
+  },
+  "contexts_with_bucket_on_path": {
+    "bn": 233,
+    "ec": 244,
+    "runtime": 244
+  },
+  "engine_on_path": 0,
+  "origin_in_engine": 0,
+  "top_origins": [
+    {
+      "contexts": 32,
+      "loc": "in /work/court/tmp/pfp29/a/distribution/libcrypto.so.3",
+      "fn": "BN_nnmod"
+    },
+    {
+      "contexts": 29,
+      "loc": "in /work/court/tmp/pfp29/a/distribution/libcrypto.so.3",
+      "fn": "openssl_rs::bn::limbs::divide_fallible"
+    },
+    {
+      "contexts": 27,
+      "loc": "in /work/court/tmp/pfp29/a/distribution/libcrypto.so.3",
+      "fn": "BN_add"
+    },
+    {
+      "contexts": 22,
+      "loc": "in /work/court/tmp/pfp29/a/distribution/libcrypto.so.3",
+      "fn": "openssl_rs::bn::limbs::mul_fallible"
+    },
+    {
+      "contexts": 22,
+      "loc": "in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so",
+      "fn": "memset"
+    },
+    {
+      "contexts": 15,
+      "loc": "in /work/court/tmp/pfp29/a/distribution/libcrypto.so.3",
+      "fn": "BN_sub"
+    },
+    {
+      "contexts": 13,
+      "loc": "in /work/court/tmp/pfp29/a/distribution/libcrypto.so.3",
+      "fn": "BN_mul"
+    },
+    {
+      "contexts": 12,
+      "loc": "in /work/court/tmp/pfp29/a/distribution/libcrypto.so.3",
+      "fn": "BN_uadd"
+    },
+    {
+      "contexts": 12,
+      "loc": "in /work/court/tmp/pfp29/a/distribution/libcrypto.so.3",
+      "fn": "BN_bn2bin"
+    },
+    {
+      "contexts": 11,
+      "loc": "in /work/court/tmp/pfp29/a/distribution/libcrypto.so.3",
+      "fn": "BN_mod_add_quick"
+    },
+    {
+      "contexts": 11,
+      "loc": "in /work/court/tmp/pfp29/a/distribution/libcrypto.so.3",
+      "fn": "openssl_rs::bn::limbs::sub_fallible"
+    },
+    {
+      "contexts": 8,
+      "loc": "in /work/court/tmp/pfp29/a/distribution/libcrypto.so.3",
+      "fn": "<alloc::raw_vec::RawVecInner>::finish_grow"
+    },
+    {
+      "contexts": 6,
+      "loc": "in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so",
+      "fn": "memmove"
+    },
+    {
+      "contexts": 4,
+      "loc": "in /work/court/tmp/pfp29/a/distribution/libcrypto.so.3",
+      "fn": "BN_num_bits"
+    },
+    {
+      "contexts": 4,
+      "loc": "in /work/court/tmp/pfp29/a/distribution/libcrypto.so.3",
+      "fn": "openssl_rs::ec::smpl::ossl_ec_GFp_simple_ladder_post"
+    },
+    {
+      "contexts": 3,
+      "loc": "in /work/court/tmp/pfp29/a/distribution/libcrypto.so.3",
+      "fn": "BN_consttime_swap"
+    },
+    {
+      "contexts": 3,
+      "loc": "in /work/court/tmp/pfp29/a/distribution/libcrypto.so.3",
+      "fn": "ossl_ecdh_simple_compute_key"
+    },
+    {
+      "contexts": 2,
+      "loc": "unix.rs:13",
+      "fn": "alloc"
+    },
+    {
+      "contexts": 2,
+      "loc": "in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so",
+      "fn": "malloc"
+    },
+    {
+      "contexts": 2,
+      "loc": "in /work/court/tmp/pfp29/a/distribution/libcrypto.so.3",
+      "fn": "BN_usub"
+    }
+  ]
+}

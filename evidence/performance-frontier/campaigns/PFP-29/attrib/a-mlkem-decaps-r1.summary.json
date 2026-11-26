@@ -1,0 +1,30 @@
+{
+  "log": "/work/evidence/performance-frontier/campaigns/PFP-29/raw/a-mlkem-decaps-r1.out",
+  "contexts": 5,
+  "origin_by_bucket": {
+    "driver": 5
+  },
+  "contexts_with_bucket_on_path": {
+    "driver": 5,
+    "runtime": 5
+  },
+  "engine_on_path": 0,
+  "origin_in_engine": 0,
+  "top_origins": [
+    {
+      "contexts": 2,
+      "loc": "in /work/court/tmp/pfp29/a/distribution/libcrypto.so.3",
+      "fn": "openssl_rs::ml_kem::arith::matrix_expand"
+    },
+    {
+      "contexts": 2,
+      "loc": "in /work/court/tmp/pfp29/a/distribution/libcrypto.so.3",
+      "fn": "openssl_rs::ml_kem::key::decap"
+    },
+    {
+      "contexts": 1,
+      "loc": "in /work/court/tmp/pfp29/a/distribution/libcrypto.so.3",
+      "fn": "openssl_rs::provider::ml_kem_kmgmt::ml_kem_pairwise_test"
+    }
+  ]
+}

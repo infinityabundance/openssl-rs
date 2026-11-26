@@ -1,0 +1,12 @@
+LOADED realpath=/work/court/tmp/pfp29/a/distribution/libcrypto.so.3 dev=57 ino=2027136 size=17094080
+MAPS realpath=/work/court/tmp/pfp29/a/distribution/libcrypto.so.3 entries=5
+FOREIGN libcrypto=0
+HARNESS mode=rsa-crt iters=20 taint=1
+TAINT what=d limbs=32 bits=2048
+TAINT what=p limbs=16 bits=1024
+TAINT what=q limbs=16 bits=1024
+TAINT what=dmp1 limbs=16 bits=1024
+TAINT what=dmq1 limbs=16 bits=1024
+TAINT what=iqmp limbs=16 bits=1024
+RESULT mode=rsa-crt ok=1 marked=1
+TIME mode=rsa-crt iters=20 ns_per_op=1723092.1

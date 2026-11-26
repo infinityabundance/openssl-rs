@@ -1,0 +1,2 @@
+REFUSED target="Montgomery multiply (core)" symbol="mont_mul_into" reason=missing
+binary_branch_audit: FAIL-CLOSED: 1 of 9 expected targets were refused; this report is not a gate result.

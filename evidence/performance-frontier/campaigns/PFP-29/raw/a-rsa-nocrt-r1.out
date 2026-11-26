@@ -1,0 +1,179 @@
+==81776== Memcheck, a memory error detector
+==81776== Copyright (C) 2002-2022, and GNU GPL'd, by Julian Seward et al.
+==81776== Using Valgrind-3.19.0 and LibVEX; rerun with -h for copyright info
+==81776== Command: /work/court/tmp/pfp29/instrument/pfp29_paths --lib /work/court/tmp/pfp29/a/distribution/libcrypto.so.3 --mode rsa-nocrt --rsa-fixture /work/evidence/performance-frontier/campaigns/PFP-29/raw/rsa-fixture.txt
+==81776== Parent PID: 81469
+==81776== 
+==81776== Conditional jump or move depends on uninitialised value(s)
+==81776==    at 0x535D5AA: BN_mod_mul_montgomery (in /work/court/tmp/pfp29/a/distribution/libcrypto.so.3)
+==81776==    by 0x4F9C41F: openssl_rs::rsa::ossl::rsa_ossl_private_decrypt (in /work/court/tmp/pfp29/a/distribution/libcrypto.so.3)
+==81776==    by 0x10B68B: op_rsa (pfp29_paths.c:902)
+==81776==    by 0x10D38C: main (pfp29_paths.c:1802)
+==81776== 
+==81776== Conditional jump or move depends on uninitialised value(s)
+==81776==    at 0x4F9E908: <alloc::raw_vec::RawVecInner>::finish_grow (in /work/court/tmp/pfp29/a/distribution/libcrypto.so.3)
+==81776==    by 0x535D78B: BN_mod_mul_montgomery (in /work/court/tmp/pfp29/a/distribution/libcrypto.so.3)
+==81776==    by 0x4F9C41F: openssl_rs::rsa::ossl::rsa_ossl_private_decrypt (in /work/court/tmp/pfp29/a/distribution/libcrypto.so.3)
+==81776==    by 0x10B68B: op_rsa (pfp29_paths.c:902)
+==81776==    by 0x10D38C: main (pfp29_paths.c:1802)
+==81776== 
+==81776== Conditional jump or move depends on uninitialised value(s)
+==81776==    at 0x4F9E939: <alloc::raw_vec::RawVecInner>::finish_grow (in /work/court/tmp/pfp29/a/distribution/libcrypto.so.3)
+==81776==    by 0x535D78B: BN_mod_mul_montgomery (in /work/court/tmp/pfp29/a/distribution/libcrypto.so.3)
+==81776==    by 0x4F9C41F: openssl_rs::rsa::ossl::rsa_ossl_private_decrypt (in /work/court/tmp/pfp29/a/distribution/libcrypto.so.3)
+==81776==    by 0x10B68B: op_rsa (pfp29_paths.c:902)
+==81776==    by 0x10D38C: main (pfp29_paths.c:1802)
+==81776== 
+==81776== Conditional jump or move depends on uninitialised value(s)
+==81776==    at 0x53F10F2: alloc (unix.rs:13)
+==81776==    by 0x53F10F2: __rustc::__rdl_alloc (alloc.rs:455)
+==81776==    by 0x4F9E94C: <alloc::raw_vec::RawVecInner>::finish_grow (in /work/court/tmp/pfp29/a/distribution/libcrypto.so.3)
+==81776==    by 0x535D78B: BN_mod_mul_montgomery (in /work/court/tmp/pfp29/a/distribution/libcrypto.so.3)
+==81776==    by 0x4F9C41F: openssl_rs::rsa::ossl::rsa_ossl_private_decrypt (in /work/court/tmp/pfp29/a/distribution/libcrypto.so.3)
+==81776==    by 0x10B68B: op_rsa (pfp29_paths.c:902)
+==81776==    by 0x10D38C: main (pfp29_paths.c:1802)
+==81776== 
+==81776== Conditional jump or move depends on uninitialised value(s)
+==81776==    at 0x484175D: malloc (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==81776==    by 0x4F9E94C: <alloc::raw_vec::RawVecInner>::finish_grow (in /work/court/tmp/pfp29/a/distribution/libcrypto.so.3)
+==81776==    by 0x535D78B: BN_mod_mul_montgomery (in /work/court/tmp/pfp29/a/distribution/libcrypto.so.3)
+==81776==    by 0x4F9C41F: openssl_rs::rsa::ossl::rsa_ossl_private_decrypt (in /work/court/tmp/pfp29/a/distribution/libcrypto.so.3)
+==81776==    by 0x10B68B: op_rsa (pfp29_paths.c:902)
+==81776==    by 0x10D38C: main (pfp29_paths.c:1802)
+==81776== 
+==81776== Conditional jump or move depends on uninitialised value(s)
+==81776==    at 0x484B2B3: memmove (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==81776==    by 0x535D7AF: BN_mod_mul_montgomery (in /work/court/tmp/pfp29/a/distribution/libcrypto.so.3)
+==81776==    by 0x4F9C41F: openssl_rs::rsa::ossl::rsa_ossl_private_decrypt (in /work/court/tmp/pfp29/a/distribution/libcrypto.so.3)
+==81776==    by 0x10B68B: op_rsa (pfp29_paths.c:902)
+==81776==    by 0x10D38C: main (pfp29_paths.c:1802)
+==81776== 
+==81776== Conditional jump or move depends on uninitialised value(s)
+==81776==    at 0x484B2DF: memmove (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==81776==    by 0x535D7AF: BN_mod_mul_montgomery (in /work/court/tmp/pfp29/a/distribution/libcrypto.so.3)
+==81776==    by 0x4F9C41F: openssl_rs::rsa::ossl::rsa_ossl_private_decrypt (in /work/court/tmp/pfp29/a/distribution/libcrypto.so.3)
+==81776==    by 0x10B68B: op_rsa (pfp29_paths.c:902)
+==81776==    by 0x10D38C: main (pfp29_paths.c:1802)
+==81776== 
+==81776== Conditional jump or move depends on uninitialised value(s)
+==81776==    at 0x484B32B: memmove (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==81776==    by 0x535D7AF: BN_mod_mul_montgomery (in /work/court/tmp/pfp29/a/distribution/libcrypto.so.3)
+==81776==    by 0x4F9C41F: openssl_rs::rsa::ossl::rsa_ossl_private_decrypt (in /work/court/tmp/pfp29/a/distribution/libcrypto.so.3)
+==81776==    by 0x10B68B: op_rsa (pfp29_paths.c:902)
+==81776==    by 0x10D38C: main (pfp29_paths.c:1802)
+==81776== 
+==81776== Conditional jump or move depends on uninitialised value(s)
+==81776==    at 0x484B37D: memmove (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==81776==    by 0x535D7AF: BN_mod_mul_montgomery (in /work/court/tmp/pfp29/a/distribution/libcrypto.so.3)
+==81776==    by 0x4F9C41F: openssl_rs::rsa::ossl::rsa_ossl_private_decrypt (in /work/court/tmp/pfp29/a/distribution/libcrypto.so.3)
+==81776==    by 0x10B68B: op_rsa (pfp29_paths.c:902)
+==81776==    by 0x10D38C: main (pfp29_paths.c:1802)
+==81776== 
+==81776== Conditional jump or move depends on uninitialised value(s)
+==81776==    at 0x484B394: memmove (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==81776==    by 0x535D7AF: BN_mod_mul_montgomery (in /work/court/tmp/pfp29/a/distribution/libcrypto.so.3)
+==81776==    by 0x4F9C41F: openssl_rs::rsa::ossl::rsa_ossl_private_decrypt (in /work/court/tmp/pfp29/a/distribution/libcrypto.so.3)
+==81776==    by 0x10B68B: op_rsa (pfp29_paths.c:902)
+==81776==    by 0x10D38C: main (pfp29_paths.c:1802)
+==81776== 
+==81776== Conditional jump or move depends on uninitialised value(s)
+==81776==    at 0x484B3D5: memmove (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==81776==    by 0x535D7AF: BN_mod_mul_montgomery (in /work/court/tmp/pfp29/a/distribution/libcrypto.so.3)
+==81776==    by 0x4F9C41F: openssl_rs::rsa::ossl::rsa_ossl_private_decrypt (in /work/court/tmp/pfp29/a/distribution/libcrypto.so.3)
+==81776==    by 0x10B68B: op_rsa (pfp29_paths.c:902)
+==81776==    by 0x10D38C: main (pfp29_paths.c:1802)
+==81776== 
+==81776== Conditional jump or move depends on uninitialised value(s)
+==81776==    at 0x535D5EF: BN_mod_mul_montgomery (in /work/court/tmp/pfp29/a/distribution/libcrypto.so.3)
+==81776==    by 0x4F9C41F: openssl_rs::rsa::ossl::rsa_ossl_private_decrypt (in /work/court/tmp/pfp29/a/distribution/libcrypto.so.3)
+==81776==    by 0x10B68B: op_rsa (pfp29_paths.c:902)
+==81776==    by 0x10D38C: main (pfp29_paths.c:1802)
+==81776== 
+==81776== Conditional jump or move depends on uninitialised value(s)
+==81776==    at 0x484B2B3: memmove (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==81776==    by 0x535D99B: BN_mod_mul_montgomery (in /work/court/tmp/pfp29/a/distribution/libcrypto.so.3)
+==81776==    by 0x4F9C41F: openssl_rs::rsa::ossl::rsa_ossl_private_decrypt (in /work/court/tmp/pfp29/a/distribution/libcrypto.so.3)
+==81776==    by 0x10B68B: op_rsa (pfp29_paths.c:902)
+==81776==    by 0x10D38C: main (pfp29_paths.c:1802)
+==81776== 
+==81776== Conditional jump or move depends on uninitialised value(s)
+==81776==    at 0x484B2DF: memmove (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==81776==    by 0x535D99B: BN_mod_mul_montgomery (in /work/court/tmp/pfp29/a/distribution/libcrypto.so.3)
+==81776==    by 0x4F9C41F: openssl_rs::rsa::ossl::rsa_ossl_private_decrypt (in /work/court/tmp/pfp29/a/distribution/libcrypto.so.3)
+==81776==    by 0x10B68B: op_rsa (pfp29_paths.c:902)
+==81776==    by 0x10D38C: main (pfp29_paths.c:1802)
+==81776== 
+==81776== Conditional jump or move depends on uninitialised value(s)
+==81776==    at 0x484B32B: memmove (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==81776==    by 0x535D99B: BN_mod_mul_montgomery (in /work/court/tmp/pfp29/a/distribution/libcrypto.so.3)
+==81776==    by 0x4F9C41F: openssl_rs::rsa::ossl::rsa_ossl_private_decrypt (in /work/court/tmp/pfp29/a/distribution/libcrypto.so.3)
+==81776==    by 0x10B68B: op_rsa (pfp29_paths.c:902)
+==81776==    by 0x10D38C: main (pfp29_paths.c:1802)
+==81776== 
+==81776== Conditional jump or move depends on uninitialised value(s)
+==81776==    at 0x484B37D: memmove (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==81776==    by 0x535D99B: BN_mod_mul_montgomery (in /work/court/tmp/pfp29/a/distribution/libcrypto.so.3)
+==81776==    by 0x4F9C41F: openssl_rs::rsa::ossl::rsa_ossl_private_decrypt (in /work/court/tmp/pfp29/a/distribution/libcrypto.so.3)
+==81776==    by 0x10B68B: op_rsa (pfp29_paths.c:902)
+==81776==    by 0x10D38C: main (pfp29_paths.c:1802)
+==81776== 
+==81776== Conditional jump or move depends on uninitialised value(s)
+==81776==    at 0x484B394: memmove (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==81776==    by 0x535D99B: BN_mod_mul_montgomery (in /work/court/tmp/pfp29/a/distribution/libcrypto.so.3)
+==81776==    by 0x4F9C41F: openssl_rs::rsa::ossl::rsa_ossl_private_decrypt (in /work/court/tmp/pfp29/a/distribution/libcrypto.so.3)
+==81776==    by 0x10B68B: op_rsa (pfp29_paths.c:902)
+==81776==    by 0x10D38C: main (pfp29_paths.c:1802)
+==81776== 
+==81776== Conditional jump or move depends on uninitialised value(s)
+==81776==    at 0x484B3D5: memmove (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==81776==    by 0x535D99B: BN_mod_mul_montgomery (in /work/court/tmp/pfp29/a/distribution/libcrypto.so.3)
+==81776==    by 0x4F9C41F: openssl_rs::rsa::ossl::rsa_ossl_private_decrypt (in /work/court/tmp/pfp29/a/distribution/libcrypto.so.3)
+==81776==    by 0x10B68B: op_rsa (pfp29_paths.c:902)
+==81776==    by 0x10D38C: main (pfp29_paths.c:1802)
+==81776== 
+==81776== Conditional jump or move depends on uninitialised value(s)
+==81776==    at 0x535D696: BN_mod_mul_montgomery (in /work/court/tmp/pfp29/a/distribution/libcrypto.so.3)
+==81776==    by 0x4F9C41F: openssl_rs::rsa::ossl::rsa_ossl_private_decrypt (in /work/court/tmp/pfp29/a/distribution/libcrypto.so.3)
+==81776==    by 0x10B68B: op_rsa (pfp29_paths.c:902)
+==81776==    by 0x10D38C: main (pfp29_paths.c:1802)
+==81776== 
+==81776== Conditional jump or move depends on uninitialised value(s)
+==81776==    at 0x535D8F1: BN_mod_mul_montgomery (in /work/court/tmp/pfp29/a/distribution/libcrypto.so.3)
+==81776==    by 0x4F9C41F: openssl_rs::rsa::ossl::rsa_ossl_private_decrypt (in /work/court/tmp/pfp29/a/distribution/libcrypto.so.3)
+==81776==    by 0x10B68B: op_rsa (pfp29_paths.c:902)
+==81776==    by 0x10D38C: main (pfp29_paths.c:1802)
+==81776== 
+==81776== Conditional jump or move depends on uninitialised value(s)
+==81776==    at 0x530E219: BN_bn2binpad (in /work/court/tmp/pfp29/a/distribution/libcrypto.so.3)
+==81776==    by 0x4F9C470: openssl_rs::rsa::ossl::rsa_ossl_private_decrypt (in /work/court/tmp/pfp29/a/distribution/libcrypto.so.3)
+==81776==    by 0x10B68B: op_rsa (pfp29_paths.c:902)
+==81776==    by 0x10D38C: main (pfp29_paths.c:1802)
+==81776== 
+==81776== Conditional jump or move depends on uninitialised value(s)
+==81776==    at 0x530E246: BN_bn2binpad (in /work/court/tmp/pfp29/a/distribution/libcrypto.so.3)
+==81776==    by 0x4F9C470: openssl_rs::rsa::ossl::rsa_ossl_private_decrypt (in /work/court/tmp/pfp29/a/distribution/libcrypto.so.3)
+==81776==    by 0x10B68B: op_rsa (pfp29_paths.c:902)
+==81776==    by 0x10D38C: main (pfp29_paths.c:1802)
+==81776== 
+==81776== Conditional jump or move depends on uninitialised value(s)
+==81776==    at 0x530E264: BN_bn2binpad (in /work/court/tmp/pfp29/a/distribution/libcrypto.so.3)
+==81776==    by 0x4F9C470: openssl_rs::rsa::ossl::rsa_ossl_private_decrypt (in /work/court/tmp/pfp29/a/distribution/libcrypto.so.3)
+==81776==    by 0x10B68B: op_rsa (pfp29_paths.c:902)
+==81776==    by 0x10D38C: main (pfp29_paths.c:1802)
+==81776== 
+==81776== 
+==81776== HEAP SUMMARY:
+==81776==     in use at exit: 232,780 bytes in 2,659 blocks
+==81776==   total heap usage: 13,172 allocs, 10,513 frees, 491,974 bytes allocated
+==81776== 
+==81776== LEAK SUMMARY:
+==81776==    definitely lost: 0 bytes in 0 blocks
+==81776==    indirectly lost: 0 bytes in 0 blocks
+==81776==      possibly lost: 24,432 bytes in 379 blocks
+==81776==    still reachable: 208,348 bytes in 2,280 blocks
+==81776==         suppressed: 0 bytes in 0 blocks
+==81776== Rerun with --leak-check=full to see details of leaked memory
+==81776== 
+==81776== Use --track-origins=yes to see where uninitialised values come from
+==81776== For lists of detected and suppressed errors, rerun with: -s
+==81776== ERROR SUMMARY: 37 errors from 23 contexts (suppressed: 0 from 0)

@@ -7,8 +7,11 @@ correctness or constant-time property was traded for it. The row is not `DONE`
 because the **latency ratio did not move**: at the same commit, the three
 edits change `ecdsa256` from 239.61 µs to 239.93 µs (ratio 18.82× → 18.83×,
 overlapping intervals). The 19.22× → 18.83× movement seen against the older
-`553e1b8c` record belongs to **PFP-6** (`src/bn/arith.rs`), not to this item; the
-control run in §8 separates them.
+`553e1b8c` record is a change in the **generated code for the selected ladder
+schedule** (`src/bn/arith.rs`, PFP-6), not this item's; the control run in §8
+separates them. PFP-27 establishes that the production DSO selects SOS
+(`LADDER_SCHEDULE = MontSchedule::Sos`), so CIOS does not execute in this
+measurement and is **not** the cause of the movement.
 
 Nothing here is a frontier claim and nothing here discharges T23, T24 or T29.
 
@@ -258,7 +261,10 @@ control:
 (+0.14%), ratio 18.82 → 18.83, and the two intervals overlap. The
 `19.22 → 18.83` movement since the historical record is therefore **PFP-6's**
 `src/bn/arith.rs` — which is in `fc2716652` and had never been through a timing
-run — not this item's. No speedup is claimed.
+run — not this item's. What moved is the generated code for the **selected**
+ladder schedule: PFP-27's artefact audit records that the production DSO selects
+SOS, so CIOS does not execute there, and CIOS activation is not named as the
+cause. No speedup is claimed.
 
 No row regressed beyond the cross-run band, and no row improved beyond it either.
 Per-row ratios, control → PFP-24: `dh-ffdhe2048` 4.13 → 4.14, `dh-ffdhe3072`

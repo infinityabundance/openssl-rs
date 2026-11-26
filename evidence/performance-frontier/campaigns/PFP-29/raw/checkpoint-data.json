@@ -1,0 +1,1084 @@
+{
+  "per_path": {
+    "ecdsa-sign": {
+      "runs": 3,
+      "errors": {
+        "values": [
+          33007,
+          33007,
+          33032
+        ],
+        "median": 33007,
+        "max": 33032
+      },
+      "contexts": {
+        "values": [
+          442,
+          442,
+          452
+        ],
+        "median": 442,
+        "max": 452
+      },
+      "origin_by_bucket": {
+        "engine": 0,
+        "bn": 446,
+        "ec": 155,
+        "driver": 0,
+        "runtime": 452
+      },
+      "bucket_on_path": {
+        "engine": {
+          "per_rep": [
+            0,
+            0,
+            0
+          ],
+          "min": 0,
+          "max": 0
+        },
+        "bn": {
+          "per_rep": [
+            436,
+            436,
+            446
+          ],
+          "min": 436,
+          "max": 446
+        },
+        "ec": {
+          "per_rep": [
+            145,
+            145,
+            155
+          ],
+          "min": 145,
+          "max": 155
+        },
+        "driver": {
+          "per_rep": [
+            0,
+            0,
+            0
+          ],
+          "min": 0,
+          "max": 0
+        },
+        "runtime": {
+          "per_rep": [
+            442,
+            442,
+            452
+          ],
+          "min": 442,
+          "max": 452
+        }
+      },
+      "engine_on_path": {
+        "values": [
+          0,
+          0,
+          0
+        ],
+        "max": 0
+      },
+      "top_origins": [
+        {
+          "fn": "openssl_rs::bn::limbs::divide_fallible",
+          "contexts": 104
+        },
+        {
+          "fn": "memset",
+          "contexts": 41
+        },
+        {
+          "fn": "memmove",
+          "contexts": 35
+        },
+        {
+          "fn": "openssl_rs::bn::limbs::sub_fallible",
+          "contexts": 33
+        },
+        {
+          "fn": "BN_nnmod",
+          "contexts": 32
+        },
+        {
+          "fn": "openssl_rs::bn::limbs::mul_fallible",
+          "contexts": 25
+        },
+        {
+          "fn": "<alloc::raw_vec::RawVecInner>::finish_grow",
+          "contexts": 22
+        },
+        {
+          "fn": "openssl_rs::bn::limbs::mod_inverse",
+          "contexts": 22
+        }
+      ]
+    },
+    "ecdsa-sign-default": {
+      "runs": 3,
+      "errors": {
+        "values": [
+          3723,
+          3733,
+          3684
+        ],
+        "median": 3723,
+        "max": 3733
+      },
+      "contexts": {
+        "values": [
+          274,
+          280,
+          245
+        ],
+        "median": 274,
+        "max": 280
+      },
+      "origin_by_bucket": {
+        "engine": 0,
+        "bn": 272,
+        "ec": 239,
+        "driver": 0,
+        "runtime": 280
+      },
+      "bucket_on_path": {
+        "engine": {
+          "per_rep": [
+            0,
+            0,
+            0
+          ],
+          "min": 0,
+          "max": 0
+        },
+        "bn": {
+          "per_rep": [
+            266,
+            272,
+            237
+          ],
+          "min": 237,
+          "max": 272
+        },
+        "ec": {
+          "per_rep": [
+            233,
+            239,
+            204
+          ],
+          "min": 204,
+          "max": 239
+        },
+        "driver": {
+          "per_rep": [
+            0,
+            0,
+            0
+          ],
+          "min": 0,
+          "max": 0
+        },
+        "runtime": {
+          "per_rep": [
+            274,
+            280,
+            245
+          ],
+          "min": 245,
+          "max": 280
+        }
+      },
+      "engine_on_path": {
+        "values": [
+          0,
+          0,
+          0
+        ],
+        "max": 0
+      },
+      "top_origins": [
+        {
+          "fn": "BN_nnmod",
+          "contexts": 33
+        },
+        {
+          "fn": "memmove",
+          "contexts": 30
+        },
+        {
+          "fn": "openssl_rs::bn::limbs::divide_fallible",
+          "contexts": 29
+        },
+        {
+          "fn": "BN_add",
+          "contexts": 27
+        },
+        {
+          "fn": "openssl_rs::bn::limbs::mul_fallible",
+          "contexts": 21
+        },
+        {
+          "fn": "memset",
+          "contexts": 21
+        },
+        {
+          "fn": "openssl_rs::bn::limbs::sub_fallible",
+          "contexts": 20
+        },
+        {
+          "fn": "BN_sub",
+          "contexts": 15
+        }
+      ]
+    },
+    "ecdsa-verify": {
+      "runs": 3,
+      "errors": {
+        "values": [
+          0,
+          0,
+          0
+        ],
+        "median": 0,
+        "max": 0
+      },
+      "contexts": {
+        "values": [
+          0,
+          0,
+          0
+        ],
+        "median": 0,
+        "max": 0
+      },
+      "origin_by_bucket": {
+        "engine": 0,
+        "bn": 0,
+        "ec": 0,
+        "driver": 0,
+        "runtime": 0
+      },
+      "bucket_on_path": {
+        "engine": {
+          "per_rep": [
+            0,
+            0,
+            0
+          ],
+          "min": 0,
+          "max": 0
+        },
+        "bn": {
+          "per_rep": [
+            0,
+            0,
+            0
+          ],
+          "min": 0,
+          "max": 0
+        },
+        "ec": {
+          "per_rep": [
+            0,
+            0,
+            0
+          ],
+          "min": 0,
+          "max": 0
+        },
+        "driver": {
+          "per_rep": [
+            0,
+            0,
+            0
+          ],
+          "min": 0,
+          "max": 0
+        },
+        "runtime": {
+          "per_rep": [
+            0,
+            0,
+            0
+          ],
+          "min": 0,
+          "max": 0
+        }
+      },
+      "engine_on_path": {
+        "values": [
+          0,
+          0,
+          0
+        ],
+        "max": 0
+      },
+      "top_origins": []
+    },
+    "ecdh": {
+      "runs": 3,
+      "errors": {
+        "values": [
+          3795,
+          3770,
+          3795
+        ],
+        "median": 3795,
+        "max": 3795
+      },
+      "contexts": {
+        "values": [
+          253,
+          244,
+          256
+        ],
+        "median": 253,
+        "max": 256
+      },
+      "origin_by_bucket": {
+        "engine": 0,
+        "bn": 245,
+        "ec": 256,
+        "driver": 0,
+        "runtime": 256
+      },
+      "bucket_on_path": {
+        "engine": {
+          "per_rep": [
+            0,
+            0,
+            0
+          ],
+          "min": 0,
+          "max": 0
+        },
+        "bn": {
+          "per_rep": [
+            242,
+            233,
+            245
+          ],
+          "min": 233,
+          "max": 245
+        },
+        "ec": {
+          "per_rep": [
+            253,
+            244,
+            256
+          ],
+          "min": 244,
+          "max": 256
+        },
+        "driver": {
+          "per_rep": [
+            0,
+            0,
+            0
+          ],
+          "min": 0,
+          "max": 0
+        },
+        "runtime": {
+          "per_rep": [
+            253,
+            244,
+            256
+          ],
+          "min": 244,
+          "max": 256
+        }
+      },
+      "engine_on_path": {
+        "values": [
+          0,
+          0,
+          0
+        ],
+        "max": 0
+      },
+      "top_origins": [
+        {
+          "fn": "BN_nnmod",
+          "contexts": 32
+        },
+        {
+          "fn": "openssl_rs::bn::limbs::divide_fallible",
+          "contexts": 29
+        },
+        {
+          "fn": "BN_add",
+          "contexts": 27
+        },
+        {
+          "fn": "memset",
+          "contexts": 24
+        },
+        {
+          "fn": "openssl_rs::bn::limbs::mul_fallible",
+          "contexts": 22
+        },
+        {
+          "fn": "openssl_rs::bn::limbs::sub_fallible",
+          "contexts": 19
+        },
+        {
+          "fn": "BN_sub",
+          "contexts": 15
+        },
+        {
+          "fn": "BN_mul",
+          "contexts": 13
+        }
+      ]
+    },
+    "rsa-crt": {
+      "runs": 3,
+      "errors": {
+        "values": [
+          48472,
+          48515,
+          48471
+        ],
+        "median": 48472,
+        "max": 48515
+      },
+      "contexts": {
+        "values": [
+          244,
+          244,
+          244
+        ],
+        "median": 244,
+        "max": 244
+      },
+      "origin_by_bucket": {
+        "engine": 0,
+        "bn": 241,
+        "ec": 0,
+        "driver": 244,
+        "runtime": 244
+      },
+      "bucket_on_path": {
+        "engine": {
+          "per_rep": [
+            0,
+            0,
+            0
+          ],
+          "min": 0,
+          "max": 0
+        },
+        "bn": {
+          "per_rep": [
+            241,
+            241,
+            241
+          ],
+          "min": 241,
+          "max": 241
+        },
+        "ec": {
+          "per_rep": [
+            0,
+            0,
+            0
+          ],
+          "min": 0,
+          "max": 0
+        },
+        "driver": {
+          "per_rep": [
+            244,
+            244,
+            244
+          ],
+          "min": 244,
+          "max": 244
+        },
+        "runtime": {
+          "per_rep": [
+            244,
+            244,
+            244
+          ],
+          "min": 244,
+          "max": 244
+        }
+      },
+      "engine_on_path": {
+        "values": [
+          0,
+          0,
+          0
+        ],
+        "max": 0
+      },
+      "top_origins": [
+        {
+          "fn": "memmove",
+          "contexts": 42
+        },
+        {
+          "fn": "openssl_rs::bn::limbs::divide_fallible",
+          "contexts": 33
+        },
+        {
+          "fn": "openssl_rs::bn::limbs::mul_fallible",
+          "contexts": 32
+        },
+        {
+          "fn": "memset",
+          "contexts": 23
+        },
+        {
+          "fn": "BN_sub",
+          "contexts": 22
+        },
+        {
+          "fn": "<alloc::raw_vec::RawVecInner>::finish_grow",
+          "contexts": 16
+        },
+        {
+          "fn": "BN_add",
+          "contexts": 13
+        },
+        {
+          "fn": "openssl_rs::bn::limbs::sub_fallible",
+          "contexts": 8
+        }
+      ]
+    },
+    "rsa-nocrt": {
+      "runs": 3,
+      "errors": {
+        "values": [
+          37,
+          37,
+          37
+        ],
+        "median": 37,
+        "max": 37
+      },
+      "contexts": {
+        "values": [
+          23,
+          23,
+          23
+        ],
+        "median": 23,
+        "max": 23
+      },
+      "origin_by_bucket": {
+        "engine": 0,
+        "bn": 23,
+        "ec": 0,
+        "driver": 23,
+        "runtime": 23
+      },
+      "bucket_on_path": {
+        "engine": {
+          "per_rep": [
+            0,
+            0,
+            0
+          ],
+          "min": 0,
+          "max": 0
+        },
+        "bn": {
+          "per_rep": [
+            23,
+            23,
+            23
+          ],
+          "min": 23,
+          "max": 23
+        },
+        "ec": {
+          "per_rep": [
+            0,
+            0,
+            0
+          ],
+          "min": 0,
+          "max": 0
+        },
+        "driver": {
+          "per_rep": [
+            23,
+            23,
+            23
+          ],
+          "min": 23,
+          "max": 23
+        },
+        "runtime": {
+          "per_rep": [
+            23,
+            23,
+            23
+          ],
+          "min": 23,
+          "max": 23
+        }
+      },
+      "engine_on_path": {
+        "values": [
+          0,
+          0,
+          0
+        ],
+        "max": 0
+      },
+      "top_origins": [
+        {
+          "fn": "memmove",
+          "contexts": 12
+        },
+        {
+          "fn": "BN_mod_mul_montgomery",
+          "contexts": 4
+        },
+        {
+          "fn": "BN_bn2binpad",
+          "contexts": 3
+        },
+        {
+          "fn": "<alloc::raw_vec::RawVecInner>::finish_grow",
+          "contexts": 2
+        },
+        {
+          "fn": "alloc",
+          "contexts": 1
+        },
+        {
+          "fn": "malloc",
+          "contexts": 1
+        }
+      ]
+    },
+    "rsa-crt-pkcs1": {
+      "runs": 3,
+      "errors": {
+        "values": [
+          48590,
+          48622,
+          48623
+        ],
+        "median": 48622,
+        "max": 48623
+      },
+      "contexts": {
+        "values": [
+          252,
+          249,
+          252
+        ],
+        "median": 252,
+        "max": 252
+      },
+      "origin_by_bucket": {
+        "engine": 0,
+        "bn": 244,
+        "ec": 0,
+        "driver": 252,
+        "runtime": 252
+      },
+      "bucket_on_path": {
+        "engine": {
+          "per_rep": [
+            0,
+            0,
+            0
+          ],
+          "min": 0,
+          "max": 0
+        },
+        "bn": {
+          "per_rep": [
+            244,
+            240,
+            244
+          ],
+          "min": 240,
+          "max": 244
+        },
+        "ec": {
+          "per_rep": [
+            0,
+            0,
+            0
+          ],
+          "min": 0,
+          "max": 0
+        },
+        "driver": {
+          "per_rep": [
+            252,
+            249,
+            252
+          ],
+          "min": 249,
+          "max": 252
+        },
+        "runtime": {
+          "per_rep": [
+            252,
+            249,
+            252
+          ],
+          "min": 249,
+          "max": 252
+        }
+      },
+      "engine_on_path": {
+        "values": [
+          0,
+          0,
+          0
+        ],
+        "max": 0
+      },
+      "top_origins": [
+        {
+          "fn": "memmove",
+          "contexts": 42
+        },
+        {
+          "fn": "openssl_rs::bn::limbs::divide_fallible",
+          "contexts": 33
+        },
+        {
+          "fn": "openssl_rs::bn::limbs::mul_fallible",
+          "contexts": 32
+        },
+        {
+          "fn": "BN_add",
+          "contexts": 27
+        },
+        {
+          "fn": "memset",
+          "contexts": 23
+        },
+        {
+          "fn": "BN_sub",
+          "contexts": 22
+        },
+        {
+          "fn": "<alloc::raw_vec::RawVecInner>::finish_grow",
+          "contexts": 16
+        },
+        {
+          "fn": "openssl_rs::bn::limbs::sub_fallible",
+          "contexts": 10
+        }
+      ]
+    },
+    "dh": {
+      "runs": 3,
+      "errors": {
+        "values": [
+          277,
+          277,
+          277
+        ],
+        "median": 277,
+        "max": 277
+      },
+      "contexts": {
+        "values": [
+          23,
+          23,
+          23
+        ],
+        "median": 23,
+        "max": 23
+      },
+      "origin_by_bucket": {
+        "engine": 0,
+        "bn": 21,
+        "ec": 0,
+        "driver": 23,
+        "runtime": 23
+      },
+      "bucket_on_path": {
+        "engine": {
+          "per_rep": [
+            0,
+            0,
+            0
+          ],
+          "min": 0,
+          "max": 0
+        },
+        "bn": {
+          "per_rep": [
+            21,
+            21,
+            21
+          ],
+          "min": 21,
+          "max": 21
+        },
+        "ec": {
+          "per_rep": [
+            0,
+            0,
+            0
+          ],
+          "min": 0,
+          "max": 0
+        },
+        "driver": {
+          "per_rep": [
+            23,
+            23,
+            23
+          ],
+          "min": 23,
+          "max": 23
+        },
+        "runtime": {
+          "per_rep": [
+            23,
+            23,
+            23
+          ],
+          "min": 23,
+          "max": 23
+        }
+      },
+      "engine_on_path": {
+        "values": [
+          0,
+          0,
+          0
+        ],
+        "max": 0
+      },
+      "top_origins": [
+        {
+          "fn": "BN_cmp",
+          "contexts": 12
+        },
+        {
+          "fn": "BN_bn2binpad",
+          "contexts": 9
+        },
+        {
+          "fn": "openssl_rs::dh::key::ossl_dh_compute_key",
+          "contexts": 2
+        }
+      ]
+    },
+    "mlkem-decaps": {
+      "runs": 3,
+      "errors": {
+        "values": [
+          2832,
+          2832,
+          2832
+        ],
+        "median": 2832,
+        "max": 2832
+      },
+      "contexts": {
+        "values": [
+          5,
+          5,
+          5
+        ],
+        "median": 5,
+        "max": 5
+      },
+      "origin_by_bucket": {
+        "engine": 0,
+        "bn": 0,
+        "ec": 0,
+        "driver": 5,
+        "runtime": 5
+      },
+      "bucket_on_path": {
+        "engine": {
+          "per_rep": [
+            0,
+            0,
+            0
+          ],
+          "min": 0,
+          "max": 0
+        },
+        "bn": {
+          "per_rep": [
+            0,
+            0,
+            0
+          ],
+          "min": 0,
+          "max": 0
+        },
+        "ec": {
+          "per_rep": [
+            0,
+            0,
+            0
+          ],
+          "min": 0,
+          "max": 0
+        },
+        "driver": {
+          "per_rep": [
+            5,
+            5,
+            5
+          ],
+          "min": 5,
+          "max": 5
+        },
+        "runtime": {
+          "per_rep": [
+            5,
+            5,
+            5
+          ],
+          "min": 5,
+          "max": 5
+        }
+      },
+      "engine_on_path": {
+        "values": [
+          0,
+          0,
+          0
+        ],
+        "max": 0
+      },
+      "top_origins": [
+        {
+          "fn": "openssl_rs::ml_kem::arith::matrix_expand",
+          "contexts": 2
+        },
+        {
+          "fn": "openssl_rs::ml_kem::key::decap",
+          "contexts": 2
+        },
+        {
+          "fn": "openssl_rs::provider::ml_kem_kmgmt::ml_kem_pairwise_test",
+          "contexts": 1
+        }
+      ]
+    }
+  },
+  "sensitivity_control": {
+    "artefact": "83f67826",
+    "engine_on_path": 4,
+    "contexts": 218
+  },
+  "differential": {
+    "ECDSA_R": {
+      "bytes": 32,
+      "equal": true
+    },
+    "ECDSA_S": {
+      "bytes": 32,
+      "equal": true
+    },
+    "ECDH_SS": {
+      "bytes": 32,
+      "equal": true
+    },
+    "RSA_PT": {
+      "bytes": 256,
+      "equal": true
+    },
+    "DH_SS": {
+      "bytes": 256,
+      "equal": true
+    },
+    "MLKEM_CT": {
+      "bytes": 1088,
+      "equal": true
+    },
+    "MLKEM_ENCAP_SS": {
+      "bytes": 32,
+      "equal": true
+    },
+    "MLKEM_DECAP_SS": {
+      "bytes": 32,
+      "equal": true
+    }
+  },
+  "cross_verify": {
+    "verify-cand-of-auth": true,
+    "verify-auth-of-cand": true
+  },
+  "sweep": {
+    "cases": 64,
+    "observable_rows": 384,
+    "identical": true,
+    "paths": {
+      "ECDSA": 64,
+      "ECDH": 64,
+      "RSA": 64,
+      "DH": 64,
+      "KEM_CT": 64,
+      "KEM_SS": 64
+    },
+    "sweep-verify-cand-of-auth": "VERIFY_SWEEP ok=64 cases=64",
+    "sweep-verify-auth-of-cand": "VERIFY_SWEEP ok=64 cases=64"
+  },
+  "timing": {
+    "ecdsa-sign": {
+      "median_ns": 684.9,
+      "min_ns": 665.6,
+      "max_ns": 1277.5,
+      "reps": 7
+    },
+    "ecdsa-sign-default": {
+      "median_ns": 250736.8,
+      "min_ns": 246064.7,
+      "max_ns": 466977.4,
+      "reps": 7
+    },
+    "ecdsa-verify": {
+      "median_ns": 601225.0,
+      "min_ns": 575814.1,
+      "max_ns": 664432.9,
+      "reps": 7
+    },
+    "ecdh": {
+      "median_ns": 226065.0,
+      "min_ns": 223716.6,
+      "max_ns": 387684.7,
+      "reps": 7
+    },
+    "rsa-crt": {
+      "median_ns": 1723092.1,
+      "min_ns": 1688021.1,
+      "max_ns": 1829224.4,
+      "reps": 7
+    },
+    "rsa-nocrt": {
+      "median_ns": 5527859.5,
+      "min_ns": 5445625.0,
+      "max_ns": 5968813.8,
+      "reps": 7
+    },
+    "dh": {
+      "median_ns": 5054656.7,
+      "min_ns": 5002087.1,
+      "max_ns": 5554980.8,
+      "reps": 7
+    },
+    "mlkem-decaps": {
+      "median_ns": 25557.3,
+      "min_ns": 25183.2,
+      "max_ns": 48643.7,
+      "reps": 7
+    }
+  }
+}

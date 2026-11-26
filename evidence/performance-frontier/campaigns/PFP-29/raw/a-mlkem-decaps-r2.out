@@ -1,0 +1,65 @@
+==81946== Memcheck, a memory error detector
+==81946== Copyright (C) 2002-2022, and GNU GPL'd, by Julian Seward et al.
+==81946== Using Valgrind-3.19.0 and LibVEX; rerun with -h for copyright info
+==81946== Command: /work/court/tmp/pfp29/instrument/pfp29_paths --lib /work/court/tmp/pfp29/a/distribution/libcrypto.so.3 --mode mlkem-decaps --rsa-fixture /work/evidence/performance-frontier/campaigns/PFP-29/raw/rsa-fixture.txt
+==81946== Parent PID: 81469
+==81946== 
+==81946== Conditional jump or move depends on uninitialised value(s)
+==81946==    at 0x51D47E9: openssl_rs::ml_kem::arith::matrix_expand (in /work/court/tmp/pfp29/a/distribution/libcrypto.so.3)
+==81946==    by 0x5100737: openssl_rs::ml_kem::key::ossl_ml_kem_genkey (in /work/court/tmp/pfp29/a/distribution/libcrypto.so.3)
+==81946==    by 0x52D742A: openssl_rs::provider::ml_kem_kmgmt::ml_kem_import (in /work/court/tmp/pfp29/a/distribution/libcrypto.so.3)
+==81946==    by 0x531A277: EVP_PKEY_fromdata (in /work/court/tmp/pfp29/a/distribution/libcrypto.so.3)
+==81946==    by 0x10956E: kem_key_from_seed (pfp29_paths.c:1025)
+==81946==    by 0x10ACDA: op_kem_decaps (pfp29_paths.c:1106)
+==81946==    by 0x10D542: main (pfp29_paths.c:1813)
+==81946== 
+==81946== Conditional jump or move depends on uninitialised value(s)
+==81946==    at 0x51D4814: openssl_rs::ml_kem::arith::matrix_expand (in /work/court/tmp/pfp29/a/distribution/libcrypto.so.3)
+==81946==    by 0x5100737: openssl_rs::ml_kem::key::ossl_ml_kem_genkey (in /work/court/tmp/pfp29/a/distribution/libcrypto.so.3)
+==81946==    by 0x52D742A: openssl_rs::provider::ml_kem_kmgmt::ml_kem_import (in /work/court/tmp/pfp29/a/distribution/libcrypto.so.3)
+==81946==    by 0x531A277: EVP_PKEY_fromdata (in /work/court/tmp/pfp29/a/distribution/libcrypto.so.3)
+==81946==    by 0x10956E: kem_key_from_seed (pfp29_paths.c:1025)
+==81946==    by 0x10ACDA: op_kem_decaps (pfp29_paths.c:1106)
+==81946==    by 0x10D542: main (pfp29_paths.c:1813)
+==81946== 
+==81946== Conditional jump or move depends on uninitialised value(s)
+==81946==    at 0x5103067: openssl_rs::ml_kem::key::decap (in /work/court/tmp/pfp29/a/distribution/libcrypto.so.3)
+==81946==    by 0x510030A: openssl_rs::ml_kem::key::ossl_ml_kem_decap (in /work/court/tmp/pfp29/a/distribution/libcrypto.so.3)
+==81946==    by 0x52D8702: openssl_rs::provider::ml_kem_kmgmt::ml_kem_pairwise_test (in /work/court/tmp/pfp29/a/distribution/libcrypto.so.3)
+==81946==    by 0x52D7492: openssl_rs::provider::ml_kem_kmgmt::ml_kem_import (in /work/court/tmp/pfp29/a/distribution/libcrypto.so.3)
+==81946==    by 0x531A277: EVP_PKEY_fromdata (in /work/court/tmp/pfp29/a/distribution/libcrypto.so.3)
+==81946==    by 0x10956E: kem_key_from_seed (pfp29_paths.c:1025)
+==81946==    by 0x10ACDA: op_kem_decaps (pfp29_paths.c:1106)
+==81946==    by 0x10D542: main (pfp29_paths.c:1813)
+==81946== 
+==81946== Conditional jump or move depends on uninitialised value(s)
+==81946==    at 0x52D872F: openssl_rs::provider::ml_kem_kmgmt::ml_kem_pairwise_test (in /work/court/tmp/pfp29/a/distribution/libcrypto.so.3)
+==81946==    by 0x52D7492: openssl_rs::provider::ml_kem_kmgmt::ml_kem_import (in /work/court/tmp/pfp29/a/distribution/libcrypto.so.3)
+==81946==    by 0x531A277: EVP_PKEY_fromdata (in /work/court/tmp/pfp29/a/distribution/libcrypto.so.3)
+==81946==    by 0x10956E: kem_key_from_seed (pfp29_paths.c:1025)
+==81946==    by 0x10ACDA: op_kem_decaps (pfp29_paths.c:1106)
+==81946==    by 0x10D542: main (pfp29_paths.c:1813)
+==81946== 
+==81946== Conditional jump or move depends on uninitialised value(s)
+==81946==    at 0x5103067: openssl_rs::ml_kem::key::decap (in /work/court/tmp/pfp29/a/distribution/libcrypto.so.3)
+==81946==    by 0x510030A: openssl_rs::ml_kem::key::ossl_ml_kem_decap (in /work/court/tmp/pfp29/a/distribution/libcrypto.so.3)
+==81946==    by 0x52D1B24: openssl_rs::provider::ml_kem_kem::ml_kem_decapsulate (in /work/court/tmp/pfp29/a/distribution/libcrypto.so.3)
+==81946==    by 0x10ABFB: op_kem_decaps (pfp29_paths.c:1136)
+==81946==    by 0x10D542: main (pfp29_paths.c:1813)
+==81946== 
+==81946== 
+==81946== HEAP SUMMARY:
+==81946==     in use at exit: 348,717 bytes in 3,714 blocks
+==81946==   total heap usage: 15,569 allocs, 11,855 frees, 646,779 bytes allocated
+==81946== 
+==81946== LEAK SUMMARY:
+==81946==    definitely lost: 0 bytes in 0 blocks
+==81946==    indirectly lost: 0 bytes in 0 blocks
+==81946==      possibly lost: 43,600 bytes in 485 blocks
+==81946==    still reachable: 305,117 bytes in 3,229 blocks
+==81946==         suppressed: 0 bytes in 0 blocks
+==81946== Rerun with --leak-check=full to see details of leaked memory
+==81946== 
+==81946== Use --track-origins=yes to see where uninitialised values come from
+==81946== For lists of detected and suppressed errors, rerun with: -s
+==81946== ERROR SUMMARY: 2832 errors from 5 contexts (suppressed: 0 from 0)

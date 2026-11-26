@@ -1,0 +1,6 @@
+LOADED realpath=/work/court/tmp/pfp2-fix/distribution/libcrypto.so.3 dev=57 ino=1977210 size=17041264
+MAPS realpath=/work/court/tmp/pfp2-fix/distribution/libcrypto.so.3 entries=5
+FOREIGN libcrypto=0
+HARNESS mode=ecdh iters=0 taint=1
+TAINT what=d limbs=4 bits=256
+RESULT mode=ecdh ok=1 marked=1
