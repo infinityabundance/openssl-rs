@@ -133,7 +133,7 @@
         "id": "PFP2-DIRTY-CANDIDATE"
       },
       {
-        "description": "The binary branch audit was extended with the P-256 mont_reduce_into and wide_mul_x86 kernels (8 of 9 targets resolve) but exits 1 because mod_exp_core_consttime_from_parts is inlined out of this DSO; there is no passing audit at the candidate digest.",
+        "description": "The binary branch audit covers the P-256 mont_reduce_into and wide_mul_x86 kernels (8 of 9 targets resolve) but exits 1 because mod_exp_core_consttime_from_parts is inlined out of this DSO; the post-fix re-run at 83f67826 still exits 1 with the same 8 of 9, so there is no passing audit at any candidate digest.",
         "discharged": false,
         "id": "PFP2-BRANCH-AUDIT-INCOMPLETE"
       },
@@ -151,6 +151,16 @@
         "description": "ctgrind executed the debug test binary built from the same source, not the distribution DSO; its context count is not a DSO-level result.",
         "discharged": false,
         "id": "PFP2-CTGRIND-TEST-BINARY"
+      },
+      {
+        "description": "Post-fix: the release branch at p256.rs:690 is removed and the post-fix minimal population (DSO 83f67826) has 0 engine origin contexts, but the write-back store_coordinate (ec/smpl.rs:2624) -> limbs::normalise (bn/limbs.rs:42) still branches on the secret top limb. It cannot be stored at fixed width inside this item without breaking the no-trailing-zero-limb BIGNUM invariant the exported representation relies on.",
+        "discharged": false,
+        "id": "PFP2-WRITEBACK-NORMALISE"
+      },
+      {
+        "description": "Post-fix: no timing measurement is bound to the post-fix DSO 83f67826; the recorded 18.69x ecdsa256 row is the pre-fix digest. The release mutation-control rebuild aborted on LLVM allocation under the court's RLIMIT_DATA (evidence/incidents/2026-11-25-4).",
+        "discharged": false,
+        "id": "PFP2-POST-FIX-TIMING"
       }
     ]
   },
@@ -182,6 +192,23 @@
       "rsa2048"
     ],
     "undeclared": []
+  },
+  "post_fix": {
+    "candidate_sha256": "83f67826e2ca53dd8e014fe5442d2e77ba96ee7af35eeb78a312112a4e0a7c4f",
+    "ctgrind_minimal_mont": {
+      "contexts": 188,
+      "engine_on_path": 4,
+      "engine_origins": 0,
+      "errors": 1595
+    },
+    "ctgrind_minimal_generic": {
+      "contexts": 29,
+      "engine_origins": 0,
+      "errors": 794
+    },
+    "note": "The REDC borrow branch is removed at source (src/ec/p256.rs). The reported measurement row is still the pre-fix digest; this post_fix block is an observation at the post-fix DSO, not a re-measurement of the timing row. The arm remains EXPERIMENT.",
+    "record": "evidence/performance-frontier/campaigns/PFP-2/ctgrind/POST-FIX.md",
+    "source_commit": "0b5c11e99"
   },
   "producer": {
     "inputs": [

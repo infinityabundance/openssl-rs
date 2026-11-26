@@ -251,10 +251,27 @@
         "record": {
           "path": "evidence/performance-frontier/claims/PFP-2.claim.json",
           "present": true,
-          "sha256": "31ac1ad13801be211e05147c7bae03e51ba844bd5e504f6d37a1efea18dc2576"
+          "sha256": "183a577254a7210c1ba3be7c0a98c53084b4e94208d61a3c9df186ead7c240e8"
         }
       },
       "queue_item": "PFP-2",
+      "post_fix": {
+        "candidate_sha256": "83f67826e2ca53dd8e014fe5442d2e77ba96ee7af35eeb78a312112a4e0a7c4f",
+        "ctgrind_minimal_generic": {
+          "contexts": 29,
+          "engine_origins": 0,
+          "errors": 794
+        },
+        "ctgrind_minimal_mont": {
+          "contexts": 188,
+          "engine_on_path": 4,
+          "engine_origins": 0,
+          "errors": 1595
+        },
+        "note": "The REDC borrow branch at src/ec/p256.rs:690 is removed at source; the post-fix minimal population shows 0 engine origin contexts. The recorded measurement row is still the pre-fix digest. The arm remains EXPERIMENT.",
+        "record": "evidence/performance-frontier/campaigns/PFP-2/ctgrind/POST-FIX.md",
+        "source_commit": "0b5c11e99"
+      },
       "reuse": null,
       "shortcuts": [],
       "status": "EXPERIMENT",
@@ -291,6 +308,16 @@
             "description": "The in-crate differential courts pass but link the crate, not the distribution DSO.",
             "discharged": false,
             "id": "PFP2-DIFFERENTIAL-NOT-DSO-BOUND"
+          },
+          {
+            "description": "Post-fix: the release branch is removed (0 engine origins on the minimal population at 83f67826), but the write-back store_coordinate -> limbs::normalise still branches on the secret top limb and cannot be stored at fixed width without breaking the BIGNUM invariant.",
+            "discharged": false,
+            "id": "PFP2-WRITEBACK-NORMALISE"
+          },
+          {
+            "description": "Post-fix: no timing measurement is bound to 83f67826; the recorded 18.69x ecdsa256 row is the pre-fix digest, and the release mutation-control rebuild aborted on LLVM allocation under the court RLIMIT_DATA.",
+            "discharged": false,
+            "id": "PFP2-POST-FIX-TIMING"
           },
           {
             "description": "The venue exposes no PMU and has no frequency, turbo, SMT or isolation control.",

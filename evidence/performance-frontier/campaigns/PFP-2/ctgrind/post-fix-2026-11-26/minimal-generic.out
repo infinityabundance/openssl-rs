@@ -1,0 +1,214 @@
+==24005== Memcheck, a memory error detector
+==24005== Copyright (C) 2002-2022, and GNU GPL'd, by Julian Seward et al.
+==24005== Using Valgrind-3.19.0 and LibVEX; rerun with -h for copyright info
+==24005== Command: /work/court/tmp/pfp2-fix/minimal_mul4 taint-value
+==24005== 
+==24005== Conditional jump or move depends on uninitialised value(s)
+==24005==    at 0x4AFDC89: BN_num_bits (in /work/court/tmp/pfp2-build/before/libcrypto.so.3)
+==24005==    by 0x4A192B0: openssl_rs::ec::mult::ossl_ec_scalar_mul_ladder (in /work/court/tmp/pfp2-build/before/libcrypto.so.3)
+==24005==    by 0x4CEF5FE: EC_POINT_mul (in /work/court/tmp/pfp2-build/before/libcrypto.so.3)
+==24005==    by 0x109401: main (minimal_mul.c:140)
+==24005== 
+==24005== Conditional jump or move depends on uninitialised value(s)
+==24005==    at 0x4AFDCB0: BN_num_bits (in /work/court/tmp/pfp2-build/before/libcrypto.so.3)
+==24005==    by 0x4A192B0: openssl_rs::ec::mult::ossl_ec_scalar_mul_ladder (in /work/court/tmp/pfp2-build/before/libcrypto.so.3)
+==24005==    by 0x4CEF5FE: EC_POINT_mul (in /work/court/tmp/pfp2-build/before/libcrypto.so.3)
+==24005==    by 0x109401: main (minimal_mul.c:140)
+==24005== 
+==24005== Conditional jump or move depends on uninitialised value(s)
+==24005==    at 0x4A192B8: openssl_rs::ec::mult::ossl_ec_scalar_mul_ladder (in /work/court/tmp/pfp2-build/before/libcrypto.so.3)
+==24005==    by 0x4CEF5FE: EC_POINT_mul (in /work/court/tmp/pfp2-build/before/libcrypto.so.3)
+==24005==    by 0x109401: main (minimal_mul.c:140)
+==24005== 
+==24005== Conditional jump or move depends on uninitialised value(s)
+==24005==    at 0x4DA1FFB: BN_add (in /work/court/tmp/pfp2-build/before/libcrypto.so.3)
+==24005==    by 0x4A192F1: openssl_rs::ec::mult::ossl_ec_scalar_mul_ladder (in /work/court/tmp/pfp2-build/before/libcrypto.so.3)
+==24005==    by 0x4CEF5FE: EC_POINT_mul (in /work/court/tmp/pfp2-build/before/libcrypto.so.3)
+==24005==    by 0x109401: main (minimal_mul.c:140)
+==24005== 
+==24005== Conditional jump or move depends on uninitialised value(s)
+==24005==    at 0x4DA1EC6: BN_add (in /work/court/tmp/pfp2-build/before/libcrypto.so.3)
+==24005==    by 0x4A192F1: openssl_rs::ec::mult::ossl_ec_scalar_mul_ladder (in /work/court/tmp/pfp2-build/before/libcrypto.so.3)
+==24005==    by 0x4CEF5FE: EC_POINT_mul (in /work/court/tmp/pfp2-build/before/libcrypto.so.3)
+==24005==    by 0x109401: main (minimal_mul.c:140)
+==24005== 
+==24005== Conditional jump or move depends on uninitialised value(s)
+==24005==    at 0x4DA1FFB: BN_add (in /work/court/tmp/pfp2-build/before/libcrypto.so.3)
+==24005==    by 0x4A1930F: openssl_rs::ec::mult::ossl_ec_scalar_mul_ladder (in /work/court/tmp/pfp2-build/before/libcrypto.so.3)
+==24005==    by 0x4CEF5FE: EC_POINT_mul (in /work/court/tmp/pfp2-build/before/libcrypto.so.3)
+==24005==    by 0x109401: main (minimal_mul.c:140)
+==24005== 
+==24005== Conditional jump or move depends on uninitialised value(s)
+==24005==    at 0x4DA2012: BN_add (in /work/court/tmp/pfp2-build/before/libcrypto.so.3)
+==24005==    by 0x4A1930F: openssl_rs::ec::mult::ossl_ec_scalar_mul_ladder (in /work/court/tmp/pfp2-build/before/libcrypto.so.3)
+==24005==    by 0x4CEF5FE: EC_POINT_mul (in /work/court/tmp/pfp2-build/before/libcrypto.so.3)
+==24005==    by 0x109401: main (minimal_mul.c:140)
+==24005== 
+==24005== Conditional jump or move depends on uninitialised value(s)
+==24005==    at 0x4DA1EC6: BN_add (in /work/court/tmp/pfp2-build/before/libcrypto.so.3)
+==24005==    by 0x4A1930F: openssl_rs::ec::mult::ossl_ec_scalar_mul_ladder (in /work/court/tmp/pfp2-build/before/libcrypto.so.3)
+==24005==    by 0x4CEF5FE: EC_POINT_mul (in /work/court/tmp/pfp2-build/before/libcrypto.so.3)
+==24005==    by 0x109401: main (minimal_mul.c:140)
+==24005== 
+==24005== Conditional jump or move depends on uninitialised value(s)
+==24005==    at 0x4AF8A8C: BN_consttime_swap (in /work/court/tmp/pfp2-build/before/libcrypto.so.3)
+==24005==    by 0x4A1939D: openssl_rs::ec::mult::ossl_ec_scalar_mul_ladder (in /work/court/tmp/pfp2-build/before/libcrypto.so.3)
+==24005==    by 0x4CEF5FE: EC_POINT_mul (in /work/court/tmp/pfp2-build/before/libcrypto.so.3)
+==24005==    by 0x109401: main (minimal_mul.c:140)
+==24005== 
+==24005== Conditional jump or move depends on uninitialised value(s)
+==24005==    at 0x4AF8B46: BN_consttime_swap (in /work/court/tmp/pfp2-build/before/libcrypto.so.3)
+==24005==    by 0x4A1939D: openssl_rs::ec::mult::ossl_ec_scalar_mul_ladder (in /work/court/tmp/pfp2-build/before/libcrypto.so.3)
+==24005==    by 0x4CEF5FE: EC_POINT_mul (in /work/court/tmp/pfp2-build/before/libcrypto.so.3)
+==24005==    by 0x109401: main (minimal_mul.c:140)
+==24005== 
+==24005== Conditional jump or move depends on uninitialised value(s)
+==24005==    at 0x4AF8B66: BN_consttime_swap (in /work/court/tmp/pfp2-build/before/libcrypto.so.3)
+==24005==    by 0x4A1939D: openssl_rs::ec::mult::ossl_ec_scalar_mul_ladder (in /work/court/tmp/pfp2-build/before/libcrypto.so.3)
+==24005==    by 0x4CEF5FE: EC_POINT_mul (in /work/court/tmp/pfp2-build/before/libcrypto.so.3)
+==24005==    by 0x109401: main (minimal_mul.c:140)
+==24005== 
+==24005== Conditional jump or move depends on uninitialised value(s)
+==24005==    at 0x4AF8A8C: BN_consttime_swap (in /work/court/tmp/pfp2-build/before/libcrypto.so.3)
+==24005==    by 0x4A1739D: openssl_rs::ec::mult::ec_point_cswap (in /work/court/tmp/pfp2-build/before/libcrypto.so.3)
+==24005==    by 0x4A195DE: openssl_rs::ec::mult::ossl_ec_scalar_mul_ladder (in /work/court/tmp/pfp2-build/before/libcrypto.so.3)
+==24005==    by 0x4CEF5FE: EC_POINT_mul (in /work/court/tmp/pfp2-build/before/libcrypto.so.3)
+==24005==    by 0x109401: main (minimal_mul.c:140)
+==24005== 
+==24005== Conditional jump or move depends on uninitialised value(s)
+==24005==    at 0x4AF8A8C: BN_consttime_swap (in /work/court/tmp/pfp2-build/before/libcrypto.so.3)
+==24005==    by 0x4A173AE: openssl_rs::ec::mult::ec_point_cswap (in /work/court/tmp/pfp2-build/before/libcrypto.so.3)
+==24005==    by 0x4A195DE: openssl_rs::ec::mult::ossl_ec_scalar_mul_ladder (in /work/court/tmp/pfp2-build/before/libcrypto.so.3)
+==24005==    by 0x4CEF5FE: EC_POINT_mul (in /work/court/tmp/pfp2-build/before/libcrypto.so.3)
+==24005==    by 0x109401: main (minimal_mul.c:140)
+==24005== 
+==24005== Conditional jump or move depends on uninitialised value(s)
+==24005==    at 0x4AF8A8C: BN_consttime_swap (in /work/court/tmp/pfp2-build/before/libcrypto.so.3)
+==24005==    by 0x4A173BF: openssl_rs::ec::mult::ec_point_cswap (in /work/court/tmp/pfp2-build/before/libcrypto.so.3)
+==24005==    by 0x4A195DE: openssl_rs::ec::mult::ossl_ec_scalar_mul_ladder (in /work/court/tmp/pfp2-build/before/libcrypto.so.3)
+==24005==    by 0x4CEF5FE: EC_POINT_mul (in /work/court/tmp/pfp2-build/before/libcrypto.so.3)
+==24005==    by 0x109401: main (minimal_mul.c:140)
+==24005== 
+==24005== Conditional jump or move depends on uninitialised value(s)
+==24005==    at 0x4AF8A8C: BN_consttime_swap (in /work/court/tmp/pfp2-build/before/libcrypto.so.3)
+==24005==    by 0x4A1739D: openssl_rs::ec::mult::ec_point_cswap (in /work/court/tmp/pfp2-build/before/libcrypto.so.3)
+==24005==    by 0x4A196A0: openssl_rs::ec::mult::ossl_ec_scalar_mul_ladder (in /work/court/tmp/pfp2-build/before/libcrypto.so.3)
+==24005==    by 0x4CEF5FE: EC_POINT_mul (in /work/court/tmp/pfp2-build/before/libcrypto.so.3)
+==24005==    by 0x109401: main (minimal_mul.c:140)
+==24005== 
+==24005== Conditional jump or move depends on uninitialised value(s)
+==24005==    at 0x4AF8A8C: BN_consttime_swap (in /work/court/tmp/pfp2-build/before/libcrypto.so.3)
+==24005==    by 0x4A173AE: openssl_rs::ec::mult::ec_point_cswap (in /work/court/tmp/pfp2-build/before/libcrypto.so.3)
+==24005==    by 0x4A196A0: openssl_rs::ec::mult::ossl_ec_scalar_mul_ladder (in /work/court/tmp/pfp2-build/before/libcrypto.so.3)
+==24005==    by 0x4CEF5FE: EC_POINT_mul (in /work/court/tmp/pfp2-build/before/libcrypto.so.3)
+==24005==    by 0x109401: main (minimal_mul.c:140)
+==24005== 
+==24005== Conditional jump or move depends on uninitialised value(s)
+==24005==    at 0x4AF8A8C: BN_consttime_swap (in /work/court/tmp/pfp2-build/before/libcrypto.so.3)
+==24005==    by 0x4A173BF: openssl_rs::ec::mult::ec_point_cswap (in /work/court/tmp/pfp2-build/before/libcrypto.so.3)
+==24005==    by 0x4A196A0: openssl_rs::ec::mult::ossl_ec_scalar_mul_ladder (in /work/court/tmp/pfp2-build/before/libcrypto.so.3)
+==24005==    by 0x4CEF5FE: EC_POINT_mul (in /work/court/tmp/pfp2-build/before/libcrypto.so.3)
+==24005==    by 0x109401: main (minimal_mul.c:140)
+==24005== 
+==24005== Conditional jump or move depends on uninitialised value(s)
+==24005==    at 0x4DAA40A: BN_nnmod (in /work/court/tmp/pfp2-build/before/libcrypto.so.3)
+==24005==    by 0x4B1200D: openssl_rs::ec::smpl::ossl_ec_GFp_simple_ladder_post (in /work/court/tmp/pfp2-build/before/libcrypto.so.3)
+==24005==    by 0x4A196C5: openssl_rs::ec::mult::ossl_ec_scalar_mul_ladder (in /work/court/tmp/pfp2-build/before/libcrypto.so.3)
+==24005==    by 0x4CEF5FE: EC_POINT_mul (in /work/court/tmp/pfp2-build/before/libcrypto.so.3)
+==24005==    by 0x109401: main (minimal_mul.c:140)
+==24005== 
+==24005== Conditional jump or move depends on uninitialised value(s)
+==24005==    at 0x4DAA40A: BN_nnmod (in /work/court/tmp/pfp2-build/before/libcrypto.so.3)
+==24005==    by 0x4B1202F: openssl_rs::ec::smpl::ossl_ec_GFp_simple_ladder_post (in /work/court/tmp/pfp2-build/before/libcrypto.so.3)
+==24005==    by 0x4A196C5: openssl_rs::ec::mult::ossl_ec_scalar_mul_ladder (in /work/court/tmp/pfp2-build/before/libcrypto.so.3)
+==24005==    by 0x4CEF5FE: EC_POINT_mul (in /work/court/tmp/pfp2-build/before/libcrypto.so.3)
+==24005==    by 0x109401: main (minimal_mul.c:140)
+==24005== 
+==24005== Conditional jump or move depends on uninitialised value(s)
+==24005==    at 0x4DAA40A: BN_nnmod (in /work/court/tmp/pfp2-build/before/libcrypto.so.3)
+==24005==    by 0x4B12053: openssl_rs::ec::smpl::ossl_ec_GFp_simple_ladder_post (in /work/court/tmp/pfp2-build/before/libcrypto.so.3)
+==24005==    by 0x4A196C5: openssl_rs::ec::mult::ossl_ec_scalar_mul_ladder (in /work/court/tmp/pfp2-build/before/libcrypto.so.3)
+==24005==    by 0x4CEF5FE: EC_POINT_mul (in /work/court/tmp/pfp2-build/before/libcrypto.so.3)
+==24005==    by 0x109401: main (minimal_mul.c:140)
+==24005== 
+==24005== Conditional jump or move depends on uninitialised value(s)
+==24005==    at 0x4DAA40A: BN_nnmod (in /work/court/tmp/pfp2-build/before/libcrypto.so.3)
+==24005==    by 0x4B12098: openssl_rs::ec::smpl::ossl_ec_GFp_simple_ladder_post (in /work/court/tmp/pfp2-build/before/libcrypto.so.3)
+==24005==    by 0x4A196C5: openssl_rs::ec::mult::ossl_ec_scalar_mul_ladder (in /work/court/tmp/pfp2-build/before/libcrypto.so.3)
+==24005==    by 0x4CEF5FE: EC_POINT_mul (in /work/court/tmp/pfp2-build/before/libcrypto.so.3)
+==24005==    by 0x109401: main (minimal_mul.c:140)
+==24005== 
+==24005== Conditional jump or move depends on uninitialised value(s)
+==24005==    at 0x4DAA40A: BN_nnmod (in /work/court/tmp/pfp2-build/before/libcrypto.so.3)
+==24005==    by 0x4B120BA: openssl_rs::ec::smpl::ossl_ec_GFp_simple_ladder_post (in /work/court/tmp/pfp2-build/before/libcrypto.so.3)
+==24005==    by 0x4A196C5: openssl_rs::ec::mult::ossl_ec_scalar_mul_ladder (in /work/court/tmp/pfp2-build/before/libcrypto.so.3)
+==24005==    by 0x4CEF5FE: EC_POINT_mul (in /work/court/tmp/pfp2-build/before/libcrypto.so.3)
+==24005==    by 0x109401: main (minimal_mul.c:140)
+==24005== 
+==24005== Conditional jump or move depends on uninitialised value(s)
+==24005==    at 0x4DAA40A: BN_nnmod (in /work/court/tmp/pfp2-build/before/libcrypto.so.3)
+==24005==    by 0x4B120FD: openssl_rs::ec::smpl::ossl_ec_GFp_simple_ladder_post (in /work/court/tmp/pfp2-build/before/libcrypto.so.3)
+==24005==    by 0x4A196C5: openssl_rs::ec::mult::ossl_ec_scalar_mul_ladder (in /work/court/tmp/pfp2-build/before/libcrypto.so.3)
+==24005==    by 0x4CEF5FE: EC_POINT_mul (in /work/court/tmp/pfp2-build/before/libcrypto.so.3)
+==24005==    by 0x109401: main (minimal_mul.c:140)
+==24005== 
+==24005== Conditional jump or move depends on uninitialised value(s)
+==24005==    at 0x4DAA40A: BN_nnmod (in /work/court/tmp/pfp2-build/before/libcrypto.so.3)
+==24005==    by 0x4B12120: openssl_rs::ec::smpl::ossl_ec_GFp_simple_ladder_post (in /work/court/tmp/pfp2-build/before/libcrypto.so.3)
+==24005==    by 0x4A196C5: openssl_rs::ec::mult::ossl_ec_scalar_mul_ladder (in /work/court/tmp/pfp2-build/before/libcrypto.so.3)
+==24005==    by 0x4CEF5FE: EC_POINT_mul (in /work/court/tmp/pfp2-build/before/libcrypto.so.3)
+==24005==    by 0x109401: main (minimal_mul.c:140)
+==24005== 
+==24005== Conditional jump or move depends on uninitialised value(s)
+==24005==    at 0x4DAA40A: BN_nnmod (in /work/court/tmp/pfp2-build/before/libcrypto.so.3)
+==24005==    by 0x4B12162: openssl_rs::ec::smpl::ossl_ec_GFp_simple_ladder_post (in /work/court/tmp/pfp2-build/before/libcrypto.so.3)
+==24005==    by 0x4A196C5: openssl_rs::ec::mult::ossl_ec_scalar_mul_ladder (in /work/court/tmp/pfp2-build/before/libcrypto.so.3)
+==24005==    by 0x4CEF5FE: EC_POINT_mul (in /work/court/tmp/pfp2-build/before/libcrypto.so.3)
+==24005==    by 0x109401: main (minimal_mul.c:140)
+==24005== 
+==24005== Conditional jump or move depends on uninitialised value(s)
+==24005==    at 0x4DAA40A: BN_nnmod (in /work/court/tmp/pfp2-build/before/libcrypto.so.3)
+==24005==    by 0x4B12187: openssl_rs::ec::smpl::ossl_ec_GFp_simple_ladder_post (in /work/court/tmp/pfp2-build/before/libcrypto.so.3)
+==24005==    by 0x4A196C5: openssl_rs::ec::mult::ossl_ec_scalar_mul_ladder (in /work/court/tmp/pfp2-build/before/libcrypto.so.3)
+==24005==    by 0x4CEF5FE: EC_POINT_mul (in /work/court/tmp/pfp2-build/before/libcrypto.so.3)
+==24005==    by 0x109401: main (minimal_mul.c:140)
+==24005== 
+==24005== Conditional jump or move depends on uninitialised value(s)
+==24005==    at 0x4DAAC4A: BN_sub (in /work/court/tmp/pfp2-build/before/libcrypto.so.3)
+==24005==    by 0x4DA9399: BN_mod_sub_quick (in /work/court/tmp/pfp2-build/before/libcrypto.so.3)
+==24005==    by 0x4B1221D: openssl_rs::ec::smpl::ossl_ec_GFp_simple_ladder_post (in /work/court/tmp/pfp2-build/before/libcrypto.so.3)
+==24005==    by 0x4A196C5: openssl_rs::ec::mult::ossl_ec_scalar_mul_ladder (in /work/court/tmp/pfp2-build/before/libcrypto.so.3)
+==24005==    by 0x4CEF5FE: EC_POINT_mul (in /work/court/tmp/pfp2-build/before/libcrypto.so.3)
+==24005==    by 0x109401: main (minimal_mul.c:140)
+==24005== 
+==24005== Conditional jump or move depends on uninitialised value(s)
+==24005==    at 0x4DAA40A: BN_nnmod (in /work/court/tmp/pfp2-build/before/libcrypto.so.3)
+==24005==    by 0x4B1225D: openssl_rs::ec::smpl::ossl_ec_GFp_simple_ladder_post (in /work/court/tmp/pfp2-build/before/libcrypto.so.3)
+==24005==    by 0x4A196C5: openssl_rs::ec::mult::ossl_ec_scalar_mul_ladder (in /work/court/tmp/pfp2-build/before/libcrypto.so.3)
+==24005==    by 0x4CEF5FE: EC_POINT_mul (in /work/court/tmp/pfp2-build/before/libcrypto.so.3)
+==24005==    by 0x109401: main (minimal_mul.c:140)
+==24005== 
+==24005== Conditional jump or move depends on uninitialised value(s)
+==24005==    at 0x4DAA40A: BN_nnmod (in /work/court/tmp/pfp2-build/before/libcrypto.so.3)
+==24005==    by 0x4B122A7: openssl_rs::ec::smpl::ossl_ec_GFp_simple_ladder_post (in /work/court/tmp/pfp2-build/before/libcrypto.so.3)
+==24005==    by 0x4A196C5: openssl_rs::ec::mult::ossl_ec_scalar_mul_ladder (in /work/court/tmp/pfp2-build/before/libcrypto.so.3)
+==24005==    by 0x4CEF5FE: EC_POINT_mul (in /work/court/tmp/pfp2-build/before/libcrypto.so.3)
+==24005==    by 0x109401: main (minimal_mul.c:140)
+==24005== 
+dso_base=0x4852000
+==24005== 
+==24005== HEAP SUMMARY:
+==24005==     in use at exit: 226,770 bytes in 2,632 blocks
+==24005==   total heap usage: 14,970 allocs, 12,338 frees, 528,715 bytes allocated
+==24005== 
+==24005== LEAK SUMMARY:
+==24005==    definitely lost: 32 bytes in 1 blocks
+==24005==    indirectly lost: 8 bytes in 1 blocks
+==24005==      possibly lost: 24,432 bytes in 379 blocks
+==24005==    still reachable: 202,298 bytes in 2,251 blocks
+==24005==         suppressed: 0 bytes in 0 blocks
+==24005== Rerun with --leak-check=full to see details of leaked memory
+==24005== 
+==24005== Use --track-origins=yes to see where uninitialised values come from
+==24005== For lists of detected and suppressed errors, rerun with: -s
+==24005== ERROR SUMMARY: 794 errors from 29 contexts (suppressed: 0 from 0)

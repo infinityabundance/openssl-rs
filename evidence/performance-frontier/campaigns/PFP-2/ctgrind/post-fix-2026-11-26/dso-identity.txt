@@ -1,0 +1,44 @@
+# PFP-2 ctgrind post-fix identities — 2026-11-26
+
+Source: `staging` HEAD `0b5c11e99`, plus the uncommitted branch-free reduction
+fix and the accompanying module-doc note in `src/ec/p256.rs` only. The fix
+removes a compiler-introduced conditional branch on the REDC borrow
+(STOP-2026-11-26.md). It changes no exported symbol, `#[repr(C)]` layout or
+`CRYPTO_*` seam.
+
+The DSO was rebuilt from this exact source and the digest is reproducible:
+a second build of the same unchanged source into a fresh `CARGO_TARGET_DIR`
+produced the same `libcrypto.so.3` digest.
+
+## Candidate distribution DSO (post-fix, final source)
+
+- path: `court/tmp/pfp2-fix/distribution/libcrypto.so.3`
+- sha256: `83f67826e2ca53dd8e014fe5442d2e77ba96ee7af35eeb78a312112a4e0a7c4f`
+- build-id: `ef860b61ec716042c749d01e9e7a97884b19de97`
+- size: 17,041,264 bytes
+- archive (`target/release/libopenssl_rs.a`) sha256:
+  `b56eba463eb50818a8fa5baf75c9fa11e0b8ce2e21c4e9870900a8b6cd4b9166`
+- recipe: the PFP-2 tracked distribution link (`PFP-2/authority/build-identity.json`):
+  `cargo build --release --lib --offline` with `CARGO_BUILD_JOBS=4`, fresh
+  `CARGO_TARGET_DIR`, then `implemented_surface.py` → `emit_shell.py` → the
+  Phase-2 version-script link.
+- the tracked ABI surface matched the fresh surface
+  (`tracked_surface_matches_fresh: true`), so no exported representation changed.
+
+## Historical candidate (pre-fix, STOP digest)
+
+- DSO sha256: `467527ae6a61fb217facd6f50bd1187fc25ce2dea3817d0b37c71bdd0ada9bf8`
+- debug test binary sha256: `e5ef938ab3b76e285f790ccf7a0b9132360bc301993d63f846774f9ae89e3347`
+
+## Post-fix debug test binary
+
+- path: `target/debug/deps/openssl_rs-672100dcc99e32ac`
+- sha256: `76050325429711d8193eb9ed1ebe348d6947d2912db311d86fb17b1cdc08a72b`
+- profile: debug, same test command as the recorded population
+  (`ec::ecdsa_ossl::tests::ctgrind_ecdsa_sign_taints_nonce_and_key`).
+
+## Comparators
+
+- generic pre-engine DSO: `court/tmp/pfp2-build/before/libcrypto.so.3`
+  (unchanged; the same binary the STOP used).
+- authority: `openssl-3.6.4-production`, sha256 `611e511d…` (not re-measured here).

@@ -35,7 +35,12 @@
 //!   same way. The engine allocates nothing: every value is a fixed `[u64; 4]`
 //!   and every operation is stack-resident.
 //! * **No value-dependent control flow.** Add, subtract, compare, select and
-//!   conditional subtraction are masks. The Solinas fold's iteration count is a
+//!   conditional subtraction are masks. Borrows and carries are read from the
+//!   high half of a 128-bit operation rather than from a comparison, and the
+//!   select masks pass an optimisation barrier, so the release optimiser has no
+//!   predicate on a secret limb that it can lower to a conditional branch (this
+//!   is measured by ctgrind and the binary branch audit, not assumed). The
+//!   Solinas fold's iteration count is a
 //!   constant, its carry pass is a fixed nine-step loop, and its final correction
 //!   is two masked subtractions. The Montgomery reduction's loops are fixed
 //!   counts and its final subtraction is a mask. No `debug_assert!` is used as a
@@ -444,14 +449,55 @@ pub(crate) enum KernelId {
 // Masked primitives
 // ---------------------------------------------------------------------------
 
+/// `a - b - borrow`, returning the difference and the 0/1 borrow out.
+///
+/// The borrow is read from the high half of a 128-bit difference, never from a
+/// comparison. A comparison produces an `i1` predicate, and the optimiser is
+/// free to lower a predicate on a secret limb to a conditional jump (this is
+/// exactly what it did to `mont_reduce_into` at release); a value read from the
+/// high half of a subtraction has no predicate to branch on. `borrow` must be
+/// zero or one.
+#[inline(always)]
+fn sub_borrow(a: Limb, b: Limb, borrow: Limb) -> (Limb, Limb) {
+    let t = (a as u128)
+        .wrapping_sub(b as u128)
+        .wrapping_sub(borrow as u128);
+    (t as Limb, ((t >> 64) as Limb) & 1)
+}
+
+/// `a + b + carry`, returning the sum and the 0/1 carry out.
+///
+/// As [`sub_borrow`]: the carry is the high half of a 128-bit sum, not a
+/// comparison result, so no secret-dependent predicate reaches control flow.
+/// `carry` must be zero or one.
+#[inline(always)]
+fn add_carry(a: Limb, b: Limb, carry: Limb) -> (Limb, Limb) {
+    let t = (a as u128)
+        .wrapping_add(b as u128)
+        .wrapping_add(carry as u128);
+    (t as Limb, ((t >> 64) as Limb) & 1)
+}
+
+/// An optimisation barrier for a secret-derived mask.
+///
+/// This is the crate's counterpart of `constant_time.h`'s `value_barrier_*`
+/// (see `ec::curve448`): the optimiser is otherwise free to prove the mask is
+/// `0`/`!0` and if-convert the masked select into a conditional branch on the
+/// secret limb, which is exactly what it did to the reduction at release. The
+/// barrier is best-effort, not a guarantee; ctgrind and the binary branch audit
+/// measure whether it held at the recorded digest.
+#[inline(always)]
+fn mask_barrier(mask: Limb) -> Limb {
+    core::hint::black_box(mask)
+}
+
 /// All ones when `a >= b`, zero otherwise, with no branch.
 #[inline(always)]
 fn ct_ge(a: &[Limb; LIMBS], b: &[Limb; LIMBS]) -> Limb {
     let mut borrow = 0u64;
     for i in 0..LIMBS {
-        let (d1, b1) = a[i].overflowing_sub(b[i]);
-        let (_, b2) = d1.overflowing_sub(borrow);
-        borrow = Limb::from(b1) | Limb::from(b2);
+        let (_, b) = sub_borrow(a[i], b[i], borrow);
+        borrow = b;
     }
     borrow.wrapping_sub(1)
 }
@@ -466,6 +512,7 @@ fn ct_is_zero(a: &[Limb; LIMBS]) -> Limb {
 /// `out = a` when `mask` is all ones, `b` when zero.
 #[inline(always)]
 fn select_limbs(out: &mut [Limb; LIMBS], mask: Limb, a: &[Limb; LIMBS], b: &[Limb; LIMBS]) {
+    let mask = mask_barrier(mask);
     for i in 0..LIMBS {
         out[i] = b[i] ^ ((a[i] ^ b[i]) & mask);
     }
@@ -474,6 +521,7 @@ fn select_limbs(out: &mut [Limb; LIMBS], mask: Limb, a: &[Limb; LIMBS], b: &[Lim
 /// Exchange `a` and `b` when `mask` is all ones.
 #[inline(always)]
 fn cswap_limbs(mask: Limb, a: &mut [Limb; LIMBS], b: &mut [Limb; LIMBS]) {
+    let mask = mask_barrier(mask);
     for i in 0..LIMBS {
         let t = mask & (a[i] ^ b[i]);
         a[i] ^= t;
@@ -493,29 +541,25 @@ fn add_canonical(out: &mut [Limb; LIMBS], a: &[Limb; LIMBS], b: &[Limb; LIMBS], 
     for i in 0..LIMBS {
         // At most `2*(2^64-1) + 1 < 2^65`: no overflow, checks suppressed as
         // the crate's other secret-bearing arithmetic does.
-        let v = (a[i] as u128)
-            .wrapping_add(b[i] as u128)
-            .wrapping_add(carry as u128);
-        out[i] = v as u64;
-        carry = (v >> 64) as u64;
+        let (v, c) = add_carry(a[i], b[i], carry);
+        out[i] = v;
+        carry = c;
     }
 
     let mut borrow = 0u64;
     for i in 0..LIMBS {
-        let (d1, b1) = out[i].overflowing_sub(m[i]);
-        let (_, b2) = d1.overflowing_sub(borrow);
-        borrow = Limb::from(b1) | Limb::from(b2);
+        let (_, b) = sub_borrow(out[i], m[i], borrow);
+        borrow = b;
     }
     // `a + b < 2m`, so when the sum has a fifth limb its low four limbs are
     // below `m`; the final borrow is then one and the sum is the answer.
-    let (_, top_borrow) = carry.overflowing_sub(borrow);
-    let subtract = Limb::from(!top_borrow).wrapping_neg();
+    let (_, top_borrow) = sub_borrow(carry, 0, borrow);
+    let subtract = mask_barrier(top_borrow.wrapping_sub(1));
     let mut c = 0u64;
     for i in 0..LIMBS {
-        let (d1, c1) = out[i].overflowing_sub(m[i] & subtract);
-        let (d2, c2) = d1.overflowing_sub(c);
-        out[i] = d2;
-        c = Limb::from(c1) | Limb::from(c2);
+        let (d, ci) = sub_borrow(out[i], m[i] & subtract, c);
+        out[i] = d;
+        c = ci;
     }
     // `carry - c` is zero by the `a + b < 2m` bound; the answer is `out`.
 }
@@ -525,18 +569,16 @@ fn add_canonical(out: &mut [Limb; LIMBS], a: &[Limb; LIMBS], b: &[Limb; LIMBS], 
 fn sub_canonical(out: &mut [Limb; LIMBS], a: &[Limb; LIMBS], b: &[Limb; LIMBS], m: &[Limb; LIMBS]) {
     let mut borrow = 0u64;
     for i in 0..LIMBS {
-        let (d1, b1) = a[i].overflowing_sub(b[i]);
-        let (d2, b2) = d1.overflowing_sub(borrow);
-        out[i] = d2;
-        borrow = Limb::from(b1) | Limb::from(b2);
+        let (d, b) = sub_borrow(a[i], b[i], borrow);
+        out[i] = d;
+        borrow = b;
     }
-    let mask = borrow.wrapping_neg();
+    let mask = mask_barrier(borrow.wrapping_neg());
     let mut c = 0u64;
     for i in 0..LIMBS {
-        let (d1, c1) = out[i].overflowing_add(m[i] & mask);
-        let (d2, c2) = d1.overflowing_add(c);
-        out[i] = d2;
-        c = Limb::from(c1) | Limb::from(c2);
+        let (d, ci) = add_carry(out[i], m[i] & mask, c);
+        out[i] = d;
+        c = ci;
     }
 }
 
@@ -616,21 +658,19 @@ fn correct_solinas(acc: &mut [Limb; 9]) {
     for _ in 0..SUBTRACTIONS {
         let mut borrow = 0u64;
         for i in 0..LIMBS {
-            let (d1, b1) = acc[i].overflowing_sub(FIELD_MODULUS[i]);
-            let (_, b2) = d1.overflowing_sub(borrow);
-            borrow = Limb::from(b1) | Limb::from(b2);
+            let (_, b) = sub_borrow(acc[i], FIELD_MODULUS[i], borrow);
+            borrow = b;
         }
-        let (_, b) = acc[4].overflowing_sub(borrow);
+        let (_, b) = sub_borrow(acc[4], 0, borrow);
         // All ones when the subtraction did not borrow, i.e. `acc >= p`.
-        let subtract = Limb::from(!b).wrapping_neg();
+        let subtract = mask_barrier(b.wrapping_sub(1));
         let mut c = 0u64;
         for i in 0..LIMBS {
-            let (d1, c1) = acc[i].overflowing_sub(FIELD_MODULUS[i] & subtract);
-            let (d2, c2) = d1.overflowing_sub(c);
-            acc[i] = d2;
-            c = Limb::from(c1) | Limb::from(c2);
+            let (d, ci) = sub_borrow(acc[i], FIELD_MODULUS[i] & subtract, c);
+            acc[i] = d;
+            c = ci;
         }
-        let (d, _) = acc[4].overflowing_sub(c);
+        let (d, _) = sub_borrow(acc[4], 0, c);
         acc[4] = d;
     }
 }
@@ -674,29 +714,28 @@ fn mont_reduce_into(
         }
         // Fixed-width carry propagation; no early exit on a secret carry.
         for slot in t[(i + LIMBS)..].iter_mut() {
-            let (s, c) = slot.overflowing_add(carry);
+            let (s, c) = add_carry(*slot, carry, 0);
             *slot = s;
-            carry = Limb::from(c);
+            carry = c;
         }
     }
 
     for _ in 0..subtractions {
         let mut borrow = 0u64;
         for i in 0..LIMBS {
-            let (d1, b1) = t[LIMBS + i].overflowing_sub(m[i]);
-            let (_, b2) = d1.overflowing_sub(borrow);
-            borrow = Limb::from(b1) | Limb::from(b2);
+            let (_, b) = sub_borrow(t[LIMBS + i], m[i], borrow);
+            borrow = b;
         }
-        let (_, b) = t[2 * LIMBS].overflowing_sub(borrow);
-        let subtract = Limb::from(!b).wrapping_neg();
+        let (_, b) = sub_borrow(t[2 * LIMBS], 0, borrow);
+        // All ones when the whole value did not borrow, i.e. `t >= m`.
+        let subtract = mask_barrier(b.wrapping_sub(1));
         let mut c = 0u64;
         for i in 0..LIMBS {
-            let (d1, c1) = t[LIMBS + i].overflowing_sub(m[i] & subtract);
-            let (d2, c2) = d1.overflowing_sub(c);
-            t[LIMBS + i] = d2;
-            c = Limb::from(c1) | Limb::from(c2);
+            let (d, ci) = sub_borrow(t[LIMBS + i], m[i] & subtract, c);
+            t[LIMBS + i] = d;
+            c = ci;
         }
-        let (d, _) = t[2 * LIMBS].overflowing_sub(c);
+        let (d, _) = sub_borrow(t[2 * LIMBS], 0, c);
         t[2 * LIMBS] = d;
     }
 
