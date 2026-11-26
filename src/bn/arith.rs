@@ -35,6 +35,55 @@
 //! before writing the result, so this implementation defines that case too.
 //! `BN_mod_exp`'s `r == m` and `BN_mod_sqrt`'s `in == p` are likewise defined here
 //! but are not authority-guaranteed.
+//!
+//! ## Montgomery multiplication: the bound argument
+//!
+//! The kernels ([`mont_mul_sos_into`], [`mont_mul_cios_into`], [`mont_sqr_into`])
+//! compute `a * b * R^-1 mod m` for `n = m.len()` limbs, radix `B = 2^64`,
+//! `R = B^n`, and an odd modulus `m` with a non-zero top limb (so
+//! `B^(n-1) <= m < R`). The `T < m * R` bound is established here, not assumed
+//! from the arithmetic:
+//!
+//! * The caller supplies `a, b < m`. The constant-time ladder establishes this
+//!   **inductively**: every schedule returns a canonical residue in `[0, m)`, so
+//!   the next multiply's operands satisfy the same bound. The base case is
+//!   explicit: `run_mont_ladder` zero-extends the base to `n` limbs (`< R`) and
+//!   multiplies by `rr = R^2 mod m < m`, so the first product is `< R * m` and
+//!   the result is canonical; its accumulator starts as `R mod m < m`, and the
+//!   final multiply uses the constant `1`. `BN_to_montgomery` passes
+//!   `R^2 mod m` as one operand; `BN_mod_mul_montgomery`'s C contract is that
+//!   both operands are already Montgomery residues (`< m`).
+//! * Therefore `T = a * b < m^2 <= m * R`, which is REDC's exact precondition.
+//!   In particular `T < B^(2n)`, so the product and every reduction
+//!   intermediate fit the `2n + 1` accumulator without a carry escaping the top
+//!   limb: adding `q_i * m * B^i` keeps the value below
+//!   `m * R + (R - 1) * m = (2R - 1) * m < 2 * B^(2n)`.
+//! * REDC returns `S = (T + q*m) / R` with `0 <= S < 2m`, so one masked
+//!   conditional subtraction (a final borrow, never a branch on secret values)
+//!   leaves the canonical representative in `[0, m)`.
+//!
+//! **Lazy-representation composition.** The schedules deliberately do *not* use
+//! a lazy representation: every result is canonical before it is returned, which
+//! is exactly what lets the ladder compose multiplications with no extra
+//! correction. A kernel returning a merely `[0, 2m)` residue would not be
+//! composable: feeding two such operands back in gives `T < 4m^2`, and
+//! `4m^2 < m*R` requires `4m < R`, false for a modulus with a full top limb. Such
+//! a kernel would have to finish the conditional subtraction (or be given a
+//! wider reduction bound) before its output could be an input here. No schedule
+//! below relaxes the bound, and none may without that argument.
+//!
+//! The width preconditions (`a`, `b`, `out`, `diff` exactly `n` limbs, `t`
+//! exactly `2n + 1`) are checked in release by [`mont_geometry_ok`]; a mismatch
+//! fails closed and writes nothing. Those lengths are public geometry, so the
+//! check is not a branch on secret values.
+//!
+//! Only the *length* preconditions are runtime-checked. The *value* bound
+//! (`a * b < m * R`) is a caller contract, not a runtime test: establishing
+//! `a < m` inside the kernel would read secret limbs and branch on them, which
+//! §5 forbids. It is instead established by construction — every kernel returns
+//! a canonical `[0, m)` residue, `BN_to_montgomery` passes `R^2 mod m` as the
+//! wide operand, and `BN_mod_mul_montgomery` requires Montgomery residues — so
+//! the induction above is discharged at the callers, not by an assertion.
 
 use core::ffi::{c_int, c_ulong};
 
@@ -1590,16 +1639,43 @@ fn fixed_width_exponent(pd: &[Limb], width: usize) -> Option<SecretLimbs> {
     stage_fixed_width_exponent(pd, width).map(|(view, _)| view)
 }
 
-/// Montgomery multiplication `a * b * R^-1 mod m` with fixed loop counts,
-/// written into caller storage and allocating nothing.
+/// The schedule an integrated Montgomery multiply uses.
 ///
-/// `a`, `b`, `out` and `diff` are all exactly `n = m.len()` limbs, `t` is
-/// `2n + 1`, `a, b < m`, and `m` is odd. `out` must not alias `a` or `b`. The
-/// schoolbook product and the REDC pass have iteration counts that depend only on
-/// `n` (public): the value-dependent `if x == 0 { continue }` of [`limbs::mul`],
-/// its trailing-zero `normalise`, and the data-dependent loops of
-/// [`limbs::div_rem`] are all avoided. The final conditional subtraction is a mask
-/// select, not a branch.
+/// Both schedules compute the same function, `a * b * R^-1 mod m`, and are
+/// differentially verified against each other bit for bit. The reference is the
+/// default so a schedule change is an explicit, measured decision.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub(crate) enum MontSchedule {
+    /// Reference: separated operand scanning (SOS) — the full schoolbook
+    /// product into `2n + 1` limbs, then a word-wise REDC pass.
+    Sos,
+    /// Coarsely integrated operand scanning (CIOS): each product row is reduced
+    /// as it is produced, so only `n + 2` limbs of accumulator are needed and
+    /// the product's low half is never stored.
+    ///
+    /// Constructed by the PFP-6 differential court and by a caller that selects
+    /// it through [`mont_mul_fallible_with`]; the default ladder constant picks
+    /// `Sos`, so a plain `cargo check` sees no construction. That is a statement
+    /// about the selected default, not a licence to leave an unreachable kernel.
+    #[cfg_attr(not(test), allow(dead_code))]
+    Cios,
+}
+
+/// The schedule the constant-time ladder uses.
+///
+/// `Sos` is the reference kernel PFP-6 differentially verified. CIOS is measured
+/// in the PFP-6 campaign; selecting it here is a default change and requires the
+/// affected API performance rows to be re-run at the same digest
+/// (`docs/PERFORMANCE-FRONTIER-TODO.md`, PFP-6).
+const LADDER_SCHEDULE: MontSchedule = MontSchedule::Sos;
+
+/// Whether the ladder uses the dedicated squaring kernel.
+///
+/// The kernel is differentially verified against the reference. Adopting it
+/// changes the ladder's default arithmetic and is therefore off until the
+/// affected performance rows are re-run at the same digest.
+const LADDER_DEDICATED_SQUARING: bool = false;
+
 /// `a * b + c + d` for 64-bit terms, as a 128-bit value.
 ///
 /// The maximum is `(2^64-1)^2 + 2*(2^64-1) = 2^128 - 1`, so the arithmetic
@@ -1616,35 +1692,60 @@ fn mul_add_carry(a: u64, b: u64, c: u64, d: u64) -> u128 {
         .wrapping_add(d as u128)
 }
 
-fn mont_mul_into(
+/// Add a 128-bit term into a private 192-bit accumulator.
+///
+/// One column of a Comba product has at most `n + 1` terms, each below `2^128`,
+/// so it is below `(n + 1) * 2^128 < 2^192` for every `usize` limb count
+/// `n < 2^64`. Three limbs therefore hold it without loss. `wrapping_*` keeps
+/// the profile's overflow check out of the secret-bearing loop; the bound above
+/// shows the wrap cannot occur.
+#[inline(always)]
+fn wide_add(acc: &mut [Limb; 3], v: u128) {
+    let (s0, c0) = acc[0].overflowing_add(v as Limb);
+    let (s1, c1) = acc[1].overflowing_add((v >> 64) as Limb);
+    let (s1, c2) = s1.overflowing_add(u64::from(c0));
+    acc[0] = s0;
+    acc[1] = s1;
+    acc[2] = acc[2]
+        .wrapping_add(u64::from(c1))
+        .wrapping_add(u64::from(c2));
+}
+
+/// Check the shared length geometry of every integrated kernel.
+///
+/// `a`, `b`, `out` and `diff` must be exactly `n = m.len()` limbs and `t`
+/// exactly `2n + 1`. These are public lengths, so this branch is not a branch on
+/// a secret value. It fails closed in release: a mismatch returns `false` and the
+/// kernel writes nothing.
+///
+/// This replaces the `debug_assert!` pair that guarded the reference. In a
+/// release build those assertions vanished, so an oversized `a` or `b` was
+/// silently truncated to `n` limbs (a wrong product with no diagnostic) and an
+/// undersized buffer indexed out of bounds (a panic, not a memory-safety bug,
+/// but not a defined failure either). Widths now fail closed in every profile.
+fn mont_geometry_ok(
     a: &[Limb],
     b: &[Limb],
-    out: &mut [Limb],
+    out: &[Limb],
+    diff: &[Limb],
     m: &[Limb],
-    n0: Limb,
-    t: &mut [Limb],
-    diff: &mut [Limb],
-) {
+    t: &[Limb],
+) -> bool {
     let n = m.len();
-    debug_assert!(a.len() == n && b.len() == n && out.len() == n && diff.len() == n);
-    debug_assert!(t.len() == 2 * n + 1);
-    t.fill(0);
+    let Some(t_needed) = n.checked_mul(2).and_then(|w| w.checked_add(1)) else {
+        return false;
+    };
+    a.len() == n && b.len() == n && out.len() == n && diff.len() == n && t.len() == t_needed
+}
 
-    // Schoolbook product into t[0..2n]. `t[i + n]` is untouched when row `i`
-    // runs, so the carry may be stored directly.
-    for i in 0..n {
-        let mut carry = 0u64;
-        for j in 0..n {
-            let v = mul_add_carry(a[i], b[j], t[i + j], carry);
-            t[i + j] = v as u64;
-            carry = (v >> 64) as u64;
-        }
-        t[i + n] = carry;
-    }
-
-    // REDC: add `u * m * B^i` so limb `i` becomes zero, for every `i`. The carry
-    // runs through a fixed range; the total value is below `2 * B^(2n)`, so it
-    // never leaves `t`.
+/// REDC in place on `t[0..=2n]`: add `u * m * B^i` so limb `i` becomes zero, for
+/// every `i`, then write the canonical residue into `out`.
+///
+/// The carry runs through a fixed range; the total value is below `2 * B^(2n)`,
+/// so it never leaves `t`. The caller has checked the geometry and that
+/// `a * b < m * R` (see the module-level bound argument).
+fn redc_into(t: &mut [Limb], m: &[Limb], n0: Limb, out: &mut [Limb], diff: &mut [Limb]) {
+    let n = m.len();
     for i in 0..n {
         let u = t[i].wrapping_mul(n0);
         let mut carry = 0u64;
@@ -1680,19 +1781,262 @@ fn mont_mul_into(
     }
 }
 
+/// Reference Montgomery multiplication (SOS): full schoolbook product, then
+/// word-wise REDC. Fixed loop counts (no value-dependent skip or normalise), and
+/// the conditional subtraction is a mask select rather than a branch.
+///
+/// Returns `false` if the caller's geometry violates the length contract, in
+/// which case nothing is written.
+fn mont_mul_sos_into(
+    a: &[Limb],
+    b: &[Limb],
+    out: &mut [Limb],
+    m: &[Limb],
+    n0: Limb,
+    t: &mut [Limb],
+    diff: &mut [Limb],
+) -> bool {
+    if !mont_geometry_ok(a, b, out, diff, m, t) {
+        return false;
+    }
+    let n = m.len();
+    t.fill(0);
+
+    // Schoolbook product into t[0..2n]. `t[i + n]` is untouched when row `i`
+    // runs, so the carry may be stored directly.
+    for i in 0..n {
+        let mut carry = 0u64;
+        for j in 0..n {
+            let v = mul_add_carry(a[i], b[j], t[i + j], carry);
+            t[i + j] = v as u64;
+            carry = (v >> 64) as u64;
+        }
+        t[i + n] = carry;
+    }
+
+    redc_into(t, m, n0, out, diff);
+    true
+}
+
+/// CIOS Montgomery multiplication: each product row is reduced as it is
+/// produced. The accumulator is `n + 2` limbs (`t[0..=n+1]`), so the product's
+/// low half is discarded as it is annihilated rather than stored.
+///
+/// **Invariant argument.** Let `T_i < 2m` be the accumulator at the start of
+/// iteration `i` (initially `T_0 = 0`). The product step gives
+/// `T' = T_i + a*b_i < 2m + m(B-1) = m(B+1)` because `a < m` and
+/// `b_i <= B-1`; so `T' < B^n(B+1) < 2B^(n+1)`, which fits the `n + 2` limbs and
+/// leaves `acc[n+1]` a single carry bit. The reduction step adds
+/// `u*m <= (B-1)m`, so `T' + u*m < m(B+1) + m(B-1) = 2Bm`; dividing by `B`
+/// gives `T_{i+1} < 2m`, re-establishing the invariant. After `n` iterations
+/// `T_n < 2m`, so the single masked subtraction leaves `[0, m)`.
+///
+/// The final subtraction is a mask select. All loop counts are fixed by the
+/// public `n`, and there is no branch on a limb's value.
+fn mont_mul_cios_into(
+    a: &[Limb],
+    b: &[Limb],
+    out: &mut [Limb],
+    m: &[Limb],
+    n0: Limb,
+    t: &mut [Limb],
+    diff: &mut [Limb],
+) -> bool {
+    if !mont_geometry_ok(a, b, out, diff, m, t) {
+        return false;
+    }
+    let n = m.len();
+    if n == 0 {
+        return true;
+    }
+    let acc = &mut t[..=n + 1];
+    acc.fill(0);
+
+    for &bi in b {
+        // acc += a * b[i]
+        let mut carry = 0u64;
+        for j in 0..n {
+            let v = mul_add_carry(a[j], bi, acc[j], carry);
+            acc[j] = v as u64;
+            carry = (v >> 64) as u64;
+        }
+        let (hi, overflow) = acc[n].overflowing_add(carry);
+        acc[n] = hi;
+        acc[n + 1] = u64::from(overflow);
+
+        // acc += u * m, with `u` chosen so the low limb becomes zero. The low
+        // limb of `u * m[0] + acc[0]` is zero by construction, so it is dropped.
+        let u = acc[0].wrapping_mul(n0);
+        let v = mul_add_carry(u, m[0], acc[0], 0);
+        let mut carry = (v >> 64) as u64;
+        for j in 1..n {
+            let v = mul_add_carry(u, m[j], acc[j], carry);
+            acc[j - 1] = v as u64;
+            carry = (v >> 64) as u64;
+        }
+        let (lo, overflow) = acc[n].overflowing_add(carry);
+        acc[n - 1] = lo;
+        acc[n] = acc[n + 1].wrapping_add(u64::from(overflow));
+    }
+
+    // acc[0..n] is the result before the single conditional subtraction; acc[n]
+    // is the possible high bit. Subtract when the value is at least `m`:
+    // `high != 0`, or the `n`-limb difference did not borrow.
+    let high = acc[n];
+    let mut borrow = 0u64;
+    for j in 0..n {
+        let (d1, b1) = acc[j].overflowing_sub(m[j]);
+        let (d2, b2) = d1.overflowing_sub(borrow);
+        diff[j] = d2;
+        borrow = u64::from(b1) | u64::from(b2);
+    }
+    let keep = high | (borrow ^ 1);
+    let mask = 0u64.wrapping_sub(keep);
+    for j in 0..n {
+        out[j] = constant_time_select(mask as usize, diff[j] as usize, acc[j] as usize) as Limb;
+    }
+    true
+}
+
+/// Dedicated squaring: a Comba product from the operand's symmetry (each
+/// unordered pair `i < j` contributes twice, the diagonal once), then the same
+/// REDC pass as the reference.
+///
+/// This halves the number of limb multiplications relative to the reference's
+/// `a * a`. The accumulator proof is in [`wide_add`]; the REDC bound is the same
+/// as the reference (`a * a < m * R` because `a < m`). Returns `false` on a
+/// geometry violation or if a carry survived the product's top column, which
+/// cannot happen for `n`-limb operands and is reported rather than ignored.
+fn mont_sqr_into(
+    a: &[Limb],
+    out: &mut [Limb],
+    m: &[Limb],
+    n0: Limb,
+    t: &mut [Limb],
+    diff: &mut [Limb],
+) -> bool {
+    if !mont_geometry_ok(a, a, out, diff, m, t) {
+        return false;
+    }
+    let n = m.len();
+    t.fill(0);
+
+    let mut acc = [0u64; 3];
+    for (k, slot) in t.iter_mut().enumerate().take(n.saturating_mul(2)) {
+        if k & 1 == 0 {
+            let i = k / 2;
+            if i < n {
+                let v = (a[i] as u128) * (a[i] as u128);
+                wide_add(&mut acc, v);
+            }
+        }
+        if k >= 1 {
+            // `j = k - i` and `i < j < n` for this (public) index range.
+            let lo = k.saturating_sub(n - 1);
+            let hi = (k - 1) / 2;
+            for i in lo..=hi {
+                let j = k - i;
+                let v = (a[i] as u128) * (a[j] as u128);
+                wide_add(&mut acc, v);
+                wide_add(&mut acc, v);
+            }
+        }
+        *slot = acc[0];
+        acc[0] = acc[1];
+        acc[1] = acc[2];
+        acc[2] = 0;
+    }
+    // A product of two `n`-limb values is below `B^(2n)`, so after the `2n`
+    // columns are emitted no carry survives. The check is structural (the value
+    // is zero for every input), and a survivor is reported rather than dropped.
+    if acc != [0, 0, 0] {
+        return false;
+    }
+
+    redc_into(t, m, n0, out, diff);
+    true
+}
+
+/// The ladder's multiply, using [`LADDER_SCHEDULE`].
+///
+/// Keeping the schedule out of the parameter list keeps the call site's argument
+/// count at the reference's and makes the selected default one named constant.
+fn mont_mul_ladder_into(
+    a: &[Limb],
+    b: &[Limb],
+    out: &mut [Limb],
+    m: &[Limb],
+    n0: Limb,
+    t: &mut [Limb],
+    diff: &mut [Limb],
+) -> bool {
+    match LADDER_SCHEDULE {
+        MontSchedule::Sos => mont_mul_sos_into(a, b, out, m, n0, t, diff),
+        MontSchedule::Cios => mont_mul_cios_into(a, b, out, m, n0, t, diff),
+    }
+}
+
+/// Reference Montgomery multiplication, kept as the named default used by
+/// [`mont_mul_fallible`]. See [`mont_mul_sos_into`]; returns `false` on a
+/// geometry violation.
+fn mont_mul_into(
+    a: &[Limb],
+    b: &[Limb],
+    out: &mut [Limb],
+    m: &[Limb],
+    n0: Limb,
+    t: &mut [Limb],
+    diff: &mut [Limb],
+) -> bool {
+    mont_mul_sos_into(a, b, out, m, n0, t, diff)
+}
+
 /// Allocating wrapper over [`mont_mul_into`], for one-shot conversions outside the
 /// ladder. `out` is returned as a plain vector because the caller adopts it into
 /// a [`SecretBuf`]; the intermediate product and REDC storage can be secret when
 /// the inputs are, so they are cleansed on every exit.
 ///
-/// The input bound is `a, b < R = 2^(64 * m.len())` (each at most `n` limbs);
-/// the result is then below `2m` and the single masked subtraction finishes it.
+/// The input bound is `a * b < m * R` (see the module-level argument), which holds
+/// for `a, b < m` or, as `BN_to_montgomery` uses, for `a < R` with `b = R^2 mod m`.
+/// The result is then below `2m` and the single masked subtraction finishes it.
+/// A geometry violation returns `None` rather than truncating.
 pub(crate) fn mont_mul_fallible(a: &[Limb], b: &[Limb], m: &[Limb], n0: Limb) -> Option<Vec<Limb>> {
+    mont_mul_fallible_with(MontSchedule::Sos, a, b, m, n0)
+}
+
+/// [`mont_mul_fallible`] with an explicit schedule, for the PFP-6 differential
+/// and for a caller that has measured the schedule at its own widths.
+pub(crate) fn mont_mul_fallible_with(
+    schedule: MontSchedule,
+    a: &[Limb],
+    b: &[Limb],
+    m: &[Limb],
+    n0: Limb,
+) -> Option<Vec<Limb>> {
     let n = m.len();
     let mut out = try_zeroed_limbs(n)?;
     let mut t = SecretBuf::try_zeroed(n.checked_mul(2)?.checked_add(1)?)?;
     let mut diff = SecretBuf::try_zeroed(n)?;
-    mont_mul_into(a, b, &mut out, m, n0, &mut t, &mut diff);
+    if !match schedule {
+        MontSchedule::Sos => mont_mul_sos_into(a, b, &mut out, m, n0, &mut t, &mut diff),
+        MontSchedule::Cios => mont_mul_cios_into(a, b, &mut out, m, n0, &mut t, &mut diff),
+    } {
+        return None;
+    }
+    Some(out)
+}
+
+/// Allocating wrapper over [`mont_sqr_into`] for tests and for a caller that has
+/// measured the dedicated squaring kernel at its own widths.
+#[cfg(test)]
+pub(crate) fn mont_sqr_fallible(a: &[Limb], m: &[Limb], n0: Limb) -> Option<Vec<Limb>> {
+    let n = m.len();
+    let mut out = try_zeroed_limbs(n)?;
+    let mut t = SecretBuf::try_zeroed(n.checked_mul(2)?.checked_add(1)?)?;
+    let mut diff = SecretBuf::try_zeroed(n)?;
+    if !mont_sqr_into(a, &mut out, m, n0, &mut t, &mut diff) {
+        return None;
+    }
     Some(out)
 }
 
@@ -2001,17 +2345,28 @@ fn run_mont_ladder(
         // The index is public: `i >> 6 < width`, the exponent buffer's length.
         let bit = (exponent[i >> 6] >> (i & 63)) & 1;
         let mask = 0u64.wrapping_sub(bit);
-        mont_mul_into(&acc, &base, &mut product, md, n0, &mut t, &mut diff);
+        if !mont_mul_ladder_into(&acc, &base, &mut product, md, n0, &mut t, &mut diff) {
+            return None;
+        }
         for (slot, &taken) in acc.iter_mut().zip(product.iter()) {
             *slot = constant_time_select(mask as usize, taken as usize, *slot as usize) as Limb;
         }
         // Squared on the last iteration too: the pattern must not depend on the
         // exponent's value or on which iteration is last.
-        mont_mul_into(&base, &base, &mut squared, md, n0, &mut t, &mut diff);
+        let squared_ok = if LADDER_DEDICATED_SQUARING {
+            mont_sqr_into(&base, &mut squared, md, n0, &mut t, &mut diff)
+        } else {
+            mont_mul_into(&base, &base, &mut squared, md, n0, &mut t, &mut diff)
+        };
+        if !squared_ok {
+            return None;
+        }
         core::mem::swap(&mut base, &mut squared);
     }
 
-    mont_mul_into(&acc, &one, &mut product, md, n0, &mut t, &mut diff);
+    if !mont_mul_ladder_into(&acc, &one, &mut product, md, n0, &mut t, &mut diff) {
+        return None;
+    }
 
     // The exponent and every secret-derived intermediate live in `SecretBuf`, so
     // the normal return, an early `?` return and an unwind all cleanse them in
@@ -3477,5 +3832,342 @@ mod tests {
             BN_free(n);
             BN_free(r);
         }
+    }
+
+    // ------------------------------------------------------------------
+    // PFP-6: independent differential courts for the Montgomery schedules.
+    //
+    // The reference is the SOS schedule (`mont_mul_fallible`). CIOS and the
+    // dedicated squaring kernel must agree with it bit for bit. These are
+    // comparisons *between kernels*; the REDC congruence itself is checked
+    // against `limbs::{mul, rem}` in `bn::mont::etp4_verification`.
+    // ------------------------------------------------------------------
+
+    fn pfp6_xorshift(state: &mut u64) -> u64 {
+        let mut x = *state;
+        x ^= x << 13;
+        x ^= x >> 7;
+        x ^= x << 17;
+        *state = x;
+        x
+    }
+
+    fn pfp6_pad(v: &[u64], n: usize) -> Vec<u64> {
+        let mut out = vec![0u64; n];
+        let take = v.len().min(n);
+        out[..take].copy_from_slice(&v[..take]);
+        out
+    }
+
+    /// Odd moduli with a non-zero top limb, the Montgomery admission shape,
+    /// spanning one to eight limbs and including P-256's prime.
+    fn pfp6_moduli() -> Vec<Vec<u64>> {
+        vec![
+            vec![3],
+            vec![0xffff_ffff_ffff_ffff],
+            vec![0x8000_0000_0000_0001],
+            vec![0x0123_4567_89ab_cdef, 0xfedc_ba98_7654_3211],
+            // b^3 + 1: minimal top-limb occupancy.
+            vec![1, 0, 0, 1],
+            vec![u64::MAX; 4],
+            // P-256 p = 2^256 - 2^224 + 2^192 + 2^96 - 1, little-endian.
+            vec![
+                0xffff_ffff_ffff_ffff,
+                0x0000_0000_ffff_ffff,
+                0,
+                0xffff_ffff_0000_0001,
+            ],
+            // Eight limbs (512 bits), mixed occupancy.
+            vec![
+                0xffff_ffff_ffff_fffd,
+                0x0123_4567_89ab_cdef,
+                0xfedc_ba98_7654_3211,
+                0x0f0f_0f0f_0f0f_0f0f,
+                0xdead_beef_dead_beef,
+                0x1111_2222_3333_4445,
+                0xaaaa_bbbb_cccc_dddd,
+                0x9999_8888_7777_6667,
+            ],
+            // Sixteen limbs (1024 bits), mixed occupancy.
+            vec![
+                0x0123_4567_89ab_cdef,
+                0xfedc_ba98_7654_3211,
+                0x0f0f_0f0f_0f0f_0f0f,
+                0xdead_beef_dead_beef,
+                0x1111_2222_3333_4445,
+                0xaaaa_bbbb_cccc_dddd,
+                0x9999_8888_7777_6667,
+                0x1357_9bdf_2468_ace1,
+                0xffff_ffff_ffff_ffff,
+                0x8000_0000_0000_0000,
+                0x7fff_ffff_ffff_ffff,
+                0x0f0f_0f0f_0f0f_0f0f,
+                0xf0f0_f0f0_f0f0_f0f0,
+                0xdead_c0de_dead_c0de,
+                0x0123_4567_89ab_cdef,
+                0x8000_0000_0000_0001,
+            ],
+        ]
+    }
+
+    /// Edge and adversarial operands below the modulus: `0`, `1`, `m-1`,
+    /// `m-2`, `m/2`, a one-limb value (minimal occupancy), a top-limb-only
+    /// value, all-ones where it is below `m`, and a deterministic pseudo-random
+    /// sweep reduced into `[0, m)`.
+    fn pfp6_operands(m: &[u64]) -> Vec<Vec<u64>> {
+        let n = m.len();
+        let mut values: Vec<Vec<u64>> = Vec::new();
+        let mut push = |v: Vec<u64>| {
+            let p = pfp6_pad(&v, n);
+            if limbs::cmp(&p, m) == core::cmp::Ordering::Less && !values.contains(&p) {
+                values.push(p);
+            }
+        };
+        push(Vec::new());
+        push(vec![1]);
+        push(vec![2]);
+        push(limbs::sub(m, &[1]));
+        push(limbs::sub(m, &[2]));
+        push(limbs::div_rem_small(m, 2).0);
+        push(vec![u64::MAX]);
+        let mut top_only = vec![0u64; n];
+        top_only[n - 1] = 1;
+        push(top_only);
+        push(vec![u64::MAX; n]);
+        let mut state = {
+            let mut s = 0x9e37_79b9_7f4a_7c15u64;
+            for &l in m {
+                s ^= l;
+                s = s.wrapping_mul(0x100_0000_01b3);
+            }
+            s | 1
+        };
+        for _ in 0..24 {
+            let raw: Vec<u64> = (0..n).map(|_| pfp6_xorshift(&mut state)).collect();
+            let Some(reduced) = limbs::rem_fallible(&raw, m) else {
+                unreachable!("a remainder succeeds")
+            };
+            push(reduced);
+        }
+        values
+    }
+
+    /// The defining Montgomery congruence for one kernel result:
+    /// `out * R == a * b (mod m)` and `out < m`.
+    fn pfp6_assert_congruent(out: &[u64], a: &[u64], b: &[u64], m: &[u64], kernel: &str) {
+        assert_eq!(
+            limbs::cmp(out, m),
+            core::cmp::Ordering::Less,
+            "{kernel} output is not canonical for m={m:?}, a={a:?}, b={b:?}"
+        );
+        let mut scaled = vec![0u64; m.len()];
+        scaled.extend_from_slice(out); // out * R
+        let product = limbs::mul(a, b);
+        let mut lhs = limbs::rem(&scaled, m);
+        let mut rhs = limbs::rem(&product, m);
+        limbs::normalise(&mut lhs);
+        limbs::normalise(&mut rhs);
+        assert_eq!(
+            lhs, rhs,
+            "{kernel}: out * R != a * b (mod m) for m={m:?}, a={a:?}, b={b:?}"
+        );
+    }
+
+    /// Every kernel is checked against the *defining congruence*, not only against
+    /// the SOS reference: `out * R == a * b (mod m)` and `out < m`. SOS, CIOS and
+    /// the dedicated squaring kernel therefore each have independent evidence; the
+    /// `*_matches_the_reference` tests below add the bit-for-bit cross-check.
+    #[test]
+    fn pfp6_each_kernel_satisfies_the_congruence() {
+        let mut sos_cases = 0usize;
+        let mut cios_cases = 0usize;
+        let mut sqr_cases = 0usize;
+        for m in pfp6_moduli() {
+            let n0 = mont_n0(m[0]);
+            let values = pfp6_operands(&m);
+            for a in &values {
+                for b in &values {
+                    let Some(sos) = mont_mul_fallible(a, b, &m, n0) else {
+                        unreachable!("allocation succeeds")
+                    };
+                    pfp6_assert_congruent(&sos, a, b, &m, "SOS");
+                    sos_cases += 1;
+                    let Some(cios) = mont_mul_fallible_with(MontSchedule::Cios, a, b, &m, n0)
+                    else {
+                        unreachable!("allocation succeeds")
+                    };
+                    pfp6_assert_congruent(&cios, a, b, &m, "CIOS");
+                    cios_cases += 1;
+                }
+            }
+            for a in &values {
+                let Some(sqr) = mont_sqr_fallible(a, &m, n0) else {
+                    unreachable!("allocation succeeds")
+                };
+                pfp6_assert_congruent(&sqr, a, a, &m, "SQR");
+                sqr_cases += 1;
+            }
+        }
+        eprintln!(
+            "PFP-6 kernel congruence: sos={sos_cases} cios={cios_cases} sqr={sqr_cases} mismatches=0"
+        );
+        assert!(sos_cases > 0 && cios_cases == sos_cases && sqr_cases > 0);
+    }
+
+    /// CIOS must equal the SOS reference over an exhaustive one-limb range and
+    /// the sampled edge/adversarial populations at 64 to 1024 bits.
+    #[test]
+    fn pfp6_cios_matches_the_reference() {
+        let mut exhaustive = 0usize;
+        for m in [3u64, 5, 7, 9, 11, 13, 15, 17, 31, 33] {
+            let n0 = mont_n0(m);
+            for a in 0..m {
+                for b in 0..m {
+                    let Some(sos) = mont_mul_fallible(&[a], &[b], &[m], n0) else {
+                        unreachable!("a one-limb allocation succeeds")
+                    };
+                    let Some(cios) =
+                        mont_mul_fallible_with(MontSchedule::Cios, &[a], &[b], &[m], n0)
+                    else {
+                        unreachable!("a one-limb allocation succeeds")
+                    };
+                    assert_eq!(cios, sos, "CIOS != SOS at m={m}, a={a}, b={b}");
+                    exhaustive += 1;
+                }
+            }
+        }
+
+        let mut sampled = 0usize;
+        for m in pfp6_moduli() {
+            assert!(m[0] & 1 == 1 && m.last().copied().unwrap_or(0) != 0);
+            let n0 = mont_n0(m[0]);
+            let values = pfp6_operands(&m);
+            assert!(values.len() >= 3, "population too small for {m:?}");
+            for a in &values {
+                for b in &values {
+                    let Some(sos) = mont_mul_fallible(a, b, &m, n0) else {
+                        unreachable!("allocation succeeds")
+                    };
+                    let Some(cios) = mont_mul_fallible_with(MontSchedule::Cios, a, b, &m, n0)
+                    else {
+                        unreachable!("allocation succeeds")
+                    };
+                    assert_eq!(cios, sos, "CIOS != SOS at m={m:?}, a={a:?}, b={b:?}");
+                    sampled += 1;
+                }
+            }
+        }
+        eprintln!(
+            "PFP-6 CIOS differential: exhaustive={exhaustive} sampled={sampled} mismatches=0"
+        );
+        assert!(exhaustive > 0 && sampled > 0);
+    }
+
+    /// The dedicated squaring kernel must equal `a * a` through the reference.
+    #[test]
+    fn pfp6_dedicated_squaring_matches_the_reference() {
+        let mut exhaustive = 0usize;
+        for m in [3u64, 5, 7, 9, 11, 13, 15, 17, 31, 33] {
+            let n0 = mont_n0(m);
+            for a in 0..m {
+                let Some(reference) = mont_mul_fallible(&[a], &[a], &[m], n0) else {
+                    unreachable!("allocation succeeds")
+                };
+                let Some(squared) = mont_sqr_fallible(&[a], &[m], n0) else {
+                    unreachable!("allocation succeeds")
+                };
+                assert_eq!(squared, reference, "SQR != SOS at m={m}, a={a}");
+                exhaustive += 1;
+            }
+        }
+
+        let mut sampled = 0usize;
+        for m in pfp6_moduli() {
+            let n0 = mont_n0(m[0]);
+            for a in pfp6_operands(&m) {
+                let Some(reference) = mont_mul_fallible(&a, &a, &m, n0) else {
+                    unreachable!("allocation succeeds")
+                };
+                let Some(squared) = mont_sqr_fallible(&a, &m, n0) else {
+                    unreachable!("allocation succeeds")
+                };
+                assert_eq!(squared, reference, "SQR != SOS at m={m:?}, a={a:?}");
+                sampled += 1;
+            }
+        }
+        eprintln!(
+            "PFP-6 squaring differential: exhaustive={exhaustive} sampled={sampled} mismatches=0"
+        );
+        assert!(exhaustive > 0 && sampled > 0);
+    }
+
+    /// The width contract is an unconditional check, not a `debug_assert!`: an
+    /// oversized operand is refused instead of truncated, an undersized
+    /// accumulator is refused, and a refused call writes nothing. The refusal is
+    /// an ordinary `if ... { return false }`, so it is compiled into every
+    /// profile; this test exercises that behaviour.
+    #[test]
+    fn pfp6_geometry_fails_closed() {
+        let m = [3u64];
+        let n0 = mont_n0(3);
+        let mut out = [0u64; 1];
+        let mut t = [0u64; 3];
+        let mut diff = [0u64; 1];
+
+        assert!(!mont_mul_sos_into(
+            &[1, 9],
+            &[1],
+            &mut out,
+            &m,
+            n0,
+            &mut t,
+            &mut diff
+        ));
+        assert!(!mont_mul_cios_into(
+            &[1, 9],
+            &[1],
+            &mut out,
+            &m,
+            n0,
+            &mut t,
+            &mut diff
+        ));
+        assert!(!mont_sqr_into(&[1, 9], &mut out, &m, n0, &mut t, &mut diff));
+        assert_eq!(out, [0], "a refused call must write nothing");
+
+        let mut short_t = [0u64; 2];
+        assert!(!mont_mul_sos_into(
+            &[1],
+            &[1],
+            &mut out,
+            &m,
+            n0,
+            &mut short_t,
+            &mut diff
+        ));
+        assert!(!mont_mul_cios_into(
+            &[1],
+            &[1],
+            &mut out,
+            &m,
+            n0,
+            &mut short_t,
+            &mut diff
+        ));
+
+        assert!(
+            mont_mul_fallible_with(MontSchedule::Cios, &[1, 9], &[1], &m, n0).is_none(),
+            "the allocating wrapper must propagate the refusal, not truncate"
+        );
+
+        assert!(mont_mul_cios_into(
+            &[1],
+            &[1],
+            &mut out,
+            &m,
+            n0,
+            &mut t,
+            &mut diff
+        ));
     }
 }

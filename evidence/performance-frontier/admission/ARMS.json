@@ -377,6 +377,87 @@
           }
         ]
       }
+    },
+    {
+      "arm_id": "PFP-6",
+      "assurance": {
+        "safe_compatible": false,
+        "semantic_assurance": false
+      },
+      "candidate": {
+        "artefact": {
+          "label": "PFP-6 C schedule-transcription harness binary (bench_mont), NOT the crate DSO; the crate candidate is the uncommitted src/bn/arith.rs worktree on c1d25e10d",
+          "sha256": "7d1b486ee02aa11654a0697dae8c8994a8e99ad368fcd10c557876037d109d72"
+        },
+        "build_profile": "cc (Debian 12.2.0-14+deb12u1) -O2 -g on x86_64; measured under taskset -c 1 on an i9-13900K in court openssl-rs-court-tools:1; C transcription, not a release build of the crate",
+        "source_commit": "c1d25e10d16bc197e03446619a5330842b411c5c"
+      },
+      "constant_time_audit": null,
+      "description": "Integrated Montgomery multiply and squaring: SOS reference, CIOS and dedicated-squaring kernels in the crate, differentially verified per kernel; a C-transcription crossover at 256-4096 bits. Both new schedules remain off by default.",
+      "differential_courts": {
+        "candidate_sha256": null,
+        "reference": {
+          "path": "evidence/performance-frontier/campaigns/PFP-6/RECORD.md",
+          "present": true,
+          "sha256": "8eac37290b777a452ce26bbe890cfcb1b5f5852188aa61b241517394ca92f682"
+        },
+        "result": "NOT_AT_CANDIDATE_DIGEST"
+      },
+      "measurement": {
+        "candidate_sha256": "7d1b486ee02aa11654a0697dae8c8994a8e99ad368fcd10c557876037d109d72",
+        "classification": "SCOPED_OBSERVATION",
+        "identity": {
+          "instrument": "wall-clock ns/op; 15 interleaved repetitions; median of per-repetition means; paired 95% percentile bootstrap CI (20,000 resamples)",
+          "population": "215a16521e8fbf04793687ead195e062cd36ab99d3cdd60fc9673319fa963b26",
+          "source": "c1d25e10d16bc197e03446619a5330842b411c5c + uncommitted src/bn/arith.rs; the C harness measurement is independent of the crate source",
+          "target": "x86_64 i9-13900K, cc 12.2.0 -O2 -g, taskset -c 1, court openssl-rs-court-tools:1",
+          "tool": "bench_mont.c + analyse_pfp6.py"
+        },
+        "population": {
+          "digest": "215a16521e8fbf04793687ead195e062cd36ab99d3cdd60fc9673319fa963b26",
+          "frozen_before_execution": true
+        },
+        "record": {
+          "path": "evidence/performance-frontier/campaigns/PFP-6/results.json",
+          "present": true,
+          "sha256": "f7ef0a72ad2da8e89b696de8bca68c5e564067bac3b05086641589a49ff81330"
+        }
+      },
+      "queue_item": "PFP-6",
+      "reuse": null,
+      "shortcuts": [],
+      "status": "EXPERIMENT",
+      "timing_obligations": {
+        "attempted_discharge": [],
+        "none_open_because": null,
+        "open": [
+          {
+            "description": "FIOS and almost-Montgomery schedules were neither implemented nor compared.",
+            "discharged": false,
+            "id": "PFP6-FIOS-ALMOST-MONT"
+          },
+          {
+            "description": "The crossover measures a C transcription of the schedules, not the crate's kernels or DSO.",
+            "discharged": false,
+            "id": "PFP6-MEASURED-TRANSCRIPTION"
+          },
+          {
+            "description": "The crate candidate is the uncommitted src/bn/arith.rs worktree on c1d25e10d; it is not reproducible from a commit.",
+            "discharged": false,
+            "id": "PFP6-DIRTY-CANDIDATE"
+          },
+          {
+            "description": "No binary branch audit at a candidate digest was run; the branch-free claim is source-level only.",
+            "discharged": false,
+            "id": "PFP6-BINARY-BRANCH-AUDIT"
+          },
+          {
+            "description": "Adopting CIOS or the dedicated squaring kernel as the ladder default requires re-running the affected API performance rows at the same digest; both defaults remain off.",
+            "discharged": false,
+            "id": "PFP6-API-ROWS-SAME-DIGEST"
+          }
+        ]
+      }
     }
   ],
   "author": {

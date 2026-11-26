@@ -1,0 +1,699 @@
+PFP-6 bench_mont: schedules=sos,cios,comba,sqr products=schoolbook,karatsuba
+REPS=15 KBASE=8 INTERLEAVED=1
+DIFFERENTIAL cios bits=256 cases=196 mismatches=0
+DIFFERENTIAL comba bits=256 cases=196 mismatches=0
+DIFFERENTIAL sqr bits=256 cases=14 mismatches=0
+DIFFERENTIAL product bits=256 cases=4 mismatches=0
+SAMPLE mont_sos limbs=4 bits=256 rep=0 ns=31.1448
+SAMPLE mont_sos limbs=4 bits=256 rep=1 ns=29.2907
+SAMPLE mont_sos limbs=4 bits=256 rep=2 ns=29.4129
+SAMPLE mont_sos limbs=4 bits=256 rep=3 ns=29.3881
+SAMPLE mont_sos limbs=4 bits=256 rep=4 ns=29.2960
+SAMPLE mont_sos limbs=4 bits=256 rep=5 ns=29.2905
+SAMPLE mont_sos limbs=4 bits=256 rep=6 ns=29.2751
+SAMPLE mont_sos limbs=4 bits=256 rep=7 ns=29.2070
+SAMPLE mont_sos limbs=4 bits=256 rep=8 ns=29.2066
+SAMPLE mont_sos limbs=4 bits=256 rep=9 ns=29.4635
+SAMPLE mont_sos limbs=4 bits=256 rep=10 ns=29.3024
+SAMPLE mont_sos limbs=4 bits=256 rep=11 ns=29.2931
+SAMPLE mont_sos limbs=4 bits=256 rep=12 ns=29.3623
+SAMPLE mont_sos limbs=4 bits=256 rep=13 ns=29.2562
+SAMPLE mont_sos limbs=4 bits=256 rep=14 ns=29.3597
+SUMMARY mont_sos limbs=4 bits=256 median_ns=29.2960 min_ns=29.2066 iters=250001
+SAMPLE mont_cios limbs=4 bits=256 rep=0 ns=28.5830
+SAMPLE mont_cios limbs=4 bits=256 rep=1 ns=28.3640
+SAMPLE mont_cios limbs=4 bits=256 rep=2 ns=28.3529
+SAMPLE mont_cios limbs=4 bits=256 rep=3 ns=28.9819
+SAMPLE mont_cios limbs=4 bits=256 rep=4 ns=28.4459
+SAMPLE mont_cios limbs=4 bits=256 rep=5 ns=28.4792
+SAMPLE mont_cios limbs=4 bits=256 rep=6 ns=28.4688
+SAMPLE mont_cios limbs=4 bits=256 rep=7 ns=28.4902
+SAMPLE mont_cios limbs=4 bits=256 rep=8 ns=28.4072
+SAMPLE mont_cios limbs=4 bits=256 rep=9 ns=28.3744
+SAMPLE mont_cios limbs=4 bits=256 rep=10 ns=28.3543
+SAMPLE mont_cios limbs=4 bits=256 rep=11 ns=28.4097
+SAMPLE mont_cios limbs=4 bits=256 rep=12 ns=28.4124
+SAMPLE mont_cios limbs=4 bits=256 rep=13 ns=28.3701
+SAMPLE mont_cios limbs=4 bits=256 rep=14 ns=28.5256
+SUMMARY mont_cios limbs=4 bits=256 median_ns=28.4124 min_ns=28.3529 iters=250001
+SAMPLE mont_comba limbs=4 bits=256 rep=0 ns=35.1138
+SAMPLE mont_comba limbs=4 bits=256 rep=1 ns=34.7681
+SAMPLE mont_comba limbs=4 bits=256 rep=2 ns=39.3230
+SAMPLE mont_comba limbs=4 bits=256 rep=3 ns=34.8849
+SAMPLE mont_comba limbs=4 bits=256 rep=4 ns=34.9595
+SAMPLE mont_comba limbs=4 bits=256 rep=5 ns=34.8983
+SAMPLE mont_comba limbs=4 bits=256 rep=6 ns=34.7640
+SAMPLE mont_comba limbs=4 bits=256 rep=7 ns=34.7317
+SAMPLE mont_comba limbs=4 bits=256 rep=8 ns=34.7669
+SAMPLE mont_comba limbs=4 bits=256 rep=9 ns=34.7559
+SAMPLE mont_comba limbs=4 bits=256 rep=10 ns=34.7508
+SAMPLE mont_comba limbs=4 bits=256 rep=11 ns=34.7376
+SAMPLE mont_comba limbs=4 bits=256 rep=12 ns=34.7427
+SAMPLE mont_comba limbs=4 bits=256 rep=13 ns=34.7703
+SAMPLE mont_comba limbs=4 bits=256 rep=14 ns=34.7515
+SUMMARY mont_comba limbs=4 bits=256 median_ns=34.7669 min_ns=34.7317 iters=250001
+SAMPLE mont_sqr limbs=4 bits=256 rep=0 ns=33.3477
+SAMPLE mont_sqr limbs=4 bits=256 rep=1 ns=33.1795
+SAMPLE mont_sqr limbs=4 bits=256 rep=2 ns=39.4592
+SAMPLE mont_sqr limbs=4 bits=256 rep=3 ns=33.1827
+SAMPLE mont_sqr limbs=4 bits=256 rep=4 ns=33.1271
+SAMPLE mont_sqr limbs=4 bits=256 rep=5 ns=33.1656
+SAMPLE mont_sqr limbs=4 bits=256 rep=6 ns=33.3424
+SAMPLE mont_sqr limbs=4 bits=256 rep=7 ns=33.1751
+SAMPLE mont_sqr limbs=4 bits=256 rep=8 ns=33.1425
+SAMPLE mont_sqr limbs=4 bits=256 rep=9 ns=33.1166
+SAMPLE mont_sqr limbs=4 bits=256 rep=10 ns=33.1144
+SAMPLE mont_sqr limbs=4 bits=256 rep=11 ns=33.1440
+SAMPLE mont_sqr limbs=4 bits=256 rep=12 ns=33.1059
+SAMPLE mont_sqr limbs=4 bits=256 rep=13 ns=33.1721
+SAMPLE mont_sqr limbs=4 bits=256 rep=14 ns=33.1988
+SUMMARY mont_sqr limbs=4 bits=256 median_ns=33.1721 min_ns=33.1059 iters=250001
+SAMPLE mont_mul_for_sqr limbs=4 bits=256 rep=0 ns=29.3019
+SAMPLE mont_mul_for_sqr limbs=4 bits=256 rep=1 ns=29.2825
+SAMPLE mont_mul_for_sqr limbs=4 bits=256 rep=2 ns=29.7886
+SAMPLE mont_mul_for_sqr limbs=4 bits=256 rep=3 ns=29.3611
+SAMPLE mont_mul_for_sqr limbs=4 bits=256 rep=4 ns=29.2655
+SAMPLE mont_mul_for_sqr limbs=4 bits=256 rep=5 ns=29.2708
+SAMPLE mont_mul_for_sqr limbs=4 bits=256 rep=6 ns=29.2026
+SAMPLE mont_mul_for_sqr limbs=4 bits=256 rep=7 ns=29.3629
+SAMPLE mont_mul_for_sqr limbs=4 bits=256 rep=8 ns=29.2531
+SAMPLE mont_mul_for_sqr limbs=4 bits=256 rep=9 ns=29.2886
+SAMPLE mont_mul_for_sqr limbs=4 bits=256 rep=10 ns=29.2110
+SAMPLE mont_mul_for_sqr limbs=4 bits=256 rep=11 ns=29.4399
+SAMPLE mont_mul_for_sqr limbs=4 bits=256 rep=12 ns=29.6686
+SAMPLE mont_mul_for_sqr limbs=4 bits=256 rep=13 ns=29.3380
+SAMPLE mont_mul_for_sqr limbs=4 bits=256 rep=14 ns=29.3096
+SUMMARY mont_mul_for_sqr limbs=4 bits=256 median_ns=29.3019 min_ns=29.2026 iters=250001
+SAMPLE product_schoolbook limbs=4 bits=256 rep=0 ns=10.6603
+SAMPLE product_schoolbook limbs=4 bits=256 rep=1 ns=10.5127
+SAMPLE product_schoolbook limbs=4 bits=256 rep=2 ns=10.6794
+SAMPLE product_schoolbook limbs=4 bits=256 rep=3 ns=10.7547
+SAMPLE product_schoolbook limbs=4 bits=256 rep=4 ns=10.7006
+SAMPLE product_schoolbook limbs=4 bits=256 rep=5 ns=10.4878
+SAMPLE product_schoolbook limbs=4 bits=256 rep=6 ns=10.6348
+SAMPLE product_schoolbook limbs=4 bits=256 rep=7 ns=10.7430
+SAMPLE product_schoolbook limbs=4 bits=256 rep=8 ns=10.5720
+SAMPLE product_schoolbook limbs=4 bits=256 rep=9 ns=10.6862
+SAMPLE product_schoolbook limbs=4 bits=256 rep=10 ns=10.6224
+SAMPLE product_schoolbook limbs=4 bits=256 rep=11 ns=10.6035
+SAMPLE product_schoolbook limbs=4 bits=256 rep=12 ns=10.8043
+SAMPLE product_schoolbook limbs=4 bits=256 rep=13 ns=10.6868
+SAMPLE product_schoolbook limbs=4 bits=256 rep=14 ns=10.5301
+SUMMARY product_schoolbook limbs=4 bits=256 median_ns=10.6603 min_ns=10.4878 iters=500002
+SAMPLE product_karatsuba limbs=4 bits=256 rep=0 ns=11.4547
+SAMPLE product_karatsuba limbs=4 bits=256 rep=1 ns=11.5193
+SAMPLE product_karatsuba limbs=4 bits=256 rep=2 ns=11.3324
+SAMPLE product_karatsuba limbs=4 bits=256 rep=3 ns=11.4087
+SAMPLE product_karatsuba limbs=4 bits=256 rep=4 ns=11.2552
+SAMPLE product_karatsuba limbs=4 bits=256 rep=5 ns=11.4094
+SAMPLE product_karatsuba limbs=4 bits=256 rep=6 ns=11.3093
+SAMPLE product_karatsuba limbs=4 bits=256 rep=7 ns=11.3050
+SAMPLE product_karatsuba limbs=4 bits=256 rep=8 ns=11.2686
+SAMPLE product_karatsuba limbs=4 bits=256 rep=9 ns=11.2333
+SAMPLE product_karatsuba limbs=4 bits=256 rep=10 ns=11.2939
+SAMPLE product_karatsuba limbs=4 bits=256 rep=11 ns=11.2875
+SAMPLE product_karatsuba limbs=4 bits=256 rep=12 ns=11.4473
+SAMPLE product_karatsuba limbs=4 bits=256 rep=13 ns=11.5257
+SAMPLE product_karatsuba limbs=4 bits=256 rep=14 ns=11.2600
+SUMMARY product_karatsuba limbs=4 bits=256 median_ns=11.3093 min_ns=11.2333 iters=500002
+DIFFERENTIAL cios bits=384 cases=196 mismatches=0
+DIFFERENTIAL comba bits=384 cases=196 mismatches=0
+DIFFERENTIAL sqr bits=384 cases=14 mismatches=0
+DIFFERENTIAL product bits=384 cases=4 mismatches=0
+SAMPLE mont_sos limbs=6 bits=384 rep=0 ns=56.4977
+SAMPLE mont_sos limbs=6 bits=384 rep=1 ns=56.1298
+SAMPLE mont_sos limbs=6 bits=384 rep=2 ns=56.4804
+SAMPLE mont_sos limbs=6 bits=384 rep=3 ns=56.0119
+SAMPLE mont_sos limbs=6 bits=384 rep=4 ns=56.4225
+SAMPLE mont_sos limbs=6 bits=384 rep=5 ns=56.2865
+SAMPLE mont_sos limbs=6 bits=384 rep=6 ns=57.0160
+SAMPLE mont_sos limbs=6 bits=384 rep=7 ns=56.0105
+SAMPLE mont_sos limbs=6 bits=384 rep=8 ns=56.2269
+SAMPLE mont_sos limbs=6 bits=384 rep=9 ns=56.6724
+SAMPLE mont_sos limbs=6 bits=384 rep=10 ns=56.6770
+SAMPLE mont_sos limbs=6 bits=384 rep=11 ns=56.4282
+SAMPLE mont_sos limbs=6 bits=384 rep=12 ns=56.5583
+SAMPLE mont_sos limbs=6 bits=384 rep=13 ns=56.3935
+SAMPLE mont_sos limbs=6 bits=384 rep=14 ns=56.7251
+SUMMARY mont_sos limbs=6 bits=384 median_ns=56.4282 min_ns=56.0105 iters=111112
+SAMPLE mont_cios limbs=6 bits=384 rep=0 ns=54.6401
+SAMPLE mont_cios limbs=6 bits=384 rep=1 ns=54.5880
+SAMPLE mont_cios limbs=6 bits=384 rep=2 ns=54.7895
+SAMPLE mont_cios limbs=6 bits=384 rep=3 ns=54.7185
+SAMPLE mont_cios limbs=6 bits=384 rep=4 ns=54.5376
+SAMPLE mont_cios limbs=6 bits=384 rep=5 ns=54.7759
+SAMPLE mont_cios limbs=6 bits=384 rep=6 ns=54.4957
+SAMPLE mont_cios limbs=6 bits=384 rep=7 ns=54.6141
+SAMPLE mont_cios limbs=6 bits=384 rep=8 ns=54.6351
+SAMPLE mont_cios limbs=6 bits=384 rep=9 ns=54.9519
+SAMPLE mont_cios limbs=6 bits=384 rep=10 ns=54.6393
+SAMPLE mont_cios limbs=6 bits=384 rep=11 ns=54.9462
+SAMPLE mont_cios limbs=6 bits=384 rep=12 ns=54.6130
+SAMPLE mont_cios limbs=6 bits=384 rep=13 ns=54.7338
+SAMPLE mont_cios limbs=6 bits=384 rep=14 ns=54.5824
+SUMMARY mont_cios limbs=6 bits=384 median_ns=54.6393 min_ns=54.4957 iters=111112
+SAMPLE mont_comba limbs=6 bits=384 rep=0 ns=65.4858
+SAMPLE mont_comba limbs=6 bits=384 rep=1 ns=66.1553
+SAMPLE mont_comba limbs=6 bits=384 rep=2 ns=65.8737
+SAMPLE mont_comba limbs=6 bits=384 rep=3 ns=66.0684
+SAMPLE mont_comba limbs=6 bits=384 rep=4 ns=65.6362
+SAMPLE mont_comba limbs=6 bits=384 rep=5 ns=65.5537
+SAMPLE mont_comba limbs=6 bits=384 rep=6 ns=65.6127
+SAMPLE mont_comba limbs=6 bits=384 rep=7 ns=65.6059
+SAMPLE mont_comba limbs=6 bits=384 rep=8 ns=65.6593
+SAMPLE mont_comba limbs=6 bits=384 rep=9 ns=65.5892
+SAMPLE mont_comba limbs=6 bits=384 rep=10 ns=65.6638
+SAMPLE mont_comba limbs=6 bits=384 rep=11 ns=65.5694
+SAMPLE mont_comba limbs=6 bits=384 rep=12 ns=65.8125
+SAMPLE mont_comba limbs=6 bits=384 rep=13 ns=65.5699
+SAMPLE mont_comba limbs=6 bits=384 rep=14 ns=65.7371
+SUMMARY mont_comba limbs=6 bits=384 median_ns=65.6362 min_ns=65.4858 iters=111112
+SAMPLE mont_sqr limbs=6 bits=384 rep=0 ns=62.6260
+SAMPLE mont_sqr limbs=6 bits=384 rep=1 ns=62.4717
+SAMPLE mont_sqr limbs=6 bits=384 rep=2 ns=62.6331
+SAMPLE mont_sqr limbs=6 bits=384 rep=3 ns=62.4392
+SAMPLE mont_sqr limbs=6 bits=384 rep=4 ns=62.6506
+SAMPLE mont_sqr limbs=6 bits=384 rep=5 ns=62.4080
+SAMPLE mont_sqr limbs=6 bits=384 rep=6 ns=62.9288
+SAMPLE mont_sqr limbs=6 bits=384 rep=7 ns=62.4164
+SAMPLE mont_sqr limbs=6 bits=384 rep=8 ns=63.1964
+SAMPLE mont_sqr limbs=6 bits=384 rep=9 ns=62.6979
+SAMPLE mont_sqr limbs=6 bits=384 rep=10 ns=62.4660
+SAMPLE mont_sqr limbs=6 bits=384 rep=11 ns=62.4703
+SAMPLE mont_sqr limbs=6 bits=384 rep=12 ns=62.5905
+SAMPLE mont_sqr limbs=6 bits=384 rep=13 ns=62.4844
+SAMPLE mont_sqr limbs=6 bits=384 rep=14 ns=62.5244
+SUMMARY mont_sqr limbs=6 bits=384 median_ns=62.5244 min_ns=62.4080 iters=111112
+SAMPLE mont_mul_for_sqr limbs=6 bits=384 rep=0 ns=56.4168
+SAMPLE mont_mul_for_sqr limbs=6 bits=384 rep=1 ns=56.1056
+SAMPLE mont_mul_for_sqr limbs=6 bits=384 rep=2 ns=56.2352
+SAMPLE mont_mul_for_sqr limbs=6 bits=384 rep=3 ns=56.5349
+SAMPLE mont_mul_for_sqr limbs=6 bits=384 rep=4 ns=55.8985
+SAMPLE mont_mul_for_sqr limbs=6 bits=384 rep=5 ns=56.1776
+SAMPLE mont_mul_for_sqr limbs=6 bits=384 rep=6 ns=56.5733
+SAMPLE mont_mul_for_sqr limbs=6 bits=384 rep=7 ns=56.7629
+SAMPLE mont_mul_for_sqr limbs=6 bits=384 rep=8 ns=56.1994
+SAMPLE mont_mul_for_sqr limbs=6 bits=384 rep=9 ns=56.2591
+SAMPLE mont_mul_for_sqr limbs=6 bits=384 rep=10 ns=56.7298
+SAMPLE mont_mul_for_sqr limbs=6 bits=384 rep=11 ns=56.1134
+SAMPLE mont_mul_for_sqr limbs=6 bits=384 rep=12 ns=56.0132
+SAMPLE mont_mul_for_sqr limbs=6 bits=384 rep=13 ns=56.5275
+SAMPLE mont_mul_for_sqr limbs=6 bits=384 rep=14 ns=56.8183
+SUMMARY mont_mul_for_sqr limbs=6 bits=384 median_ns=56.2591 min_ns=55.8985 iters=111112
+SAMPLE product_schoolbook limbs=6 bits=384 rep=0 ns=21.8024
+SAMPLE product_schoolbook limbs=6 bits=384 rep=1 ns=21.7079
+SAMPLE product_schoolbook limbs=6 bits=384 rep=2 ns=21.7167
+SAMPLE product_schoolbook limbs=6 bits=384 rep=3 ns=21.9940
+SAMPLE product_schoolbook limbs=6 bits=384 rep=4 ns=21.6121
+SAMPLE product_schoolbook limbs=6 bits=384 rep=5 ns=21.8864
+SAMPLE product_schoolbook limbs=6 bits=384 rep=6 ns=21.5270
+SAMPLE product_schoolbook limbs=6 bits=384 rep=7 ns=21.3857
+SAMPLE product_schoolbook limbs=6 bits=384 rep=8 ns=22.1501
+SAMPLE product_schoolbook limbs=6 bits=384 rep=9 ns=21.7188
+SAMPLE product_schoolbook limbs=6 bits=384 rep=10 ns=22.2889
+SAMPLE product_schoolbook limbs=6 bits=384 rep=11 ns=22.1266
+SAMPLE product_schoolbook limbs=6 bits=384 rep=12 ns=21.8453
+SAMPLE product_schoolbook limbs=6 bits=384 rep=13 ns=21.8158
+SAMPLE product_schoolbook limbs=6 bits=384 rep=14 ns=22.0439
+SUMMARY product_schoolbook limbs=6 bits=384 median_ns=21.8158 min_ns=21.3857 iters=222224
+SAMPLE product_karatsuba limbs=6 bits=384 rep=0 ns=22.5860
+SAMPLE product_karatsuba limbs=6 bits=384 rep=1 ns=22.8957
+SAMPLE product_karatsuba limbs=6 bits=384 rep=2 ns=21.8809
+SAMPLE product_karatsuba limbs=6 bits=384 rep=3 ns=22.9449
+SAMPLE product_karatsuba limbs=6 bits=384 rep=4 ns=22.2838
+SAMPLE product_karatsuba limbs=6 bits=384 rep=5 ns=22.5395
+SAMPLE product_karatsuba limbs=6 bits=384 rep=6 ns=22.3934
+SAMPLE product_karatsuba limbs=6 bits=384 rep=7 ns=22.6110
+SAMPLE product_karatsuba limbs=6 bits=384 rep=8 ns=22.3839
+SAMPLE product_karatsuba limbs=6 bits=384 rep=9 ns=22.7143
+SAMPLE product_karatsuba limbs=6 bits=384 rep=10 ns=22.3488
+SAMPLE product_karatsuba limbs=6 bits=384 rep=11 ns=22.5507
+SAMPLE product_karatsuba limbs=6 bits=384 rep=12 ns=22.2018
+SAMPLE product_karatsuba limbs=6 bits=384 rep=13 ns=22.2394
+SAMPLE product_karatsuba limbs=6 bits=384 rep=14 ns=22.0334
+SUMMARY product_karatsuba limbs=6 bits=384 median_ns=22.3934 min_ns=21.8809 iters=222224
+DIFFERENTIAL cios bits=512 cases=196 mismatches=0
+DIFFERENTIAL comba bits=512 cases=196 mismatches=0
+DIFFERENTIAL sqr bits=512 cases=14 mismatches=0
+DIFFERENTIAL product bits=512 cases=4 mismatches=0
+SAMPLE mont_sos limbs=8 bits=512 rep=0 ns=92.2657
+SAMPLE mont_sos limbs=8 bits=512 rep=1 ns=92.7016
+SAMPLE mont_sos limbs=8 bits=512 rep=2 ns=92.1859
+SAMPLE mont_sos limbs=8 bits=512 rep=3 ns=92.1057
+SAMPLE mont_sos limbs=8 bits=512 rep=4 ns=92.3752
+SAMPLE mont_sos limbs=8 bits=512 rep=5 ns=92.1973
+SAMPLE mont_sos limbs=8 bits=512 rep=6 ns=91.2909
+SAMPLE mont_sos limbs=8 bits=512 rep=7 ns=92.7168
+SAMPLE mont_sos limbs=8 bits=512 rep=8 ns=93.2735
+SAMPLE mont_sos limbs=8 bits=512 rep=9 ns=92.1155
+SAMPLE mont_sos limbs=8 bits=512 rep=10 ns=92.2526
+SAMPLE mont_sos limbs=8 bits=512 rep=11 ns=92.3544
+SAMPLE mont_sos limbs=8 bits=512 rep=12 ns=92.7459
+SAMPLE mont_sos limbs=8 bits=512 rep=13 ns=92.8108
+SAMPLE mont_sos limbs=8 bits=512 rep=14 ns=92.9025
+SUMMARY mont_sos limbs=8 bits=512 median_ns=92.3544 min_ns=91.2909 iters=62501
+SAMPLE mont_cios limbs=8 bits=512 rep=0 ns=90.0524
+SAMPLE mont_cios limbs=8 bits=512 rep=1 ns=89.9573
+SAMPLE mont_cios limbs=8 bits=512 rep=2 ns=89.6854
+SAMPLE mont_cios limbs=8 bits=512 rep=3 ns=89.7897
+SAMPLE mont_cios limbs=8 bits=512 rep=4 ns=89.7293
+SAMPLE mont_cios limbs=8 bits=512 rep=5 ns=89.9140
+SAMPLE mont_cios limbs=8 bits=512 rep=6 ns=89.8494
+SAMPLE mont_cios limbs=8 bits=512 rep=7 ns=89.7613
+SAMPLE mont_cios limbs=8 bits=512 rep=8 ns=89.8188
+SAMPLE mont_cios limbs=8 bits=512 rep=9 ns=89.6615
+SAMPLE mont_cios limbs=8 bits=512 rep=10 ns=89.6165
+SAMPLE mont_cios limbs=8 bits=512 rep=11 ns=89.6142
+SAMPLE mont_cios limbs=8 bits=512 rep=12 ns=89.7357
+SAMPLE mont_cios limbs=8 bits=512 rep=13 ns=89.6633
+SAMPLE mont_cios limbs=8 bits=512 rep=14 ns=89.7501
+SUMMARY mont_cios limbs=8 bits=512 median_ns=89.7501 min_ns=89.6142 iters=62501
+SAMPLE mont_comba limbs=8 bits=512 rep=0 ns=107.2029
+SAMPLE mont_comba limbs=8 bits=512 rep=1 ns=107.2436
+SAMPLE mont_comba limbs=8 bits=512 rep=2 ns=107.1613
+SAMPLE mont_comba limbs=8 bits=512 rep=3 ns=107.2038
+SAMPLE mont_comba limbs=8 bits=512 rep=4 ns=107.2416
+SAMPLE mont_comba limbs=8 bits=512 rep=5 ns=107.1574
+SAMPLE mont_comba limbs=8 bits=512 rep=6 ns=107.0713
+SAMPLE mont_comba limbs=8 bits=512 rep=7 ns=107.4991
+SAMPLE mont_comba limbs=8 bits=512 rep=8 ns=107.3086
+SAMPLE mont_comba limbs=8 bits=512 rep=9 ns=107.4901
+SAMPLE mont_comba limbs=8 bits=512 rep=10 ns=107.2251
+SAMPLE mont_comba limbs=8 bits=512 rep=11 ns=107.1221
+SAMPLE mont_comba limbs=8 bits=512 rep=12 ns=107.5517
+SAMPLE mont_comba limbs=8 bits=512 rep=13 ns=107.3661
+SAMPLE mont_comba limbs=8 bits=512 rep=14 ns=107.4982
+SUMMARY mont_comba limbs=8 bits=512 median_ns=107.2416 min_ns=107.0713 iters=62501
+SAMPLE mont_sqr limbs=8 bits=512 rep=0 ns=103.1502
+SAMPLE mont_sqr limbs=8 bits=512 rep=1 ns=103.3073
+SAMPLE mont_sqr limbs=8 bits=512 rep=2 ns=103.1929
+SAMPLE mont_sqr limbs=8 bits=512 rep=3 ns=103.5052
+SAMPLE mont_sqr limbs=8 bits=512 rep=4 ns=103.1164
+SAMPLE mont_sqr limbs=8 bits=512 rep=5 ns=103.1630
+SAMPLE mont_sqr limbs=8 bits=512 rep=6 ns=103.3657
+SAMPLE mont_sqr limbs=8 bits=512 rep=7 ns=103.1475
+SAMPLE mont_sqr limbs=8 bits=512 rep=8 ns=103.2279
+SAMPLE mont_sqr limbs=8 bits=512 rep=9 ns=103.1252
+SAMPLE mont_sqr limbs=8 bits=512 rep=10 ns=103.2574
+SAMPLE mont_sqr limbs=8 bits=512 rep=11 ns=103.2383
+SAMPLE mont_sqr limbs=8 bits=512 rep=12 ns=103.0520
+SAMPLE mont_sqr limbs=8 bits=512 rep=13 ns=103.6537
+SAMPLE mont_sqr limbs=8 bits=512 rep=14 ns=103.3232
+SUMMARY mont_sqr limbs=8 bits=512 median_ns=103.2279 min_ns=103.0520 iters=62501
+SAMPLE mont_mul_for_sqr limbs=8 bits=512 rep=0 ns=92.1341
+SAMPLE mont_mul_for_sqr limbs=8 bits=512 rep=1 ns=92.9972
+SAMPLE mont_mul_for_sqr limbs=8 bits=512 rep=2 ns=92.1706
+SAMPLE mont_mul_for_sqr limbs=8 bits=512 rep=3 ns=92.4310
+SAMPLE mont_mul_for_sqr limbs=8 bits=512 rep=4 ns=93.2303
+SAMPLE mont_mul_for_sqr limbs=8 bits=512 rep=5 ns=91.9089
+SAMPLE mont_mul_for_sqr limbs=8 bits=512 rep=6 ns=92.5152
+SAMPLE mont_mul_for_sqr limbs=8 bits=512 rep=7 ns=92.4264
+SAMPLE mont_mul_for_sqr limbs=8 bits=512 rep=8 ns=92.6575
+SAMPLE mont_mul_for_sqr limbs=8 bits=512 rep=9 ns=93.0954
+SAMPLE mont_mul_for_sqr limbs=8 bits=512 rep=10 ns=92.9259
+SAMPLE mont_mul_for_sqr limbs=8 bits=512 rep=11 ns=92.1764
+SAMPLE mont_mul_for_sqr limbs=8 bits=512 rep=12 ns=92.1266
+SAMPLE mont_mul_for_sqr limbs=8 bits=512 rep=13 ns=92.5810
+SAMPLE mont_mul_for_sqr limbs=8 bits=512 rep=14 ns=92.1018
+SUMMARY mont_mul_for_sqr limbs=8 bits=512 median_ns=92.4310 min_ns=91.9089 iters=62501
+SAMPLE product_schoolbook limbs=8 bits=512 rep=0 ns=37.4260
+SAMPLE product_schoolbook limbs=8 bits=512 rep=1 ns=36.6611
+SAMPLE product_schoolbook limbs=8 bits=512 rep=2 ns=36.8683
+SAMPLE product_schoolbook limbs=8 bits=512 rep=3 ns=36.3205
+SAMPLE product_schoolbook limbs=8 bits=512 rep=4 ns=37.4430
+SAMPLE product_schoolbook limbs=8 bits=512 rep=5 ns=36.4958
+SAMPLE product_schoolbook limbs=8 bits=512 rep=6 ns=37.7471
+SAMPLE product_schoolbook limbs=8 bits=512 rep=7 ns=37.7937
+SAMPLE product_schoolbook limbs=8 bits=512 rep=8 ns=36.1391
+SAMPLE product_schoolbook limbs=8 bits=512 rep=9 ns=36.5412
+SAMPLE product_schoolbook limbs=8 bits=512 rep=10 ns=37.1171
+SAMPLE product_schoolbook limbs=8 bits=512 rep=11 ns=36.9498
+SAMPLE product_schoolbook limbs=8 bits=512 rep=12 ns=37.8497
+SAMPLE product_schoolbook limbs=8 bits=512 rep=13 ns=37.0877
+SAMPLE product_schoolbook limbs=8 bits=512 rep=14 ns=36.8351
+SUMMARY product_schoolbook limbs=8 bits=512 median_ns=36.9498 min_ns=36.1391 iters=125002
+SAMPLE product_karatsuba limbs=8 bits=512 rep=0 ns=37.8004
+SAMPLE product_karatsuba limbs=8 bits=512 rep=1 ns=37.7424
+SAMPLE product_karatsuba limbs=8 bits=512 rep=2 ns=37.8176
+SAMPLE product_karatsuba limbs=8 bits=512 rep=3 ns=35.2293
+SAMPLE product_karatsuba limbs=8 bits=512 rep=4 ns=38.3939
+SAMPLE product_karatsuba limbs=8 bits=512 rep=5 ns=38.7749
+SAMPLE product_karatsuba limbs=8 bits=512 rep=6 ns=37.8849
+SAMPLE product_karatsuba limbs=8 bits=512 rep=7 ns=37.8676
+SAMPLE product_karatsuba limbs=8 bits=512 rep=8 ns=37.1804
+SAMPLE product_karatsuba limbs=8 bits=512 rep=9 ns=37.0133
+SAMPLE product_karatsuba limbs=8 bits=512 rep=10 ns=37.8003
+SAMPLE product_karatsuba limbs=8 bits=512 rep=11 ns=37.6181
+SAMPLE product_karatsuba limbs=8 bits=512 rep=12 ns=37.8561
+SAMPLE product_karatsuba limbs=8 bits=512 rep=13 ns=37.0788
+SAMPLE product_karatsuba limbs=8 bits=512 rep=14 ns=37.4736
+SUMMARY product_karatsuba limbs=8 bits=512 median_ns=37.8003 min_ns=35.2293 iters=125002
+DIFFERENTIAL cios bits=1024 cases=196 mismatches=0
+DIFFERENTIAL comba bits=1024 cases=196 mismatches=0
+DIFFERENTIAL sqr bits=1024 cases=14 mismatches=0
+DIFFERENTIAL product bits=1024 cases=4 mismatches=0
+SAMPLE mont_sos limbs=16 bits=1024 rep=0 ns=344.9791
+SAMPLE mont_sos limbs=16 bits=1024 rep=1 ns=345.4589
+SAMPLE mont_sos limbs=16 bits=1024 rep=2 ns=345.5592
+SAMPLE mont_sos limbs=16 bits=1024 rep=3 ns=345.3188
+SAMPLE mont_sos limbs=16 bits=1024 rep=4 ns=343.7532
+SAMPLE mont_sos limbs=16 bits=1024 rep=5 ns=344.2978
+SAMPLE mont_sos limbs=16 bits=1024 rep=6 ns=338.7949
+SAMPLE mont_sos limbs=16 bits=1024 rep=7 ns=343.5092
+SAMPLE mont_sos limbs=16 bits=1024 rep=8 ns=342.1756
+SAMPLE mont_sos limbs=16 bits=1024 rep=9 ns=343.6292
+SAMPLE mont_sos limbs=16 bits=1024 rep=10 ns=344.5962
+SAMPLE mont_sos limbs=16 bits=1024 rep=11 ns=345.3841
+SAMPLE mont_sos limbs=16 bits=1024 rep=12 ns=344.5916
+SAMPLE mont_sos limbs=16 bits=1024 rep=13 ns=345.1273
+SAMPLE mont_sos limbs=16 bits=1024 rep=14 ns=344.4400
+SUMMARY mont_sos limbs=16 bits=1024 median_ns=344.5916 min_ns=338.7949 iters=15626
+SAMPLE mont_cios limbs=16 bits=1024 rep=0 ns=323.4533
+SAMPLE mont_cios limbs=16 bits=1024 rep=1 ns=322.7829
+SAMPLE mont_cios limbs=16 bits=1024 rep=2 ns=322.6622
+SAMPLE mont_cios limbs=16 bits=1024 rep=3 ns=322.8423
+SAMPLE mont_cios limbs=16 bits=1024 rep=4 ns=322.7632
+SAMPLE mont_cios limbs=16 bits=1024 rep=5 ns=322.9731
+SAMPLE mont_cios limbs=16 bits=1024 rep=6 ns=322.8641
+SAMPLE mont_cios limbs=16 bits=1024 rep=7 ns=323.5836
+SAMPLE mont_cios limbs=16 bits=1024 rep=8 ns=322.5779
+SAMPLE mont_cios limbs=16 bits=1024 rep=9 ns=322.5756
+SAMPLE mont_cios limbs=16 bits=1024 rep=10 ns=322.7191
+SAMPLE mont_cios limbs=16 bits=1024 rep=11 ns=322.8518
+SAMPLE mont_cios limbs=16 bits=1024 rep=12 ns=322.5527
+SAMPLE mont_cios limbs=16 bits=1024 rep=13 ns=322.7603
+SAMPLE mont_cios limbs=16 bits=1024 rep=14 ns=322.7265
+SUMMARY mont_cios limbs=16 bits=1024 median_ns=322.7632 min_ns=322.5527 iters=15626
+SAMPLE mont_comba limbs=16 bits=1024 rep=0 ns=377.6482
+SAMPLE mont_comba limbs=16 bits=1024 rep=1 ns=377.1130
+SAMPLE mont_comba limbs=16 bits=1024 rep=2 ns=376.8367
+SAMPLE mont_comba limbs=16 bits=1024 rep=3 ns=376.5329
+SAMPLE mont_comba limbs=16 bits=1024 rep=4 ns=376.6083
+SAMPLE mont_comba limbs=16 bits=1024 rep=5 ns=376.8369
+SAMPLE mont_comba limbs=16 bits=1024 rep=6 ns=376.7715
+SAMPLE mont_comba limbs=16 bits=1024 rep=7 ns=376.6706
+SAMPLE mont_comba limbs=16 bits=1024 rep=8 ns=378.5158
+SAMPLE mont_comba limbs=16 bits=1024 rep=9 ns=376.9067
+SAMPLE mont_comba limbs=16 bits=1024 rep=10 ns=376.6704
+SAMPLE mont_comba limbs=16 bits=1024 rep=11 ns=377.3984
+SAMPLE mont_comba limbs=16 bits=1024 rep=12 ns=377.8074
+SAMPLE mont_comba limbs=16 bits=1024 rep=13 ns=376.6517
+SAMPLE mont_comba limbs=16 bits=1024 rep=14 ns=376.5789
+SUMMARY mont_comba limbs=16 bits=1024 median_ns=376.8367 min_ns=376.5329 iters=15626
+SAMPLE mont_sqr limbs=16 bits=1024 rep=0 ns=368.6361
+SAMPLE mont_sqr limbs=16 bits=1024 rep=1 ns=369.3156
+SAMPLE mont_sqr limbs=16 bits=1024 rep=2 ns=368.3552
+SAMPLE mont_sqr limbs=16 bits=1024 rep=3 ns=367.9725
+SAMPLE mont_sqr limbs=16 bits=1024 rep=4 ns=368.7086
+SAMPLE mont_sqr limbs=16 bits=1024 rep=5 ns=368.0318
+SAMPLE mont_sqr limbs=16 bits=1024 rep=6 ns=368.2837
+SAMPLE mont_sqr limbs=16 bits=1024 rep=7 ns=368.3905
+SAMPLE mont_sqr limbs=16 bits=1024 rep=8 ns=368.1343
+SAMPLE mont_sqr limbs=16 bits=1024 rep=9 ns=367.9458
+SAMPLE mont_sqr limbs=16 bits=1024 rep=10 ns=368.5003
+SAMPLE mont_sqr limbs=16 bits=1024 rep=11 ns=368.1780
+SAMPLE mont_sqr limbs=16 bits=1024 rep=12 ns=368.2266
+SAMPLE mont_sqr limbs=16 bits=1024 rep=13 ns=368.0413
+SAMPLE mont_sqr limbs=16 bits=1024 rep=14 ns=368.6055
+SUMMARY mont_sqr limbs=16 bits=1024 median_ns=368.2837 min_ns=367.9458 iters=15626
+SAMPLE mont_mul_for_sqr limbs=16 bits=1024 rep=0 ns=345.8250
+SAMPLE mont_mul_for_sqr limbs=16 bits=1024 rep=1 ns=340.8942
+SAMPLE mont_mul_for_sqr limbs=16 bits=1024 rep=2 ns=342.4411
+SAMPLE mont_mul_for_sqr limbs=16 bits=1024 rep=3 ns=344.8905
+SAMPLE mont_mul_for_sqr limbs=16 bits=1024 rep=4 ns=341.1048
+SAMPLE mont_mul_for_sqr limbs=16 bits=1024 rep=5 ns=344.5434
+SAMPLE mont_mul_for_sqr limbs=16 bits=1024 rep=6 ns=344.5549
+SAMPLE mont_mul_for_sqr limbs=16 bits=1024 rep=7 ns=343.7117
+SAMPLE mont_mul_for_sqr limbs=16 bits=1024 rep=8 ns=345.4596
+SAMPLE mont_mul_for_sqr limbs=16 bits=1024 rep=9 ns=346.1981
+SAMPLE mont_mul_for_sqr limbs=16 bits=1024 rep=10 ns=346.1416
+SAMPLE mont_mul_for_sqr limbs=16 bits=1024 rep=11 ns=347.7993
+SAMPLE mont_mul_for_sqr limbs=16 bits=1024 rep=12 ns=345.8287
+SAMPLE mont_mul_for_sqr limbs=16 bits=1024 rep=13 ns=342.0924
+SAMPLE mont_mul_for_sqr limbs=16 bits=1024 rep=14 ns=345.1154
+SUMMARY mont_mul_for_sqr limbs=16 bits=1024 median_ns=344.8905 min_ns=340.8942 iters=15626
+SAMPLE product_schoolbook limbs=16 bits=1024 rep=0 ns=143.5065
+SAMPLE product_schoolbook limbs=16 bits=1024 rep=1 ns=144.5310
+SAMPLE product_schoolbook limbs=16 bits=1024 rep=2 ns=148.3068
+SAMPLE product_schoolbook limbs=16 bits=1024 rep=3 ns=144.3193
+SAMPLE product_schoolbook limbs=16 bits=1024 rep=4 ns=140.2672
+SAMPLE product_schoolbook limbs=16 bits=1024 rep=5 ns=138.5619
+SAMPLE product_schoolbook limbs=16 bits=1024 rep=6 ns=151.4681
+SAMPLE product_schoolbook limbs=16 bits=1024 rep=7 ns=142.7712
+SAMPLE product_schoolbook limbs=16 bits=1024 rep=8 ns=145.6093
+SAMPLE product_schoolbook limbs=16 bits=1024 rep=9 ns=143.1686
+SAMPLE product_schoolbook limbs=16 bits=1024 rep=10 ns=150.2545
+SAMPLE product_schoolbook limbs=16 bits=1024 rep=11 ns=150.8247
+SAMPLE product_schoolbook limbs=16 bits=1024 rep=12 ns=146.5739
+SAMPLE product_schoolbook limbs=16 bits=1024 rep=13 ns=137.7828
+SAMPLE product_schoolbook limbs=16 bits=1024 rep=14 ns=142.9232
+SUMMARY product_schoolbook limbs=16 bits=1024 median_ns=144.3193 min_ns=137.7828 iters=31252
+SAMPLE product_karatsuba limbs=16 bits=1024 rep=0 ns=224.5954
+SAMPLE product_karatsuba limbs=16 bits=1024 rep=1 ns=221.9551
+SAMPLE product_karatsuba limbs=16 bits=1024 rep=2 ns=220.6530
+SAMPLE product_karatsuba limbs=16 bits=1024 rep=3 ns=222.6132
+SAMPLE product_karatsuba limbs=16 bits=1024 rep=4 ns=220.7882
+SAMPLE product_karatsuba limbs=16 bits=1024 rep=5 ns=221.8803
+SAMPLE product_karatsuba limbs=16 bits=1024 rep=6 ns=217.1115
+SAMPLE product_karatsuba limbs=16 bits=1024 rep=7 ns=220.2402
+SAMPLE product_karatsuba limbs=16 bits=1024 rep=8 ns=221.6077
+SAMPLE product_karatsuba limbs=16 bits=1024 rep=9 ns=219.9638
+SAMPLE product_karatsuba limbs=16 bits=1024 rep=10 ns=219.6679
+SAMPLE product_karatsuba limbs=16 bits=1024 rep=11 ns=220.6114
+SAMPLE product_karatsuba limbs=16 bits=1024 rep=12 ns=218.6073
+SAMPLE product_karatsuba limbs=16 bits=1024 rep=13 ns=221.6648
+SAMPLE product_karatsuba limbs=16 bits=1024 rep=14 ns=220.5547
+SUMMARY product_karatsuba limbs=16 bits=1024 median_ns=220.6530 min_ns=217.1115 iters=31252
+DIFFERENTIAL cios bits=2048 cases=196 mismatches=0
+DIFFERENTIAL comba bits=2048 cases=196 mismatches=0
+DIFFERENTIAL sqr bits=2048 cases=14 mismatches=0
+DIFFERENTIAL product bits=2048 cases=4 mismatches=0
+SAMPLE mont_sos limbs=32 bits=2048 rep=0 ns=1337.6232
+SAMPLE mont_sos limbs=32 bits=2048 rep=1 ns=1276.8316
+SAMPLE mont_sos limbs=32 bits=2048 rep=2 ns=1291.0944
+SAMPLE mont_sos limbs=32 bits=2048 rep=3 ns=1283.6560
+SAMPLE mont_sos limbs=32 bits=2048 rep=4 ns=1297.8190
+SAMPLE mont_sos limbs=32 bits=2048 rep=5 ns=1329.3486
+SAMPLE mont_sos limbs=32 bits=2048 rep=6 ns=1329.2117
+SAMPLE mont_sos limbs=32 bits=2048 rep=7 ns=1327.6043
+SAMPLE mont_sos limbs=32 bits=2048 rep=8 ns=1318.8242
+SAMPLE mont_sos limbs=32 bits=2048 rep=9 ns=1291.7666
+SAMPLE mont_sos limbs=32 bits=2048 rep=10 ns=1323.5764
+SAMPLE mont_sos limbs=32 bits=2048 rep=11 ns=1281.0427
+SAMPLE mont_sos limbs=32 bits=2048 rep=12 ns=1322.2936
+SAMPLE mont_sos limbs=32 bits=2048 rep=13 ns=1325.8188
+SAMPLE mont_sos limbs=32 bits=2048 rep=14 ns=1285.5600
+SUMMARY mont_sos limbs=32 bits=2048 median_ns=1318.8242 min_ns=1276.8316 iters=3907
+SAMPLE mont_cios limbs=32 bits=2048 rep=0 ns=1199.8300
+SAMPLE mont_cios limbs=32 bits=2048 rep=1 ns=1199.2974
+SAMPLE mont_cios limbs=32 bits=2048 rep=2 ns=1199.8167
+SAMPLE mont_cios limbs=32 bits=2048 rep=3 ns=1199.7592
+SAMPLE mont_cios limbs=32 bits=2048 rep=4 ns=1199.9406
+SAMPLE mont_cios limbs=32 bits=2048 rep=5 ns=1201.2398
+SAMPLE mont_cios limbs=32 bits=2048 rep=6 ns=1203.6944
+SAMPLE mont_cios limbs=32 bits=2048 rep=7 ns=1200.5372
+SAMPLE mont_cios limbs=32 bits=2048 rep=8 ns=1199.2089
+SAMPLE mont_cios limbs=32 bits=2048 rep=9 ns=1199.7154
+SAMPLE mont_cios limbs=32 bits=2048 rep=10 ns=1199.7888
+SAMPLE mont_cios limbs=32 bits=2048 rep=11 ns=1200.1815
+SAMPLE mont_cios limbs=32 bits=2048 rep=12 ns=1200.0079
+SAMPLE mont_cios limbs=32 bits=2048 rep=13 ns=1202.2053
+SAMPLE mont_cios limbs=32 bits=2048 rep=14 ns=1200.4080
+SUMMARY mont_cios limbs=32 bits=2048 median_ns=1199.9406 min_ns=1199.2089 iters=3907
+SAMPLE mont_comba limbs=32 bits=2048 rep=0 ns=1414.6570
+SAMPLE mont_comba limbs=32 bits=2048 rep=1 ns=1415.8021
+SAMPLE mont_comba limbs=32 bits=2048 rep=2 ns=1413.7251
+SAMPLE mont_comba limbs=32 bits=2048 rep=3 ns=1415.9803
+SAMPLE mont_comba limbs=32 bits=2048 rep=4 ns=1414.6762
+SAMPLE mont_comba limbs=32 bits=2048 rep=5 ns=1413.9007
+SAMPLE mont_comba limbs=32 bits=2048 rep=6 ns=1417.0752
+SAMPLE mont_comba limbs=32 bits=2048 rep=7 ns=1413.7077
+SAMPLE mont_comba limbs=32 bits=2048 rep=8 ns=1414.2142
+SAMPLE mont_comba limbs=32 bits=2048 rep=9 ns=1417.2060
+SAMPLE mont_comba limbs=32 bits=2048 rep=10 ns=1414.5183
+SAMPLE mont_comba limbs=32 bits=2048 rep=11 ns=1412.9521
+SAMPLE mont_comba limbs=32 bits=2048 rep=12 ns=1412.8083
+SAMPLE mont_comba limbs=32 bits=2048 rep=13 ns=1414.3396
+SAMPLE mont_comba limbs=32 bits=2048 rep=14 ns=1412.7791
+SUMMARY mont_comba limbs=32 bits=2048 median_ns=1414.3396 min_ns=1412.7791 iters=3907
+SAMPLE mont_sqr limbs=32 bits=2048 rep=0 ns=1375.8958
+SAMPLE mont_sqr limbs=32 bits=2048 rep=1 ns=1376.2306
+SAMPLE mont_sqr limbs=32 bits=2048 rep=2 ns=1375.6191
+SAMPLE mont_sqr limbs=32 bits=2048 rep=3 ns=1376.0504
+SAMPLE mont_sqr limbs=32 bits=2048 rep=4 ns=1377.5393
+SAMPLE mont_sqr limbs=32 bits=2048 rep=5 ns=1379.0906
+SAMPLE mont_sqr limbs=32 bits=2048 rep=6 ns=1376.0719
+SAMPLE mont_sqr limbs=32 bits=2048 rep=7 ns=1377.4599
+SAMPLE mont_sqr limbs=32 bits=2048 rep=8 ns=1375.5234
+SAMPLE mont_sqr limbs=32 bits=2048 rep=9 ns=1376.8208
+SAMPLE mont_sqr limbs=32 bits=2048 rep=10 ns=1376.2158
+SAMPLE mont_sqr limbs=32 bits=2048 rep=11 ns=1378.3440
+SAMPLE mont_sqr limbs=32 bits=2048 rep=12 ns=1377.8155
+SAMPLE mont_sqr limbs=32 bits=2048 rep=13 ns=1381.1546
+SAMPLE mont_sqr limbs=32 bits=2048 rep=14 ns=1375.4308
+SUMMARY mont_sqr limbs=32 bits=2048 median_ns=1376.2306 min_ns=1375.4308 iters=3907
+SAMPLE mont_mul_for_sqr limbs=32 bits=2048 rep=0 ns=1303.2173
+SAMPLE mont_mul_for_sqr limbs=32 bits=2048 rep=1 ns=1301.4402
+SAMPLE mont_mul_for_sqr limbs=32 bits=2048 rep=2 ns=1317.8858
+SAMPLE mont_mul_for_sqr limbs=32 bits=2048 rep=3 ns=1319.1408
+SAMPLE mont_mul_for_sqr limbs=32 bits=2048 rep=4 ns=1311.3693
+SAMPLE mont_mul_for_sqr limbs=32 bits=2048 rep=5 ns=1312.6396
+SAMPLE mont_mul_for_sqr limbs=32 bits=2048 rep=6 ns=1312.2475
+SAMPLE mont_mul_for_sqr limbs=32 bits=2048 rep=7 ns=1328.6563
+SAMPLE mont_mul_for_sqr limbs=32 bits=2048 rep=8 ns=1316.1868
+SAMPLE mont_mul_for_sqr limbs=32 bits=2048 rep=9 ns=1349.9383
+SAMPLE mont_mul_for_sqr limbs=32 bits=2048 rep=10 ns=1327.0041
+SAMPLE mont_mul_for_sqr limbs=32 bits=2048 rep=11 ns=1302.1413
+SAMPLE mont_mul_for_sqr limbs=32 bits=2048 rep=12 ns=1363.9071
+SAMPLE mont_mul_for_sqr limbs=32 bits=2048 rep=13 ns=1326.1610
+SAMPLE mont_mul_for_sqr limbs=32 bits=2048 rep=14 ns=1299.3698
+SUMMARY mont_mul_for_sqr limbs=32 bits=2048 median_ns=1316.1868 min_ns=1299.3698 iters=3907
+SAMPLE product_schoolbook limbs=32 bits=2048 rep=0 ns=622.1757
+SAMPLE product_schoolbook limbs=32 bits=2048 rep=1 ns=618.9024
+SAMPLE product_schoolbook limbs=32 bits=2048 rep=2 ns=580.0819
+SAMPLE product_schoolbook limbs=32 bits=2048 rep=3 ns=557.9288
+SAMPLE product_schoolbook limbs=32 bits=2048 rep=4 ns=638.4194
+SAMPLE product_schoolbook limbs=32 bits=2048 rep=5 ns=628.8567
+SAMPLE product_schoolbook limbs=32 bits=2048 rep=6 ns=612.4214
+SAMPLE product_schoolbook limbs=32 bits=2048 rep=7 ns=568.9537
+SAMPLE product_schoolbook limbs=32 bits=2048 rep=8 ns=605.0640
+SAMPLE product_schoolbook limbs=32 bits=2048 rep=9 ns=606.8468
+SAMPLE product_schoolbook limbs=32 bits=2048 rep=10 ns=621.7602
+SAMPLE product_schoolbook limbs=32 bits=2048 rep=11 ns=609.3847
+SAMPLE product_schoolbook limbs=32 bits=2048 rep=12 ns=586.2197
+SAMPLE product_schoolbook limbs=32 bits=2048 rep=13 ns=581.3541
+SAMPLE product_schoolbook limbs=32 bits=2048 rep=14 ns=553.6020
+SUMMARY product_schoolbook limbs=32 bits=2048 median_ns=606.8468 min_ns=553.6020 iters=7814
+SAMPLE product_karatsuba limbs=32 bits=2048 rep=0 ns=825.1150
+SAMPLE product_karatsuba limbs=32 bits=2048 rep=1 ns=832.3407
+SAMPLE product_karatsuba limbs=32 bits=2048 rep=2 ns=825.2513
+SAMPLE product_karatsuba limbs=32 bits=2048 rep=3 ns=815.4482
+SAMPLE product_karatsuba limbs=32 bits=2048 rep=4 ns=828.0530
+SAMPLE product_karatsuba limbs=32 bits=2048 rep=5 ns=820.6268
+SAMPLE product_karatsuba limbs=32 bits=2048 rep=6 ns=841.6364
+SAMPLE product_karatsuba limbs=32 bits=2048 rep=7 ns=820.6060
+SAMPLE product_karatsuba limbs=32 bits=2048 rep=8 ns=836.8106
+SAMPLE product_karatsuba limbs=32 bits=2048 rep=9 ns=835.7215
+SAMPLE product_karatsuba limbs=32 bits=2048 rep=10 ns=816.8938
+SAMPLE product_karatsuba limbs=32 bits=2048 rep=11 ns=830.4396
+SAMPLE product_karatsuba limbs=32 bits=2048 rep=12 ns=832.1456
+SAMPLE product_karatsuba limbs=32 bits=2048 rep=13 ns=817.6550
+SAMPLE product_karatsuba limbs=32 bits=2048 rep=14 ns=822.2249
+SUMMARY product_karatsuba limbs=32 bits=2048 median_ns=825.2513 min_ns=815.4482 iters=7814
+DIFFERENTIAL cios bits=4096 cases=196 mismatches=0
+DIFFERENTIAL comba bits=4096 cases=196 mismatches=0
+DIFFERENTIAL sqr bits=4096 cases=14 mismatches=0
+DIFFERENTIAL product bits=4096 cases=4 mismatches=0
+SAMPLE mont_sos limbs=64 bits=4096 rep=0 ns=5276.6796
+SAMPLE mont_sos limbs=64 bits=4096 rep=1 ns=5393.9529
+SAMPLE mont_sos limbs=64 bits=4096 rep=2 ns=5277.6049
+SAMPLE mont_sos limbs=64 bits=4096 rep=3 ns=5382.7922
+SAMPLE mont_sos limbs=64 bits=4096 rep=4 ns=5368.0594
+SAMPLE mont_sos limbs=64 bits=4096 rep=5 ns=5326.9089
+SAMPLE mont_sos limbs=64 bits=4096 rep=6 ns=5363.6807
+SAMPLE mont_sos limbs=64 bits=4096 rep=7 ns=5359.7656
+SAMPLE mont_sos limbs=64 bits=4096 rep=8 ns=5325.9826
+SAMPLE mont_sos limbs=64 bits=4096 rep=9 ns=5320.7830
+SAMPLE mont_sos limbs=64 bits=4096 rep=10 ns=5315.3552
+SAMPLE mont_sos limbs=64 bits=4096 rep=11 ns=5320.2487
+SAMPLE mont_sos limbs=64 bits=4096 rep=12 ns=5340.8066
+SAMPLE mont_sos limbs=64 bits=4096 rep=13 ns=5328.3224
+SAMPLE mont_sos limbs=64 bits=4096 rep=14 ns=5340.1259
+SUMMARY mont_sos limbs=64 bits=4096 median_ns=5328.3224 min_ns=5276.6796 iters=977
+SAMPLE mont_cios limbs=64 bits=4096 rep=0 ns=4983.9621
+SAMPLE mont_cios limbs=64 bits=4096 rep=1 ns=4995.4637
+SAMPLE mont_cios limbs=64 bits=4096 rep=2 ns=4971.8373
+SAMPLE mont_cios limbs=64 bits=4096 rep=3 ns=4965.0266
+SAMPLE mont_cios limbs=64 bits=4096 rep=4 ns=4980.3849
+SAMPLE mont_cios limbs=64 bits=4096 rep=5 ns=4966.2661
+SAMPLE mont_cios limbs=64 bits=4096 rep=6 ns=4987.2027
+SAMPLE mont_cios limbs=64 bits=4096 rep=7 ns=4979.9284
+SAMPLE mont_cios limbs=64 bits=4096 rep=8 ns=4999.1003
+SAMPLE mont_cios limbs=64 bits=4096 rep=9 ns=4954.7615
+SAMPLE mont_cios limbs=64 bits=4096 rep=10 ns=4981.1136
+SAMPLE mont_cios limbs=64 bits=4096 rep=11 ns=4953.4309
+SAMPLE mont_cios limbs=64 bits=4096 rep=12 ns=4965.9079
+SAMPLE mont_cios limbs=64 bits=4096 rep=13 ns=4982.9437
+SAMPLE mont_cios limbs=64 bits=4096 rep=14 ns=4982.1177
+SUMMARY mont_cios limbs=64 bits=4096 median_ns=4980.3849 min_ns=4953.4309 iters=977
+SAMPLE mont_comba limbs=64 bits=4096 rep=0 ns=5897.4985
+SAMPLE mont_comba limbs=64 bits=4096 rep=1 ns=5919.6827
+SAMPLE mont_comba limbs=64 bits=4096 rep=2 ns=5898.2917
+SAMPLE mont_comba limbs=64 bits=4096 rep=3 ns=5907.4442
+SAMPLE mont_comba limbs=64 bits=4096 rep=4 ns=5935.1822
+SAMPLE mont_comba limbs=64 bits=4096 rep=5 ns=5934.3675
+SAMPLE mont_comba limbs=64 bits=4096 rep=6 ns=5947.3501
+SAMPLE mont_comba limbs=64 bits=4096 rep=7 ns=5905.4534
+SAMPLE mont_comba limbs=64 bits=4096 rep=8 ns=5894.1750
+SAMPLE mont_comba limbs=64 bits=4096 rep=9 ns=5939.7257
+SAMPLE mont_comba limbs=64 bits=4096 rep=10 ns=5877.2016
+SAMPLE mont_comba limbs=64 bits=4096 rep=11 ns=5952.2897
+SAMPLE mont_comba limbs=64 bits=4096 rep=12 ns=5902.4299
+SAMPLE mont_comba limbs=64 bits=4096 rep=13 ns=5959.9539
+SAMPLE mont_comba limbs=64 bits=4096 rep=14 ns=5949.9601
+SUMMARY mont_comba limbs=64 bits=4096 median_ns=5919.6827 min_ns=5877.2016 iters=977
+SAMPLE mont_sqr limbs=64 bits=4096 rep=0 ns=5598.6622
+SAMPLE mont_sqr limbs=64 bits=4096 rep=1 ns=5660.2569
+SAMPLE mont_sqr limbs=64 bits=4096 rep=2 ns=5633.8833
+SAMPLE mont_sqr limbs=64 bits=4096 rep=3 ns=5639.8311
+SAMPLE mont_sqr limbs=64 bits=4096 rep=4 ns=5650.6776
+SAMPLE mont_sqr limbs=64 bits=4096 rep=5 ns=5642.4391
+SAMPLE mont_sqr limbs=64 bits=4096 rep=6 ns=5641.3511
+SAMPLE mont_sqr limbs=64 bits=4096 rep=7 ns=5602.8966
+SAMPLE mont_sqr limbs=64 bits=4096 rep=8 ns=5606.2129
+SAMPLE mont_sqr limbs=64 bits=4096 rep=9 ns=5609.9284
+SAMPLE mont_sqr limbs=64 bits=4096 rep=10 ns=5617.7533
+SAMPLE mont_sqr limbs=64 bits=4096 rep=11 ns=5653.1105
+SAMPLE mont_sqr limbs=64 bits=4096 rep=12 ns=5605.2528
+SAMPLE mont_sqr limbs=64 bits=4096 rep=13 ns=5646.5496
+SAMPLE mont_sqr limbs=64 bits=4096 rep=14 ns=5639.8649
+SUMMARY mont_sqr limbs=64 bits=4096 median_ns=5639.8311 min_ns=5598.6622 iters=977
+SAMPLE mont_mul_for_sqr limbs=64 bits=4096 rep=0 ns=5235.1443
+SAMPLE mont_mul_for_sqr limbs=64 bits=4096 rep=1 ns=5380.7666
+SAMPLE mont_mul_for_sqr limbs=64 bits=4096 rep=2 ns=5339.5210
+SAMPLE mont_mul_for_sqr limbs=64 bits=4096 rep=3 ns=5388.8526
+SAMPLE mont_mul_for_sqr limbs=64 bits=4096 rep=4 ns=5391.1126
+SAMPLE mont_mul_for_sqr limbs=64 bits=4096 rep=5 ns=5404.8895
+SAMPLE mont_mul_for_sqr limbs=64 bits=4096 rep=6 ns=5363.8301
+SAMPLE mont_mul_for_sqr limbs=64 bits=4096 rep=7 ns=5355.8833
+SAMPLE mont_mul_for_sqr limbs=64 bits=4096 rep=8 ns=5384.2600
+SAMPLE mont_mul_for_sqr limbs=64 bits=4096 rep=9 ns=5337.0123
+SAMPLE mont_mul_for_sqr limbs=64 bits=4096 rep=10 ns=5330.7083
+SAMPLE mont_mul_for_sqr limbs=64 bits=4096 rep=11 ns=5422.0972
+SAMPLE mont_mul_for_sqr limbs=64 bits=4096 rep=12 ns=5366.9632
+SAMPLE mont_mul_for_sqr limbs=64 bits=4096 rep=13 ns=5376.1095
+SAMPLE mont_mul_for_sqr limbs=64 bits=4096 rep=14 ns=5386.6428
+SUMMARY mont_mul_for_sqr limbs=64 bits=4096 median_ns=5376.1095 min_ns=5235.1443 iters=977
+SAMPLE product_schoolbook limbs=64 bits=4096 rep=0 ns=2204.3178
+SAMPLE product_schoolbook limbs=64 bits=4096 rep=1 ns=2238.1402
+SAMPLE product_schoolbook limbs=64 bits=4096 rep=2 ns=2255.4550
+SAMPLE product_schoolbook limbs=64 bits=4096 rep=3 ns=2159.4893
+SAMPLE product_schoolbook limbs=64 bits=4096 rep=4 ns=2231.0532
+SAMPLE product_schoolbook limbs=64 bits=4096 rep=5 ns=2191.2129
+SAMPLE product_schoolbook limbs=64 bits=4096 rep=6 ns=2306.4161
+SAMPLE product_schoolbook limbs=64 bits=4096 rep=7 ns=2192.8956
+SAMPLE product_schoolbook limbs=64 bits=4096 rep=8 ns=2206.4386
+SAMPLE product_schoolbook limbs=64 bits=4096 rep=9 ns=2308.7856
+SAMPLE product_schoolbook limbs=64 bits=4096 rep=10 ns=2290.5399
+SAMPLE product_schoolbook limbs=64 bits=4096 rep=11 ns=2251.1996
+SAMPLE product_schoolbook limbs=64 bits=4096 rep=12 ns=2108.6986
+SAMPLE product_schoolbook limbs=64 bits=4096 rep=13 ns=2201.1013
+SAMPLE product_schoolbook limbs=64 bits=4096 rep=14 ns=2305.9273
+SUMMARY product_schoolbook limbs=64 bits=4096 median_ns=2231.0532 min_ns=2108.6986 iters=1954
+SAMPLE product_karatsuba limbs=64 bits=4096 rep=0 ns=2817.1755
+SAMPLE product_karatsuba limbs=64 bits=4096 rep=1 ns=2837.1607
+SAMPLE product_karatsuba limbs=64 bits=4096 rep=2 ns=2815.5875
+SAMPLE product_karatsuba limbs=64 bits=4096 rep=3 ns=2853.6720
+SAMPLE product_karatsuba limbs=64 bits=4096 rep=4 ns=2798.5686
+SAMPLE product_karatsuba limbs=64 bits=4096 rep=5 ns=2794.9166
+SAMPLE product_karatsuba limbs=64 bits=4096 rep=6 ns=2839.0711
+SAMPLE product_karatsuba limbs=64 bits=4096 rep=7 ns=2840.5271
+SAMPLE product_karatsuba limbs=64 bits=4096 rep=8 ns=2872.4314
+SAMPLE product_karatsuba limbs=64 bits=4096 rep=9 ns=2836.7917
+SAMPLE product_karatsuba limbs=64 bits=4096 rep=10 ns=2810.5670
+SAMPLE product_karatsuba limbs=64 bits=4096 rep=11 ns=2832.6873
+SAMPLE product_karatsuba limbs=64 bits=4096 rep=12 ns=2803.3153
+SAMPLE product_karatsuba limbs=64 bits=4096 rep=13 ns=2792.8726
+SAMPLE product_karatsuba limbs=64 bits=4096 rep=14 ns=2804.4770
+SUMMARY product_karatsuba limbs=64 bits=4096 median_ns=2817.1755 min_ns=2792.8726 iters=1954
+SINK 7253424225684744900
