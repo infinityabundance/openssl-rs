@@ -1,0 +1,30 @@
+{
+  "reps": 15,
+  "sos_ns_per_op_median": 19644.9,
+  "cios_ns_per_op_median": 18369.1,
+  "cios_over_sos_median_of_paired_ratios": 0.93997,
+  "cios_over_sos_ratio_of_medians": 0.93506,
+  "ci95_percentile": [
+    0.9117,
+    0.97355
+  ],
+  "ci_excludes_1": true,
+  "per_rep_ratios": [
+    1.03448,
+    0.97501,
+    0.91424,
+    0.97355,
+    0.92542,
+    0.94488,
+    0.89143,
+    0.87455,
+    0.9192,
+    1.07453,
+    0.9536,
+    0.94815,
+    0.93997,
+    0.90103,
+    0.9117
+  ],
+  "method": "paired per-repetition ratio; median of per-repetition means; 20000-resample percentile bootstrap, seed 344777044535"
+}

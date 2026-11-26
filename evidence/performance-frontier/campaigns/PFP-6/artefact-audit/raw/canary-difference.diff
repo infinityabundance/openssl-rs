@@ -1,0 +1,51 @@
+--- /work/court/tmp/pfp27/arith.restore-canary.rs	2026-11-26 08:06:26.627009273 +0000
++++ src/bn/arith.rs	2026-11-26 08:06:26.634948254 +0000
+@@ -1667,7 +1667,7 @@
+ /// in the PFP-6 campaign; selecting it here is a default change and requires the
+ /// affected API performance rows to be re-run at the same digest
+ /// (`docs/PERFORMANCE-FRONTIER-TODO.md`, PFP-6).
+-const LADDER_SCHEDULE: MontSchedule = MontSchedule::Sos;
++const LADDER_SCHEDULE: MontSchedule = MontSchedule::Cios;
+ 
+ /// Whether the ladder uses the dedicated squaring kernel.
+ ///
+@@ -1833,6 +1833,22 @@
+ ///
+ /// The final subtraction is a mask select. All loop counts are fixed by the
+ /// public `n`, and there is no branch on a limb's value.
++
++// CANARY (PFP-27 negative control): the two arms are distinct opaque callees.
++#[inline(never)]
++fn canary_take_diff(out: &mut [Limb], src: &[Limb], n: usize) {
++    for j in 0..n {
++        out[j] = src[j];
++    }
++}
++
++#[inline(never)]
++fn canary_take_acc(out: &mut [Limb], src: &[Limb], n: usize) {
++    for j in 0..n {
++        out[j] = src[j];
++    }
++}
++
+ fn mont_mul_cios_into(
+     a: &[Limb],
+     b: &[Limb],
+@@ -1891,9 +1907,13 @@
+         borrow = u64::from(b1) | u64::from(b2);
+     }
+     let keep = high | (borrow ^ 1);
+-    let mask = 0u64.wrapping_sub(keep);
+-    for j in 0..n {
+-        out[j] = constant_time_select(mask as usize, diff[j] as usize, acc[j] as usize) as Limb;
++    // CANARY (PFP-27 negative control): a branch on the secret-derived flag.
++    // Two distinct `#[inline(never)]` sinks keep the optimiser from
++    // if-converting the branch into a conditional move.
++    if keep != 0 {
++        canary_take_diff(out, diff, n);
++    } else {
++        canary_take_acc(out, acc, n);
+     }
+     true
+ }

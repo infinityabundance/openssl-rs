@@ -1,0 +1,184 @@
+==68107== Memcheck, a memory error detector
+==68107== Copyright (C) 2002-2022, and GNU GPL'd, by Julian Seward et al.
+==68107== Using Valgrind-3.19.0 and LibVEX; rerun with -h for copyright info
+==68107== Command: /work/court/tmp/pfp27/instrument/pfp27_dso_ct --lib /work/court/tmp/pfp27/b/distribution/libcrypto.so.3 --mode sign-ex
+==68107== Parent PID: 67598
+==68107== 
+==68107== Conditional jump or move depends on uninitialised value(s)
+==68107==    at 0x535D696: BN_mod_mul_montgomery (in /work/court/tmp/pfp27/b/distribution/libcrypto.so.3)
+==68107==    by 0x4FE4975: ossl_ecdsa_simple_sign_sig (in /work/court/tmp/pfp27/b/distribution/libcrypto.so.3)
+==68107==    by 0x109CCE: op_sign (pfp21_dso_ct.c:534)
+==68107==    by 0x10AC38: main (pfp21_dso_ct.c:606)
+==68107== 
+==68107== Conditional jump or move depends on uninitialised value(s)
+==68107==    at 0x537DED3: openssl_rs::bn::arith::mod_add_reduced_ct (in /work/court/tmp/pfp27/b/distribution/libcrypto.so.3)
+==68107==    by 0x4FE4992: ossl_ecdsa_simple_sign_sig (in /work/court/tmp/pfp27/b/distribution/libcrypto.so.3)
+==68107==    by 0x109CCE: op_sign (pfp21_dso_ct.c:534)
+==68107==    by 0x10AC38: main (pfp21_dso_ct.c:606)
+==68107== 
+==68107== Conditional jump or move depends on uninitialised value(s)
+==68107==    at 0x5361F83: BN_to_montgomery (in /work/court/tmp/pfp27/b/distribution/libcrypto.so.3)
+==68107==    by 0x4FE49B2: ossl_ecdsa_simple_sign_sig (in /work/court/tmp/pfp27/b/distribution/libcrypto.so.3)
+==68107==    by 0x109CCE: op_sign (pfp21_dso_ct.c:534)
+==68107==    by 0x10AC38: main (pfp21_dso_ct.c:606)
+==68107== 
+==68107== Conditional jump or move depends on uninitialised value(s)
+==68107==    at 0x4F9E908: <alloc::raw_vec::RawVecInner>::finish_grow (in /work/court/tmp/pfp27/b/distribution/libcrypto.so.3)
+==68107==    by 0x53620F4: BN_to_montgomery (in /work/court/tmp/pfp27/b/distribution/libcrypto.so.3)
+==68107==    by 0x4FE49B2: ossl_ecdsa_simple_sign_sig (in /work/court/tmp/pfp27/b/distribution/libcrypto.so.3)
+==68107==    by 0x109CCE: op_sign (pfp21_dso_ct.c:534)
+==68107==    by 0x10AC38: main (pfp21_dso_ct.c:606)
+==68107== 
+==68107== Conditional jump or move depends on uninitialised value(s)
+==68107==    at 0x4F9E939: <alloc::raw_vec::RawVecInner>::finish_grow (in /work/court/tmp/pfp27/b/distribution/libcrypto.so.3)
+==68107==    by 0x53620F4: BN_to_montgomery (in /work/court/tmp/pfp27/b/distribution/libcrypto.so.3)
+==68107==    by 0x4FE49B2: ossl_ecdsa_simple_sign_sig (in /work/court/tmp/pfp27/b/distribution/libcrypto.so.3)
+==68107==    by 0x109CCE: op_sign (pfp21_dso_ct.c:534)
+==68107==    by 0x10AC38: main (pfp21_dso_ct.c:606)
+==68107== 
+==68107== Conditional jump or move depends on uninitialised value(s)
+==68107==    at 0x53F13F2: alloc (unix.rs:13)
+==68107==    by 0x53F13F2: __rustc::__rdl_alloc (alloc.rs:455)
+==68107==    by 0x4F9E94C: <alloc::raw_vec::RawVecInner>::finish_grow (in /work/court/tmp/pfp27/b/distribution/libcrypto.so.3)
+==68107==    by 0x53620F4: BN_to_montgomery (in /work/court/tmp/pfp27/b/distribution/libcrypto.so.3)
+==68107==    by 0x4FE49B2: ossl_ecdsa_simple_sign_sig (in /work/court/tmp/pfp27/b/distribution/libcrypto.so.3)
+==68107==    by 0x109CCE: op_sign (pfp21_dso_ct.c:534)
+==68107==    by 0x10AC38: main (pfp21_dso_ct.c:606)
+==68107== 
+==68107== Conditional jump or move depends on uninitialised value(s)
+==68107==    at 0x484175D: malloc (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==68107==    by 0x4F9E94C: <alloc::raw_vec::RawVecInner>::finish_grow (in /work/court/tmp/pfp27/b/distribution/libcrypto.so.3)
+==68107==    by 0x53620F4: BN_to_montgomery (in /work/court/tmp/pfp27/b/distribution/libcrypto.so.3)
+==68107==    by 0x4FE49B2: ossl_ecdsa_simple_sign_sig (in /work/court/tmp/pfp27/b/distribution/libcrypto.so.3)
+==68107==    by 0x109CCE: op_sign (pfp21_dso_ct.c:534)
+==68107==    by 0x10AC38: main (pfp21_dso_ct.c:606)
+==68107== 
+==68107== Conditional jump or move depends on uninitialised value(s)
+==68107==    at 0x484B2B3: memmove (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==68107==    by 0x5362118: BN_to_montgomery (in /work/court/tmp/pfp27/b/distribution/libcrypto.so.3)
+==68107==    by 0x4FE49B2: ossl_ecdsa_simple_sign_sig (in /work/court/tmp/pfp27/b/distribution/libcrypto.so.3)
+==68107==    by 0x109CCE: op_sign (pfp21_dso_ct.c:534)
+==68107==    by 0x10AC38: main (pfp21_dso_ct.c:606)
+==68107== 
+==68107== Conditional jump or move depends on uninitialised value(s)
+==68107==    at 0x484B2DF: memmove (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==68107==    by 0x5362118: BN_to_montgomery (in /work/court/tmp/pfp27/b/distribution/libcrypto.so.3)
+==68107==    by 0x4FE49B2: ossl_ecdsa_simple_sign_sig (in /work/court/tmp/pfp27/b/distribution/libcrypto.so.3)
+==68107==    by 0x109CCE: op_sign (pfp21_dso_ct.c:534)
+==68107==    by 0x10AC38: main (pfp21_dso_ct.c:606)
+==68107== 
+==68107== Conditional jump or move depends on uninitialised value(s)
+==68107==    at 0x484B32B: memmove (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==68107==    by 0x5362118: BN_to_montgomery (in /work/court/tmp/pfp27/b/distribution/libcrypto.so.3)
+==68107==    by 0x4FE49B2: ossl_ecdsa_simple_sign_sig (in /work/court/tmp/pfp27/b/distribution/libcrypto.so.3)
+==68107==    by 0x109CCE: op_sign (pfp21_dso_ct.c:534)
+==68107==    by 0x10AC38: main (pfp21_dso_ct.c:606)
+==68107== 
+==68107== Conditional jump or move depends on uninitialised value(s)
+==68107==    at 0x484B37D: memmove (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==68107==    by 0x5362118: BN_to_montgomery (in /work/court/tmp/pfp27/b/distribution/libcrypto.so.3)
+==68107==    by 0x4FE49B2: ossl_ecdsa_simple_sign_sig (in /work/court/tmp/pfp27/b/distribution/libcrypto.so.3)
+==68107==    by 0x109CCE: op_sign (pfp21_dso_ct.c:534)
+==68107==    by 0x10AC38: main (pfp21_dso_ct.c:606)
+==68107== 
+==68107== Conditional jump or move depends on uninitialised value(s)
+==68107==    at 0x484B394: memmove (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==68107==    by 0x5362118: BN_to_montgomery (in /work/court/tmp/pfp27/b/distribution/libcrypto.so.3)
+==68107==    by 0x4FE49B2: ossl_ecdsa_simple_sign_sig (in /work/court/tmp/pfp27/b/distribution/libcrypto.so.3)
+==68107==    by 0x109CCE: op_sign (pfp21_dso_ct.c:534)
+==68107==    by 0x10AC38: main (pfp21_dso_ct.c:606)
+==68107== 
+==68107== Conditional jump or move depends on uninitialised value(s)
+==68107==    at 0x484B3D5: memmove (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==68107==    by 0x5362118: BN_to_montgomery (in /work/court/tmp/pfp27/b/distribution/libcrypto.so.3)
+==68107==    by 0x4FE49B2: ossl_ecdsa_simple_sign_sig (in /work/court/tmp/pfp27/b/distribution/libcrypto.so.3)
+==68107==    by 0x109CCE: op_sign (pfp21_dso_ct.c:534)
+==68107==    by 0x10AC38: main (pfp21_dso_ct.c:606)
+==68107== 
+==68107== Conditional jump or move depends on uninitialised value(s)
+==68107==    at 0x5361FA4: BN_to_montgomery (in /work/court/tmp/pfp27/b/distribution/libcrypto.so.3)
+==68107==    by 0x4FE49B2: ossl_ecdsa_simple_sign_sig (in /work/court/tmp/pfp27/b/distribution/libcrypto.so.3)
+==68107==    by 0x109CCE: op_sign (pfp21_dso_ct.c:534)
+==68107==    by 0x10AC38: main (pfp21_dso_ct.c:606)
+==68107== 
+==68107== Conditional jump or move depends on uninitialised value(s)
+==68107==    at 0x484B2B3: memmove (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==68107==    by 0x53621A1: BN_to_montgomery (in /work/court/tmp/pfp27/b/distribution/libcrypto.so.3)
+==68107==    by 0x4FE49B2: ossl_ecdsa_simple_sign_sig (in /work/court/tmp/pfp27/b/distribution/libcrypto.so.3)
+==68107==    by 0x109CCE: op_sign (pfp21_dso_ct.c:534)
+==68107==    by 0x10AC38: main (pfp21_dso_ct.c:606)
+==68107== 
+==68107== Conditional jump or move depends on uninitialised value(s)
+==68107==    at 0x484B2DF: memmove (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==68107==    by 0x53621A1: BN_to_montgomery (in /work/court/tmp/pfp27/b/distribution/libcrypto.so.3)
+==68107==    by 0x4FE49B2: ossl_ecdsa_simple_sign_sig (in /work/court/tmp/pfp27/b/distribution/libcrypto.so.3)
+==68107==    by 0x109CCE: op_sign (pfp21_dso_ct.c:534)
+==68107==    by 0x10AC38: main (pfp21_dso_ct.c:606)
+==68107== 
+==68107== Conditional jump or move depends on uninitialised value(s)
+==68107==    at 0x484B32B: memmove (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==68107==    by 0x53621A1: BN_to_montgomery (in /work/court/tmp/pfp27/b/distribution/libcrypto.so.3)
+==68107==    by 0x4FE49B2: ossl_ecdsa_simple_sign_sig (in /work/court/tmp/pfp27/b/distribution/libcrypto.so.3)
+==68107==    by 0x109CCE: op_sign (pfp21_dso_ct.c:534)
+==68107==    by 0x10AC38: main (pfp21_dso_ct.c:606)
+==68107== 
+==68107== Conditional jump or move depends on uninitialised value(s)
+==68107==    at 0x484B37D: memmove (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==68107==    by 0x53621A1: BN_to_montgomery (in /work/court/tmp/pfp27/b/distribution/libcrypto.so.3)
+==68107==    by 0x4FE49B2: ossl_ecdsa_simple_sign_sig (in /work/court/tmp/pfp27/b/distribution/libcrypto.so.3)
+==68107==    by 0x109CCE: op_sign (pfp21_dso_ct.c:534)
+==68107==    by 0x10AC38: main (pfp21_dso_ct.c:606)
+==68107== 
+==68107== Conditional jump or move depends on uninitialised value(s)
+==68107==    at 0x484B394: memmove (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==68107==    by 0x53621A1: BN_to_montgomery (in /work/court/tmp/pfp27/b/distribution/libcrypto.so.3)
+==68107==    by 0x4FE49B2: ossl_ecdsa_simple_sign_sig (in /work/court/tmp/pfp27/b/distribution/libcrypto.so.3)
+==68107==    by 0x109CCE: op_sign (pfp21_dso_ct.c:534)
+==68107==    by 0x10AC38: main (pfp21_dso_ct.c:606)
+==68107== 
+==68107== Conditional jump or move depends on uninitialised value(s)
+==68107==    at 0x484B3D5: memmove (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==68107==    by 0x53621A1: BN_to_montgomery (in /work/court/tmp/pfp27/b/distribution/libcrypto.so.3)
+==68107==    by 0x4FE49B2: ossl_ecdsa_simple_sign_sig (in /work/court/tmp/pfp27/b/distribution/libcrypto.so.3)
+==68107==    by 0x109CCE: op_sign (pfp21_dso_ct.c:534)
+==68107==    by 0x10AC38: main (pfp21_dso_ct.c:606)
+==68107== 
+==68107== Conditional jump or move depends on uninitialised value(s)
+==68107==    at 0x5362046: BN_to_montgomery (in /work/court/tmp/pfp27/b/distribution/libcrypto.so.3)
+==68107==    by 0x4FE49B2: ossl_ecdsa_simple_sign_sig (in /work/court/tmp/pfp27/b/distribution/libcrypto.so.3)
+==68107==    by 0x109CCE: op_sign (pfp21_dso_ct.c:534)
+==68107==    by 0x10AC38: main (pfp21_dso_ct.c:606)
+==68107== 
+==68107== Conditional jump or move depends on uninitialised value(s)
+==68107==    at 0x53622A6: BN_to_montgomery (in /work/court/tmp/pfp27/b/distribution/libcrypto.so.3)
+==68107==    by 0x4FE49B2: ossl_ecdsa_simple_sign_sig (in /work/court/tmp/pfp27/b/distribution/libcrypto.so.3)
+==68107==    by 0x109CCE: op_sign (pfp21_dso_ct.c:534)
+==68107==    by 0x10AC38: main (pfp21_dso_ct.c:606)
+==68107== 
+==68107== Conditional jump or move depends on uninitialised value(s)
+==68107==    at 0x535D696: BN_mod_mul_montgomery (in /work/court/tmp/pfp27/b/distribution/libcrypto.so.3)
+==68107==    by 0x4FE49D7: ossl_ecdsa_simple_sign_sig (in /work/court/tmp/pfp27/b/distribution/libcrypto.so.3)
+==68107==    by 0x109CCE: op_sign (pfp21_dso_ct.c:534)
+==68107==    by 0x10AC38: main (pfp21_dso_ct.c:606)
+==68107== 
+==68107== Conditional jump or move depends on uninitialised value(s)
+==68107==    at 0x4FE4A01: ossl_ecdsa_simple_sign_sig (in /work/court/tmp/pfp27/b/distribution/libcrypto.so.3)
+==68107==    by 0x109CCE: op_sign (pfp21_dso_ct.c:534)
+==68107==    by 0x10AC38: main (pfp21_dso_ct.c:606)
+==68107== 
+==68107== 
+==68107== HEAP SUMMARY:
+==68107==     in use at exit: 232,860 bytes in 2,663 blocks
+==68107==   total heap usage: 14,898 allocs, 12,235 frees, 517,569 bytes allocated
+==68107== 
+==68107== LEAK SUMMARY:
+==68107==    definitely lost: 64 bytes in 2 blocks
+==68107==    indirectly lost: 16 bytes in 2 blocks
+==68107==      possibly lost: 24,432 bytes in 379 blocks
+==68107==    still reachable: 208,348 bytes in 2,280 blocks
+==68107==         suppressed: 0 bytes in 0 blocks
+==68107== Rerun with --leak-check=full to see details of leaked memory
+==68107== 
+==68107== Use --track-origins=yes to see where uninitialised values come from
+==68107== For lists of detected and suppressed errors, rerun with: -s
+==68107== ERROR SUMMARY: 24 errors from 24 contexts (suppressed: 0 from 0)

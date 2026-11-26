@@ -1,0 +1,48 @@
+# canary K: mont_mul_ladder_into extent and the deliberate branch
+000000000035a970 000000000000009f t _RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15canary_take_acc
+000000000035b750 000000000000009f t _RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith16canary_take_diff
+000000000035c520 0000000000000339 t _RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith20mont_mul_ladder_into
+
+
+k/distribution/libcrypto.so.3:     file format elf64-x86-64
+
+
+Disassembly of section .text:
+
+000000000035c7f0 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith20mont_mul_ladder_into+0x2d0>:
+  35c7f0:	setb   %cl
+  35c7f3:	movzbl %cl,%ecx
+  35c7f6:	cmp    %rsi,%r10
+  35c7f9:	jne    35c7c0 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith20mont_mul_ladder_into+0x2a0>
+  35c7fb:	test   $0x1,%bl
+  35c7fe:	je     35c81d <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith20mont_mul_ladder_into+0x2fd>
+  35c800:	mov    (%r14,%rsi,8),%r9
+  35c804:	sub    0x0(%rbp,%rsi,8),%r9
+  35c809:	setb   %r8b
+  35c80d:	sub    %rcx,%r9
+  35c810:	setb   %cl
+  35c813:	mov    %r9,(%rdx,%rsi,8)
+  35c817:	or     %r8b,%cl
+  35c81a:	movzbl %cl,%ecx
+  35c81d:	xor    $0x1,%rcx
+  35c821:	or     %rax,%rcx
+  35c824:	je     35c836 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith20mont_mul_ladder_into+0x316>
+  35c826:	mov    %rbx,%rsi
+  35c829:	mov    %rbx,%rcx
+  35c82c:	mov    %rbx,%r8
+  35c82f:	call   35b750 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith16canary_take_diff>
+  35c834:	jmp    35c848 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith20mont_mul_ladder_into+0x328>
+  35c836:	lea    0x2(%rbx),%rcx
+  35c83a:	mov    %rbx,%rsi
+  35c83d:	mov    %r14,%rdx
+  35c840:	mov    %rbx,%r8
+  35c843:	call   35a970 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15canary_take_acc>
+  35c848:	mov    $0x1,%al
+  35c84a:	add    $0x18,%rsp
+  35c84e:	pop    %rbx
+  35c84f:	pop    %r12
+  35c851:	pop    %r13
+  35c853:	pop    %r14
+  35c855:	pop    %r15
+  35c857:	pop    %rbp
+  35c858:	ret

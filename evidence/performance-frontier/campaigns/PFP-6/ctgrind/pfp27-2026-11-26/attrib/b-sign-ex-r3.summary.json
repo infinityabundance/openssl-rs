@@ -1,0 +1,52 @@
+{
+  "log": "/work/evidence/performance-frontier/campaigns/PFP-6/ctgrind/pfp27-2026-11-26/raw/b-sign-ex-r3.out",
+  "contexts": 24,
+  "per_class": {
+    "E": 23,
+    "C": 1
+  },
+  "engine_on_path": 0,
+  "origin_in_engine": 0,
+  "top_origins": [
+    {
+      "contexts": 12,
+      "loc": "in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so",
+      "fn": "memmove"
+    },
+    {
+      "contexts": 4,
+      "loc": "in /work/court/tmp/pfp27/b/distribution/libcrypto.so.3",
+      "fn": "BN_to_montgomery"
+    },
+    {
+      "contexts": 2,
+      "loc": "in /work/court/tmp/pfp27/b/distribution/libcrypto.so.3",
+      "fn": "BN_mod_mul_montgomery"
+    },
+    {
+      "contexts": 2,
+      "loc": "in /work/court/tmp/pfp27/b/distribution/libcrypto.so.3",
+      "fn": "<alloc::raw_vec::RawVecInner>::finish_grow"
+    },
+    {
+      "contexts": 1,
+      "loc": "in /work/court/tmp/pfp27/b/distribution/libcrypto.so.3",
+      "fn": "openssl_rs::bn::arith::mod_add_reduced_ct"
+    },
+    {
+      "contexts": 1,
+      "loc": "unix.rs:13",
+      "fn": "alloc"
+    },
+    {
+      "contexts": 1,
+      "loc": "in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so",
+      "fn": "malloc"
+    },
+    {
+      "contexts": 1,
+      "loc": "in /work/court/tmp/pfp27/b/distribution/libcrypto.so.3",
+      "fn": "ossl_ecdsa_simple_sign_sig"
+    }
+  ]
+}

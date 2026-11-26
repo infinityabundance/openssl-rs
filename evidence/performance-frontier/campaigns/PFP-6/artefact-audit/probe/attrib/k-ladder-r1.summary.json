@@ -1,0 +1,16 @@
+{
+  "log": "/work/evidence/performance-frontier/campaigns/PFP-6/artefact-audit/probe/raw/k-ladder-r1.out",
+  "contexts": 2,
+  "per_class": {
+    "C": 2
+  },
+  "engine_on_path": 0,
+  "origin_in_engine": 0,
+  "top_origins": [
+    {
+      "contexts": 2,
+      "loc": "in /work/court/tmp/pfp27/k/distribution/libcrypto.so.3",
+      "fn": "openssl_rs::bn::arith::mont_mul_ladder_into"
+    }
+  ]
+}

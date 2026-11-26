@@ -1,0 +1,244 @@
+{
+  "campaign": "PFP-2",
+  "cases": {
+    "base-mul-g": {
+      "authority_output_sha256": "a9e1068d9c28846fd8beec36d372845723e9f253f3c09602fe93bfb7a23361fd",
+      "candidate_output_sha256": "a9e1068d9c28846fd8beec36d372845723e9f253f3c09602fe93bfb7a23361fd",
+      "class_group": "existing_seed_driven",
+      "compared_lines": 4096,
+      "derivation": "original scalar_for generator: uniform in [1, 2^255), k*G; byte-identical to the earlier differential",
+      "expected_cases": 4096,
+      "mismatches": 0,
+      "mode": "mul-g",
+      "seed": "0x5046503250485032"
+    },
+    "base-mul-p": {
+      "authority_output_sha256": "bcb22a91415f5a8593262b56935218f0a21712b2bbedddb2d8824d485af9e23b",
+      "candidate_output_sha256": "bcb22a91415f5a8593262b56935218f0a21712b2bbedddb2d8824d485af9e23b",
+      "class_group": "existing_seed_driven",
+      "compared_lines": 4096,
+      "derivation": "original scalar_for generator: uniform in [1, 2^255), k*P with P=j*G from domain BASE",
+      "expected_cases": 4096,
+      "mismatches": 0,
+      "mode": "mul-p",
+      "seed": "0x5046503250485032"
+    },
+    "boundary-g": {
+      "authority_output_sha256": "412a0adb3593b02dcdf9aa5034657a6b49bcf2c62e35e48d35eca0f0d5763ad6",
+      "candidate_output_sha256": "412a0adb3593b02dcdf9aa5034657a6b49bcf2c62e35e48d35eca0f0d5763ad6",
+      "class_group": "domain_completion",
+      "compared_lines": 8,
+      "derivation": "fixed scalars 1, 2, q-2, q-1, q, q+1, 2q-1 (33 bytes), 2^256-1 as k*G; acceptance/rejection compared",
+      "expected_cases": 8,
+      "mismatches": 0,
+      "mode": "boundary-g",
+      "seed": "0x5050463232424f47"
+    },
+    "boundary-p": {
+      "authority_output_sha256": "7d37a627ba14ba9f58a45a5125ed24e7bc20925d31f1eedeb211b1aa97390d2d",
+      "candidate_output_sha256": "7d37a627ba14ba9f58a45a5125ed24e7bc20925d31f1eedeb211b1aa97390d2d",
+      "class_group": "domain_completion",
+      "compared_lines": 8,
+      "derivation": "the same fixed scalars as k*P with P=j*G; acceptance/rejection compared",
+      "expected_cases": 8,
+      "mismatches": 0,
+      "mode": "boundary-p",
+      "seed": "0x5050463232424f50"
+    },
+    "exceptional": {
+      "authority_output_sha256": "07c10828a61883dd69eb4d26c67c9acf888b1f498ed6aa52fa2288e95fa2a013",
+      "candidate_output_sha256": "07c10828a61883dd69eb4d26c67c9acf888b1f498ed6aa52fa2288e95fa2a013",
+      "class_group": "domain_completion",
+      "compared_lines": 10,
+      "derivation": "zero scalar (all-zero limbs) on G and P; 2^256-1 on G and P; infinity base with k=5 and k=0; generator and non-generator base with k=7; oct2point(generator) then 7*decoded; off-curve (0,0) decode rejection",
+      "expected_cases": 10,
+      "mismatches": 0,
+      "mode": "exceptional",
+      "seed": "0x5050463232455845"
+    },
+    "limb-g": {
+      "authority_output_sha256": "ed46a959522f20d7f90a3894dada1b37a91778f79cdffe849a81f57166f459ed",
+      "candidate_output_sha256": "ed46a959522f20d7f90a3894dada1b37a91778f79cdffe849a81f57166f459ed",
+      "class_group": "domain_completion",
+      "compared_lines": 12,
+      "derivation": "one non-zero 64-bit limb in each of the four positions (value 1 and 0xffffffffffffffff), and four values with the most-significant limb zero, as k*G",
+      "expected_cases": 12,
+      "mismatches": 0,
+      "mode": "limb-g",
+      "seed": "0x50504632324c4d47"
+    },
+    "limb-p": {
+      "authority_output_sha256": "f2d5f0381ad53488d62ee02ed8d02d215dc7672139862020dffd8ce43b880c37",
+      "candidate_output_sha256": "f2d5f0381ad53488d62ee02ed8d02d215dc7672139862020dffd8ce43b880c37",
+      "class_group": "domain_completion",
+      "compared_lines": 12,
+      "derivation": "the same twelve scalars as k*P with P=j*G",
+      "expected_cases": 12,
+      "mismatches": 0,
+      "mode": "limb-p",
+      "seed": "0x50504632324c4d50"
+    },
+    "upper-g": {
+      "authority_output_sha256": "5aa11f7ce28c896d4a44d885d2364874fd7632c925e85fd3981001ab8a1a4c50",
+      "candidate_output_sha256": "5aa11f7ce28c896d4a44d885d2364874fd7632c925e85fd3981001ab8a1a4c50",
+      "class_group": "domain_completion",
+      "compared_lines": 4096,
+      "derivation": "upper_half_for: uniform in [2^255, q-1] by rejection, k*G",
+      "expected_cases": 4096,
+      "mismatches": 0,
+      "mode": "upper-g",
+      "seed": "0x5050463232555047"
+    },
+    "upper-p": {
+      "authority_output_sha256": "e364eb3e41670413725ef7b5a35be13475884e6f91362e73936ed7c0e2a41180",
+      "candidate_output_sha256": "e364eb3e41670413725ef7b5a35be13475884e6f91362e73936ed7c0e2a41180",
+      "class_group": "domain_completion",
+      "compared_lines": 4096,
+      "derivation": "upper_half_for: uniform in [2^255, q-1] by rejection, k*P with P=j*G",
+      "expected_cases": 4096,
+      "mismatches": 0,
+      "mode": "upper-p",
+      "seed": "0x5050463232555050"
+    }
+  },
+  "comparability": {
+    "historical_mul_g_sha256": "a9e1068d9c28846fd8beec36d372845723e9f253f3c09602fe93bfb7a23361fd",
+    "historical_mul_p_sha256": "bcb22a91415f5a8593262b56935218f0a21712b2bbedddb2d8824d485af9e23b",
+    "note": "the original 4096 k*G and 4096 k*P population, at seed 0x5046503250485032, reproduces the digests recorded at the same two DSOs in dso-differential-pfp20/raw, so the added classes did not change the comparable population",
+    "reproduced": true
+  },
+  "identity_proof": {
+    "all_ok": true,
+    "file": "raw/identity-check.tsv",
+    "method": "each process printed LOADED realpath/dev/ino/size for the file it mapped and LIB from dladdr(BN_new); the runner compared those fields with stat(2) on the expected on-disk DSO and required a /proc/self/maps entry",
+    "rows": 18
+  },
+  "instrument": {
+    "binary_sha256": "9db14b748ada2eb7e12cf030620541c5fd554f36c03c99e2fbc47def314a3af7",
+    "instrument_note": "The loader, identity proof and serialised-point comparison are the PFP-2 court instrument (pfp2_dso_differential.c, sha256 fd67b943889ab710af9f3c246e3119c2f28561dc6a47084ee96f5a5d5f64affc). Only the population generator was extended; the original mul-g/mul-p modes reproduce the original bytes and line format.",
+    "loader_pattern": "dlopen(RTLD_NOW|RTLD_LOCAL), one libcrypto.so.3 per process; LOADED/MAPS/LIB checked against stat(2), unchanged from pfp2_dso_differential.c",
+    "serialisation": "EC_POINT_point2oct(POINT_CONVERSION_UNCOMPRESSED); the original modes require 65 bytes, the population classes record the actual SEC1 length so the point at infinity (one 0x00 byte) is compared rather than treated as a failure",
+    "source": "pfp22_domain_differential.c",
+    "source_sha256": "0aa2695ef442985dd90a7f1ce04023a4920868493c1eef766292a245e21ab779"
+  },
+  "limitations": [
+    "Internal field operations (p256::mont_reduce_into, p256::wide_mul_x86, limbs::normalise_branchless) have no exported entry point and were not called directly; they are exercised only through EC_POINT_mul and EC_POINT_oct2point. No source-level test is substituted while this court is called DSO-bound.",
+    "P-256 has prime group order n, so it has no non-trivial small-order point; the only order-1 point is infinity, exercised as an input base and as a result.",
+    "2q-1 does not fit in 32 bytes and is supplied to EC_POINT_mul as a 33-byte BIGNUM; the API accepts arbitrary-precision scalars and does not reject out-of-range values, so agreement is on the computed result, and the only rejection compared is an off-curve point decode.",
+    "The candidate is the frozen distribution DSO; it was not rebuilt in this court. Its digest is checked before and after execution.",
+    "This is a compatibility/correctness court. It is not a constant-time result and not a safety conclusion."
+  ],
+  "population": {
+    "classes": [
+      {
+        "cases": 4096,
+        "class": "base-mul-g",
+        "class_group": "existing_seed_driven",
+        "derivation": "original scalar_for generator: uniform in [1, 2^255), k*G; byte-identical to the earlier differential",
+        "mode": "mul-g",
+        "seed": "0x5046503250485032"
+      },
+      {
+        "cases": 4096,
+        "class": "base-mul-p",
+        "class_group": "existing_seed_driven",
+        "derivation": "original scalar_for generator: uniform in [1, 2^255), k*P with P=j*G from domain BASE",
+        "mode": "mul-p",
+        "seed": "0x5046503250485032"
+      },
+      {
+        "cases": 4096,
+        "class": "upper-g",
+        "class_group": "domain_completion",
+        "derivation": "upper_half_for: uniform in [2^255, q-1] by rejection, k*G",
+        "mode": "upper-g",
+        "seed": "0x5050463232555047"
+      },
+      {
+        "cases": 4096,
+        "class": "upper-p",
+        "class_group": "domain_completion",
+        "derivation": "upper_half_for: uniform in [2^255, q-1] by rejection, k*P with P=j*G",
+        "mode": "upper-p",
+        "seed": "0x5050463232555050"
+      },
+      {
+        "cases": 8,
+        "class": "boundary-g",
+        "class_group": "domain_completion",
+        "derivation": "fixed scalars 1, 2, q-2, q-1, q, q+1, 2q-1 (33 bytes), 2^256-1 as k*G; acceptance/rejection compared",
+        "mode": "boundary-g",
+        "seed": "0x5050463232424f47"
+      },
+      {
+        "cases": 8,
+        "class": "boundary-p",
+        "class_group": "domain_completion",
+        "derivation": "the same fixed scalars as k*P with P=j*G; acceptance/rejection compared",
+        "mode": "boundary-p",
+        "seed": "0x5050463232424f50"
+      },
+      {
+        "cases": 10,
+        "class": "exceptional",
+        "class_group": "domain_completion",
+        "derivation": "zero scalar (all-zero limbs) on G and P; 2^256-1 on G and P; infinity base with k=5 and k=0; generator and non-generator base with k=7; oct2point(generator) then 7*decoded; off-curve (0,0) decode rejection",
+        "mode": "exceptional",
+        "seed": "0x5050463232455845"
+      },
+      {
+        "cases": 12,
+        "class": "limb-g",
+        "class_group": "domain_completion",
+        "derivation": "one non-zero 64-bit limb in each of the four positions (value 1 and 0xffffffffffffffff), and four values with the most-significant limb zero, as k*G",
+        "mode": "limb-g",
+        "seed": "0x50504632324c4d47"
+      },
+      {
+        "cases": 12,
+        "class": "limb-p",
+        "class_group": "domain_completion",
+        "derivation": "the same twelve scalars as k*P with P=j*G",
+        "mode": "limb-p",
+        "seed": "0x50504632324c4d50"
+      }
+    ],
+    "total_cases_per_subject": 16434
+  },
+  "problems": [],
+  "raw_outputs": {
+    "base-mul-g-authority.points": "a9e1068d9c28846fd8beec36d372845723e9f253f3c09602fe93bfb7a23361fd",
+    "base-mul-g-candidate.points": "a9e1068d9c28846fd8beec36d372845723e9f253f3c09602fe93bfb7a23361fd",
+    "base-mul-p-authority.points": "bcb22a91415f5a8593262b56935218f0a21712b2bbedddb2d8824d485af9e23b",
+    "base-mul-p-candidate.points": "bcb22a91415f5a8593262b56935218f0a21712b2bbedddb2d8824d485af9e23b",
+    "boundary-g-authority.points": "412a0adb3593b02dcdf9aa5034657a6b49bcf2c62e35e48d35eca0f0d5763ad6",
+    "boundary-g-candidate.points": "412a0adb3593b02dcdf9aa5034657a6b49bcf2c62e35e48d35eca0f0d5763ad6",
+    "boundary-p-authority.points": "7d37a627ba14ba9f58a45a5125ed24e7bc20925d31f1eedeb211b1aa97390d2d",
+    "boundary-p-candidate.points": "7d37a627ba14ba9f58a45a5125ed24e7bc20925d31f1eedeb211b1aa97390d2d",
+    "exceptional-authority.points": "07c10828a61883dd69eb4d26c67c9acf888b1f498ed6aa52fa2288e95fa2a013",
+    "exceptional-candidate.points": "07c10828a61883dd69eb4d26c67c9acf888b1f498ed6aa52fa2288e95fa2a013",
+    "limb-g-authority.points": "ed46a959522f20d7f90a3894dada1b37a91778f79cdffe849a81f57166f459ed",
+    "limb-g-candidate.points": "ed46a959522f20d7f90a3894dada1b37a91778f79cdffe849a81f57166f459ed",
+    "limb-p-authority.points": "f2d5f0381ad53488d62ee02ed8d02d215dc7672139862020dffd8ce43b880c37",
+    "limb-p-candidate.points": "f2d5f0381ad53488d62ee02ed8d02d215dc7672139862020dffd8ce43b880c37",
+    "upper-g-authority.points": "5aa11f7ce28c896d4a44d885d2364874fd7632c925e85fd3981001ab8a1a4c50",
+    "upper-g-candidate.points": "5aa11f7ce28c896d4a44d885d2364874fd7632c925e85fd3981001ab8a1a4c50",
+    "upper-p-authority.points": "e364eb3e41670413725ef7b5a35be13475884e6f91362e73936ed7c0e2a41180",
+    "upper-p-candidate.points": "e364eb3e41670413725ef7b5a35be13475884e6f91362e73936ed7c0e2a41180"
+  },
+  "record_id": "PFP2-DOMAIN-DIFFERENTIAL-553E1B8C",
+  "result": "PASS",
+  "schema": "openssl-rs/performance/pfp22-domain-differential/v1",
+  "subjects": {
+    "authority": {
+      "label": "OpenSSL 3.6.4 production authority",
+      "path": "/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+      "sha256": "611e511db4273c4b6b522031fd171efce71b80661bb8310c2a21dfd18ec0efd2"
+    },
+    "candidate": {
+      "label": "distribution-shaped libcrypto.so.3 at the PFP-20 candidate (P-256 engine, branchless write-back trim)",
+      "path": "/work/court/tmp/pfp27/a/distribution/libcrypto.so.3",
+      "sha256": "5e75b6945907536959c6339eb8acb4c362495dcf4a5a781983c76ac65e2ce5ae"
+    }
+  }
+}

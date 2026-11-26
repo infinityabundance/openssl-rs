@@ -1,0 +1,24 @@
+# PFP-27 carrier evidence, from the artefacts themselves
+## DSO a
+dso_sha256 5e75b6945907536959c6339eb8acb4c362495dcf4a5a781983c76ac65e2ce5ae
+-- kernel symbols (mangled, local t) --
+0000000000543950 00000000000003f5 t _RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith17mont_mul_sos_into
+-- any cios/sqr symbol at all --
+(absent)
+## DSO b
+dso_sha256 12023efec3e40444f579c9e88a78653c891448b2ffd2abf9c9c0ee89e0b9f9e8
+-- kernel symbols (mangled, local t) --
+00000000005438e0 00000000000003f5 t _RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith17mont_mul_sos_into
+0000000000544000 000000000000036c t _RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith20mont_mul_ladder_into
+-- any cios/sqr symbol at all --
+(absent)
+## DSO B: calls into the CIOS carrier
+507:  542f24:	call   544000 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith20mont_mul_ladder_into>
+548:  542fc7:	call   5438e0 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith17mont_mul_sos_into>
+587:  54306a:	call   544000 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith20mont_mul_ladder_into>
+## DSO A: calls to the SOS kernel from the ladder
+530:  542f89:	call   543950 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith17mont_mul_sos_into>
+570:  54302b:	call   543950 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith17mont_mul_sos_into>
+609:  5430ce:	call   543950 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith17mont_mul_sos_into>
+## B carrier calls (inside mont_mul_ladder_into)
+43:  544086:	call   *0x388794(%rip)        # 8cc820 <memset@GLIBC_2.2.5>

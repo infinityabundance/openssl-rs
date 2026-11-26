@@ -1,0 +1,29 @@
+mont_mul_sos_into	543913	jne	543a30 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith17mont_mul_sos_into+0x150>	xor 0xa0(%rsp),%rax	or %r9,%rax	jcc
+mont_mul_sos_into	54392c	jne	543a30 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith17mont_mul_sos_into+0x150>	lea 0x1(,%rsi,2),%rax	cmp %rax,%rcx	jcc
+mont_mul_sos_into	54395d	je	543a32 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith17mont_mul_sos_into+0x152>	mov $0x1,%al	test %r14,%r14	jcc
+mont_mul_sos_into	5439a2	setb	%r11b	xor %r11d,%r11d	add (%rcx,%r8,8),%r9	setcc
+mont_mul_sos_into	5439c1	je	543a41 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith17mont_mul_sos_into+0x161>	add $0x8,%rsi	cmp %rdi,%rbp	jcc
+mont_mul_sos_into	5439d4	je	543990 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith17mont_mul_sos_into+0xb0>	xor %r9d,%r9d	test %rax,%rax	jcc
+mont_mul_sos_into	5439ef	setb	%r11b	xor %r11d,%r11d	add -0x8(%rsi,%r8,8),%r9	setcc
+mont_mul_sos_into	543a0d	setb	%r9b	xor %r9d,%r9d	add (%rsi,%r8,8),%r11	setcc
+mont_mul_sos_into	543a22	jne	5439e0 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith17mont_mul_sos_into+0x100>	adc %rdx,%r9	cmp %r8,%r13	jcc
+mont_mul_sos_into	543a28	jne	543990 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith17mont_mul_sos_into+0xb0>	jne 5439e0 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith17mont_mul_sos_into+0x100>	test $0x1,%dil	jcc
+mont_mul_sos_into	543a9d	je	543b4a <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith17mont_mul_sos_into+0x26a>	mov %rax,%r9	cmp %rdi,%rax	jcc
+mont_mul_sos_into	543aab	je	543c9a <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith17mont_mul_sos_into+0x3ba>	je 543b4a <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith17mont_mul_sos_into+0x26a>	cmp 0x90(%rsp),%r9	jcc
+mont_mul_sos_into	543ae3	je	543c7f <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith17mont_mul_sos_into+0x39f>	data16 data16 cs nopw 0x0(%rax,%rax,1)	cmp %rsi,%rbx	jcc
+mont_mul_sos_into	543af7	setb	%r8b	xor %r8d,%r8d	add (%r14,%rsi,8),%r12	setcc
+mont_mul_sos_into	543b0f	jne	543ae0 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith17mont_mul_sos_into+0x200>	adc %rdx,%r12	cmp %rsi,%rdi	jcc
+mont_mul_sos_into	543b1d	je	543a80 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith17mont_mul_sos_into+0x1a0>	shl $0x3,%r9	cmp 0x28(%rsp),%r9	jcc
+mont_mul_sos_into	543b36	setb	%cl	xor %ecx,%ecx	add %r12,(%r11,%rax,1)	setcc
+mont_mul_sos_into	543b43	jne	543b30 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith17mont_mul_sos_into+0x250>	mov %rcx,%r12	cmp %rax,%rbp	jcc
+mont_mul_sos_into	543b62	je	543bd2 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith17mont_mul_sos_into+0x2f2>	lea -0x1(%rdi),%rdx	test %rdx,%rdx	jcc
+mont_mul_sos_into	543b99	setb	%r11b	mov -0x8(%r8,%rsi,8),%r9	sub (%r10,%rsi,8),%r9	setcc
+mont_mul_sos_into	543ba0	setb	%dl	setb %r11b	sub %rdx,%r9	setcc
+mont_mul_sos_into	543bbf	setb	%dl	mov %r9,0x8(%r15,%rsi,8)	lea 0x2(%rsi),%rsi	setcc
+mont_mul_sos_into	543bc8	jne	543b90 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith17mont_mul_sos_into+0x2b0>	movzbl %dl,%edx	cmp %rsi,%r13	jcc
+mont_mul_sos_into	543bce	jne	543bed <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith17mont_mul_sos_into+0x30d>	jne 543b90 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith17mont_mul_sos_into+0x2b0>	test $0x1,%dil	jcc
+mont_mul_sos_into	543bfa	setb	%r9b	mov (%r8,%rsi,8),%r8	sub (%r10,%rsi,8),%r8	setcc
+mont_mul_sos_into	543c01	setb	%dl	setb %r9b	sub %rdx,%r8	setcc
+mont_mul_sos_into	543c47	jae	543cc2 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith17mont_mul_sos_into+0x3e2>	lea (%rdi,%r10,1),%rcx	cmp %r14,%rcx	jcc
+mont_mul_sos_into	543c4c	je	543cb2 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith17mont_mul_sos_into+0x3d2>	jae 543cc2 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith17mont_mul_sos_into+0x3e2>	cmp %r10,%rdi	jcc
+mont_mul_sos_into	543c78	jne	543c40 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith17mont_mul_sos_into+0x360>	inc %r10	add $0xfffffffffffffff8,%r8	jcc

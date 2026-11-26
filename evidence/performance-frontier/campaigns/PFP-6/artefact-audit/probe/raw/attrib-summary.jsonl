@@ -1,0 +1,12 @@
+{"log": "a-control-r1.out", "contexts": 0, "per_class": {}, "engine_on_path": 0}
+{"log": "a-ladder-r1.out", "contexts": 0, "per_class": {}, "engine_on_path": 0}
+{"log": "a-ladder-r2.out", "contexts": 0, "per_class": {}, "engine_on_path": 0}
+{"log": "a-ladder-r3.out", "contexts": 0, "per_class": {}, "engine_on_path": 0}
+{"log": "b-control-r1.out", "contexts": 0, "per_class": {}, "engine_on_path": 0}
+{"log": "b-ladder-r1.out", "contexts": 0, "per_class": {}, "engine_on_path": 0}
+{"log": "b-ladder-r2.out", "contexts": 0, "per_class": {}, "engine_on_path": 0}
+{"log": "b-ladder-r3.out", "contexts": 0, "per_class": {}, "engine_on_path": 0}
+{"log": "k-control-r1.out", "contexts": 0, "per_class": {}, "engine_on_path": 0}
+{"log": "k-ladder-r1.out", "contexts": 2, "per_class": {"C": 2}, "engine_on_path": 0}
+{"log": "k-ladder-r2.out", "contexts": 2, "per_class": {"C": 2}, "engine_on_path": 0}
+{"log": "k-ladder-r3.out", "contexts": 2, "per_class": {"C": 2}, "engine_on_path": 0}

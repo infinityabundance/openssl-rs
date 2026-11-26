@@ -1,0 +1,19 @@
+{
+  "sign_operations": 64,
+  "a": {
+    "sos_calls_per_sign": 513,
+    "sos_ir_per_call": 844,
+    "sos_ir_per_sign": 432972
+  },
+  "b": {
+    "cios_calls_per_sign": 257,
+    "cios_ir_per_call": 572,
+    "sos_calls_per_sign": 256,
+    "sos_ir_per_call": 844,
+    "cios_ir_per_sign": 147004,
+    "sos_ir_per_sign": 216064
+  },
+  "cios_over_sos_multiply_ir": 0.677725,
+  "cios_over_sos_ladder_ir": 0.838548,
+  "note": "instruction counts, not time; both sides are the artefact's own callgrind run of the same harness and population"
+}

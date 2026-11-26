@@ -1,0 +1,6 @@
+LOADED realpath=/work/court/tmp/pfp27/a/distribution/libcrypto.so.3 dev=57 ino=2024830 size=17094080
+MAPS realpath=/work/court/tmp/pfp27/a/distribution/libcrypto.so.3 entries=5
+FOREIGN libcrypto=0
+HARNESS mode=time iters=2000
+RESULT mode=time ok=1 marked=0
+TIME mode=time iters=2000 ns_per_op=20411.8

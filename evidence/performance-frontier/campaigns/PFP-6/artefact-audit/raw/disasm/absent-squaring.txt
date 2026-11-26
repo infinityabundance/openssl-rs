@@ -1,0 +1,2 @@
+a absent (LADDER_DEDICATED_SQUARING = false; no symbol, no body)
+b absent (LADDER_DEDICATED_SQUARING = false; no symbol, no body)

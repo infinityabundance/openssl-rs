@@ -1,0 +1,18 @@
+==68313== Callgrind, a call-graph generating cache profiler
+==68313== Copyright (C) 2002-2017, and GNU GPL'd, by Josef Weidendorfer et al.
+==68313== Using Valgrind-3.19.0 and LibVEX; rerun with -h for copyright info
+==68313== Command: /work/court/tmp/pfp27/instrument/pfp27_dso_ct --lib /work/court/tmp/pfp27/b/distribution/libcrypto.so.3 --mode mul-g --iters 64
+==68313== 
+==68313== For interactive control, run 'callgrind_control -h'.
+LOADED realpath=/work/court/tmp/pfp27/b/distribution/libcrypto.so.3 dev=57 ino=2025013 size=17092448
+MAPS realpath=/work/court/tmp/pfp27/b/distribution/libcrypto.so.3 entries=5
+FOREIGN libcrypto=0
+HARNESS mode=mul-g iters=64 taint=1
+TAINT what=k limbs=4 bits=256
+RESULT mode=mul-g ok=1 marked=1
+TIME mode=mul-g iters=64 ns_per_op=5187314.7
+==68313== 
+==68313== Events    : Ir
+==68313== Collected : 341683153
+==68313== 
+==68313== I   refs:      341,683,153

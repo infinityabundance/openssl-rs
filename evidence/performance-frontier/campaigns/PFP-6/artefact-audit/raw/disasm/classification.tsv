@@ -1,0 +1,91 @@
+dso	symbol	addr	kind	insn	operand	class	sub	depends_on	note	prev
+b	mont_mul_ladder_into	544033	jcc	jne	544229	a	a-geom	a/b/out/diff/t lengths	mont_geometry_ok: xor/or of the five length words	or %r9,%rax
+b	mont_mul_ladder_into	544049	setcc	sete	%al	a	a-geom	t.len == 2n+1	geometry flag (return value on the failure path)	cmp %rax,0x80(%rsp)
+b	mont_mul_ladder_into	54404c	setcc	setne	%cl	a	a-geom	t.len != 2n+1	geometry flag, ORed into the early-return test	sete %al
+b	mont_mul_ladder_into	544052	setcc	sete	%dl	a	a-geom	n == 0	geometry flag, ORed into the early-return test	test %rsi,%rsi
+b	mont_mul_ladder_into	544057	jcc	jne	54435d	a	a-geom	!(geometry) || n == 0	early return; public lengths only	or %cl,%dl
+b	mont_mul_ladder_into	544097	jcc	jb	544230	a	a-loop	n < 2	specialisation for a one-limb modulus	cmp $0x2,%r13
+b	mont_mul_ladder_into	5440dd	setcc	setb	%sil	b	b-flag	carry of acc[j] + a[j]*b[i]	setb %sil -> adc %rdx,%rsi; data	add (%rbx,%r9,8),%rcx
+b	mont_mul_ladder_into	54410e	jcc	je	544287	a	a-loop	outer loop over b's n limbs	fixed trip count = b.len()	cmp 0x20(%rsp),%r14
+b	mont_mul_ladder_into	544123	jcc	je	544179	a	a-loop	n == 1	n-1 == 0: no inner product iteration	test %rax,%rax
+b	mont_mul_ladder_into	54413e	setcc	setb	%r10b	b	b-flag	carry of the product row	setb %r10b -> adc/or; data	add (%rbx,%r9,8),%rsi
+b	mont_mul_ladder_into	54415b	setcc	setb	%sil	b	b-flag	carry of the product row	setb %sil -> adc; data	add 0x8(%rbx,%r9,8),%r10
+b	mont_mul_ladder_into	544171	jcc	jne	544130	a	a-loop	j < n & ~1	unrolled-by-2 product loop, public bound	cmp %r9,%r13
+b	mont_mul_ladder_into	544177	jcc	je	544196	a	a-loop	n odd	remaining product limb, public parity	test $0x1,%dil
+b	mont_mul_ladder_into	544186	setcc	setb	%cl	b	b-flag	carry of the tail product limb	setb %cl -> adc; data	add (%rbx,%r9,8),%rsi
+b	mont_mul_ladder_into	54419c	setcc	setb	%al	b	b-flag	carry into acc[n+1]	setb %al -> stored as acc[n+1]; data	add %rsi,(%rbx,%rdi,8)
+b	mont_mul_ladder_into	5441ca	jcc	je	5440d0	a	a-loop	n == 2	reduction-loop specialisation, public n	cmp $0x2,%rdi
+b	mont_mul_ladder_into	5441de	setcc	setb	%r10b	b	b-flag	carry of the reduction row	setb %r10b -> adc/or; data	add (%rbx,%r9,8),%rcx
+b	mont_mul_ladder_into	5441fc	setcc	setb	%cl	b	b-flag	carry of the reduction row	setb %cl -> adc; data	add 0x8(%rbx,%r9,8),%r10
+b	mont_mul_ladder_into	544216	jcc	jne	5441d0	a	a-loop	reduction-loop count from n	unrolled-by-2 reduction loop	cmp $0x1,%rax
+b	mont_mul_ladder_into	54421e	jcc	jne	5440d0	a	a-loop	n - 1 odd	remaining reduction limb, public parity	test $0x1,%al
+b	mont_mul_ladder_into	544245	setcc	setb	%sil	b	b-flag	carry of acc[n] += carry	setb %sil -> add 0xff/adc; data	adc (%rbx,%rdi,8),%rcx
+b	mont_mul_ladder_into	544249	setcc	setb	%al	b	b-flag	same carry, second read	setb %al -> movzbl/store acc[n+1]; data	setb %sil
+b	mont_mul_ladder_into	54426b	setcc	setb	%al	b	b-flag	carry of u*m[0] + acc[0]	setb %al -> movzbl/add 0xff/adc; data	adc %rcx,%rdx
+b	mont_mul_ladder_into	544293	jcc	jne	54429b	a	a-loop	n == 1	conditional-subtraction specialisation	cmp $0x1,%rdi
+b	mont_mul_ladder_into	5442b8	setcc	setb	%r11b	b	b-flag	borrow of acc[j] - m[j]	setb %r11b -> or into borrow; data	sub (%r12,%rsi,8),%r10
+b	mont_mul_ladder_into	5442bf	setcc	setb	%cl	b	b-flag	borrow of (d1 - borrow)	setb %cl -> or/add 0xff; data	sub %rcx,%r10
+b	mont_mul_ladder_into	5442df	setcc	setb	%cl	b	b-flag	borrow of the sbb pair	setb %cl -> movzbl, next borrow; data	lea 0x2(%rsi),%rsi
+b	mont_mul_ladder_into	5442e8	jcc	jne	5442b0	a	a-loop	j < n & ~1	unrolled-by-2 subtraction loop	cmp %rsi,%r9
+b	mont_mul_ladder_into	5442ee	jcc	je	54430c	a	a-loop	n odd	remaining subtraction limb, public parity	test $0x1,%dil
+b	mont_mul_ladder_into	5442f8	setcc	setb	%r10b	b	b-flag	borrow of the tail limb	setb %r10b -> or; data	sub (%r12,%rsi,8),%r9
+b	mont_mul_ladder_into	5442ff	setcc	setb	%cl	b	b-flag	borrow of the tail limb	setb %cl -> movzbl; data	sub %rcx,%r9
+b	mont_mul_ladder_into	544359	jcc	jne	544330	a	a-loop	j < n	final mask-select loop, public bound	cmp %r9,%rdi
+a	mont_mul_sos_into	543983	jcc	jne	543aa0	a	a-geom	a/b/out/diff/t lengths	mont_geometry_ok	or %r9,%rax
+a	mont_mul_sos_into	54399c	jcc	jne	543aa0	a	a-geom	t.len == 2n+1	geometry check	cmp %rax,%rcx
+a	mont_mul_sos_into	5439cd	jcc	je	543aa2	a	a-geom	n == 0	early return true	test %r14,%r14
+a	mont_mul_sos_into	543a12	setcc	setb	%r11b	b	b-flag	carry of the product row	setb %r11b -> adc; data	add (%rcx,%r8,8),%r9
+a	mont_mul_sos_into	543a31	jcc	je	543ab1	a	a-loop	outer product loop	i < n	cmp %rdi,%rbp
+a	mont_mul_sos_into	543a44	jcc	je	543a00	a	a-loop	n == 1	inner-loop specialisation	test %rax,%rax
+a	mont_mul_sos_into	543a5f	setcc	setb	%r11b	b	b-flag	carry of the product row	setb %r11b -> adc; data	add -0x8(%rsi,%r8,8),%r9
+a	mont_mul_sos_into	543a7d	setcc	setb	%r9b	b	b-flag	carry of the product row	setb %r9b -> adc; data	add (%rsi,%r8,8),%r11
+a	mont_mul_sos_into	543a92	jcc	jne	543a50	a	a-loop	j < n & ~1	unrolled-by-2 product loop	cmp %r8,%r13
+a	mont_mul_sos_into	543a98	jcc	jne	543a00	a	a-loop	n odd	remaining product limb	test $0x1,%dil
+a	mont_mul_sos_into	543b0d	jcc	je	543bba	a	a-loop	REDC outer loop	i < n	cmp %rdi,%rax
+a	mont_mul_sos_into	543b1b	jcc	je	543d0a	a	a-loop	REDC outer loop end	i vs n (public)	cmp 0x90(%rsp),%r9
+a	mont_mul_sos_into	543b53	jcc	je	543cef	a	a-panic	j < n	bounds check, panic path only	cmp %rsi,%rbx
+a	mont_mul_sos_into	543b67	setcc	setb	%r8b	b	b-flag	carry of the REDC row	setb %r8b -> adc; data	add (%r14,%rsi,8),%r12
+a	mont_mul_sos_into	543b7f	jcc	jne	543b50	a	a-loop	j < n	REDC inner loop	cmp %rsi,%rdi
+a	mont_mul_sos_into	543b8d	jcc	je	543af0	a	a-loop	t index vs 2n+1	carry-propagation loop entry	cmp 0x28(%rsp),%r9
+a	mont_mul_sos_into	543ba6	setcc	setb	%cl	b	b-flag	carry into t[i+n]	setb %cl -> adc; data	add %r12,(%r11,%rax,1)
+a	mont_mul_sos_into	543bb3	jcc	jne	543ba0	a	a-loop	carry-propagation range	fixed by n	cmp %rax,%rbp
+a	mont_mul_sos_into	543bd2	jcc	je	543c42	a	a-loop	n == 1	subtraction specialisation	test %rdx,%rdx
+a	mont_mul_sos_into	543c09	setcc	setb	%r11b	b	b-flag	borrow of t[n+j] - m[j]	setb %r11b -> or; data	sub (%r10,%rsi,8),%r9
+a	mont_mul_sos_into	543c10	setcc	setb	%dl	b	b-flag	borrow of (d1 - borrow)	setb %dl -> or/add 0xff; data	sub %rdx,%r9
+a	mont_mul_sos_into	543c2f	setcc	setb	%dl	b	b-flag	borrow of the sbb pair	setb %dl -> movzbl; data	lea 0x2(%rsi),%rsi
+a	mont_mul_sos_into	543c38	jcc	jne	543c00	a	a-loop	j < n & ~1	unrolled subtraction loop	cmp %rsi,%r13
+a	mont_mul_sos_into	543c3e	jcc	jne	543c5d	a	a-loop	n odd	remaining subtraction limb	test $0x1,%dil
+a	mont_mul_sos_into	543c6a	setcc	setb	%r9b	b	b-flag	borrow of the tail limb	setb %r9b -> or; data	sub (%r10,%rsi,8),%r8
+a	mont_mul_sos_into	543c71	setcc	setb	%dl	b	b-flag	borrow of the tail limb	setb %dl -> movzbl; data	sub %rdx,%r8
+a	mont_mul_sos_into	543cb7	jcc	jae	543d32	a	a-panic	n + j < t.len()	bounds check, panic path only	cmp %r14,%rcx
+a	mont_mul_sos_into	543cbc	jcc	je	543d22	a	a-panic	j < n	bounds check, panic path only	cmp %r10,%rdi
+a	mont_mul_sos_into	543ce8	jcc	jne	543cb0	a	a-loop	j < n	final mask-select loop	add $0xfffffffffffffff8,%r8
+b	mont_mul_sos_into	543913	jcc	jne	543a30	a	a-geom	a/b/out/diff/t lengths	mont_geometry_ok	or %r9,%rax
+b	mont_mul_sos_into	54392c	jcc	jne	543a30	a	a-geom	t.len == 2n+1	geometry check	cmp %rax,%rcx
+b	mont_mul_sos_into	54395d	jcc	je	543a32	a	a-geom	n == 0	early return true	test %r14,%r14
+b	mont_mul_sos_into	5439a2	setcc	setb	%r11b	b	b-flag	carry of the product row	setb %r11b -> adc; data	add (%rcx,%r8,8),%r9
+b	mont_mul_sos_into	5439c1	jcc	je	543a41	a	a-loop	outer product loop	i < n	cmp %rdi,%rbp
+b	mont_mul_sos_into	5439d4	jcc	je	543990	a	a-loop	n == 1	inner-loop specialisation	test %rax,%rax
+b	mont_mul_sos_into	5439ef	setcc	setb	%r11b	b	b-flag	carry of the product row	setb %r11b -> adc; data	add -0x8(%rsi,%r8,8),%r9
+b	mont_mul_sos_into	543a0d	setcc	setb	%r9b	b	b-flag	carry of the product row	setb %r9b -> adc; data	add (%rsi,%r8,8),%r11
+b	mont_mul_sos_into	543a22	jcc	jne	5439e0	a	a-loop	j < n & ~1	unrolled-by-2 product loop	cmp %r8,%r13
+b	mont_mul_sos_into	543a28	jcc	jne	543990	a	a-loop	n odd	remaining product limb	test $0x1,%dil
+b	mont_mul_sos_into	543a9d	jcc	je	543b4a	a	a-loop	REDC outer loop	i < n	cmp %rdi,%rax
+b	mont_mul_sos_into	543aab	jcc	je	543c9a	a	a-loop	REDC outer loop end	i vs n (public)	cmp 0x90(%rsp),%r9
+b	mont_mul_sos_into	543ae3	jcc	je	543c7f	a	a-panic	j < n	bounds check, panic path only	cmp %rsi,%rbx
+b	mont_mul_sos_into	543af7	setcc	setb	%r8b	b	b-flag	carry of the REDC row	setb %r8b -> adc; data	add (%r14,%rsi,8),%r12
+b	mont_mul_sos_into	543b0f	jcc	jne	543ae0	a	a-loop	j < n	REDC inner loop	cmp %rsi,%rdi
+b	mont_mul_sos_into	543b1d	jcc	je	543a80	a	a-loop	t index vs 2n+1	carry-propagation loop entry	cmp 0x28(%rsp),%r9
+b	mont_mul_sos_into	543b36	setcc	setb	%cl	b	b-flag	carry into t[i+n]	setb %cl -> adc; data	add %r12,(%r11,%rax,1)
+b	mont_mul_sos_into	543b43	jcc	jne	543b30	a	a-loop	carry-propagation range	fixed by n	cmp %rax,%rbp
+b	mont_mul_sos_into	543b62	jcc	je	543bd2	a	a-loop	n == 1	subtraction specialisation	test %rdx,%rdx
+b	mont_mul_sos_into	543b99	setcc	setb	%r11b	b	b-flag	borrow of t[n+j] - m[j]	setb %r11b -> or; data	sub (%r10,%rsi,8),%r9
+b	mont_mul_sos_into	543ba0	setcc	setb	%dl	b	b-flag	borrow of (d1 - borrow)	setb %dl -> or/add 0xff; data	sub %rdx,%r9
+b	mont_mul_sos_into	543bbf	setcc	setb	%dl	b	b-flag	borrow of the sbb pair	setb %dl -> movzbl; data	lea 0x2(%rsi),%rsi
+b	mont_mul_sos_into	543bc8	jcc	jne	543b90	a	a-loop	j < n & ~1	unrolled subtraction loop	cmp %rsi,%r13
+b	mont_mul_sos_into	543bce	jcc	jne	543bed	a	a-loop	n odd	remaining subtraction limb	test $0x1,%dil
+b	mont_mul_sos_into	543bfa	setcc	setb	%r9b	b	b-flag	borrow of the tail limb	setb %r9b -> or; data	sub (%r10,%rsi,8),%r8
+b	mont_mul_sos_into	543c01	setcc	setb	%dl	b	b-flag	borrow of the tail limb	setb %dl -> movzbl; data	sub %rdx,%r8
+b	mont_mul_sos_into	543c47	jcc	jae	543cc2	a	a-panic	n + j < t.len()	bounds check, panic path only	cmp %r14,%rcx
+b	mont_mul_sos_into	543c4c	jcc	je	543cb2	a	a-panic	j < n	bounds check, panic path only	cmp %r10,%rdi
+b	mont_mul_sos_into	543c78	jcc	jne	543c40	a	a-loop	j < n	final mask-select loop	add $0xfffffffffffffff8,%r8

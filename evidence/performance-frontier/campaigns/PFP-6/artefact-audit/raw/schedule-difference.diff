@@ -1,0 +1,11 @@
+--- /work/court/tmp/pfp27/arith.restore.rs	2026-11-26 08:01:32.771012952 +0000
++++ src/bn/arith.rs	2026-11-26 08:01:32.773013019 +0000
+@@ -1667,7 +1667,7 @@
+ /// in the PFP-6 campaign; selecting it here is a default change and requires the
+ /// affected API performance rows to be re-run at the same digest
+ /// (`docs/PERFORMANCE-FRONTIER-TODO.md`, PFP-6).
+-const LADDER_SCHEDULE: MontSchedule = MontSchedule::Sos;
++const LADDER_SCHEDULE: MontSchedule = MontSchedule::Cios;
+ 
+ /// Whether the ladder uses the dedicated squaring kernel.
+ ///

@@ -5,6 +5,31 @@
 `src/bn/arith.rs` worktree change (687 insertions, 39 deletions). The previous
 attempt left that file modified and uncommitted; this record resumes it.
 
+## Committed-source identity supplement (added 2026-11-26, PFP-27/PFP-28)
+
+The identity statement above is superseded on this point: the `src/bn/arith.rs`
+work described here **is committed**. It landed in
+`20972901dc5e1d984d1b391ecc9b69d4bd943701` — "PFP-6: integrated Montgomery
+schedules compared, with a negative result recorded" (2026-11-26) — and the file
+is byte-identical at `staging` `8f771620bba5739fcc830dc23236dd003802c0ec`
+(`git diff 20972901d HEAD -- src/bn/arith.rs` is empty; blob `1ea1965`, sha256
+`06005795079c9957ba2b35c6816c423b507f427705842284aa9c23d0e0759a1c`).
+
+The artefact measured for PFP-27 is DSO
+`5e75b6945907536959c6339eb8acb4c362495dcf4a5a781983c76ac65e2ce5ae`
+(source `8f771620b`, `LADDER_SCHEDULE = Sos`), together with the CIOS-default
+twin `12023efec3e40444f579c9e88a78653c891448b2ffd2abf9c9c0ee89e0b9f9e8`
+(`LADDER_SCHEDULE = Cios`, one line). Records: `ARTEFACT-AUDIT.md` and
+`ctgrind/pfp27-2026-11-26/`.
+
+**Not transferred.** The `553e1b8c…` DSO used by the PFP-21/PFP-23 work
+deliberately excluded the PFP-6 `src/bn/arith.rs` changes — its build restored
+`src/bn/arith.rs` to `c1d25e10d`. Nothing measured on `553e1b8c` (branch audit,
+ctgrind, differential, timing) applies to `5e75b694` or `12023efe`, and this
+record does not cite it for them. The crossover table below measures C schedule
+transcriptions via `bench_mont.c`, not these artefacts, and is marked not
+applicable in `ARTEFACT-AUDIT.md` §6.
+
 ## What the uncommitted change was trying to do
 
 Integrate the Montgomery arithmetic in `src/bn/arith.rs`:
