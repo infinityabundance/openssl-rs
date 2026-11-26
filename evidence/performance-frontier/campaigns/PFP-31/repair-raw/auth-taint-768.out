@@ -1,0 +1,56 @@
+==94149== Memcheck, a memory error detector
+==94149== Copyright (C) 2002-2022, and GNU GPL'd, by Julian Seward et al.
+==94149== Using Valgrind-3.19.0 and LibVEX; rerun with -h for copyright info
+==94149== Command: /work/court/tmp/pfp31/instrument/pfp31_mlkem --lib /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3 --mode taint --param 768
+==94149== Parent PID: 93849
+==94149== 
+==94149== Conditional jump or move depends on uninitialised value(s)
+==94149==    at 0x509D9C6: matrix_expand (in /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3)
+==94149==    by 0x50A3BFC: ossl_ml_kem_genkey (in /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3)
+==94149==    by 0x526E145: ml_kem_import (in /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3)
+==94149==    by 0x5058834: evp_keymgmt_util_fromdata (in /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3)
+==94149==    by 0x506547E: EVP_PKEY_fromdata (in /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3)
+==94149==    by 0x1095B4: key_from_seed (pfp31_mlkem.c:227)
+==94149==    by 0x109E66: main (pfp31_mlkem.c:450)
+==94149== 
+==94149== Conditional jump or move depends on uninitialised value(s)
+==94149==    at 0x509D992: matrix_expand (in /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3)
+==94149==    by 0x50A3BFC: ossl_ml_kem_genkey (in /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3)
+==94149==    by 0x526E145: ml_kem_import (in /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3)
+==94149==    by 0x5058834: evp_keymgmt_util_fromdata (in /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3)
+==94149==    by 0x506547E: EVP_PKEY_fromdata (in /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3)
+==94149==    by 0x1095B4: key_from_seed (pfp31_mlkem.c:227)
+==94149==    by 0x109E66: main (pfp31_mlkem.c:450)
+==94149== 
+==94149== Conditional jump or move depends on uninitialised value(s)
+==94149==    at 0x526D1C2: ml_kem_pairwise_test (in /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3)
+==94149==    by 0x526E057: ml_kem_import (in /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3)
+==94149==    by 0x5058834: evp_keymgmt_util_fromdata (in /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3)
+==94149==    by 0x506547E: EVP_PKEY_fromdata (in /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3)
+==94149==    by 0x1095B4: key_from_seed (pfp31_mlkem.c:227)
+==94149==    by 0x109E66: main (pfp31_mlkem.c:450)
+==94149== 
+==94149== Conditional jump or move depends on uninitialised value(s)
+==94149==    at 0x526D1DF: ml_kem_pairwise_test (in /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3)
+==94149==    by 0x526E057: ml_kem_import (in /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3)
+==94149==    by 0x5058834: evp_keymgmt_util_fromdata (in /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3)
+==94149==    by 0x506547E: EVP_PKEY_fromdata (in /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3)
+==94149==    by 0x1095B4: key_from_seed (pfp31_mlkem.c:227)
+==94149==    by 0x109E66: main (pfp31_mlkem.c:450)
+==94149== 
+==94149== 
+==94149== HEAP SUMMARY:
+==94149==     in use at exit: 2,037 bytes in 4 blocks
+==94149==   total heap usage: 6,657 allocs, 6,653 frees, 455,570 bytes allocated
+==94149== 
+==94149== LEAK SUMMARY:
+==94149==    definitely lost: 0 bytes in 0 blocks
+==94149==    indirectly lost: 0 bytes in 0 blocks
+==94149==      possibly lost: 0 bytes in 0 blocks
+==94149==    still reachable: 2,037 bytes in 4 blocks
+==94149==         suppressed: 0 bytes in 0 blocks
+==94149== Rerun with --leak-check=full to see details of leaked memory
+==94149== 
+==94149== Use --track-origins=yes to see where uninitialised values come from
+==94149== For lists of detected and suppressed errors, rerun with: -s
+==94149== ERROR SUMMARY: 2896 errors from 4 contexts (suppressed: 0 from 0)

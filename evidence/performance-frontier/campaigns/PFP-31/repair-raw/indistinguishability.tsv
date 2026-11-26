@@ -1,0 +1,4 @@
+param	cases	differing_rows	rc_mismatches	outlen_mismatches	ss_mismatches	verdict
+512	77	0	0	0	0	identical
+768	77	0	0	0	0	identical
+1024	77	0	0	0	0	identical

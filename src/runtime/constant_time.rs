@@ -150,8 +150,12 @@ pub(crate) fn constant_time_select_8(mask: u8, a: u8, b: u8) -> u8 {
 
 /// `value_barrier(unsigned int a)` — `constant_time.h:278-288`, the `unsigned int` form of the
 /// barrier the `select` is written through.
+///
+/// It also guards the equality **mask derivation** in [`constant_time_eq_int_8`] (PFP-31): the
+/// barrier stops the compiler from folding a caller's boolean normalisation together with the
+/// is-zero mask into one `select` of constants, which x86 lowers as a conditional branch.
 #[inline(always)]
-#[allow(dead_code)] // the landing caller is `RSA_padding_check_PKCS1_OAEP_mgf1`, D288's next unit
+#[allow(dead_code)] // further landing callers are `RSA_padding_check_PKCS1_OAEP_mgf1`, D288's next unit
 fn value_barrier_u32(a: u32) -> u32 {
     core::hint::black_box(a)
 }
@@ -207,9 +211,39 @@ pub(crate) fn constant_time_eq_int(a: i32, b: i32) -> u32 {
 /// `ml_kem.c:1882`'s FO verdict: `constant_time_eq_int_8(0, CRYPTO_memcmp(...))` is a byte mask
 /// that is `0xFF` when the ciphers match and `0x00` when they do not, which is what
 /// `constant_time_select_8` then chooses the shared secret with. The narrowing is the header's.
+///
+/// **The mask is derived without a conditional transfer (PFP-31).** The authority's
+/// `constant_time_msb(a & (a-1))` spelling is the same arithmetic at the source level, but InstCombine
+/// recognises every is-zero spelling as `select(a == 0, -1, 0)`. When the compared word is
+/// `CRYPTO_memcmp`'s inlined, already normalised `{0,1}` result, that mask select *fused* with the
+/// normalisation into one `select` of the byte constants `0xFF`/`0`, which the x86 selector
+/// materialised as `test %dl,%dl; jne` — a secret-derived conditional transfer. The repair has two
+/// parts:
+///
+/// * a [`value_barrier_u32`] on the compared word. This is what stops the fusion: the caller's
+///   normalisation must be materialised in a register (`setne`) instead of being folded into the
+///   mask select. Without it the arithmetic below still folds to the same branch.
+/// * an **arithmetic** spelling of the mask, `(((x - 1) & !x) as i32) >> 31`, whose bit 31 records
+///   `x == 0` by construction rather than by a comparison.
+///
+/// LLVM canonicalises the arithmetic back into `select(x == 0, 0xFF, 0)`; the point is *how that
+/// select is lowered*. Measured on the repaired release DSO, the region is
+/// `test %dl,%dl; setne %al; …; cmpl $0x0,0xa0(%rsp); cmovne` — a branchless `cmov`, with the
+/// compared word spilled to a **fixed** stack slot. There is no `jcc` on the comparison result and
+/// no secret-derived address. `cmovcc` with register operands is constant-time on this target and
+/// the compare reads a constant address, so neither is a timing signal here. The barrier is
+/// best-effort (module note), so the compiled form is *checked* by the release-DSO audit in
+/// `evidence/performance-frontier/campaigns/PFP-31`, not inferred from this source.
+///
+/// The result is all-ones (`0xFF`) iff `a == b` and all-zeros otherwise, for every `u32` input;
+/// this is checked by `the_eq_int_8_mask_is_all_ones_or_all_zeros_across_the_domain`.
 #[inline(always)]
 pub(crate) fn constant_time_eq_int_8(a: i32, b: i32) -> u8 {
-    constant_time_eq_int(a, b) as u8
+    let x = value_barrier_u32((a as u32) ^ (b as u32));
+    // Bit 31 of `(x - 1) & !x` is set exactly when `x == 0`: for `x == 0` the borrow fills `x - 1`
+    // with ones; for `x` with its top bit set `!x` clears it; for any other `x` the subtraction
+    // cannot reach the top bit. An arithmetic shift smears that bit into the byte mask.
+    (((x.wrapping_sub(1) & !x) as i32) >> 31) as u8
 }
 
 /// `constant_time_select(unsigned int mask, unsigned int a, unsigned int b)` —
@@ -499,6 +533,58 @@ mod tests {
         // A mask of `1` is not a boolean `true`: the authority answers `0x54` for
         // `(1, 0xaa, 0x55)`, which is `(a & 1) | (b & !1)` and not `a`. The fixture section for
         // non-mask inputs carries that row, and `a_mask_that_is_neither...` asserts it.
+    }
+
+    /// **The `eq_int_8` mask is all-ones iff the operands are equal (PFP-31).** The derivation was
+    /// changed from the authority's `constant_time_msb(is_zero)` spelling to a value barrier plus an
+    /// arithmetic zero-bit, so the mask's *meaning* is asserted directly: exhaustive over every
+    /// possible byte difference (the compared word is an inlined `CRYPTO_memcmp` accumulator, a
+    /// byte), the signed boundaries, and the equal/unequal cases including a length-zero comparison
+    /// (`0 == 0`, the all-zero word) and an all-zero-versus-nonzero pair.
+    #[test]
+    fn the_eq_int_8_mask_is_all_ones_or_all_zeros_across_the_domain() {
+        // Length-zero comparison: both operands are the zero accumulator.
+        assert_eq!(constant_time_eq_int_8(0, 0), 0xff);
+        // All-zero versus a one-bit word is not equal.
+        assert_eq!(constant_time_eq_int_8(0, 1), 0x00);
+        assert_eq!(constant_time_eq_int_8(1, 0), 0x00);
+
+        // Exhaustive over every byte pair, which is the whole domain of the accumulator's OR.
+        for a in 0u16..=255 {
+            for b in 0u16..=255 {
+                let want = if a == b { 0xff } else { 0x00 };
+                assert_eq!(
+                    constant_time_eq_int_8(a as i32, b as i32),
+                    want,
+                    "eq_int_8({a}, {b})"
+                );
+            }
+        }
+
+        // Signed boundaries: equality is on the bit pattern, and the result is a mask not a boolean.
+        let edges = [
+            i32::MIN,
+            i32::MIN + 1,
+            -2,
+            -1,
+            0,
+            1,
+            2,
+            0x00ff_ffff,
+            0x7fff_ffff,
+            i32::MAX,
+        ];
+        for &a in &edges {
+            for &b in &edges {
+                let got = constant_time_eq_int_8(a, b);
+                let want = if a == b { 0xff } else { 0x00 };
+                assert_eq!(got, want, "eq_int_8({a:#x}, {b:#x})");
+                assert!(
+                    got == 0x00 || got == 0xff,
+                    "a mask, not a boolean: {got:#04x}"
+                );
+            }
+        }
     }
 
     #[test]

@@ -1,0 +1,4 @@
+param	valid_errors	invalid_errors	valid_contexts	invalid_contexts	delta_errors	sites_identical
+512	1271	1271	3	3	0	yes
+768	2895	2895	3	3	0	yes
+1024	4990	4990	3	3	0	yes

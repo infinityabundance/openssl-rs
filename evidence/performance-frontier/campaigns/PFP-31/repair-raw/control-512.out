@@ -1,0 +1,21 @@
+==93879== Memcheck, a memory error detector
+==93879== Copyright (C) 2002-2022, and GNU GPL'd, by Julian Seward et al.
+==93879== Using Valgrind-3.19.0 and LibVEX; rerun with -h for copyright info
+==93879== Command: /work/court/tmp/pfp31/instrument/pfp31_mlkem --lib /work/court/tmp/pfp31/repair/r/distribution/libcrypto.so.3 --mode control --param 512
+==93879== Parent PID: 93849
+==93879== 
+==93879== 
+==93879== HEAP SUMMARY:
+==93879==     in use at exit: 348,738 bytes in 3,714 blocks
+==93879==   total heap usage: 15,541 allocs, 11,827 frees, 629,416 bytes allocated
+==93879== 
+==93879== LEAK SUMMARY:
+==93879==    definitely lost: 0 bytes in 0 blocks
+==93879==    indirectly lost: 0 bytes in 0 blocks
+==93879==      possibly lost: 43,600 bytes in 485 blocks
+==93879==    still reachable: 305,138 bytes in 3,229 blocks
+==93879==         suppressed: 0 bytes in 0 blocks
+==93879== Rerun with --leak-check=full to see details of leaked memory
+==93879== 
+==93879== For lists of detected and suppressed errors, rerun with: -s
+==93879== ERROR SUMMARY: 0 errors from 0 contexts (suppressed: 0 from 0)

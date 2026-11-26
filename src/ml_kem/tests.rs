@@ -46,7 +46,7 @@ use super::key::{
 };
 use super::{
     MlKemVinfo, EVP_PKEY_ML_KEM_1024, EVP_PKEY_ML_KEM_512, EVP_PKEY_ML_KEM_768,
-    ML_KEM_SHARED_SECRET_BYTES,
+    ML_KEM_RANDOM_BYTES, ML_KEM_SEED_BYTES, ML_KEM_SHARED_SECRET_BYTES,
 };
 
 /// The authority's nine vector files, three per variant.
@@ -543,4 +543,139 @@ fn the_acvp_encap_decap_set_agrees() {
     }
     assert!(encapped > 0, "the ACVP file's encapsulation records");
     assert!(decapped > 0, "the ACVP file's decapsulation records");
+}
+
+/// **Decapsulation returns the encapsulated secret, or the implicit-rejection secret (PFP-31).**
+///
+/// This is the direct behavioural check behind the mask repair: the same `decap` that the
+/// branch audit disassembles is exercised end to end. For each parameter set it generates a key
+/// from a fixed `(d, z)` seed, encapsulates with fixed entropy, and then:
+///
+/// * decapsulating the **valid** ciphertext returns exactly the encapsulation's shared secret
+///   (`kr`);
+/// * decapsulating a **malformed** ciphertext of the correct length returns a secret that is
+///   *not* the encapsulated one (implicit rejection), is deterministic for that ciphertext, and
+///   changes when the ciphertext changes (it is bound to the ciphertext through `kdf(z, ctext)`).
+///
+/// The malformed case is the one whose comparison result the mask selects on, so a repair that
+/// selected the wrong arm would fail here rather than only in the differential court.
+#[test]
+fn the_decap_returns_the_encapsulated_secret_or_the_implicit_rejection_secret() {
+    for name in ["ML-KEM-512", "ML-KEM-768", "ML-KEM-1024"] {
+        let evp_type = evp_type_of(name).expect("a known variant");
+        let vinfo = vinfo_of(evp_type);
+        let libctx = fresh_libctx();
+        // SAFETY: every pointer is this test's own and the lengths come from the vinfo.
+        unsafe {
+            let key = ossl_ml_kem_key_new(libctx, ptr::null(), evp_type);
+            assert!(!key.is_null(), "{name}: key creation");
+
+            let mut seed = [0u8; ML_KEM_SEED_BYTES];
+            for (i, b) in seed.iter_mut().enumerate() {
+                *b = (i as u8).wrapping_mul(17).wrapping_add(3);
+            }
+            assert_eq!(
+                ossl_ml_kem_set_seed(seed.as_ptr(), seed.len(), key),
+                key,
+                "{name}: set_seed"
+            );
+            let mut pubenc = vec![0u8; vinfo.pubkey_bytes];
+            assert_eq!(
+                ossl_ml_kem_genkey(pubenc.as_mut_ptr(), pubenc.len(), key),
+                1,
+                "{name}: genkey"
+            );
+
+            let mut entropy = [0u8; ML_KEM_RANDOM_BYTES];
+            for (i, b) in entropy.iter_mut().enumerate() {
+                *b = (i as u8).wrapping_mul(29).wrapping_add(7);
+            }
+            let mut ctext = vec![0u8; vinfo.ctext_bytes];
+            let mut encapped = vec![0u8; ML_KEM_SHARED_SECRET_BYTES];
+            assert_eq!(
+                ossl_ml_kem_encap_seed(
+                    ctext.as_mut_ptr(),
+                    ctext.len(),
+                    encapped.as_mut_ptr(),
+                    encapped.len(),
+                    entropy.as_ptr(),
+                    entropy.len(),
+                    key,
+                ),
+                1,
+                "{name}: encap_seed"
+            );
+
+            let mut got = vec![0u8; ML_KEM_SHARED_SECRET_BYTES];
+            assert_eq!(
+                ossl_ml_kem_decap(
+                    got.as_mut_ptr(),
+                    got.len(),
+                    ctext.as_ptr(),
+                    ctext.len(),
+                    key,
+                ),
+                1,
+                "{name}: decap(valid)"
+            );
+            assert_eq!(
+                got, encapped,
+                "{name}: a valid ciphertext must return the encapsulated secret"
+            );
+
+            // Malformed, same length: one bit flipped in the ciphertext body.
+            let mut bad = ctext.clone();
+            bad[0] ^= 0x01;
+            let mut rej = vec![0u8; ML_KEM_SHARED_SECRET_BYTES];
+            assert_eq!(
+                ossl_ml_kem_decap(rej.as_mut_ptr(), rej.len(), bad.as_ptr(), bad.len(), key,),
+                1,
+                "{name}: decap(malformed)"
+            );
+            assert_ne!(
+                rej, encapped,
+                "{name}: a malformed ciphertext must not return the encapsulated secret"
+            );
+
+            // Deterministic for a given ciphertext, and bound to it.
+            let mut rej_again = vec![0u8; ML_KEM_SHARED_SECRET_BYTES];
+            assert_eq!(
+                ossl_ml_kem_decap(
+                    rej_again.as_mut_ptr(),
+                    rej_again.len(),
+                    bad.as_ptr(),
+                    bad.len(),
+                    key,
+                ),
+                1,
+                "{name}: decap(malformed) replay"
+            );
+            assert_eq!(
+                rej, rej_again,
+                "{name}: the rejection secret is deterministic"
+            );
+
+            let mut bad2 = ctext.clone();
+            bad2[1] ^= 0x80;
+            let mut rej2 = vec![0u8; ML_KEM_SHARED_SECRET_BYTES];
+            assert_eq!(
+                ossl_ml_kem_decap(
+                    rej2.as_mut_ptr(),
+                    rej2.len(),
+                    bad2.as_ptr(),
+                    bad2.len(),
+                    key,
+                ),
+                1,
+                "{name}: decap(second malformed)"
+            );
+            assert_ne!(
+                rej, rej2,
+                "{name}: the rejection secret is bound to the ciphertext"
+            );
+
+            ossl_ml_kem_key_free(key);
+            OSSL_LIB_CTX_free(libctx);
+        }
+    }
 }

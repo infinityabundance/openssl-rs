@@ -1,0 +1,45 @@
+==93964== Memcheck, a memory error detector
+==93964== Copyright (C) 2002-2022, and GNU GPL'd, by Julian Seward et al.
+==93964== Using Valgrind-3.19.0 and LibVEX; rerun with -h for copyright info
+==93964== Command: /work/court/tmp/pfp31/instrument/pfp31_mlkem --lib /work/court/tmp/pfp31/repair/r/distribution/libcrypto.so.3 --mode malformed --param 512 --case valid --taint
+==93964== Parent PID: 93849
+==93964== 
+==93964== Conditional jump or move depends on uninitialised value(s)
+==93964==    at 0x50D4069: openssl_rs::ml_kem::arith::matrix_expand (in /work/court/tmp/pfp31/repair/r/distribution/libcrypto.so.3)
+==93964==    by 0x500AD27: openssl_rs::ml_kem::key::ossl_ml_kem_genkey (in /work/court/tmp/pfp31/repair/r/distribution/libcrypto.so.3)
+==93964==    by 0x52D837A: openssl_rs::provider::ml_kem_kmgmt::ml_kem_import (in /work/court/tmp/pfp31/repair/r/distribution/libcrypto.so.3)
+==93964==    by 0x531B137: EVP_PKEY_fromdata (in /work/court/tmp/pfp31/repair/r/distribution/libcrypto.so.3)
+==93964==    by 0x1095B4: key_from_seed (pfp31_mlkem.c:227)
+==93964==    by 0x10A31B: main (pfp31_mlkem.c:477)
+==93964== 
+==93964== Conditional jump or move depends on uninitialised value(s)
+==93964==    at 0x50D4094: openssl_rs::ml_kem::arith::matrix_expand (in /work/court/tmp/pfp31/repair/r/distribution/libcrypto.so.3)
+==93964==    by 0x500AD27: openssl_rs::ml_kem::key::ossl_ml_kem_genkey (in /work/court/tmp/pfp31/repair/r/distribution/libcrypto.so.3)
+==93964==    by 0x52D837A: openssl_rs::provider::ml_kem_kmgmt::ml_kem_import (in /work/court/tmp/pfp31/repair/r/distribution/libcrypto.so.3)
+==93964==    by 0x531B137: EVP_PKEY_fromdata (in /work/court/tmp/pfp31/repair/r/distribution/libcrypto.so.3)
+==93964==    by 0x1095B4: key_from_seed (pfp31_mlkem.c:227)
+==93964==    by 0x10A31B: main (pfp31_mlkem.c:477)
+==93964== 
+==93964== Conditional jump or move depends on uninitialised value(s)
+==93964==    at 0x52D967F: openssl_rs::provider::ml_kem_kmgmt::ml_kem_pairwise_test (in /work/court/tmp/pfp31/repair/r/distribution/libcrypto.so.3)
+==93964==    by 0x52D83E2: openssl_rs::provider::ml_kem_kmgmt::ml_kem_import (in /work/court/tmp/pfp31/repair/r/distribution/libcrypto.so.3)
+==93964==    by 0x531B137: EVP_PKEY_fromdata (in /work/court/tmp/pfp31/repair/r/distribution/libcrypto.so.3)
+==93964==    by 0x1095B4: key_from_seed (pfp31_mlkem.c:227)
+==93964==    by 0x10A31B: main (pfp31_mlkem.c:477)
+==93964== 
+==93964== 
+==93964== HEAP SUMMARY:
+==93964==     in use at exit: 407,714 bytes in 3,790 blocks
+==93964==   total heap usage: 15,647 allocs, 11,857 frees, 703,352 bytes allocated
+==93964== 
+==93964== LEAK SUMMARY:
+==93964==    definitely lost: 58,976 bytes in 76 blocks
+==93964==    indirectly lost: 0 bytes in 0 blocks
+==93964==      possibly lost: 43,600 bytes in 485 blocks
+==93964==    still reachable: 305,138 bytes in 3,229 blocks
+==93964==         suppressed: 0 bytes in 0 blocks
+==93964== Rerun with --leak-check=full to see details of leaked memory
+==93964== 
+==93964== Use --track-origins=yes to see where uninitialised values come from
+==93964== For lists of detected and suppressed errors, rerun with: -s
+==93964== ERROR SUMMARY: 1271 errors from 3 contexts (suppressed: 0 from 0)

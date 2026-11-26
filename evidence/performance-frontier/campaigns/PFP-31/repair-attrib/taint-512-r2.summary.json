@@ -1,0 +1,25 @@
+{
+  "log": "/work/evidence/performance-frontier/campaigns/PFP-31/repair-raw/taint-512-r2.out",
+  "contexts": 3,
+  "origin_by_bucket": {
+    "driver": 3
+  },
+  "contexts_with_bucket_on_path": {
+    "driver": 3,
+    "runtime": 3
+  },
+  "engine_on_path": 0,
+  "origin_in_engine": 0,
+  "top_origins": [
+    {
+      "contexts": 2,
+      "loc": "in /work/court/tmp/pfp31/repair/r/distribution/libcrypto.so.3",
+      "fn": "openssl_rs::ml_kem::arith::matrix_expand"
+    },
+    {
+      "contexts": 1,
+      "loc": "in /work/court/tmp/pfp31/repair/r/distribution/libcrypto.so.3",
+      "fn": "openssl_rs::provider::ml_kem_kmgmt::ml_kem_pairwise_test"
+    }
+  ]
+}
