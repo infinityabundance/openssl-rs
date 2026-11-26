@@ -95,3 +95,33 @@ not substitutes for reducing the fundamental mathematical work.
 - Bare-metal access with a PMU is a prerequisite for `FRONTIER_LEADING` and for
   any `INDEPENDENTLY_REPRODUCED_FRONTIER`. Until then every result is
   `SCOPED_OBSERVATION` and says so.
+
+## Review-driven queue (2026-11-26)
+
+The 25 and 26 November external assessments added obligations that were not
+rows. They are recorded here with the same standing as the rest of the queue,
+so that none is lost and each is testable on its own.
+
+| id | work package | status |
+|---|---|---|
+| PFP-20 | **Write-back declassification boundary.** The PFP-2 receipt leaves a secret-dependent branch on the path `store_coordinate` → `limbs::normalise`, because the write-back inherits the `BIGNUM` no-trailing-zero-limb invariant. Introduce a fixed-width internal representation for the field engine's own coordinates, keep normalisation only at an explicitly named declassification boundary where the value leaves the secret domain for the C ABI, and keep the exported representation byte-identical to today's. Acceptance: the branch is gone from the secret path as measured by the minimal-population ctgrind; a test asserts an exported `BIGNUM` is normalised exactly as before for every coordinate the engine writes; the boundary is named in source and in the receipt, with the argument for why it is a legal declassification and what an attacker observes at it; ctgrind records the path with and without the change. A boundary that hides the branch rather than moving it is a refusal, not a pass. | TODO |
+| PFP-21 | **DSO-level constant-time evidence for the exact candidate.** The recorded taint evidence is on the test binary, and the mutation control is source-bound, so neither is a statement about the shipped artefact. Acceptance: ctgrind and the mutation control both run against the exact candidate DSO at one digest; the mutation control shows the fast path is load-bearing **in the artefact**; the population is stated, seed-fixed and excludes nothing that touches a secret. The 3,023/123 and 12,371/203 readings stay visible as history. | TODO |
+| PFP-22 | **Differential domain completion.** The 4,096-case generator samples below 2^255. Acceptance: the population includes the upper half of the valid scalar domain, both order boundaries (`q-1`, `q`, `q+1` as far as the API admits), the exceptional cases an API can be given (point at infinity, identity operands, generator and non-generator points), and zero and maximal limb occupancy; case counts, seed and result recorded per class; a single mismatch is a STOP. | TODO |
+| PFP-23 | **Reproducible candidate bytes.** The measured DSO's digest is recorded but its bytes are not committed. Acceptance: a clean rebuild from a declared commit reproduces the measured digest, or the discrepancy is explained and the identity re-bound; the build inputs (toolchain, flags, target) are recorded; the receipt states which of the two happened. A digest match alone is not a source-to-binary refinement claim. | TODO |
+| PFP-24 | **Allocation and conversion budget.** `ecdsa256` allocates 254 times against the authority's 29, and the remaining 19× gap is not in the new field engine. Acceptance: allocation sites on the signing path are enumerated with counts per site, ranked; the top sites are removed or their necessity argued; the ratio is re-measured at one digest with the same instrument; no correctness or constant-time property is traded for a count. Profile first, optimise second. | TODO |
+| PFP-25 | **Search-synthesised kernels under equivalence and branch audit.** Fiat-Crypto's word-by-word style yields branch-free arithmetic by construction, and CryptOpt (arXiv:2211.10665) searches assembly with repeated on-target benchmarking and a verified equivalence checker. This project already has the other two halves: a DSO-bound differential court and a binary branch audit. Acceptance: a search or synthesis step whose candidates are admitted only if the equivalence check, the differential court **and** the branch audit all pass at one digest; the generator, seed, search budget and toolchain digests are recorded so a result is reproducible; a candidate that is faster but fails any of the three is refused. A negative result is recorded as a negative result, never as an absence. | TODO |
+
+Binding notes for this section:
+
+- `PFP-20` precedes any claim that the full ECDSA operation is constant-time.
+  Removing a leak in the engine does not establish the property for the
+  surrounding representation and conversion code.
+- `PFP-21` and `PFP-22` strengthen an existing candidate; they do not create a
+  new classification.
+- `PFP-23` is a precondition for `PFP-17` and for any independently
+  reproducible frontier claim.
+- `PFP-24` may change timing; it may not discharge T23, T24 or T29, and it may
+  not be measured on a virtualised court and reported as a frontier result.
+- `PFP-25` is the only row that aims at the frontier rather than at the gap.
+  It inherits `PFP-19`: a faster arm without the courts and the audit at the
+  same digest is an experiment, not a candidate.

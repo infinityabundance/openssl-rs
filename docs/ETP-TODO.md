@@ -369,3 +369,14 @@ no DO-178C level and no DAL, and **upgrades no ETP verdict**: it reads ETP-T1,
 ETP-T3, ETP-T4, ETP-T5, ETP-T6, ETP-T7, ETP-T9, ETP-T11 and ETP-T15 evidence
 and changes no claim, unsafe site, hazard barrier, consumer family or refinement
 edge. It supplies evidence a verdict may cite; it does not supply a verdict.
+
+## Review-driven queue (2026-11-26)
+
+Both 25 and 26 November external assessments named operational obligations that
+were not rows. Recorded here so none is lost.
+
+| id | work package | status |
+|---|---|---|
+| ETP-CI-2 | **Make the assurance suite a mandatory venue gate.** Ordinary CI is green while the Python assurance suite is red on the host for venue reasons. Acceptance: one workflow gate runs the assurance modules inside the declared court image with the declared memory cap, and a failing module fails the gate; modules that cannot run in that venue are named with the prerequisite that is missing rather than skipped silently. The workflow patch stays a tracked file until a push credential with `workflow` scope exists; until then the gate is a script a human runs, and its status is `PARTIAL`, not `DONE`. | PARTIAL |
+| ETP-B7-2 | **Persistence-boundary fault injection for the transparency model.** B7 explores up to five operations and declares crash recovery, partial writes, retries and concurrent publication outside the model. Acceptance: the model is extended with fault injection at the persistence boundary — torn write, write-then-crash, retry after acknowledgement, two concurrent publishers — and each invariant is re-checked under each fault; a broken-model canary exists per fault, and an invariant that only holds without faults is reported as such rather than counted as holding. | TODO |
+| ETP-B1B5-2 | **Genuine live-service experiment.** Real Rekor publication is 0, trusted timestamps are 0 and independent witnesses are 0. Acceptance: the POSIX server binary identity is established and recorded, a real statement is published to an admitted service, inclusion and consistency are verified offline from the published bytes, and the witness is a party other than the project. Any part that cannot be done is named as unestablished; a fixture-based demonstration must not stand in for it. | TODO |
