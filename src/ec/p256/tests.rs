@@ -1088,3 +1088,42 @@ fn pfp2_kernel_measurement() {
         }
     }
 }
+
+/// PFP-20: the declassification boundary emits exactly the `normalise`d
+/// representation for every shape the engine can write — including coordinates
+/// whose top limb is zero — so replacing the loop trim with the branchless one
+/// preserved the exported `BIGNUM`, it did not introduce a new representation.
+#[test]
+fn the_declassification_boundary_preserves_the_normalised_bignum() {
+    use crate::bn::bignum::{BN_free, BN_new};
+
+    let cases: [[Limb; LIMBS]; 7] = [
+        [0, 0, 0, 0],
+        [0x0123_4567_89ab_cdef, 0, 0, 0],
+        [0x1111_1111_1111_1111, 0x2222_2222_2222_2222, 0, 0],
+        [1, 2, 3, 0],
+        [1, 2, 3, 4],
+        [0, 0, 0, 1],
+        [Limb::MAX, 0, 0, 0],
+    ];
+
+    for case in cases {
+        let mut want = case.to_vec();
+        limbs::normalise(&mut want);
+
+        // SAFETY: `bn` is a fresh, uniquely-owned `BIGNUM`; `canonical` is a live
+        // engine value; the boundary writes only into `bn`.
+        unsafe {
+            let bn = BN_new();
+            assert!(!bn.is_null());
+            let canonical = Canonical4(case);
+            assert!(
+                crate::ec::smpl::declassify_coordinate(bn, &canonical),
+                "boundary refused {case:?}"
+            );
+            assert_eq!((*bn).d, want, "magnitude for {case:?}");
+            assert_eq!((*bn).neg, 0, "sign for {case:?}");
+            BN_free(bn);
+        }
+    }
+}

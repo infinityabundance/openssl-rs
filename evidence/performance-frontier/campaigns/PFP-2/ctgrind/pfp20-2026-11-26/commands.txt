@@ -1,0 +1,29 @@
+PFP-20 commands (run inside the court, openssl-rs-court-tools:1, 8 GiB cap)
+==========================================================================
+
+Build the after DSO (HEAD arith.rs swapped in, restored on exit):
+  sh /work/court/tmp/pfp20/build_after.sh
+
+ctgrind, minimal secret-scalar population, one process per DSO:
+  cd /work
+  V="valgrind --tool=memcheck --error-exitcode=99 --num-callers=24"
+  H=/work/court/tmp/pfp2-fix/minimal_mul4
+  LD_LIBRARY_PATH=/work/court/tmp/pfp2-fix/distribution $V $H taint-value > before-recheck.out 2>&1
+  LD_LIBRARY_PATH=/work/court/tmp/pfp20/distribution      $V $H taint-value > after-recheck.out  2>&1
+  # repetitions 2 and 3 repeat both
+  LD_LIBRARY_PATH=/work/court/tmp/pfp20/distribution      $V $H defined      > min-defined.out   2>&1
+  python3 .../ctgrind/repro-2026-11-26/attribute.py attrib before-recheck.out after-recheck.out ...
+
+Branch audit at the new DSO:
+  python3 courts/phase18/timing/binary_branch_audit.py \
+    --expect-sha256 553e1b8ce1eb7e03a0d92a5614b566b88e49e55d2c2a3f7ba28fc6d78eecc4e4 \
+    court/tmp/pfp20/distribution/libcrypto.so.3
+
+DSO-bound differential (preserves the recorded court in ../dso-differential/):
+  bash evidence/performance-frontier/campaigns/PFP-2/dso-differential-pfp20/run_dso_differential.sh
+
+Correctness / lint:
+  cargo test --lib -- p256 --test-threads=4
+  cargo test --lib -- bn   --test-threads=4
+  cargo fmt --all -- --check
+  cargo clippy --all-targets -- -D warnings

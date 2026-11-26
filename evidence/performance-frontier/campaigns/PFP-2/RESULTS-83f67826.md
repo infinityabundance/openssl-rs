@@ -149,6 +149,12 @@ is not. The residuals are enumerated below and in the claim record.
    `limbs::normalise` (`src/bn/limbs.rs:42`) branches on the secret top limb
    (the 4 engine-on-path contexts). It cannot be stored at fixed width without
    breaking the no-trailing-zero-limb `BIGNUM` representation invariant.
+   **Update (PFP-20, 2026-11-26):** the timing branch is gone —
+   `store_coordinate` now trims with `limbs::normalise_branchless`, and the four
+   `store_coordinate` engine-on-path contexts are **0** on DSO `553e1b8c` across
+   three repetitions (the `83f67826` before-control stays 4). The representation
+   is unchanged; the relocation after declassification and the downstream length
+   consumers remain. See `ctgrind/PFP-20-NORMALISE.md`.
 2. `PFP2-ADMIT-BE-BYTES` — `P256Scalar::admit_be_bytes` branches on `ct_ge` for
    the required public accept/reject decision; not on the ladder path, and
    removing it would be a correctness bug.

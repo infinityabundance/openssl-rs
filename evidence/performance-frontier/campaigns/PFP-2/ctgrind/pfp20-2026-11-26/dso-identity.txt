@@ -1,0 +1,36 @@
+PFP-20 candidate identity (2026-11-26)
+======================================
+
+Source candidate S = staging HEAD d8be435a63d623aaed97345a686ab9f426f6329c
+                     + the PFP-20 working-tree edits below.
+
+  src/bn/limbs.rs        a728d8725a1000f8455907ce6552a3535ab19f8014d0158c143adf0e34d86aa2
+  src/ec/smpl.rs         88038a92f5c8cd6ffe8fbde7dc951e13301ede3461c0fc755c662a2d130e8776
+  src/ec/mult.rs         f8e4184dadbb4f06d273c69c948305a9fcfdca1ea60a34792a8ccc205b145821
+  src/ec/p256/tests.rs   13ffd0157792424e8391d1f1e379d0b57000399c428617b8b9b3225ce1d2b447
+                         (test-only; not compiled into the release DSO)
+
+The working tree also carries an UNRELATED, uncommitted PFP-6 change in
+src/bn/arith.rs (sha256 b1e4a4ee...). It is not part of this candidate: the DSO
+below was built with HEAD's arith.rs (sha256 edf456e6...) so the measured source
+differs from the recorded 83f67826 source by PFP-20 alone. The working-tree copy
+was restored immediately after the build and verified by sha256.
+
+Candidate distribution DSO (the "after" artefact):
+  path   court/tmp/pfp20/distribution/libcrypto.so.3
+  sha256 553e1b8ce1eb7e03a0d92a5614b566b88e49e55d2c2a3f7ba28fc6d78eecc4e4
+  size   17032672 bytes
+  built  cargo build --release --lib --offline, CARGO_BUILD_JOBS=4,
+         rustc 1.98.1 (48a229cea 2026-09-01), then linked against the campaign's
+         generated libcrypto shell object and artifacts/phase2/libcrypto.ld.
+
+Before DSO (recorded, unchanged, used as the controlled before-control):
+  path   court/tmp/pfp2-fix/distribution/libcrypto.so.3
+  sha256 83f67826e2ca53dd8e014fe5442d2e77ba96ee7af35eeb78a312112a4e0a7c4f
+
+Authority DSO:
+  path   forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3
+  sha256 611e511db4273c4b6b522031fd171efce71b80661bb8310c2a21dfd18ec0efd2
+
+ctgrind harness: court/tmp/pfp2-fix/minimal_mul4 (unchanged), one EC_POINT_mul,
+taint-value, valgrind memcheck 3.19.0, --num-callers=24.

@@ -129,6 +129,12 @@ bounds on the public `subtractions` argument (`test %r8,%r8` at `+0x2ed`,
    a named obligation, distinct from the engine arithmetic. The read-side
    `limbs_from_slice` length branch is the same representation class; the
    minimal population taints limb *values* only, so it is not in the count.
+   **Update (PFP-20, 2026-11-26):** the timing branch is gone —
+   `store_coordinate` now trims with `limbs::normalise_branchless`, the four
+   `store_coordinate` engine-on-path contexts are **0** on DSO `553e1b8c` across
+   three repetitions, and the representation is unchanged. The relocation after
+   declassification and the downstream length consumers remain. See
+   `PFP-20-NORMALISE.md`.
 2. **`PFP2-BRANCH-AUDIT-INCOMPLETE`** — the audit still exits 1 on the inlined
    `mod_exp_core_consttime_from_parts`, so there is no passing branch audit at
    this digest and the arm cannot be `CANDIDATE`.

@@ -1,0 +1,21 @@
+==38444== Memcheck, a memory error detector
+==38444== Copyright (C) 2002-2022, and GNU GPL'd, by Julian Seward et al.
+==38444== Using Valgrind-3.19.0 and LibVEX; rerun with -h for copyright info
+==38444== Command: /work/court/tmp/pfp2-fix/minimal_mul4 defined
+==38444== 
+dso_base=0x4852000
+==38444== 
+==38444== HEAP SUMMARY:
+==38444==     in use at exit: 226,770 bytes in 2,632 blocks
+==38444==   total heap usage: 14,952 allocs, 12,320 frees, 528,059 bytes allocated
+==38444== 
+==38444== LEAK SUMMARY:
+==38444==    definitely lost: 32 bytes in 1 blocks
+==38444==    indirectly lost: 8 bytes in 1 blocks
+==38444==      possibly lost: 24,432 bytes in 379 blocks
+==38444==    still reachable: 202,298 bytes in 2,251 blocks
+==38444==         suppressed: 0 bytes in 0 blocks
+==38444== Rerun with --leak-check=full to see details of leaked memory
+==38444== 
+==38444== For lists of detected and suppressed errors, rerun with: -s
+==38444== ERROR SUMMARY: 0 errors from 0 contexts (suppressed: 0 from 0)

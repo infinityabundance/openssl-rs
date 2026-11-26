@@ -58,6 +58,7 @@ use crate::ec::lib::{
     EC_POINT_invert, EC_POINT_is_at_infinity, EC_POINT_set_Jprojective_coordinates_GFp,
     EC_POINT_set_affine_coordinates, EC_POINT_set_to_infinity,
 };
+use crate::ec::p256::Canonical4;
 use crate::ec::{
     EcComputeKeyFn, EcFieldMulFn, EcFieldSqrFn, EcGroup, EcGroupCheckDiscriminantFn, EcGroupCopyFn,
     EcGroupFinishFn, EcGroupGetCurveFn, EcGroupInitFn, EcGroupQueryFn, EcGroupSetCurveFn,
@@ -2597,15 +2598,44 @@ pub(crate) unsafe fn ossl_ec_GFp_simple_ladder_step_workspace(
     }
 }
 
-/// Replace a coordinate's magnitude with a fixed-width slot's value, reusing the
-/// coordinate's own allocation when it can hold `src`.
+/// **Declassification boundary:** write a fixed-width slot's value into a
+/// coordinate's magnitude, producing the exported `BIGNUM` representation.
+///
+/// This is the one place `ossl_ec_GFp_simple` converts a field value from the
+/// fixed-width representation the arithmetic holds — the engine's
+/// [`Canonical4`]/`SecretLimbs4`, or the generic workspace's `n`-limb slot — into
+/// a `BIGNUM`, whose magnitude is a `Vec<Limb>` with **no trailing zero limbs**.
+/// That representation carries the value's limb count in `d.len()`, so the
+/// conversion necessarily *encodes* the highest-nonzero-limb position: this is
+/// the declassification, and the trim below is where it happens.
+///
+/// The trim is [`limbs::normalise_branchless`], not the loop, so the encoded
+/// length involves **no conditional jump on a limb** (PFP-20). The only thing
+/// the conversion reveals is the represented length, and its distribution for a
+/// value uniform in `[0, p)` is negligible:
+///
+/// * `p = 2^256 - 2^224 + 2^192 + 2^96 - 1`, so `2^192 <= p < 2^256`.
+/// * `P(top limb zero)   = P(v < 2^192) = 2^192 / p ~= 2^-64(1 + 2^-32)`
+///   `~= 5.42e-20`.
+/// * `P(top two zero)    = 2^128 / p ~= 2^-128 ~= 2.94e-39`.
+/// * `P(top three zero)  = 2^64 / p  ~= 2^-192 ~= 1.59e-58`.
+/// * `P(all four zero)   = 1 / p     ~= 2^-256`.
+///
+/// The length `L` is a deterministic function of the value, so the information
+/// it reveals is `H(L)`. With `q = P(L != 4) = 2^192/p ~= 5.42e-20`,
+/// `H(L) = -q log2(q) - (1-q) log2(1-q) ~= q(64 + log2 1/(1+2^-32)) + q/ln 2
+/// ~= 5.42e-20 * 64.69 ~= 3.5e-18 bits ~= 2^-58 bits`: an observer of the length
+/// learns essentially nothing except in the `2^-64` event that the value fell
+/// below `2^192`. For the final affine `x` that ECDSA exports, `r = x mod q` is
+/// public output, so its length is legitimately public; the intermediate
+/// projective coordinates never leave the process, and with the branch removed
+/// there is no timing channel from the length either.
 ///
 /// The value is written into `[0, src.len())` — the whole public width — before
-/// the normalised trim, so no limb of the previous value survives in the live
-/// region. A coordinate whose capacity is still too small takes
-/// `reserve_cleansed`'s separate fallible allocation, which cleanses the old
-/// block before releasing it; a refusal leaves the coordinate unchanged and
-/// answers `false`.
+/// the trim, so no limb of the previous value survives in the live region. A
+/// coordinate whose capacity is still too small takes `reserve_cleansed`'s
+/// separate fallible allocation, which cleanses the old block before releasing
+/// it; a refusal leaves the coordinate unchanged and answers `false`.
 ///
 /// # Safety
 ///
@@ -2621,9 +2651,29 @@ pub(crate) unsafe fn store_coordinate(dst: *mut BigNum, src: &[limbs::Limb]) -> 
     }
     bn.d.clear();
     bn.d.extend_from_slice(src);
-    limbs::normalise(&mut bn.d);
+    // PFP-20: branchless, so the highest-nonzero-limb position never reaches a
+    // conditional jump; the result is byte-identical to the loop trim.
+    limbs::normalise_branchless(&mut bn.d);
     bn.neg = 0;
     true
+}
+
+/// The P-256 engine's typed entry to the declassification boundary.
+///
+/// Takes the engine's own fixed-width [`Canonical4`] rather than a raw slice, so
+/// a still-secret engine value cannot be normalised anywhere but at the boundary
+/// documented on [`store_coordinate`]. The engine computes every coordinate at a
+/// fixed four-limb width and cleanses that storage on drop; only here does the
+/// value acquire the exported `BIGNUM` representation, with its observer-visible
+/// length.
+///
+/// # Safety
+///
+/// `dst` is null or a live, uniquely-owned `BIGNUM` coordinate.
+pub(crate) unsafe fn declassify_coordinate(dst: *mut BigNum, src: &Canonical4) -> bool {
+    // SAFETY: the caller's contract is exactly `store_coordinate`'s; `src` is a
+    // live engine value and is only read.
+    unsafe { store_coordinate(dst, src.as_limbs()) }
 }
 
 /// `int ossl_ec_GFp_simple_ladder_post(const EC_GROUP *group, EC_POINT *r, EC_POINT *s,

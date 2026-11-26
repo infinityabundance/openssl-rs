@@ -31,8 +31,8 @@ use crate::ec::lib::{
 };
 use crate::ec::p256::{self, FieldDomain, FieldKernel, SelectedFieldKernel};
 use crate::ec::smpl::{
-    ec_method_field_is_plain, ossl_ec_GFp_simple_ladder_step,
-    ossl_ec_GFp_simple_ladder_step_workspace, store_coordinate,
+    declassify_coordinate, ec_method_field_is_plain, ossl_ec_GFp_simple_ladder_step,
+    ossl_ec_GFp_simple_ladder_step_workspace,
 };
 use crate::ec::{EcGroup, EcLadderFn, EcPoint, Pct};
 use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx};
@@ -693,10 +693,17 @@ unsafe fn p256_ladder_run<K: FieldKernel<FieldDomain>>(
         (*r).z_is_one = r_z_is_one;
         (*s).z_is_one = s_z_is_one;
 
-        let stored = store_coordinate((*r).x, ladder.rx_canonical().as_limbs())
-            && store_coordinate((*r).z, ladder.rz_canonical().as_limbs())
-            && store_coordinate((*s).x, ladder.sx_canonical().as_limbs())
-            && store_coordinate((*s).z, ladder.sz_canonical().as_limbs());
+        // PFP-20: the engine's fixed-width coordinates leave the secret domain
+        // only here, through the typed declassification boundary. The trim that
+        // produces the exported `BIGNUM` representation is branchless.
+        let rx = ladder.rx_canonical();
+        let rz = ladder.rz_canonical();
+        let sx = ladder.sx_canonical();
+        let sz = ladder.sz_canonical();
+        let stored = declassify_coordinate((*r).x, &rx)
+            && declassify_coordinate((*r).z, &rz)
+            && declassify_coordinate((*s).x, &sx)
+            && declassify_coordinate((*s).z, &sz);
         c_int::from(stored)
     }
 }

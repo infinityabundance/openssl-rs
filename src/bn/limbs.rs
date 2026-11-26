@@ -44,6 +44,38 @@ pub(crate) fn normalise(v: &mut Vec<Limb>) {
     }
 }
 
+/// Drop trailing zero limbs without a branch on a limb's value.
+///
+/// The result is byte-identical to [`normalise`] for every input: the retained
+/// length is the index of the highest nonzero limb plus one (zero for an
+/// all-zero value) and every retained limb is unchanged. The difference is that
+/// the length is formed by arithmetic over `v.len()` — the caller's **public**
+/// width — instead of a `while v.last() == &0 { pop }` loop whose trip count is
+/// a function of the value. This is the trim the EC write-back uses so that a
+/// secret-derived coordinate's highest-limb position never reaches a conditional
+/// jump (PFP-20).
+///
+/// `v.len()` must be public geometry (the fixed width the caller wrote), not a
+/// secret-derived length; a fixed-width slot satisfies this. The loop count is
+/// `v.len()`; its body reads a limb only to form a `setne`-style `nonzero` value
+/// and never branches on it. Release builds compile `Vec::set_len`'s
+/// `debug_assert!` out, so the length store has no value-dependent control flow.
+pub(crate) fn normalise_branchless(v: &mut Vec<Limb>) {
+    let mut keep = 0usize;
+    for (i, &limb) in v.iter().enumerate() {
+        // `0` for a zero limb, `1` otherwise, without a comparison: the top bit
+        // of `x | -x` is set exactly when `x != 0` (if `x`'s top bit is clear,
+        // `-x`'s is set).
+        let nonzero = ((limb | limb.wrapping_neg()) >> 63) as usize;
+        keep = nonzero * (i + 1) + (1 - nonzero) * keep;
+    }
+    // SAFETY: `keep` is at most `v.len()` (the highest nonzero index plus one,
+    // or zero). Every element below `v.len()` was initialised before this call,
+    // so the retained prefix is initialised, and `Limb` is `u64`, which is
+    // `Copy` with no destructor, so shortening the length drops nothing.
+    unsafe { v.set_len(keep) };
+}
+
 /// Zero every limb of `d`'s allocation, not merely its current length.
 ///
 /// This is the representation's analogue of the authority's
@@ -1862,6 +1894,25 @@ mod tests {
         assert_eq!(cmp(&[5, 0, 0], &[5]), core::cmp::Ordering::Equal);
         assert_eq!(cmp(&[], &[0]), core::cmp::Ordering::Equal);
         assert_eq!(cmp(&[0, 1], &[u64::MAX]), core::cmp::Ordering::Greater);
+    }
+
+    /// PFP-20: the branchless trim is the loop trim, for every arrangement of
+    /// zero and nonzero limbs in a four-limb slot (including zero values, a
+    /// zero top limb and interior zeros).
+    #[test]
+    fn the_branchless_trim_matches_the_loop_on_every_four_limb_shape() {
+        let nonzero = [1u64, 0x0123_4567_89ab_cdef, u64::MAX, 0x8000_0000_0000_0000];
+        for mask in 0u64..16 {
+            let mut v: Vec<Limb> = (0..4)
+                .map(|i| if mask & (1 << i) != 0 { nonzero[i] } else { 0 })
+                .collect();
+            let mut want = v.clone();
+            normalise(&mut want);
+            normalise_branchless(&mut v);
+            assert_eq!(v, want, "mask {mask:04b}");
+            // The trim never reallocates, so capacity is unchanged.
+            assert!(v.capacity() >= v.len());
+        }
     }
 
     #[test]
