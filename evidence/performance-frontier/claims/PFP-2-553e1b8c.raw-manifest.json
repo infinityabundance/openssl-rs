@@ -1367,6 +1367,326 @@
    "sha256": "9ff0bf5ed1abf9bc52f5d64d3c7e1b36a115745db4a4f2228a28187a9a79b802"
   },
   {
+   "bytes": 8966,
+   "path": "evidence/performance-frontier/campaigns/PFP-2/dso-differential/DOMAIN-553e1b8c.md",
+   "sha256": "01f77f28736e6c597ed7bd1be9f6632640691f49b89b218c4ca0aee3d1ee0432"
+  },
+  {
+   "bytes": 66464,
+   "path": "evidence/performance-frontier/campaigns/PFP-2/dso-differential/pfp22-domain-553e1b8c/build/pfp22_domain_differential",
+   "sha256": "06a750886ba488b72995b10c247a14331d0ea9586da62280fa509b832649b685"
+  },
+  {
+   "bytes": 13039,
+   "path": "evidence/performance-frontier/campaigns/PFP-2/dso-differential/pfp22-domain-553e1b8c/domain-differential-553e1b8c.json",
+   "sha256": "36ab9d6b2c028e840b206f001cb1f451aecf9fc04ccaca70ce9f9bac70a6ffac"
+  },
+  {
+   "bytes": 12246,
+   "path": "evidence/performance-frontier/campaigns/PFP-2/dso-differential/pfp22-domain-553e1b8c/domain_record.py",
+   "sha256": "dfcceade4702ac8121df967607403f24d4dc145e3572a4669ef2ec16a93e56b3"
+  },
+  {
+   "bytes": 31745,
+   "path": "evidence/performance-frontier/campaigns/PFP-2/dso-differential/pfp22-domain-553e1b8c/pfp22_domain_differential.c",
+   "sha256": "0aa2695ef442985dd90a7f1ce04023a4920868493c1eef766292a245e21ab779"
+  },
+  {
+   "bytes": 888138,
+   "path": "evidence/performance-frontier/campaigns/PFP-2/dso-differential/pfp22-domain-553e1b8c/raw/base-mul-g-authority.out",
+   "sha256": "9da0132ab59aa75affed480086d98b3ce5a3949079bd0af68e51991cb5341588"
+  },
+  {
+   "bytes": 0,
+   "path": "evidence/performance-frontier/campaigns/PFP-2/dso-differential/pfp22-domain-553e1b8c/raw/base-mul-g-authority.out.err",
+   "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+   "bytes": 887722,
+   "path": "evidence/performance-frontier/campaigns/PFP-2/dso-differential/pfp22-domain-553e1b8c/raw/base-mul-g-authority.points",
+   "sha256": "a9e1068d9c28846fd8beec36d372845723e9f253f3c09602fe93bfb7a23361fd"
+  },
+  {
+   "bytes": 888059,
+   "path": "evidence/performance-frontier/campaigns/PFP-2/dso-differential/pfp22-domain-553e1b8c/raw/base-mul-g-candidate.out",
+   "sha256": "52786a1b9327863a18f74d952e6bf0ce692c71ff475b5f368936fa940a7b1adb"
+  },
+  {
+   "bytes": 0,
+   "path": "evidence/performance-frontier/campaigns/PFP-2/dso-differential/pfp22-domain-553e1b8c/raw/base-mul-g-candidate.out.err",
+   "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+   "bytes": 887722,
+   "path": "evidence/performance-frontier/campaigns/PFP-2/dso-differential/pfp22-domain-553e1b8c/raw/base-mul-g-candidate.points",
+   "sha256": "a9e1068d9c28846fd8beec36d372845723e9f253f3c09602fe93bfb7a23361fd"
+  },
+  {
+   "bytes": 1162570,
+   "path": "evidence/performance-frontier/campaigns/PFP-2/dso-differential/pfp22-domain-553e1b8c/raw/base-mul-p-authority.out",
+   "sha256": "2264f0e78ee2b7725756703010dc350e0d24eac914935d9dbf632d444c49a76b"
+  },
+  {
+   "bytes": 0,
+   "path": "evidence/performance-frontier/campaigns/PFP-2/dso-differential/pfp22-domain-553e1b8c/raw/base-mul-p-authority.out.err",
+   "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+   "bytes": 1162154,
+   "path": "evidence/performance-frontier/campaigns/PFP-2/dso-differential/pfp22-domain-553e1b8c/raw/base-mul-p-authority.points",
+   "sha256": "bcb22a91415f5a8593262b56935218f0a21712b2bbedddb2d8824d485af9e23b"
+  },
+  {
+   "bytes": 1162491,
+   "path": "evidence/performance-frontier/campaigns/PFP-2/dso-differential/pfp22-domain-553e1b8c/raw/base-mul-p-candidate.out",
+   "sha256": "d9908c5ac51f6d0c7f4360062edbed7c3660a00d42903ebc34628a15303b0cfd"
+  },
+  {
+   "bytes": 0,
+   "path": "evidence/performance-frontier/campaigns/PFP-2/dso-differential/pfp22-domain-553e1b8c/raw/base-mul-p-candidate.out.err",
+   "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+   "bytes": 1162154,
+   "path": "evidence/performance-frontier/campaigns/PFP-2/dso-differential/pfp22-domain-553e1b8c/raw/base-mul-p-candidate.points",
+   "sha256": "bcb22a91415f5a8593262b56935218f0a21712b2bbedddb2d8824d485af9e23b"
+  },
+  {
+   "bytes": 2171,
+   "path": "evidence/performance-frontier/campaigns/PFP-2/dso-differential/pfp22-domain-553e1b8c/raw/boundary-g-authority.out",
+   "sha256": "c62cdab3cc2db90b3ea0d85dde759109bb12b3698b55bf2a6fe997a9c9618f88"
+  },
+  {
+   "bytes": 0,
+   "path": "evidence/performance-frontier/campaigns/PFP-2/dso-differential/pfp22-domain-553e1b8c/raw/boundary-g-authority.out.err",
+   "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+   "bytes": 1753,
+   "path": "evidence/performance-frontier/campaigns/PFP-2/dso-differential/pfp22-domain-553e1b8c/raw/boundary-g-authority.points",
+   "sha256": "412a0adb3593b02dcdf9aa5034657a6b49bcf2c62e35e48d35eca0f0d5763ad6"
+  },
+  {
+   "bytes": 2092,
+   "path": "evidence/performance-frontier/campaigns/PFP-2/dso-differential/pfp22-domain-553e1b8c/raw/boundary-g-candidate.out",
+   "sha256": "0d9dda91b1100c7b1a3be992b84324fa757b5ebac507eb47b9c00126be52b23e"
+  },
+  {
+   "bytes": 0,
+   "path": "evidence/performance-frontier/campaigns/PFP-2/dso-differential/pfp22-domain-553e1b8c/raw/boundary-g-candidate.out.err",
+   "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+   "bytes": 1753,
+   "path": "evidence/performance-frontier/campaigns/PFP-2/dso-differential/pfp22-domain-553e1b8c/raw/boundary-g-candidate.points",
+   "sha256": "412a0adb3593b02dcdf9aa5034657a6b49bcf2c62e35e48d35eca0f0d5763ad6"
+  },
+  {
+   "bytes": 2707,
+   "path": "evidence/performance-frontier/campaigns/PFP-2/dso-differential/pfp22-domain-553e1b8c/raw/boundary-p-authority.out",
+   "sha256": "49c8ceb28fcad17ee7816740caa129d26a3c86f54206293a229371c91a7b4a2d"
+  },
+  {
+   "bytes": 0,
+   "path": "evidence/performance-frontier/campaigns/PFP-2/dso-differential/pfp22-domain-553e1b8c/raw/boundary-p-authority.out.err",
+   "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+   "bytes": 2289,
+   "path": "evidence/performance-frontier/campaigns/PFP-2/dso-differential/pfp22-domain-553e1b8c/raw/boundary-p-authority.points",
+   "sha256": "7d37a627ba14ba9f58a45a5125ed24e7bc20925d31f1eedeb211b1aa97390d2d"
+  },
+  {
+   "bytes": 2628,
+   "path": "evidence/performance-frontier/campaigns/PFP-2/dso-differential/pfp22-domain-553e1b8c/raw/boundary-p-candidate.out",
+   "sha256": "f93e5c06416f0e2a26e0449d55cfa896acbf3037a285c95acca1d4ee4b886fde"
+  },
+  {
+   "bytes": 0,
+   "path": "evidence/performance-frontier/campaigns/PFP-2/dso-differential/pfp22-domain-553e1b8c/raw/boundary-p-candidate.out.err",
+   "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+   "bytes": 2289,
+   "path": "evidence/performance-frontier/campaigns/PFP-2/dso-differential/pfp22-domain-553e1b8c/raw/boundary-p-candidate.points",
+   "sha256": "7d37a627ba14ba9f58a45a5125ed24e7bc20925d31f1eedeb211b1aa97390d2d"
+  },
+  {
+   "bytes": 1692,
+   "path": "evidence/performance-frontier/campaigns/PFP-2/dso-differential/pfp22-domain-553e1b8c/raw/comparison.tsv",
+   "sha256": "11b5ea0dd5ea11f009e33d6fbded3d9f27846bd9930aa07f93736f55867a4316"
+  },
+  {
+   "bytes": 2826,
+   "path": "evidence/performance-frontier/campaigns/PFP-2/dso-differential/pfp22-domain-553e1b8c/raw/exceptional-authority.out",
+   "sha256": "b45ce8840a52c42ce3578722870fce8bb44783896b81b65686ef792a0000767a"
+  },
+  {
+   "bytes": 0,
+   "path": "evidence/performance-frontier/campaigns/PFP-2/dso-differential/pfp22-domain-553e1b8c/raw/exceptional-authority.out.err",
+   "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+   "bytes": 2406,
+   "path": "evidence/performance-frontier/campaigns/PFP-2/dso-differential/pfp22-domain-553e1b8c/raw/exceptional-authority.points",
+   "sha256": "07c10828a61883dd69eb4d26c67c9acf888b1f498ed6aa52fa2288e95fa2a013"
+  },
+  {
+   "bytes": 2747,
+   "path": "evidence/performance-frontier/campaigns/PFP-2/dso-differential/pfp22-domain-553e1b8c/raw/exceptional-candidate.out",
+   "sha256": "e4267bc51e9c34480a7927c640ffeeb0000c58319997ff855a63798a069ce6df"
+  },
+  {
+   "bytes": 0,
+   "path": "evidence/performance-frontier/campaigns/PFP-2/dso-differential/pfp22-domain-553e1b8c/raw/exceptional-candidate.out.err",
+   "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+   "bytes": 2406,
+   "path": "evidence/performance-frontier/campaigns/PFP-2/dso-differential/pfp22-domain-553e1b8c/raw/exceptional-candidate.points",
+   "sha256": "07c10828a61883dd69eb4d26c67c9acf888b1f498ed6aa52fa2288e95fa2a013"
+  },
+  {
+   "bytes": 374,
+   "path": "evidence/performance-frontier/campaigns/PFP-2/dso-differential/pfp22-domain-553e1b8c/raw/harness.sha256",
+   "sha256": "1b0722341a308de49e0b0c15cf79af727a3d20213e6023f015ffbb6628611cea"
+  },
+  {
+   "bytes": 4815,
+   "path": "evidence/performance-frontier/campaigns/PFP-2/dso-differential/pfp22-domain-553e1b8c/raw/identity-check.tsv",
+   "sha256": "1401662903a2287ef988fee802b16316c9a34c0e26ecee6de2608d5a0c5b8a05"
+  },
+  {
+   "bytes": 3449,
+   "path": "evidence/performance-frontier/campaigns/PFP-2/dso-differential/pfp22-domain-553e1b8c/raw/limb-g-authority.out",
+   "sha256": "258607180db5fa5409a4cbc9c99aa84aefb12e06b2bc44620e7e81d10ff0d867"
+  },
+  {
+   "bytes": 0,
+   "path": "evidence/performance-frontier/campaigns/PFP-2/dso-differential/pfp22-domain-553e1b8c/raw/limb-g-authority.out.err",
+   "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+   "bytes": 3034,
+   "path": "evidence/performance-frontier/campaigns/PFP-2/dso-differential/pfp22-domain-553e1b8c/raw/limb-g-authority.points",
+   "sha256": "ed46a959522f20d7f90a3894dada1b37a91778f79cdffe849a81f57166f459ed"
+  },
+  {
+   "bytes": 3370,
+   "path": "evidence/performance-frontier/campaigns/PFP-2/dso-differential/pfp22-domain-553e1b8c/raw/limb-g-candidate.out",
+   "sha256": "8e92edde9e7d8523249ef5103bb40f23cf4e588e71f2ccee6363f179db392d2c"
+  },
+  {
+   "bytes": 0,
+   "path": "evidence/performance-frontier/campaigns/PFP-2/dso-differential/pfp22-domain-553e1b8c/raw/limb-g-candidate.out.err",
+   "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+   "bytes": 3034,
+   "path": "evidence/performance-frontier/campaigns/PFP-2/dso-differential/pfp22-domain-553e1b8c/raw/limb-g-candidate.points",
+   "sha256": "ed46a959522f20d7f90a3894dada1b37a91778f79cdffe849a81f57166f459ed"
+  },
+  {
+   "bytes": 4253,
+   "path": "evidence/performance-frontier/campaigns/PFP-2/dso-differential/pfp22-domain-553e1b8c/raw/limb-p-authority.out",
+   "sha256": "fc6540f82d8975dd8839b37ab94dda1922a098d204da6c3b444490405ce64913"
+  },
+  {
+   "bytes": 0,
+   "path": "evidence/performance-frontier/campaigns/PFP-2/dso-differential/pfp22-domain-553e1b8c/raw/limb-p-authority.out.err",
+   "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+   "bytes": 3838,
+   "path": "evidence/performance-frontier/campaigns/PFP-2/dso-differential/pfp22-domain-553e1b8c/raw/limb-p-authority.points",
+   "sha256": "f2d5f0381ad53488d62ee02ed8d02d215dc7672139862020dffd8ce43b880c37"
+  },
+  {
+   "bytes": 4174,
+   "path": "evidence/performance-frontier/campaigns/PFP-2/dso-differential/pfp22-domain-553e1b8c/raw/limb-p-candidate.out",
+   "sha256": "561b0c61032294c242a17be6192253fc3aeba0c9019a699380908821fc43589b"
+  },
+  {
+   "bytes": 0,
+   "path": "evidence/performance-frontier/campaigns/PFP-2/dso-differential/pfp22-domain-553e1b8c/raw/limb-p-candidate.out.err",
+   "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+   "bytes": 3838,
+   "path": "evidence/performance-frontier/campaigns/PFP-2/dso-differential/pfp22-domain-553e1b8c/raw/limb-p-candidate.points",
+   "sha256": "f2d5f0381ad53488d62ee02ed8d02d215dc7672139862020dffd8ce43b880c37"
+  },
+  {
+   "bytes": 935,
+   "path": "evidence/performance-frontier/campaigns/PFP-2/dso-differential/pfp22-domain-553e1b8c/raw/run-meta.env",
+   "sha256": "fe60d6574523f10da915e9062506945fc1abe9ee67257505ad3b0aeda3896f55"
+  },
+  {
+   "bytes": 986444,
+   "path": "evidence/performance-frontier/campaigns/PFP-2/dso-differential/pfp22-domain-553e1b8c/raw/upper-g-authority.out",
+   "sha256": "52157b6f972b65691e289be91066130e4bd00a16638462f58c479f71dfc1ab2c"
+  },
+  {
+   "bytes": 0,
+   "path": "evidence/performance-frontier/campaigns/PFP-2/dso-differential/pfp22-domain-553e1b8c/raw/upper-g-authority.out.err",
+   "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+   "bytes": 986026,
+   "path": "evidence/performance-frontier/campaigns/PFP-2/dso-differential/pfp22-domain-553e1b8c/raw/upper-g-authority.points",
+   "sha256": "5aa11f7ce28c896d4a44d885d2364874fd7632c925e85fd3981001ab8a1a4c50"
+  },
+  {
+   "bytes": 986365,
+   "path": "evidence/performance-frontier/campaigns/PFP-2/dso-differential/pfp22-domain-553e1b8c/raw/upper-g-candidate.out",
+   "sha256": "88ed93902e29f46f4da38f16fd0a2b04fe72465ac2d7a9b9e95d280af238d3a1"
+  },
+  {
+   "bytes": 0,
+   "path": "evidence/performance-frontier/campaigns/PFP-2/dso-differential/pfp22-domain-553e1b8c/raw/upper-g-candidate.out.err",
+   "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+   "bytes": 986026,
+   "path": "evidence/performance-frontier/campaigns/PFP-2/dso-differential/pfp22-domain-553e1b8c/raw/upper-g-candidate.points",
+   "sha256": "5aa11f7ce28c896d4a44d885d2364874fd7632c925e85fd3981001ab8a1a4c50"
+  },
+  {
+   "bytes": 1260876,
+   "path": "evidence/performance-frontier/campaigns/PFP-2/dso-differential/pfp22-domain-553e1b8c/raw/upper-p-authority.out",
+   "sha256": "f5a76e379f031b2bb81d72a6bebbba00e83357f5c317823f8ab381f41ac3d4f9"
+  },
+  {
+   "bytes": 0,
+   "path": "evidence/performance-frontier/campaigns/PFP-2/dso-differential/pfp22-domain-553e1b8c/raw/upper-p-authority.out.err",
+   "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+   "bytes": 1260458,
+   "path": "evidence/performance-frontier/campaigns/PFP-2/dso-differential/pfp22-domain-553e1b8c/raw/upper-p-authority.points",
+   "sha256": "e364eb3e41670413725ef7b5a35be13475884e6f91362e73936ed7c0e2a41180"
+  },
+  {
+   "bytes": 1260797,
+   "path": "evidence/performance-frontier/campaigns/PFP-2/dso-differential/pfp22-domain-553e1b8c/raw/upper-p-candidate.out",
+   "sha256": "771f272cc66b995afc062adb3b59cdb8ba01c811bb52acc19eb58a5e40692bb0"
+  },
+  {
+   "bytes": 0,
+   "path": "evidence/performance-frontier/campaigns/PFP-2/dso-differential/pfp22-domain-553e1b8c/raw/upper-p-candidate.out.err",
+   "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+   "bytes": 1260458,
+   "path": "evidence/performance-frontier/campaigns/PFP-2/dso-differential/pfp22-domain-553e1b8c/raw/upper-p-candidate.points",
+   "sha256": "e364eb3e41670413725ef7b5a35be13475884e6f91362e73936ed7c0e2a41180"
+  },
+  {
+   "bytes": 12668,
+   "path": "evidence/performance-frontier/campaigns/PFP-2/dso-differential/pfp22-domain-553e1b8c/run_domain.sh",
+   "sha256": "11cc7d77ad1bed183566d909789901a18c8b72dedba19895f0b7b62a748564d5"
+  },
+  {
    "bytes": 3564,
    "path": "evidence/performance-frontier/campaigns/PFP-2/repro-553e1b8c/REPORT.md",
    "sha256": "aeb240e0c93bde77c09831d00daabf351300dac41ea8f64b911051b437eda0f2"
@@ -2162,6 +2482,6 @@
    "sha256": "6fb6a42c4a4b641bebaf29df4096ae2758715d621f06315122b0d19f20cde5b9"
   }
  ],
- "identity": "PFP-20 candidate DSO 553e1b8c; timing, DSO-level ctgrind with mutation control, branch audit, DSO-bound differential, and two independent rebuilds",
+ "identity": "PFP-20 candidate DSO 553e1b8c; timing, DSO-level ctgrind with mutation control, branch audit, DSO-bound differential, and two independent rebuilds; PFP-22 domain completion at 553e1b8c (upper half, order boundaries, exceptional/structural cases, limb occupancy)",
  "schema": "openssl-rs/performance/raw-manifest/v1"
 }

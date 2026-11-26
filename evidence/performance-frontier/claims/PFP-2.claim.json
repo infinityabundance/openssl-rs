@@ -116,9 +116,10 @@
       "branch_audit_report_sha256": "b63fc18d595c82ee269fd21a01ba04c5141d714b0a3479bda23bb6862a21c3d0",
       "ctgrind_harness_binary_sha256": "3a385537cc286cb7c19e0bbbb468c4033ffabb8edc74ac69df29237fc3d2aea1",
       "ctgrind_harness_source_sha256": "ef1374120b29649ea8537ffcf58d9b01acd05b3bc9dcaeb0184a60c7977d3c51",
-      "differential_binary_sha256": "7d15adb4a146594cf8d9254240e33e14585b9b2763bbae6f82c45445cf357feb",
-      "differential_record_sha256": "d3bfe7b30ce1bcd05ba10685b089fa853c26549680581065fb4e085b8c7a66bc",
-      "differential_source_sha256": "fd67b943889ab710af9f3c246e3119c2f28561dc6a47084ee96f5a5d5f64affc",
+      "differential_binary_sha256": "06a750886ba488b72995b10c247a14331d0ea9586da62280fa509b832649b685",
+      "differential_record_path": "evidence/performance-frontier/campaigns/PFP-2/dso-differential/pfp22-domain-553e1b8c/domain-differential-553e1b8c.json",
+      "differential_record_sha256": "36ab9d6b2c028e840b206f001cb1f451aecf9fc04ccaca70ce9f9bac70a6ffac",
+      "differential_source_sha256": "0aa2695ef442985dd90a7f1ce04023a4920868493c1eef766292a245e21ab779",
       "executed_runner_note": "timing-553e1b8c/run_timing.sh is a bound copy of the 83f67826 runner that does not rebuild the candidate; bench_api.c and analyse_bench_api.py are the tracked instruments, invoked unchanged",
       "executed_runner_sha256": "554b4a52b2392321869647a5b826b02ef474c154e1a72eb2f834ba48dfb21d0a",
       "harness_sha256": "e1add483b9bee3158e93e2f7d84296441bb2fc5d715cbf27cfd13f80cfde263f",
@@ -128,12 +129,12 @@
     },
     "measures": [
       "cross-library single-operation latency for nine workloads, candidate versus OpenSSL 3.6.4",
-      "4096 scalar multiplications k*G and 4096 variable-base k*P through the exported DSO ABI",
+      "4096 scalar multiplications k*G and 4096 variable-base k*P through the exported DSO ABI, plus PFP-22 domain completion: 4096+4096 uniform upper-half scalars, order boundaries, exceptional/structural cases and limb occupancy (16,434 cases per subject)",
       "ECDSA sign-then-cross-verify in both directions, 256 signatures per direction",
       "conditional jumps and their targets in the named P-256 and ladder functions of the distribution DSO",
       "DSO-level undefined-value taint over six populations, and a two-DSO mutation control (instructions and wall time)"
     ],
-    "name": "bench_api.c with analyse_bench_api.py (timing); pfp21_dso_ct.c (DSO-level ctgrind and mutation control); binary_branch_audit.py (branch audit); pfp2_dso_differential.c (DSO-bound differential)",
+    "name": "bench_api.c with analyse_bench_api.py (timing); pfp21_dso_ct.c (DSO-level ctgrind and mutation control); binary_branch_audit.py (branch audit); pfp22_domain_differential.c (PFP-22 domain-completion DSO-bound differential; loader/identity/serialisation unchanged from pfp2_dso_differential.c)",
     "preregistration": {
       "path": "evidence/performance-frontier/campaigns/PFP-2/timing-553e1b8c/preregistration.json",
       "present": true,
@@ -142,12 +143,12 @@
     "procedure": "docs/PERFORMANCE-METHODOLOGY.md \u00a75-\u00a76",
     "repetition_count": 15,
     "samples": {
-      "location": "evidence/performance-frontier/campaigns/PFP-2/timing-553e1b8c, .../ctgrind/pfp21-2026-11-26, .../ctgrind/pfp20-2026-11-26, .../dso-differential-pfp20 and .../repro-553e1b8c, enumerated by the bound manifest",
+      "location": "evidence/performance-frontier/campaigns/PFP-2/timing-553e1b8c, .../ctgrind/pfp21-2026-11-26, .../ctgrind/pfp20-2026-11-26, .../dso-differential-pfp20 .../dso-differential/pfp22-domain-553e1b8c and .../repro-553e1b8c, enumerated by the bound manifest",
       "obligation": null,
       "path": "evidence/performance-frontier/claims/PFP-2-553e1b8c.raw-manifest.json",
       "present_in_repository": true,
       "repetitions": 15,
-      "sha256": "7b30c268c1da374bc5f78fa4025e8442ed73bf6194c905c27119799bb24c45e3",
+      "sha256": "a10a2b2dc116ffdc8789c2cfec8707aada51d193f7b9dde965ca2543156ae24b",
       "statistic": "median over repetitions of candidate_us / authority_us",
       "unit_of_replication": "one process per subject per repetition"
     },
@@ -489,7 +490,32 @@
       {
         "path": "evidence/performance-frontier/claims/PFP-2-553e1b8c.raw-manifest.json",
         "present": true,
-        "sha256": "7b30c268c1da374bc5f78fa4025e8442ed73bf6194c905c27119799bb24c45e3"
+        "sha256": "a10a2b2dc116ffdc8789c2cfec8707aada51d193f7b9dde965ca2543156ae24b"
+      },
+      {
+        "path": "evidence/performance-frontier/campaigns/PFP-2/dso-differential/pfp22-domain-553e1b8c/domain-differential-553e1b8c.json",
+        "present": true,
+        "sha256": "36ab9d6b2c028e840b206f001cb1f451aecf9fc04ccaca70ce9f9bac70a6ffac"
+      },
+      {
+        "path": "evidence/performance-frontier/campaigns/PFP-2/dso-differential/pfp22-domain-553e1b8c/pfp22_domain_differential.c",
+        "present": true,
+        "sha256": "0aa2695ef442985dd90a7f1ce04023a4920868493c1eef766292a245e21ab779"
+      },
+      {
+        "path": "evidence/performance-frontier/campaigns/PFP-2/dso-differential/pfp22-domain-553e1b8c/run_domain.sh",
+        "present": true,
+        "sha256": "11cc7d77ad1bed183566d909789901a18c8b72dedba19895f0b7b62a748564d5"
+      },
+      {
+        "path": "evidence/performance-frontier/campaigns/PFP-2/dso-differential/pfp22-domain-553e1b8c/domain_record.py",
+        "present": true,
+        "sha256": "dfcceade4702ac8121df967607403f24d4dc145e3572a4669ef2ec16a93e56b3"
+      },
+      {
+        "path": "evidence/performance-frontier/campaigns/PFP-2/dso-differential/DOMAIN-553e1b8c.md",
+        "present": true,
+        "sha256": "01f77f28736e6c597ed7bd1be9f6632640691f49b89b218c4ca0aee3d1ee0432"
       }
     ],
     "limits": [

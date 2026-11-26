@@ -248,11 +248,11 @@
       "description": "fixed-width P-256 field engine: MONT, SOLINAS and ARCH behind one FieldKernel interface; PFP-20 candidate DSO 553e1b8c, with timing, DSO-bound differential, branch audit and DSO-level ctgrind plus mutation control all bound to that digest, and two independent clean rebuilds",
       "differential_courts": {
         "candidate_sha256": "553e1b8ce1eb7e03a0d92a5614b566b88e49e55d2c2a3f7ba28fc6d78eecc4e4",
-        "note": "4096 k*G and 4096 k*P with 0 mismatches; ECDSA cross-verify 256/256 in both directions, seed 0x5046503250485032; identity proof 8/8. The record's record_id string carries the parent campaign label PFP2-DSO-DIFFERENTIAL-83f67826 while all subjects and raw outputs are at 553e1b8c.",
+        "note": "PFP-22 domain completion at 553e1b8c: 16,434 cases per subject across nine classes (upper-half 4096+4096, order boundaries 8+8, exceptional 10, limb 12+12, base 4096+4096), 0 mismatches, identity 18/18; the base population reproduces its historical digests. This supersedes the 4096+4096-only reference (dso-differential-pfp20/...) as the arm's differential court.",
         "reference": {
-          "path": "evidence/performance-frontier/campaigns/PFP-2/dso-differential-pfp20/differential-dso-bound.json",
+          "path": "evidence/performance-frontier/campaigns/PFP-2/dso-differential/pfp22-domain-553e1b8c/domain-differential-553e1b8c.json",
           "present": true,
-          "sha256": "d3bfe7b30ce1bcd05ba10685b089fa853c26549680581065fb4e085b8c7a66bc"
+          "sha256": "36ab9d6b2c028e840b206f001cb1f451aecf9fc04ccaca70ce9f9bac70a6ffac"
         },
         "result": "PASS"
       },
@@ -274,7 +274,7 @@
         "record": {
           "path": "evidence/performance-frontier/claims/PFP-2.claim.json",
           "present": true,
-          "sha256": "950200bb98604cd4f814fbe13b055f34b4e6739a756a86a24558f14c98793fdf"
+          "sha256": "7ef8a99fac5acda7421f893a6c78cf9a0f4df66bbc0ac95a9631e27fb62c1ba8"
         }
       },
       "post_fix": {
@@ -596,7 +596,7 @@
       {
         "path": "evidence/performance-frontier/claims/PFP-2.claim.json",
         "present": true,
-        "sha256": "950200bb98604cd4f814fbe13b055f34b4e6739a756a86a24558f14c98793fdf"
+        "sha256": "7ef8a99fac5acda7421f893a6c78cf9a0f4df66bbc0ac95a9631e27fb62c1ba8"
       },
       {
         "path": "evidence/performance-frontier/campaigns/PFP-2/authority/results.json",
@@ -726,7 +726,32 @@
       {
         "path": "evidence/performance-frontier/claims/PFP-2-553e1b8c.raw-manifest.json",
         "present": true,
-        "sha256": "7b30c268c1da374bc5f78fa4025e8442ed73bf6194c905c27119799bb24c45e3"
+        "sha256": "a10a2b2dc116ffdc8789c2cfec8707aada51d193f7b9dde965ca2543156ae24b"
+      },
+      {
+        "path": "evidence/performance-frontier/campaigns/PFP-2/dso-differential/pfp22-domain-553e1b8c/domain-differential-553e1b8c.json",
+        "present": true,
+        "sha256": "36ab9d6b2c028e840b206f001cb1f451aecf9fc04ccaca70ce9f9bac70a6ffac"
+      },
+      {
+        "path": "evidence/performance-frontier/campaigns/PFP-2/dso-differential/pfp22-domain-553e1b8c/pfp22_domain_differential.c",
+        "present": true,
+        "sha256": "0aa2695ef442985dd90a7f1ce04023a4920868493c1eef766292a245e21ab779"
+      },
+      {
+        "path": "evidence/performance-frontier/campaigns/PFP-2/dso-differential/pfp22-domain-553e1b8c/run_domain.sh",
+        "present": true,
+        "sha256": "11cc7d77ad1bed183566d909789901a18c8b72dedba19895f0b7b62a748564d5"
+      },
+      {
+        "path": "evidence/performance-frontier/campaigns/PFP-2/dso-differential/pfp22-domain-553e1b8c/domain_record.py",
+        "present": true,
+        "sha256": "dfcceade4702ac8121df967607403f24d4dc145e3572a4669ef2ec16a93e56b3"
+      },
+      {
+        "path": "evidence/performance-frontier/campaigns/PFP-2/dso-differential/DOMAIN-553e1b8c.md",
+        "present": true,
+        "sha256": "01f77f28736e6c597ed7bd1be9f6632640691f49b89b218c4ca0aee3d1ee0432"
       }
     ],
     "limits": [
