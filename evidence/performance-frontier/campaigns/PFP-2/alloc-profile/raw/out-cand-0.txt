@@ -1,0 +1,22 @@
+==54199== DHAT, a dynamic heap analysis tool
+==54199== Copyright (C) 2010-2018, and GNU GPL'd, by Mozilla Foundation
+==54199== Using Valgrind-3.19.0 and LibVEX; rerun with -h for copyright info
+==54199== Command: /tmp/harness --lib /work/court/tmp/pfp21/a/distribution/libcrypto.so.3 --sign-ops 0
+==54199== 
+LIB /work/court/tmp/pfp21/a/distribution/libcrypto.so.3
+LOADED realpath=/work/court/tmp/pfp21/a/distribution/libcrypto.so.3 dev=57 ino=1985086 size=17032672
+MAPS realpath=/work/court/tmp/pfp21/a/distribution/libcrypto.so.3 entries=5
+CHECK ecdsa256 pub=02c5b17d076d8e27f07ea9f82d7eeb92c5f994e7d285ee083452ab244d3c54128f verify=1
+SIGN_OPS 0
+==54199== 
+==54199== Total:     1,415,361 bytes in 33,069 blocks
+==54199== At t-gmax: 290,727 bytes in 3,237 blocks
+==54199== At t-end:  265,667 bytes in 2,993 blocks
+==54199== Reads:     12,498,671 bytes
+==54199== Writes:    6,739,653 bytes
+==54199== 
+==54199== To view the resulting profile, open
+==54199==   file:///usr/libexec/valgrind/dh_view.html
+==54199== in a web browser, click on "Load...", and then select the file
+==54199==   /work/evidence/performance-frontier/campaigns/PFP-2/alloc-profile/raw/dhat-cand-0.json
+==54199== The text at the bottom explains the abbreviations used in the output.

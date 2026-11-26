@@ -125,9 +125,10 @@
 //! deliberately *not* made through the `CRYPTO_*` seam: it is private metadata,
 //! and routing it through a caller-installed `CRYPTO_set_mem_functions` hook
 //! would make the hook observe allocations the authority never makes. It is
-//! created on the first read acquisition and released with the lock. This still
-//! promotes nothing to `SAFETY_DISCHARGED`: the §7 independent-check package is
-//! outstanding.
+//! created on the first read acquisition and, from then on, emptied rather than
+//! released when the last reader leaves, so a lock pays for it at most once. This
+//! still promotes nothing to `SAFETY_DISCHARGED`: the §7 independent-check
+//! package is outstanding.
 
 use core::ffi::{c_int, c_long, c_uint, c_ulong, c_void};
 use core::sync::atomic::{AtomicI32, AtomicPtr, AtomicU64, Ordering};
@@ -205,12 +206,23 @@ struct LockState {
 /// Per-thread read-hold accounting for one lock. Each entry is the calling
 /// thread's identity and its outstanding read count; an entry is removed when
 /// its count reaches zero, so the table is empty exactly when `LockState::readers`
-/// is zero. A lock that has never been read, and any lock after its last reader
-/// releases, carries no table at all.
+/// is zero. A lock that has never been read carries no table at all. Once a lock
+/// has been read its table is *emptied* rather than freed on the last release, so
+/// the next acquisition reuses the same allocation: every `CRYPTO_THREAD_read_lock`
+/// / `CRYPTO_THREAD_unlock` pair on the signing path otherwise allocates the box and
+/// its entries again, which the PFP-24 profile measured at 14 allocations per
+/// P-256 signature. Clearing on the last release keeps the anti-staleness property
+/// that motivated freeing it — the table is empty exactly when `readers` is zero —
+/// without the per-pair allocation.
 #[derive(Default)]
 struct ReaderTable(Vec<(CryptoThreadId, usize)>);
 
 impl ReaderTable {
+    /// Empty the table, keeping its capacity. Used when the last reader releases.
+    fn clear(&mut self) {
+        self.0.clear();
+    }
+
     /// Record one read hold by `me`. Answers false, without recording anything,
     /// when the entry cannot be allocated (the caller then reports the failure
     /// value and does not count the read).
@@ -618,9 +630,14 @@ pub unsafe extern "C" fn CRYPTO_THREAD_unlock(lock: *mut CryptoRwlock) -> c_int 
                     }
                     state.readers -= 1;
                     if state.readers == 0 {
-                        // Release the accounting with the last reader. This also makes
-                        // the table impossible to leave stale after a foreign unlock.
-                        state.reader_ids = None;
+                        // Empty the accounting with the last reader. The table stays
+                        // allocated so the next acquisition does not reallocate it;
+                        // clearing it keeps the property the unconditional `free`
+                        // provided — the table holds no entry once `readers` is zero,
+                        // so a foreign unlock cannot leave a stale entry behind.
+                        if let Some(table) = state.reader_ids.as_mut() {
+                            table.clear();
+                        }
                     }
                     inner.cond.notify_all();
                     return 1;

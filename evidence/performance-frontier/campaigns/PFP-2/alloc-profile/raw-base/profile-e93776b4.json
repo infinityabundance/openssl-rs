@@ -1,0 +1,2184 @@
+{
+  "groups": [
+    {
+      "blocks_per_op": 54.32,
+      "bytes_per_op": 2784.64,
+      "caller": "openssl_rs::bn::limbs::rem_fallible",
+      "program_points": 6,
+      "site": "openssl_rs::bn::limbs::divide_fallible"
+    },
+    {
+      "blocks_per_op": 27.16,
+      "bytes_per_op": 1714.24,
+      "caller": "BN_mul",
+      "program_points": 8,
+      "site": "openssl_rs::bn::limbs::mul_fallible"
+    },
+    {
+      "blocks_per_op": 12.0,
+      "bytes_per_op": 392.0,
+      "caller": "openssl_rs::bn::limbs::mod_inverse_consttime",
+      "program_points": 1,
+      "site": "openssl_rs::runtime::alloc::try_zeroed::<u64>"
+    },
+    {
+      "blocks_per_op": 11.0,
+      "bytes_per_op": 352.0,
+      "caller": "BN_CTX_get",
+      "program_points": 3,
+      "site": "BN_new"
+    },
+    {
+      "blocks_per_op": 10.0,
+      "bytes_per_op": 361.0,
+      "caller": "BN_bin2bn",
+      "program_points": 4,
+      "site": "openssl_rs::bn::bignum::from_bytes"
+    },
+    {
+      "blocks_per_op": 9.0,
+      "bytes_per_op": 320.0,
+      "caller": "openssl_rs::ec::mult::ossl_ec_scalar_mul_ladder",
+      "program_points": 1,
+      "site": "openssl_rs::bn::limbs::reserve_cleansed"
+    },
+    {
+      "blocks_per_op": 8.08,
+      "bytes_per_op": 282.56,
+      "caller": "BN_sub",
+      "program_points": 5,
+      "site": "openssl_rs::bn::limbs::sub_fallible"
+    },
+    {
+      "blocks_per_op": 8.0,
+      "bytes_per_op": 352.0,
+      "caller": "RAND_get_rand_method",
+      "program_points": 6,
+      "site": "CRYPTO_THREAD_read_lock"
+    },
+    {
+      "blocks_per_op": 7.125,
+      "bytes_per_op": 285.0,
+      "caller": "BN_lshift",
+      "program_points": 5,
+      "site": "openssl_rs::bn::limbs::shl_fallible"
+    },
+    {
+      "blocks_per_op": 6.0,
+      "bytes_per_op": 192.0,
+      "caller": "openssl_rs::ec::mult::ossl_ec_scalar_mul_ladder",
+      "program_points": 1,
+      "site": "openssl_rs::ec::smpl::ossl_ec_GFp_simple_point_init"
+    },
+    {
+      "blocks_per_op": 6.0,
+      "bytes_per_op": 192.0,
+      "caller": "openssl_rs::bn::arith::mod_inverse_impl",
+      "program_points": 1,
+      "site": "openssl_rs::bn::limbs::mod_inverse_consttime"
+    },
+    {
+      "blocks_per_op": 6.0,
+      "bytes_per_op": 232.0,
+      "caller": "openssl_rs::bn::arith::mod_exp_core_consttime_from_parts_prepared",
+      "program_points": 1,
+      "site": "openssl_rs::bn::arith::run_mont_ladder"
+    },
+    {
+      "blocks_per_op": 6.0,
+      "bytes_per_op": 272.0,
+      "caller": "BN_to_montgomery",
+      "program_points": 1,
+      "site": "openssl_rs::bn::arith::mont_mul_fallible"
+    },
+    {
+      "blocks_per_op": 6.0,
+      "bytes_per_op": 192.0,
+      "caller": "ossl_ecdsa_simple_sign_sig",
+      "program_points": 1,
+      "site": "BN_mod_mul_montgomery"
+    },
+    {
+      "blocks_per_op": 6.0,
+      "bytes_per_op": 272.0,
+      "caller": "BN_mod_mul_montgomery",
+      "program_points": 1,
+      "site": "openssl_rs::bn::arith::mont_mul_fallible"
+    },
+    {
+      "blocks_per_op": 5.04,
+      "bytes_per_op": 201.6,
+      "caller": "BN_mod_add_quick",
+      "program_points": 3,
+      "site": "BN_uadd"
+    },
+    {
+      "blocks_per_op": 4.0,
+      "bytes_per_op": 128.0,
+      "caller": "ossl_ecdsa_simple_sign_sig",
+      "program_points": 1,
+      "site": "BN_to_montgomery"
+    },
+    {
+      "blocks_per_op": 3.4699999999999998,
+      "bytes_per_op": 138.8,
+      "caller": "BN_usub",
+      "program_points": 3,
+      "site": "openssl_rs::bn::limbs::sub_fallible"
+    },
+    {
+      "blocks_per_op": 3.0,
+      "bytes_per_op": 96.0,
+      "caller": "BN_add",
+      "program_points": 3,
+      "site": "openssl_rs::bn::limbs::sub_fallible"
+    },
+    {
+      "blocks_per_op": 3.0,
+      "bytes_per_op": 96.0,
+      "caller": "ossl_ecdsa_simple_sign_sig",
+      "program_points": 1,
+      "site": "BN_new"
+    },
+    {
+      "blocks_per_op": 3.0,
+      "bytes_per_op": 96.0,
+      "caller": "openssl_rs::ec::ecdsa_ossl::ecdsa_sign_setup",
+      "program_points": 1,
+      "site": "openssl_rs::ec::smpl::ossl_ec_GFp_simple_point_init"
+    },
+    {
+      "blocks_per_op": 3.0,
+      "bytes_per_op": 120.0,
+      "caller": "openssl_rs::bn::limbs::set_bit",
+      "program_points": 1,
+      "site": "openssl_rs::bn::limbs::reserve_cleansed"
+    },
+    {
+      "blocks_per_op": 3.0,
+      "bytes_per_op": 72.0,
+      "caller": "openssl_rs::ec::smpl::ossl_ec_GFp_simple_point_copy",
+      "program_points": 1,
+      "site": "BN_copy"
+    },
+    {
+      "blocks_per_op": 3.0,
+      "bytes_per_op": 224.0,
+      "caller": "openssl_rs::ec::mult::ossl_ec_scalar_mul_ladder",
+      "program_points": 1,
+      "site": "BN_CTX_get"
+    },
+    {
+      "blocks_per_op": 3.0,
+      "bytes_per_op": 96.0,
+      "caller": "openssl_rs::bn::rand::bnrand_range",
+      "program_points": 2,
+      "site": "openssl_rs::bn::rand::bnrand"
+    },
+    {
+      "blocks_per_op": 3.0,
+      "bytes_per_op": 136.0,
+      "caller": "openssl_rs::bn::arith::run_mont_ladder",
+      "program_points": 1,
+      "site": "openssl_rs::bn::arith::mont_mul_fallible"
+    },
+    {
+      "blocks_per_op": 2.0,
+      "bytes_per_op": 88.0,
+      "caller": "main (ecdsa_alloc_harness.c:293)",
+      "program_points": 2,
+      "site": "ossl_ecdsa_simple_sign_sig"
+    },
+    {
+      "blocks_per_op": 2.0,
+      "bytes_per_op": 64.0,
+      "caller": "openssl_rs::ec::ecdsa_ossl::ecdsa_sign_setup",
+      "program_points": 1,
+      "site": "BN_new"
+    },
+    {
+      "blocks_per_op": 2.0,
+      "bytes_per_op": 105.0,
+      "caller": "openssl_rs::ec::ecdsa_ossl::ecdsa_sign_setup",
+      "program_points": 2,
+      "site": "openssl_rs::bn::rand::ossl_bn_gen_dsa_nonce_fixed_top"
+    },
+    {
+      "blocks_per_op": 2.0,
+      "bytes_per_op": 88.0,
+      "caller": "openssl_rs::context::namemap::ossl_namemap_stored",
+      "program_points": 2,
+      "site": "CRYPTO_THREAD_read_lock"
+    },
+    {
+      "blocks_per_op": 2.0,
+      "bytes_per_op": 88.0,
+      "caller": "openssl_rs::context::namemap::name2num_inner",
+      "program_points": 2,
+      "site": "CRYPTO_THREAD_read_lock"
+    },
+    {
+      "blocks_per_op": 2.0,
+      "bytes_per_op": 88.0,
+      "caller": "openssl_rs::property::store::ossl_method_store_cache_get",
+      "program_points": 2,
+      "site": "CRYPTO_THREAD_read_lock"
+    },
+    {
+      "blocks_per_op": 2.0,
+      "bytes_per_op": 96.0,
+      "caller": "EC_POINT_mul",
+      "program_points": 1,
+      "site": "openssl_rs::ec::mult::ossl_ec_scalar_mul_ladder"
+    },
+    {
+      "blocks_per_op": 2.0,
+      "bytes_per_op": 88.0,
+      "caller": "openssl_rs::ec::mult::ossl_ec_scalar_mul_ladder",
+      "program_points": 1,
+      "site": "BN_add"
+    },
+    {
+      "blocks_per_op": 2.0,
+      "bytes_per_op": 64.0,
+      "caller": "openssl_rs::ec::smpl::ossl_ec_GFp_simple_field_inv",
+      "program_points": 1,
+      "site": "openssl_rs::bn::arith::mod_inverse_impl"
+    },
+    {
+      "blocks_per_op": 2.0,
+      "bytes_per_op": 64.0,
+      "caller": "ossl_ec_group_do_inverse_ord",
+      "program_points": 1,
+      "site": "BN_mod_exp_mont_consttime"
+    },
+    {
+      "blocks_per_op": 2.0,
+      "bytes_per_op": 64.0,
+      "caller": "BN_mod_exp_mont_consttime",
+      "program_points": 1,
+      "site": "openssl_rs::bn::arith::mod_exp_core_consttime_from_parts_prepared"
+    },
+    {
+      "blocks_per_op": 2.0,
+      "bytes_per_op": 64.0,
+      "caller": "BN_mod_mul_montgomery",
+      "program_points": 1,
+      "site": "openssl_rs::runtime::alloc::try_zeroed::<u64>"
+    },
+    {
+      "blocks_per_op": 2.0,
+      "bytes_per_op": 80.0,
+      "caller": "ossl_ecdsa_simple_sign_sig",
+      "program_points": 1,
+      "site": "openssl_rs::bn::arith::mod_add_reduced_ct"
+    },
+    {
+      "blocks_per_op": 1.0,
+      "bytes_per_op": 32.0,
+      "caller": "openssl_rs::ec::ecdsa_ossl::ecdsa_sign_setup",
+      "program_points": 1,
+      "site": "BN_secure_new"
+    },
+    {
+      "blocks_per_op": 1.0,
+      "bytes_per_op": 48.0,
+      "caller": "ossl_ecdsa_simple_sign_sig",
+      "program_points": 1,
+      "site": "openssl_rs::ec::ecdsa_ossl::ecdsa_sign_setup"
+    },
+    {
+      "blocks_per_op": 1.0,
+      "bytes_per_op": 8.0,
+      "caller": "allocate (alloc.rs:449)",
+      "program_points": 1,
+      "site": "alloc (alloc.rs:101)"
+    },
+    {
+      "blocks_per_op": 1.0,
+      "bytes_per_op": 216.0,
+      "caller": "openssl_rs::bn::rand::ossl_bn_gen_dsa_nonce_fixed_top",
+      "program_points": 1,
+      "site": "openssl_rs::evp::digest::evp_md_init_internal"
+    },
+    {
+      "blocks_per_op": 1.0,
+      "bytes_per_op": 40.0,
+      "caller": "openssl_rs::bn::bignum::ossl_bn_mask_bits_fixed_top",
+      "program_points": 1,
+      "site": "openssl_rs::bn::limbs::shl_fallible"
+    },
+    {
+      "blocks_per_op": 1.0,
+      "bytes_per_op": 40.0,
+      "caller": "openssl_rs::bn::bignum::ossl_bn_mask_bits_fixed_top",
+      "program_points": 1,
+      "site": "openssl_rs::bn::limbs::sub_fallible"
+    },
+    {
+      "blocks_per_op": 1.0,
+      "bytes_per_op": 32.0,
+      "caller": "openssl_rs::bn::bignum::ossl_bn_mask_bits_fixed_top",
+      "program_points": 1,
+      "site": "openssl_rs::bn::limbs::and_fallible"
+    },
+    {
+      "blocks_per_op": 1.0,
+      "bytes_per_op": 32.0,
+      "caller": "openssl_rs::ec::mult::ossl_ec_scalar_mul_ladder",
+      "program_points": 1,
+      "site": "BN_CTX_start"
+    },
+    {
+      "blocks_per_op": 1.0,
+      "bytes_per_op": 48.0,
+      "caller": "BN_consttime_swap",
+      "program_points": 1,
+      "site": "openssl_rs::bn::limbs::reserve_cleansed"
+    },
+    {
+      "blocks_per_op": 0.0,
+      "bytes_per_op": 0.03,
+      "caller": "openssl_rs::ec::mult::ossl_ec_wNAF_mul",
+      "program_points": 1,
+      "site": "openssl_rs::bn::intern::bn_compute_wNAF"
+    }
+  ],
+  "ops": 200,
+  "rows": [
+    {
+      "blocks_per_op": 0.005,
+      "blocks_total": 1,
+      "bytes_per_op": 0.2,
+      "bytes_total": 40,
+      "caller": "BN_usub",
+      "caller2": "openssl_rs::ec::smpl::ossl_ec_GFp_simple_ladder_post",
+      "site": "openssl_rs::bn::limbs::sub_fallible",
+      "stack": [
+        "malloc",
+        "<alloc::raw_vec::RawVecInner>::finish_grow",
+        "openssl_rs::bn::limbs::sub_fallible",
+        "BN_usub",
+        "openssl_rs::ec::smpl::ossl_ec_GFp_simple_ladder_post",
+        "openssl_rs::ec::mult::ossl_ec_scalar_mul_ladder",
+        "EC_POINT_mul",
+        "main (ecdsa_alloc_harness.c:248)"
+      ]
+    },
+    {
+      "blocks_per_op": 0.0,
+      "blocks_total": 0,
+      "bytes_per_op": 0.03,
+      "bytes_total": 6,
+      "caller": "openssl_rs::ec::mult::ossl_ec_wNAF_mul",
+      "caller2": "EC_POINT_mul",
+      "site": "openssl_rs::bn::intern::bn_compute_wNAF",
+      "stack": [
+        "malloc",
+        "CRYPTO_malloc",
+        "openssl_rs::bn::intern::bn_compute_wNAF",
+        "openssl_rs::ec::mult::ossl_ec_wNAF_mul",
+        "EC_POINT_mul",
+        "ossl_ecdsa_simple_verify_sig",
+        "main (ecdsa_alloc_harness.c:269)"
+      ]
+    },
+    {
+      "blocks_per_op": 0.08,
+      "blocks_total": 16,
+      "bytes_per_op": 5.12,
+      "bytes_total": 1024,
+      "caller": "BN_mul",
+      "caller2": "openssl_rs::ec::smpl::ossl_ec_GFp_simple_field_sqr",
+      "site": "openssl_rs::bn::limbs::mul_fallible",
+      "stack": [
+        "malloc",
+        "<alloc::raw_vec::RawVecInner>::finish_grow",
+        "openssl_rs::bn::limbs::mul_fallible",
+        "BN_mul",
+        "openssl_rs::ec::smpl::ossl_ec_GFp_simple_field_sqr",
+        "openssl_rs::ec::smpl::ossl_ec_GFp_simple_dbl",
+        "openssl_rs::ec::mult::ossl_ec_wNAF_mul",
+        "EC_POINT_mul",
+        "ossl_ecdsa_simple_verify_sig",
+        "main (ecdsa_alloc_harness.c:269)"
+      ]
+    },
+    {
+      "blocks_per_op": 0.32,
+      "blocks_total": 64,
+      "bytes_per_op": 16.64,
+      "bytes_total": 3328,
+      "caller": "openssl_rs::bn::limbs::rem_fallible",
+      "caller2": "BN_nnmod",
+      "site": "openssl_rs::bn::limbs::divide_fallible",
+      "stack": [
+        "malloc",
+        "<alloc::raw_vec::RawVecInner>::finish_grow",
+        "openssl_rs::bn::limbs::divide_fallible",
+        "openssl_rs::bn::limbs::rem_fallible",
+        "BN_nnmod",
+        "openssl_rs::ec::smpl::ossl_ec_GFp_simple_dbl",
+        "openssl_rs::ec::mult::ossl_ec_wNAF_mul",
+        "EC_POINT_mul",
+        "ossl_ecdsa_simple_verify_sig",
+        "main (ecdsa_alloc_harness.c:269)"
+      ]
+    },
+    {
+      "blocks_per_op": 0.04,
+      "blocks_total": 8,
+      "bytes_per_op": 1.6,
+      "bytes_total": 320,
+      "caller": "BN_mod_add_quick",
+      "caller2": "openssl_rs::ec::smpl::ossl_ec_GFp_simple_dbl",
+      "site": "BN_uadd",
+      "stack": [
+        "malloc",
+        "<alloc::raw_vec::RawVecInner>::finish_grow",
+        "BN_uadd",
+        "BN_mod_add_quick",
+        "openssl_rs::ec::smpl::ossl_ec_GFp_simple_dbl",
+        "openssl_rs::ec::mult::ossl_ec_wNAF_mul",
+        "EC_POINT_mul",
+        "ossl_ecdsa_simple_verify_sig",
+        "main (ecdsa_alloc_harness.c:269)"
+      ]
+    },
+    {
+      "blocks_per_op": 0.06,
+      "blocks_total": 12,
+      "bytes_per_op": 2.4,
+      "bytes_total": 480,
+      "caller": "BN_lshift",
+      "caller2": "BN_mod_lshift1_quick",
+      "site": "openssl_rs::bn::limbs::shl_fallible",
+      "stack": [
+        "malloc",
+        "<alloc::raw_vec::RawVecInner>::finish_grow",
+        "openssl_rs::bn::limbs::shl_fallible",
+        "BN_lshift",
+        "BN_mod_lshift1_quick",
+        "openssl_rs::ec::smpl::ossl_ec_GFp_simple_dbl",
+        "openssl_rs::ec::mult::ossl_ec_wNAF_mul",
+        "EC_POINT_mul",
+        "ossl_ecdsa_simple_verify_sig",
+        "main (ecdsa_alloc_harness.c:269)"
+      ]
+    },
+    {
+      "blocks_per_op": 0.08,
+      "blocks_total": 16,
+      "bytes_per_op": 5.12,
+      "bytes_total": 1024,
+      "caller": "BN_mul",
+      "caller2": "openssl_rs::ec::smpl::ossl_ec_GFp_simple_field_mul",
+      "site": "openssl_rs::bn::limbs::mul_fallible",
+      "stack": [
+        "malloc",
+        "<alloc::raw_vec::RawVecInner>::finish_grow",
+        "openssl_rs::bn::limbs::mul_fallible",
+        "BN_mul",
+        "openssl_rs::ec::smpl::ossl_ec_GFp_simple_field_mul",
+        "openssl_rs::ec::smpl::ossl_ec_GFp_simple_dbl",
+        "openssl_rs::ec::mult::ossl_ec_wNAF_mul",
+        "EC_POINT_mul",
+        "ossl_ecdsa_simple_verify_sig",
+        "main (ecdsa_alloc_harness.c:269)"
+      ]
+    },
+    {
+      "blocks_per_op": 0.065,
+      "blocks_total": 13,
+      "bytes_per_op": 2.6,
+      "bytes_total": 520,
+      "caller": "BN_lshift",
+      "caller2": "openssl_rs::bn::arith::mod_lshift_quick_impl",
+      "site": "openssl_rs::bn::limbs::shl_fallible",
+      "stack": [
+        "malloc",
+        "<alloc::raw_vec::RawVecInner>::finish_grow",
+        "openssl_rs::bn::limbs::shl_fallible",
+        "BN_lshift",
+        "openssl_rs::bn::arith::mod_lshift_quick_impl",
+        "BN_mod_lshift_quick",
+        "openssl_rs::ec::smpl::ossl_ec_GFp_simple_dbl",
+        "openssl_rs::ec::mult::ossl_ec_wNAF_mul",
+        "EC_POINT_mul",
+        "ossl_ecdsa_simple_verify_sig",
+        "main (ecdsa_alloc_harness.c:269)"
+      ]
+    },
+    {
+      "blocks_per_op": 0.08,
+      "blocks_total": 16,
+      "bytes_per_op": 2.56,
+      "bytes_total": 512,
+      "caller": "BN_sub",
+      "caller2": "BN_mod_sub_quick",
+      "site": "openssl_rs::bn::limbs::sub_fallible",
+      "stack": [
+        "malloc",
+        "<alloc::raw_vec::RawVecInner>::finish_grow",
+        "openssl_rs::bn::limbs::sub_fallible",
+        "BN_sub",
+        "BN_mod_sub_quick",
+        "openssl_rs::ec::smpl::ossl_ec_GFp_simple_dbl",
+        "openssl_rs::ec::mult::ossl_ec_wNAF_mul",
+        "EC_POINT_mul",
+        "ossl_ecdsa_simple_verify_sig",
+        "main (ecdsa_alloc_harness.c:269)"
+      ]
+    },
+    {
+      "blocks_per_op": 0.055,
+      "blocks_total": 11,
+      "bytes_per_op": 1.76,
+      "bytes_total": 352,
+      "caller": "BN_add",
+      "caller2": "openssl_rs::ec::smpl::ossl_ec_GFp_simple_add",
+      "site": "openssl_rs::bn::limbs::sub_fallible",
+      "stack": [
+        "malloc",
+        "<alloc::raw_vec::RawVecInner>::finish_grow",
+        "openssl_rs::bn::limbs::sub_fallible",
+        "BN_add",
+        "openssl_rs::ec::smpl::ossl_ec_GFp_simple_add",
+        "openssl_rs::ec::mult::ossl_ec_wNAF_mul",
+        "EC_POINT_mul",
+        "ossl_ecdsa_simple_verify_sig",
+        "main (ecdsa_alloc_harness.c:269)"
+      ]
+    },
+    {
+      "blocks_per_op": 1.0,
+      "blocks_total": 200,
+      "bytes_per_op": 16.0,
+      "bytes_total": 3200,
+      "caller": "main (ecdsa_alloc_harness.c:293)",
+      "caller2": "",
+      "site": "ossl_ecdsa_simple_sign_sig",
+      "stack": [
+        "malloc",
+        "CRYPTO_zalloc",
+        "ossl_ecdsa_simple_sign_sig",
+        "main (ecdsa_alloc_harness.c:293)"
+      ]
+    },
+    {
+      "blocks_per_op": 3.0,
+      "blocks_total": 600,
+      "bytes_per_op": 96.0,
+      "bytes_total": 19200,
+      "caller": "ossl_ecdsa_simple_sign_sig",
+      "caller2": "main (ecdsa_alloc_harness.c:293)",
+      "site": "BN_new",
+      "stack": [
+        "malloc",
+        "BN_new",
+        "ossl_ecdsa_simple_sign_sig",
+        "main (ecdsa_alloc_harness.c:293)"
+      ]
+    },
+    {
+      "blocks_per_op": 1.0,
+      "blocks_total": 200,
+      "bytes_per_op": 72.0,
+      "bytes_total": 14400,
+      "caller": "main (ecdsa_alloc_harness.c:293)",
+      "caller2": "",
+      "site": "ossl_ecdsa_simple_sign_sig",
+      "stack": [
+        "malloc",
+        "ossl_ecdsa_simple_sign_sig",
+        "main (ecdsa_alloc_harness.c:293)"
+      ]
+    },
+    {
+      "blocks_per_op": 2.0,
+      "blocks_total": 400,
+      "bytes_per_op": 72.0,
+      "bytes_total": 14400,
+      "caller": "BN_bin2bn",
+      "caller2": "ossl_ecdsa_simple_sign_sig",
+      "site": "openssl_rs::bn::bignum::from_bytes",
+      "stack": [
+        "malloc",
+        "<alloc::raw_vec::RawVecInner>::finish_grow",
+        "openssl_rs::bn::bignum::from_bytes",
+        "BN_bin2bn",
+        "ossl_ecdsa_simple_sign_sig",
+        "main (ecdsa_alloc_harness.c:293)"
+      ]
+    },
+    {
+      "blocks_per_op": 1.0,
+      "blocks_total": 200,
+      "bytes_per_op": 32.0,
+      "bytes_total": 6400,
+      "caller": "openssl_rs::bn::limbs::rem_fallible",
+      "caller2": "BN_nnmod",
+      "site": "openssl_rs::bn::limbs::divide_fallible",
+      "stack": [
+        "malloc",
+        "<alloc::raw_vec::RawVecInner>::finish_grow",
+        "openssl_rs::bn::limbs::divide_fallible",
+        "openssl_rs::bn::limbs::rem_fallible",
+        "BN_nnmod",
+        "ossl_ecdsa_simple_sign_sig",
+        "main (ecdsa_alloc_harness.c:293)"
+      ]
+    },
+    {
+      "blocks_per_op": 1.0,
+      "blocks_total": 200,
+      "bytes_per_op": 32.0,
+      "bytes_total": 6400,
+      "caller": "openssl_rs::ec::ecdsa_ossl::ecdsa_sign_setup",
+      "caller2": "ossl_ecdsa_simple_sign_sig",
+      "site": "BN_secure_new",
+      "stack": [
+        "malloc",
+        "BN_secure_new",
+        "openssl_rs::ec::ecdsa_ossl::ecdsa_sign_setup",
+        "ossl_ecdsa_simple_sign_sig",
+        "main (ecdsa_alloc_harness.c:293)"
+      ]
+    },
+    {
+      "blocks_per_op": 2.0,
+      "blocks_total": 400,
+      "bytes_per_op": 64.0,
+      "bytes_total": 12800,
+      "caller": "openssl_rs::ec::ecdsa_ossl::ecdsa_sign_setup",
+      "caller2": "ossl_ecdsa_simple_sign_sig",
+      "site": "BN_new",
+      "stack": [
+        "malloc",
+        "BN_new",
+        "openssl_rs::ec::ecdsa_ossl::ecdsa_sign_setup",
+        "ossl_ecdsa_simple_sign_sig",
+        "main (ecdsa_alloc_harness.c:293)"
+      ]
+    },
+    {
+      "blocks_per_op": 1.0,
+      "blocks_total": 200,
+      "bytes_per_op": 48.0,
+      "bytes_total": 9600,
+      "caller": "ossl_ecdsa_simple_sign_sig",
+      "caller2": "main (ecdsa_alloc_harness.c:293)",
+      "site": "openssl_rs::ec::ecdsa_ossl::ecdsa_sign_setup",
+      "stack": [
+        "malloc",
+        "CRYPTO_zalloc",
+        "openssl_rs::ec::ecdsa_ossl::ecdsa_sign_setup",
+        "ossl_ecdsa_simple_sign_sig",
+        "main (ecdsa_alloc_harness.c:293)"
+      ]
+    },
+    {
+      "blocks_per_op": 3.0,
+      "blocks_total": 600,
+      "bytes_per_op": 96.0,
+      "bytes_total": 19200,
+      "caller": "openssl_rs::ec::ecdsa_ossl::ecdsa_sign_setup",
+      "caller2": "ossl_ecdsa_simple_sign_sig",
+      "site": "openssl_rs::ec::smpl::ossl_ec_GFp_simple_point_init",
+      "stack": [
+        "malloc",
+        "openssl_rs::ec::smpl::ossl_ec_GFp_simple_point_init",
+        "openssl_rs::ec::ecdsa_ossl::ecdsa_sign_setup",
+        "ossl_ecdsa_simple_sign_sig",
+        "main (ecdsa_alloc_harness.c:293)"
+      ]
+    },
+    {
+      "blocks_per_op": 3.0,
+      "blocks_total": 600,
+      "bytes_per_op": 120.0,
+      "bytes_total": 24000,
+      "caller": "openssl_rs::bn::limbs::set_bit",
+      "caller2": "BN_set_bit",
+      "site": "openssl_rs::bn::limbs::reserve_cleansed",
+      "stack": [
+        "malloc",
+        "<alloc::raw_vec::RawVecInner>::finish_grow",
+        "openssl_rs::bn::limbs::reserve_cleansed",
+        "openssl_rs::bn::limbs::set_bit",
+        "BN_set_bit",
+        "openssl_rs::ec::ecdsa_ossl::ecdsa_sign_setup",
+        "ossl_ecdsa_simple_sign_sig",
+        "main (ecdsa_alloc_harness.c:293)"
+      ]
+    },
+    {
+      "blocks_per_op": 1.0,
+      "blocks_total": 200,
+      "bytes_per_op": 72.0,
+      "bytes_total": 14400,
+      "caller": "openssl_rs::ec::ecdsa_ossl::ecdsa_sign_setup",
+      "caller2": "ossl_ecdsa_simple_sign_sig",
+      "site": "openssl_rs::bn::rand::ossl_bn_gen_dsa_nonce_fixed_top",
+      "stack": [
+        "malloc",
+        "CRYPTO_zalloc",
+        "openssl_rs::bn::rand::ossl_bn_gen_dsa_nonce_fixed_top",
+        "openssl_rs::ec::ecdsa_ossl::ecdsa_sign_setup",
+        "ossl_ecdsa_simple_sign_sig",
+        "main (ecdsa_alloc_harness.c:293)"
+      ]
+    },
+    {
+      "blocks_per_op": 1.0,
+      "blocks_total": 200,
+      "bytes_per_op": 33.0,
+      "bytes_total": 6600,
+      "caller": "openssl_rs::ec::ecdsa_ossl::ecdsa_sign_setup",
+      "caller2": "ossl_ecdsa_simple_sign_sig",
+      "site": "openssl_rs::bn::rand::ossl_bn_gen_dsa_nonce_fixed_top",
+      "stack": [
+        "malloc",
+        "CRYPTO_malloc",
+        "openssl_rs::bn::rand::ossl_bn_gen_dsa_nonce_fixed_top",
+        "openssl_rs::ec::ecdsa_ossl::ecdsa_sign_setup",
+        "ossl_ecdsa_simple_sign_sig",
+        "main (ecdsa_alloc_harness.c:293)"
+      ]
+    },
+    {
+      "blocks_per_op": 1.0,
+      "blocks_total": 200,
+      "bytes_per_op": 64.0,
+      "bytes_total": 12800,
+      "caller": "openssl_rs::context::namemap::ossl_namemap_stored",
+      "caller2": "openssl_rs::evp::fetch::inner_evp_generic_fetch",
+      "site": "CRYPTO_THREAD_read_lock",
+      "stack": [
+        "malloc",
+        "<alloc::raw_vec::RawVecInner>::finish_grow",
+        "CRYPTO_THREAD_read_lock",
+        "openssl_rs::context::namemap::ossl_namemap_stored",
+        "openssl_rs::evp::fetch::inner_evp_generic_fetch",
+        "openssl_rs::evp::fetch::evp_generic_fetch",
+        "openssl_rs::bn::rand::ossl_bn_gen_dsa_nonce_fixed_top",
+        "openssl_rs::ec::ecdsa_ossl::ecdsa_sign_setup",
+        "ossl_ecdsa_simple_sign_sig",
+        "main (ecdsa_alloc_harness.c:293)"
+      ]
+    },
+    {
+      "blocks_per_op": 1.0,
+      "blocks_total": 200,
+      "bytes_per_op": 24.0,
+      "bytes_total": 4800,
+      "caller": "openssl_rs::context::namemap::ossl_namemap_stored",
+      "caller2": "openssl_rs::evp::fetch::inner_evp_generic_fetch",
+      "site": "CRYPTO_THREAD_read_lock",
+      "stack": [
+        "malloc",
+        "CRYPTO_THREAD_read_lock",
+        "openssl_rs::context::namemap::ossl_namemap_stored",
+        "openssl_rs::evp::fetch::inner_evp_generic_fetch",
+        "openssl_rs::evp::fetch::evp_generic_fetch",
+        "openssl_rs::bn::rand::ossl_bn_gen_dsa_nonce_fixed_top",
+        "openssl_rs::ec::ecdsa_ossl::ecdsa_sign_setup",
+        "ossl_ecdsa_simple_sign_sig",
+        "main (ecdsa_alloc_harness.c:293)"
+      ]
+    },
+    {
+      "blocks_per_op": 1.0,
+      "blocks_total": 200,
+      "bytes_per_op": 8.0,
+      "bytes_total": 1600,
+      "caller": "allocate (alloc.rs:449)",
+      "caller2": "openssl_rs::context::namemap::name2num_inner",
+      "site": "alloc (alloc.rs:101)",
+      "stack": [
+        "malloc",
+        "alloc (alloc.rs:101)",
+        "alloc_impl_runtime (alloc.rs:210)",
+        "alloc_impl (alloc.rs:332)",
+        "allocate (alloc.rs:449)",
+        "<alloc::raw_vec::RawVecInner>::finish_grow (mod.rs:560)",
+        "grow_amortized<alloc::alloc::Global> (mod.rs:529)",
+        "grow_one<alloc::alloc::Global> (mod.rs:493)",
+        "<alloc::raw_vec::RawVec<u8>>::grow_one (mod.rs:188)",
+        "openssl_rs::context::namemap::name2num_inner",
+        "openssl_rs::evp::fetch::inner_evp_generic_fetch",
+        "openssl_rs::evp::fetch::evp_generic_fetch",
+        "openssl_rs::bn::rand::ossl_bn_gen_dsa_nonce_fixed_top",
+        "openssl_rs::ec::ecdsa_ossl::ecdsa_sign_setup",
+        "ossl_ecdsa_simple_sign_sig",
+        "main (ecdsa_alloc_harness.c:293)"
+      ]
+    },
+    {
+      "blocks_per_op": 1.0,
+      "blocks_total": 200,
+      "bytes_per_op": 64.0,
+      "bytes_total": 12800,
+      "caller": "openssl_rs::context::namemap::name2num_inner",
+      "caller2": "openssl_rs::evp::fetch::inner_evp_generic_fetch",
+      "site": "CRYPTO_THREAD_read_lock",
+      "stack": [
+        "malloc",
+        "<alloc::raw_vec::RawVecInner>::finish_grow",
+        "CRYPTO_THREAD_read_lock",
+        "openssl_rs::context::namemap::name2num_inner",
+        "openssl_rs::evp::fetch::inner_evp_generic_fetch",
+        "openssl_rs::evp::fetch::evp_generic_fetch",
+        "openssl_rs::bn::rand::ossl_bn_gen_dsa_nonce_fixed_top",
+        "openssl_rs::ec::ecdsa_ossl::ecdsa_sign_setup",
+        "ossl_ecdsa_simple_sign_sig",
+        "main (ecdsa_alloc_harness.c:293)"
+      ]
+    },
+    {
+      "blocks_per_op": 1.0,
+      "blocks_total": 200,
+      "bytes_per_op": 24.0,
+      "bytes_total": 4800,
+      "caller": "openssl_rs::context::namemap::name2num_inner",
+      "caller2": "openssl_rs::evp::fetch::inner_evp_generic_fetch",
+      "site": "CRYPTO_THREAD_read_lock",
+      "stack": [
+        "malloc",
+        "CRYPTO_THREAD_read_lock",
+        "openssl_rs::context::namemap::name2num_inner",
+        "openssl_rs::evp::fetch::inner_evp_generic_fetch",
+        "openssl_rs::evp::fetch::evp_generic_fetch",
+        "openssl_rs::bn::rand::ossl_bn_gen_dsa_nonce_fixed_top",
+        "openssl_rs::ec::ecdsa_ossl::ecdsa_sign_setup",
+        "ossl_ecdsa_simple_sign_sig",
+        "main (ecdsa_alloc_harness.c:293)"
+      ]
+    },
+    {
+      "blocks_per_op": 1.0,
+      "blocks_total": 200,
+      "bytes_per_op": 64.0,
+      "bytes_total": 12800,
+      "caller": "openssl_rs::property::store::ossl_method_store_cache_get",
+      "caller2": "openssl_rs::evp::fetch::inner_evp_generic_fetch",
+      "site": "CRYPTO_THREAD_read_lock",
+      "stack": [
+        "malloc",
+        "<alloc::raw_vec::RawVecInner>::finish_grow",
+        "CRYPTO_THREAD_read_lock",
+        "openssl_rs::property::store::ossl_method_store_cache_get",
+        "openssl_rs::evp::fetch::inner_evp_generic_fetch",
+        "openssl_rs::evp::fetch::evp_generic_fetch",
+        "openssl_rs::bn::rand::ossl_bn_gen_dsa_nonce_fixed_top",
+        "openssl_rs::ec::ecdsa_ossl::ecdsa_sign_setup",
+        "ossl_ecdsa_simple_sign_sig",
+        "main (ecdsa_alloc_harness.c:293)"
+      ]
+    },
+    {
+      "blocks_per_op": 1.0,
+      "blocks_total": 200,
+      "bytes_per_op": 24.0,
+      "bytes_total": 4800,
+      "caller": "openssl_rs::property::store::ossl_method_store_cache_get",
+      "caller2": "openssl_rs::evp::fetch::inner_evp_generic_fetch",
+      "site": "CRYPTO_THREAD_read_lock",
+      "stack": [
+        "malloc",
+        "CRYPTO_THREAD_read_lock",
+        "openssl_rs::property::store::ossl_method_store_cache_get",
+        "openssl_rs::evp::fetch::inner_evp_generic_fetch",
+        "openssl_rs::evp::fetch::evp_generic_fetch",
+        "openssl_rs::bn::rand::ossl_bn_gen_dsa_nonce_fixed_top",
+        "openssl_rs::ec::ecdsa_ossl::ecdsa_sign_setup",
+        "ossl_ecdsa_simple_sign_sig",
+        "main (ecdsa_alloc_harness.c:293)"
+      ]
+    },
+    {
+      "blocks_per_op": 1.0,
+      "blocks_total": 200,
+      "bytes_per_op": 64.0,
+      "bytes_total": 12800,
+      "caller": "RAND_get_rand_method",
+      "caller2": "RAND_priv_bytes_ex",
+      "site": "CRYPTO_THREAD_read_lock",
+      "stack": [
+        "malloc",
+        "<alloc::raw_vec::RawVecInner>::finish_grow",
+        "CRYPTO_THREAD_read_lock",
+        "RAND_get_rand_method",
+        "RAND_priv_bytes_ex",
+        "openssl_rs::bn::rand::ossl_bn_gen_dsa_nonce_fixed_top",
+        "openssl_rs::ec::ecdsa_ossl::ecdsa_sign_setup",
+        "ossl_ecdsa_simple_sign_sig",
+        "main (ecdsa_alloc_harness.c:293)"
+      ]
+    },
+    {
+      "blocks_per_op": 1.0,
+      "blocks_total": 200,
+      "bytes_per_op": 24.0,
+      "bytes_total": 4800,
+      "caller": "RAND_get_rand_method",
+      "caller2": "RAND_priv_bytes_ex",
+      "site": "CRYPTO_THREAD_read_lock",
+      "stack": [
+        "malloc",
+        "CRYPTO_THREAD_read_lock",
+        "RAND_get_rand_method",
+        "RAND_priv_bytes_ex",
+        "openssl_rs::bn::rand::ossl_bn_gen_dsa_nonce_fixed_top",
+        "openssl_rs::ec::ecdsa_ossl::ecdsa_sign_setup",
+        "ossl_ecdsa_simple_sign_sig",
+        "main (ecdsa_alloc_harness.c:293)"
+      ]
+    },
+    {
+      "blocks_per_op": 1.0,
+      "blocks_total": 200,
+      "bytes_per_op": 216.0,
+      "bytes_total": 43200,
+      "caller": "openssl_rs::bn::rand::ossl_bn_gen_dsa_nonce_fixed_top",
+      "caller2": "openssl_rs::ec::ecdsa_ossl::ecdsa_sign_setup",
+      "site": "openssl_rs::evp::digest::evp_md_init_internal",
+      "stack": [
+        "malloc",
+        "CRYPTO_zalloc",
+        "openssl_rs::evp::digest::evp_md_init_internal",
+        "openssl_rs::bn::rand::ossl_bn_gen_dsa_nonce_fixed_top",
+        "openssl_rs::ec::ecdsa_ossl::ecdsa_sign_setup",
+        "ossl_ecdsa_simple_sign_sig",
+        "main (ecdsa_alloc_harness.c:293)"
+      ]
+    },
+    {
+      "blocks_per_op": 2.0,
+      "blocks_total": 400,
+      "bytes_per_op": 73.0,
+      "bytes_total": 14600,
+      "caller": "BN_bin2bn",
+      "caller2": "openssl_rs::bn::rand::ossl_bn_gen_dsa_nonce_fixed_top",
+      "site": "openssl_rs::bn::bignum::from_bytes",
+      "stack": [
+        "malloc",
+        "<alloc::raw_vec::RawVecInner>::finish_grow",
+        "openssl_rs::bn::bignum::from_bytes",
+        "BN_bin2bn",
+        "openssl_rs::bn::rand::ossl_bn_gen_dsa_nonce_fixed_top",
+        "openssl_rs::ec::ecdsa_ossl::ecdsa_sign_setup",
+        "ossl_ecdsa_simple_sign_sig",
+        "main (ecdsa_alloc_harness.c:293)"
+      ]
+    },
+    {
+      "blocks_per_op": 1.0,
+      "blocks_total": 200,
+      "bytes_per_op": 40.0,
+      "bytes_total": 8000,
+      "caller": "openssl_rs::bn::bignum::ossl_bn_mask_bits_fixed_top",
+      "caller2": "openssl_rs::bn::rand::ossl_bn_gen_dsa_nonce_fixed_top",
+      "site": "openssl_rs::bn::limbs::shl_fallible",
+      "stack": [
+        "malloc",
+        "<alloc::raw_vec::RawVecInner>::finish_grow",
+        "openssl_rs::bn::limbs::shl_fallible",
+        "openssl_rs::bn::bignum::ossl_bn_mask_bits_fixed_top",
+        "openssl_rs::bn::rand::ossl_bn_gen_dsa_nonce_fixed_top",
+        "openssl_rs::ec::ecdsa_ossl::ecdsa_sign_setup",
+        "ossl_ecdsa_simple_sign_sig",
+        "main (ecdsa_alloc_harness.c:293)"
+      ]
+    },
+    {
+      "blocks_per_op": 1.0,
+      "blocks_total": 200,
+      "bytes_per_op": 40.0,
+      "bytes_total": 8000,
+      "caller": "openssl_rs::bn::bignum::ossl_bn_mask_bits_fixed_top",
+      "caller2": "openssl_rs::bn::rand::ossl_bn_gen_dsa_nonce_fixed_top",
+      "site": "openssl_rs::bn::limbs::sub_fallible",
+      "stack": [
+        "malloc",
+        "<alloc::raw_vec::RawVecInner>::finish_grow",
+        "openssl_rs::bn::limbs::sub_fallible",
+        "openssl_rs::bn::bignum::ossl_bn_mask_bits_fixed_top",
+        "openssl_rs::bn::rand::ossl_bn_gen_dsa_nonce_fixed_top",
+        "openssl_rs::ec::ecdsa_ossl::ecdsa_sign_setup",
+        "ossl_ecdsa_simple_sign_sig",
+        "main (ecdsa_alloc_harness.c:293)"
+      ]
+    },
+    {
+      "blocks_per_op": 1.0,
+      "blocks_total": 200,
+      "bytes_per_op": 32.0,
+      "bytes_total": 6400,
+      "caller": "openssl_rs::bn::bignum::ossl_bn_mask_bits_fixed_top",
+      "caller2": "openssl_rs::bn::rand::ossl_bn_gen_dsa_nonce_fixed_top",
+      "site": "openssl_rs::bn::limbs::and_fallible",
+      "stack": [
+        "malloc",
+        "<alloc::raw_vec::RawVecInner>::finish_grow",
+        "openssl_rs::bn::limbs::and_fallible",
+        "openssl_rs::bn::bignum::ossl_bn_mask_bits_fixed_top",
+        "openssl_rs::bn::rand::ossl_bn_gen_dsa_nonce_fixed_top",
+        "openssl_rs::ec::ecdsa_ossl::ecdsa_sign_setup",
+        "ossl_ecdsa_simple_sign_sig",
+        "main (ecdsa_alloc_harness.c:293)"
+      ]
+    },
+    {
+      "blocks_per_op": 1.0,
+      "blocks_total": 200,
+      "bytes_per_op": 32.0,
+      "bytes_total": 6400,
+      "caller": "openssl_rs::ec::mult::ossl_ec_scalar_mul_ladder",
+      "caller2": "EC_POINT_mul",
+      "site": "BN_CTX_start",
+      "stack": [
+        "malloc",
+        "<alloc::raw_vec::RawVecInner>::finish_grow",
+        "<alloc::raw_vec::RawVec<usize>>::grow_one",
+        "BN_CTX_start",
+        "openssl_rs::ec::mult::ossl_ec_scalar_mul_ladder",
+        "EC_POINT_mul",
+        "openssl_rs::ec::ecdsa_ossl::ecdsa_sign_setup",
+        "ossl_ecdsa_simple_sign_sig",
+        "main (ecdsa_alloc_harness.c:293)"
+      ]
+    },
+    {
+      "blocks_per_op": 2.0,
+      "blocks_total": 400,
+      "bytes_per_op": 96.0,
+      "bytes_total": 19200,
+      "caller": "EC_POINT_mul",
+      "caller2": "openssl_rs::ec::ecdsa_ossl::ecdsa_sign_setup",
+      "site": "openssl_rs::ec::mult::ossl_ec_scalar_mul_ladder",
+      "stack": [
+        "malloc",
+        "CRYPTO_zalloc",
+        "openssl_rs::ec::mult::ossl_ec_scalar_mul_ladder",
+        "EC_POINT_mul",
+        "openssl_rs::ec::ecdsa_ossl::ecdsa_sign_setup",
+        "ossl_ecdsa_simple_sign_sig",
+        "main (ecdsa_alloc_harness.c:293)"
+      ]
+    },
+    {
+      "blocks_per_op": 6.0,
+      "blocks_total": 1200,
+      "bytes_per_op": 192.0,
+      "bytes_total": 38400,
+      "caller": "openssl_rs::ec::mult::ossl_ec_scalar_mul_ladder",
+      "caller2": "EC_POINT_mul",
+      "site": "openssl_rs::ec::smpl::ossl_ec_GFp_simple_point_init",
+      "stack": [
+        "malloc",
+        "openssl_rs::ec::smpl::ossl_ec_GFp_simple_point_init",
+        "openssl_rs::ec::mult::ossl_ec_scalar_mul_ladder",
+        "EC_POINT_mul",
+        "openssl_rs::ec::ecdsa_ossl::ecdsa_sign_setup",
+        "ossl_ecdsa_simple_sign_sig",
+        "main (ecdsa_alloc_harness.c:293)"
+      ]
+    },
+    {
+      "blocks_per_op": 3.0,
+      "blocks_total": 600,
+      "bytes_per_op": 72.0,
+      "bytes_total": 14400,
+      "caller": "openssl_rs::ec::smpl::ossl_ec_GFp_simple_point_copy",
+      "caller2": "openssl_rs::ec::mult::ossl_ec_scalar_mul_ladder",
+      "site": "BN_copy",
+      "stack": [
+        "malloc",
+        "<alloc::raw_vec::RawVecInner>::finish_grow",
+        "BN_copy",
+        "openssl_rs::ec::smpl::ossl_ec_GFp_simple_point_copy",
+        "openssl_rs::ec::mult::ossl_ec_scalar_mul_ladder",
+        "EC_POINT_mul",
+        "openssl_rs::ec::ecdsa_ossl::ecdsa_sign_setup",
+        "ossl_ecdsa_simple_sign_sig",
+        "main (ecdsa_alloc_harness.c:293)"
+      ]
+    },
+    {
+      "blocks_per_op": 3.0,
+      "blocks_total": 600,
+      "bytes_per_op": 96.0,
+      "bytes_total": 19200,
+      "caller": "BN_CTX_get",
+      "caller2": "openssl_rs::ec::mult::ossl_ec_scalar_mul_ladder",
+      "site": "BN_new",
+      "stack": [
+        "malloc",
+        "BN_new",
+        "BN_CTX_get",
+        "openssl_rs::ec::mult::ossl_ec_scalar_mul_ladder",
+        "EC_POINT_mul",
+        "openssl_rs::ec::ecdsa_ossl::ecdsa_sign_setup",
+        "ossl_ecdsa_simple_sign_sig",
+        "main (ecdsa_alloc_harness.c:293)"
+      ]
+    },
+    {
+      "blocks_per_op": 3.0,
+      "blocks_total": 600,
+      "bytes_per_op": 224.0,
+      "bytes_total": 44800,
+      "caller": "openssl_rs::ec::mult::ossl_ec_scalar_mul_ladder",
+      "caller2": "EC_POINT_mul",
+      "site": "BN_CTX_get",
+      "stack": [
+        "malloc",
+        "<alloc::raw_vec::RawVecInner>::finish_grow",
+        "BN_CTX_get",
+        "openssl_rs::ec::mult::ossl_ec_scalar_mul_ladder",
+        "EC_POINT_mul",
+        "openssl_rs::ec::ecdsa_ossl::ecdsa_sign_setup",
+        "ossl_ecdsa_simple_sign_sig",
+        "main (ecdsa_alloc_harness.c:293)"
+      ]
+    },
+    {
+      "blocks_per_op": 1.0,
+      "blocks_total": 200,
+      "bytes_per_op": 40.0,
+      "bytes_total": 8000,
+      "caller": "BN_mul",
+      "caller2": "openssl_rs::ec::mult::ossl_ec_scalar_mul_ladder",
+      "site": "openssl_rs::bn::limbs::mul_fallible",
+      "stack": [
+        "malloc",
+        "<alloc::raw_vec::RawVecInner>::finish_grow",
+        "openssl_rs::bn::limbs::mul_fallible",
+        "BN_mul",
+        "openssl_rs::ec::mult::ossl_ec_scalar_mul_ladder",
+        "EC_POINT_mul",
+        "openssl_rs::ec::ecdsa_ossl::ecdsa_sign_setup",
+        "ossl_ecdsa_simple_sign_sig",
+        "main (ecdsa_alloc_harness.c:293)"
+      ]
+    },
+    {
+      "blocks_per_op": 9.0,
+      "blocks_total": 1800,
+      "bytes_per_op": 320.0,
+      "bytes_total": 64000,
+      "caller": "openssl_rs::ec::mult::ossl_ec_scalar_mul_ladder",
+      "caller2": "EC_POINT_mul",
+      "site": "openssl_rs::bn::limbs::reserve_cleansed",
+      "stack": [
+        "malloc",
+        "<alloc::raw_vec::RawVecInner>::finish_grow",
+        "openssl_rs::bn::limbs::reserve_cleansed",
+        "openssl_rs::ec::mult::ossl_ec_scalar_mul_ladder",
+        "EC_POINT_mul",
+        "openssl_rs::ec::ecdsa_ossl::ecdsa_sign_setup",
+        "ossl_ecdsa_simple_sign_sig",
+        "main (ecdsa_alloc_harness.c:293)"
+      ]
+    },
+    {
+      "blocks_per_op": 2.0,
+      "blocks_total": 400,
+      "bytes_per_op": 88.0,
+      "bytes_total": 17600,
+      "caller": "openssl_rs::ec::mult::ossl_ec_scalar_mul_ladder",
+      "caller2": "EC_POINT_mul",
+      "site": "BN_add",
+      "stack": [
+        "malloc",
+        "<alloc::raw_vec::RawVecInner>::finish_grow",
+        "BN_add",
+        "openssl_rs::ec::mult::ossl_ec_scalar_mul_ladder",
+        "EC_POINT_mul",
+        "openssl_rs::ec::ecdsa_ossl::ecdsa_sign_setup",
+        "ossl_ecdsa_simple_sign_sig",
+        "main (ecdsa_alloc_harness.c:293)"
+      ]
+    },
+    {
+      "blocks_per_op": 1.0,
+      "blocks_total": 200,
+      "bytes_per_op": 48.0,
+      "bytes_total": 9600,
+      "caller": "BN_consttime_swap",
+      "caller2": "openssl_rs::ec::mult::ossl_ec_scalar_mul_ladder",
+      "site": "openssl_rs::bn::limbs::reserve_cleansed",
+      "stack": [
+        "malloc",
+        "<alloc::raw_vec::RawVecInner>::finish_grow",
+        "openssl_rs::bn::limbs::reserve_cleansed",
+        "BN_consttime_swap",
+        "openssl_rs::ec::mult::ossl_ec_scalar_mul_ladder",
+        "EC_POINT_mul",
+        "openssl_rs::ec::ecdsa_ossl::ecdsa_sign_setup",
+        "ossl_ecdsa_simple_sign_sig",
+        "main (ecdsa_alloc_harness.c:293)"
+      ]
+    },
+    {
+      "blocks_per_op": 2.0,
+      "blocks_total": 400,
+      "bytes_per_op": 128.0,
+      "bytes_total": 25600,
+      "caller": "BN_mul",
+      "caller2": "openssl_rs::ec::smpl::ossl_ec_GFp_simple_field_sqr",
+      "site": "openssl_rs::bn::limbs::mul_fallible",
+      "stack": [
+        "malloc",
+        "<alloc::raw_vec::RawVecInner>::finish_grow",
+        "openssl_rs::bn::limbs::mul_fallible",
+        "BN_mul",
+        "openssl_rs::ec::smpl::ossl_ec_GFp_simple_field_sqr",
+        "openssl_rs::ec::smpl::ossl_ec_GFp_simple_ladder_pre",
+        "openssl_rs::ec::mult::ossl_ec_scalar_mul_ladder",
+        "EC_POINT_mul",
+        "openssl_rs::ec::ecdsa_ossl::ecdsa_sign_setup",
+        "ossl_ecdsa_simple_sign_sig",
+        "main (ecdsa_alloc_harness.c:293)"
+      ]
+    },
+    {
+      "blocks_per_op": 14.0,
+      "blocks_total": 2800,
+      "bytes_per_op": 728.0,
+      "bytes_total": 145600,
+      "caller": "openssl_rs::bn::limbs::rem_fallible",
+      "caller2": "BN_nnmod",
+      "site": "openssl_rs::bn::limbs::divide_fallible",
+      "stack": [
+        "malloc",
+        "<alloc::raw_vec::RawVecInner>::finish_grow",
+        "openssl_rs::bn::limbs::divide_fallible",
+        "openssl_rs::bn::limbs::rem_fallible",
+        "BN_nnmod",
+        "openssl_rs::ec::smpl::ossl_ec_GFp_simple_ladder_pre",
+        "openssl_rs::ec::mult::ossl_ec_scalar_mul_ladder",
+        "EC_POINT_mul",
+        "openssl_rs::ec::ecdsa_ossl::ecdsa_sign_setup",
+        "ossl_ecdsa_simple_sign_sig",
+        "main (ecdsa_alloc_harness.c:293)"
+      ]
+    },
+    {
+      "blocks_per_op": 2.0,
+      "blocks_total": 400,
+      "bytes_per_op": 64.0,
+      "bytes_total": 12800,
+      "caller": "BN_sub",
+      "caller2": "BN_mod_sub_quick",
+      "site": "openssl_rs::bn::limbs::sub_fallible",
+      "stack": [
+        "malloc",
+        "<alloc::raw_vec::RawVecInner>::finish_grow",
+        "openssl_rs::bn::limbs::sub_fallible",
+        "BN_sub",
+        "BN_mod_sub_quick",
+        "openssl_rs::ec::smpl::ossl_ec_GFp_simple_ladder_pre",
+        "openssl_rs::ec::mult::ossl_ec_scalar_mul_ladder",
+        "EC_POINT_mul",
+        "openssl_rs::ec::ecdsa_ossl::ecdsa_sign_setup",
+        "ossl_ecdsa_simple_sign_sig",
+        "main (ecdsa_alloc_harness.c:293)"
+      ]
+    },
+    {
+      "blocks_per_op": 2.0,
+      "blocks_total": 400,
+      "bytes_per_op": 64.0,
+      "bytes_total": 12800,
+      "caller": "BN_add",
+      "caller2": "openssl_rs::ec::smpl::ossl_ec_GFp_simple_ladder_pre",
+      "site": "openssl_rs::bn::limbs::sub_fallible",
+      "stack": [
+        "malloc",
+        "<alloc::raw_vec::RawVecInner>::finish_grow",
+        "openssl_rs::bn::limbs::sub_fallible",
+        "BN_add",
+        "openssl_rs::ec::smpl::ossl_ec_GFp_simple_ladder_pre",
+        "openssl_rs::ec::mult::ossl_ec_scalar_mul_ladder",
+        "EC_POINT_mul",
+        "openssl_rs::ec::ecdsa_ossl::ecdsa_sign_setup",
+        "ossl_ecdsa_simple_sign_sig",
+        "main (ecdsa_alloc_harness.c:293)"
+      ]
+    },
+    {
+      "blocks_per_op": 5.0,
+      "blocks_total": 1000,
+      "bytes_per_op": 320.0,
+      "bytes_total": 64000,
+      "caller": "BN_mul",
+      "caller2": "openssl_rs::ec::smpl::ossl_ec_GFp_simple_field_mul",
+      "site": "openssl_rs::bn::limbs::mul_fallible",
+      "stack": [
+        "malloc",
+        "<alloc::raw_vec::RawVecInner>::finish_grow",
+        "openssl_rs::bn::limbs::mul_fallible",
+        "BN_mul",
+        "openssl_rs::ec::smpl::ossl_ec_GFp_simple_field_mul",
+        "openssl_rs::ec::smpl::ossl_ec_GFp_simple_ladder_pre",
+        "openssl_rs::ec::mult::ossl_ec_scalar_mul_ladder",
+        "EC_POINT_mul",
+        "openssl_rs::ec::ecdsa_ossl::ecdsa_sign_setup",
+        "ossl_ecdsa_simple_sign_sig",
+        "main (ecdsa_alloc_harness.c:293)"
+      ]
+    },
+    {
+      "blocks_per_op": 5.0,
+      "blocks_total": 1000,
+      "bytes_per_op": 200.0,
+      "bytes_total": 40000,
+      "caller": "BN_lshift",
+      "caller2": "openssl_rs::bn::arith::mod_lshift_quick_impl",
+      "site": "openssl_rs::bn::limbs::shl_fallible",
+      "stack": [
+        "malloc",
+        "<alloc::raw_vec::RawVecInner>::finish_grow",
+        "openssl_rs::bn::limbs::shl_fallible",
+        "BN_lshift",
+        "openssl_rs::bn::arith::mod_lshift_quick_impl",
+        "BN_mod_lshift_quick",
+        "openssl_rs::ec::smpl::ossl_ec_GFp_simple_ladder_pre",
+        "openssl_rs::ec::mult::ossl_ec_scalar_mul_ladder",
+        "EC_POINT_mul",
+        "openssl_rs::ec::ecdsa_ossl::ecdsa_sign_setup",
+        "ossl_ecdsa_simple_sign_sig",
+        "main (ecdsa_alloc_harness.c:293)"
+      ]
+    },
+    {
+      "blocks_per_op": 3.0,
+      "blocks_total": 600,
+      "bytes_per_op": 120.0,
+      "bytes_total": 24000,
+      "caller": "BN_sub",
+      "caller2": "openssl_rs::bn::arith::mod_lshift_quick_impl",
+      "site": "openssl_rs::bn::limbs::sub_fallible",
+      "stack": [
+        "malloc",
+        "<alloc::raw_vec::RawVecInner>::finish_grow",
+        "openssl_rs::bn::limbs::sub_fallible",
+        "BN_sub",
+        "openssl_rs::bn::arith::mod_lshift_quick_impl",
+        "BN_mod_lshift_quick",
+        "openssl_rs::ec::smpl::ossl_ec_GFp_simple_ladder_pre",
+        "openssl_rs::ec::mult::ossl_ec_scalar_mul_ladder",
+        "EC_POINT_mul",
+        "openssl_rs::ec::ecdsa_ossl::ecdsa_sign_setup",
+        "ossl_ecdsa_simple_sign_sig",
+        "main (ecdsa_alloc_harness.c:293)"
+      ]
+    },
+    {
+      "blocks_per_op": 2.0,
+      "blocks_total": 400,
+      "bytes_per_op": 80.0,
+      "bytes_total": 16000,
+      "caller": "BN_mod_add_quick",
+      "caller2": "openssl_rs::ec::smpl::ossl_ec_GFp_simple_ladder_pre",
+      "site": "BN_uadd",
+      "stack": [
+        "malloc",
+        "<alloc::raw_vec::RawVecInner>::finish_grow",
+        "BN_uadd",
+        "BN_mod_add_quick",
+        "openssl_rs::ec::smpl::ossl_ec_GFp_simple_ladder_pre",
+        "openssl_rs::ec::mult::ossl_ec_scalar_mul_ladder",
+        "EC_POINT_mul",
+        "openssl_rs::ec::ecdsa_ossl::ecdsa_sign_setup",
+        "ossl_ecdsa_simple_sign_sig",
+        "main (ecdsa_alloc_harness.c:293)"
+      ]
+    },
+    {
+      "blocks_per_op": 2.0,
+      "blocks_total": 400,
+      "bytes_per_op": 80.0,
+      "bytes_total": 16000,
+      "caller": "BN_usub",
+      "caller2": "openssl_rs::ec::smpl::ossl_ec_GFp_simple_ladder_pre",
+      "site": "openssl_rs::bn::limbs::sub_fallible",
+      "stack": [
+        "malloc",
+        "<alloc::raw_vec::RawVecInner>::finish_grow",
+        "openssl_rs::bn::limbs::sub_fallible",
+        "BN_usub",
+        "openssl_rs::ec::smpl::ossl_ec_GFp_simple_ladder_pre",
+        "openssl_rs::ec::mult::ossl_ec_scalar_mul_ladder",
+        "EC_POINT_mul",
+        "openssl_rs::ec::ecdsa_ossl::ecdsa_sign_setup",
+        "ossl_ecdsa_simple_sign_sig",
+        "main (ecdsa_alloc_harness.c:293)"
+      ]
+    },
+    {
+      "blocks_per_op": 2.0,
+      "blocks_total": 400,
+      "bytes_per_op": 64.0,
+      "bytes_total": 12800,
+      "caller": "openssl_rs::bn::rand::bnrand_range",
+      "caller2": "BN_priv_rand_range_ex",
+      "site": "openssl_rs::bn::rand::bnrand",
+      "stack": [
+        "malloc",
+        "CRYPTO_malloc",
+        "openssl_rs::bn::rand::bnrand",
+        "openssl_rs::bn::rand::bnrand_range",
+        "BN_priv_rand_range_ex",
+        "openssl_rs::ec::smpl::ossl_ec_GFp_simple_ladder_pre",
+        "openssl_rs::ec::mult::ossl_ec_scalar_mul_ladder",
+        "EC_POINT_mul",
+        "openssl_rs::ec::ecdsa_ossl::ecdsa_sign_setup",
+        "ossl_ecdsa_simple_sign_sig",
+        "main (ecdsa_alloc_harness.c:293)"
+      ]
+    },
+    {
+      "blocks_per_op": 2.0,
+      "blocks_total": 400,
+      "bytes_per_op": 128.0,
+      "bytes_total": 25600,
+      "caller": "RAND_get_rand_method",
+      "caller2": "RAND_priv_bytes_ex",
+      "site": "CRYPTO_THREAD_read_lock",
+      "stack": [
+        "malloc",
+        "<alloc::raw_vec::RawVecInner>::finish_grow",
+        "CRYPTO_THREAD_read_lock",
+        "RAND_get_rand_method",
+        "RAND_priv_bytes_ex",
+        "openssl_rs::bn::rand::bnrand",
+        "openssl_rs::bn::rand::bnrand_range",
+        "BN_priv_rand_range_ex",
+        "openssl_rs::ec::smpl::ossl_ec_GFp_simple_ladder_pre",
+        "openssl_rs::ec::mult::ossl_ec_scalar_mul_ladder",
+        "EC_POINT_mul",
+        "openssl_rs::ec::ecdsa_ossl::ecdsa_sign_setup",
+        "ossl_ecdsa_simple_sign_sig",
+        "main (ecdsa_alloc_harness.c:293)"
+      ]
+    },
+    {
+      "blocks_per_op": 2.0,
+      "blocks_total": 400,
+      "bytes_per_op": 48.0,
+      "bytes_total": 9600,
+      "caller": "RAND_get_rand_method",
+      "caller2": "RAND_priv_bytes_ex",
+      "site": "CRYPTO_THREAD_read_lock",
+      "stack": [
+        "malloc",
+        "CRYPTO_THREAD_read_lock",
+        "RAND_get_rand_method",
+        "RAND_priv_bytes_ex",
+        "openssl_rs::bn::rand::bnrand",
+        "openssl_rs::bn::rand::bnrand_range",
+        "BN_priv_rand_range_ex",
+        "openssl_rs::ec::smpl::ossl_ec_GFp_simple_ladder_pre",
+        "openssl_rs::ec::mult::ossl_ec_scalar_mul_ladder",
+        "EC_POINT_mul",
+        "openssl_rs::ec::ecdsa_ossl::ecdsa_sign_setup",
+        "ossl_ecdsa_simple_sign_sig",
+        "main (ecdsa_alloc_harness.c:293)"
+      ]
+    },
+    {
+      "blocks_per_op": 4.0,
+      "blocks_total": 800,
+      "bytes_per_op": 144.0,
+      "bytes_total": 28800,
+      "caller": "BN_bin2bn",
+      "caller2": "openssl_rs::bn::rand::bnrand",
+      "site": "openssl_rs::bn::bignum::from_bytes",
+      "stack": [
+        "malloc",
+        "<alloc::raw_vec::RawVecInner>::finish_grow",
+        "openssl_rs::bn::bignum::from_bytes",
+        "BN_bin2bn",
+        "openssl_rs::bn::rand::bnrand",
+        "openssl_rs::bn::rand::bnrand_range",
+        "BN_priv_rand_range_ex",
+        "openssl_rs::ec::smpl::ossl_ec_GFp_simple_ladder_pre",
+        "openssl_rs::ec::mult::ossl_ec_scalar_mul_ladder",
+        "EC_POINT_mul",
+        "openssl_rs::ec::ecdsa_ossl::ecdsa_sign_setup",
+        "ossl_ecdsa_simple_sign_sig",
+        "main (ecdsa_alloc_harness.c:293)"
+      ]
+    },
+    {
+      "blocks_per_op": 7.0,
+      "blocks_total": 1400,
+      "bytes_per_op": 224.0,
+      "bytes_total": 44800,
+      "caller": "BN_CTX_get",
+      "caller2": "openssl_rs::ec::smpl::ossl_ec_GFp_simple_ladder_post",
+      "site": "BN_new",
+      "stack": [
+        "malloc",
+        "BN_new",
+        "BN_CTX_get",
+        "openssl_rs::ec::smpl::ossl_ec_GFp_simple_ladder_post",
+        "openssl_rs::ec::mult::ossl_ec_scalar_mul_ladder",
+        "EC_POINT_mul",
+        "openssl_rs::ec::ecdsa_ossl::ecdsa_sign_setup",
+        "ossl_ecdsa_simple_sign_sig",
+        "main (ecdsa_alloc_harness.c:293)"
+      ]
+    },
+    {
+      "blocks_per_op": 1.0,
+      "blocks_total": 200,
+      "bytes_per_op": 40.0,
+      "bytes_total": 8000,
+      "caller": "BN_lshift",
+      "caller2": "openssl_rs::ec::smpl::ossl_ec_GFp_simple_ladder_post",
+      "site": "openssl_rs::bn::limbs::shl_fallible",
+      "stack": [
+        "malloc",
+        "<alloc::raw_vec::RawVecInner>::finish_grow",
+        "openssl_rs::bn::limbs::shl_fallible",
+        "BN_lshift",
+        "openssl_rs::ec::smpl::ossl_ec_GFp_simple_ladder_post",
+        "openssl_rs::ec::mult::ossl_ec_scalar_mul_ladder",
+        "EC_POINT_mul",
+        "openssl_rs::ec::ecdsa_ossl::ecdsa_sign_setup",
+        "ossl_ecdsa_simple_sign_sig",
+        "main (ecdsa_alloc_harness.c:293)"
+      ]
+    },
+    {
+      "blocks_per_op": 15.0,
+      "blocks_total": 3000,
+      "bytes_per_op": 960.0,
+      "bytes_total": 192000,
+      "caller": "BN_mul",
+      "caller2": "openssl_rs::ec::smpl::ossl_ec_GFp_simple_field_mul",
+      "site": "openssl_rs::bn::limbs::mul_fallible",
+      "stack": [
+        "malloc",
+        "<alloc::raw_vec::RawVecInner>::finish_grow",
+        "openssl_rs::bn::limbs::mul_fallible",
+        "BN_mul",
+        "openssl_rs::ec::smpl::ossl_ec_GFp_simple_field_mul",
+        "openssl_rs::ec::smpl::ossl_ec_GFp_simple_ladder_post",
+        "openssl_rs::ec::mult::ossl_ec_scalar_mul_ladder",
+        "EC_POINT_mul",
+        "openssl_rs::ec::ecdsa_ossl::ecdsa_sign_setup",
+        "ossl_ecdsa_simple_sign_sig",
+        "main (ecdsa_alloc_harness.c:293)"
+      ]
+    },
+    {
+      "blocks_per_op": 34.0,
+      "blocks_total": 6800,
+      "bytes_per_op": 1768.0,
+      "bytes_total": 353600,
+      "caller": "openssl_rs::bn::limbs::rem_fallible",
+      "caller2": "BN_nnmod",
+      "site": "openssl_rs::bn::limbs::divide_fallible",
+      "stack": [
+        "malloc",
+        "<alloc::raw_vec::RawVecInner>::finish_grow",
+        "openssl_rs::bn::limbs::divide_fallible",
+        "openssl_rs::bn::limbs::rem_fallible",
+        "BN_nnmod",
+        "openssl_rs::ec::smpl::ossl_ec_GFp_simple_ladder_post",
+        "openssl_rs::ec::mult::ossl_ec_scalar_mul_ladder",
+        "EC_POINT_mul",
+        "openssl_rs::ec::ecdsa_ossl::ecdsa_sign_setup",
+        "ossl_ecdsa_simple_sign_sig",
+        "main (ecdsa_alloc_harness.c:293)"
+      ]
+    },
+    {
+      "blocks_per_op": 1.0,
+      "blocks_total": 200,
+      "bytes_per_op": 40.0,
+      "bytes_total": 8000,
+      "caller": "BN_lshift",
+      "caller2": "BN_mod_lshift1_quick",
+      "site": "openssl_rs::bn::limbs::shl_fallible",
+      "stack": [
+        "malloc",
+        "<alloc::raw_vec::RawVecInner>::finish_grow",
+        "openssl_rs::bn::limbs::shl_fallible",
+        "BN_lshift",
+        "BN_mod_lshift1_quick",
+        "openssl_rs::ec::smpl::ossl_ec_GFp_simple_ladder_post",
+        "openssl_rs::ec::mult::ossl_ec_scalar_mul_ladder",
+        "EC_POINT_mul",
+        "openssl_rs::ec::ecdsa_ossl::ecdsa_sign_setup",
+        "ossl_ecdsa_simple_sign_sig",
+        "main (ecdsa_alloc_harness.c:293)"
+      ]
+    },
+    {
+      "blocks_per_op": 2.0,
+      "blocks_total": 400,
+      "bytes_per_op": 128.0,
+      "bytes_total": 25600,
+      "caller": "BN_mul",
+      "caller2": "openssl_rs::ec::smpl::ossl_ec_GFp_simple_field_sqr",
+      "site": "openssl_rs::bn::limbs::mul_fallible",
+      "stack": [
+        "malloc",
+        "<alloc::raw_vec::RawVecInner>::finish_grow",
+        "openssl_rs::bn::limbs::mul_fallible",
+        "BN_mul",
+        "openssl_rs::ec::smpl::ossl_ec_GFp_simple_field_sqr",
+        "openssl_rs::ec::smpl::ossl_ec_GFp_simple_ladder_post",
+        "openssl_rs::ec::mult::ossl_ec_scalar_mul_ladder",
+        "EC_POINT_mul",
+        "openssl_rs::ec::ecdsa_ossl::ecdsa_sign_setup",
+        "ossl_ecdsa_simple_sign_sig",
+        "main (ecdsa_alloc_harness.c:293)"
+      ]
+    },
+    {
+      "blocks_per_op": 3.0,
+      "blocks_total": 600,
+      "bytes_per_op": 120.0,
+      "bytes_total": 24000,
+      "caller": "BN_mod_add_quick",
+      "caller2": "openssl_rs::ec::smpl::ossl_ec_GFp_simple_ladder_post",
+      "site": "BN_uadd",
+      "stack": [
+        "malloc",
+        "<alloc::raw_vec::RawVecInner>::finish_grow",
+        "BN_uadd",
+        "BN_mod_add_quick",
+        "openssl_rs::ec::smpl::ossl_ec_GFp_simple_ladder_post",
+        "openssl_rs::ec::mult::ossl_ec_scalar_mul_ladder",
+        "EC_POINT_mul",
+        "openssl_rs::ec::ecdsa_ossl::ecdsa_sign_setup",
+        "ossl_ecdsa_simple_sign_sig",
+        "main (ecdsa_alloc_harness.c:293)"
+      ]
+    },
+    {
+      "blocks_per_op": 1.465,
+      "blocks_total": 293,
+      "bytes_per_op": 58.6,
+      "bytes_total": 11720,
+      "caller": "BN_usub",
+      "caller2": "openssl_rs::ec::smpl::ossl_ec_GFp_simple_ladder_post",
+      "site": "openssl_rs::bn::limbs::sub_fallible",
+      "stack": [
+        "malloc",
+        "<alloc::raw_vec::RawVecInner>::finish_grow",
+        "openssl_rs::bn::limbs::sub_fallible",
+        "BN_usub",
+        "openssl_rs::ec::smpl::ossl_ec_GFp_simple_ladder_post",
+        "openssl_rs::ec::mult::ossl_ec_scalar_mul_ladder",
+        "EC_POINT_mul",
+        "openssl_rs::ec::ecdsa_ossl::ecdsa_sign_setup",
+        "ossl_ecdsa_simple_sign_sig",
+        "main (ecdsa_alloc_harness.c:293)"
+      ]
+    },
+    {
+      "blocks_per_op": 2.0,
+      "blocks_total": 400,
+      "bytes_per_op": 64.0,
+      "bytes_total": 12800,
+      "caller": "BN_sub",
+      "caller2": "BN_mod_sub_quick",
+      "site": "openssl_rs::bn::limbs::sub_fallible",
+      "stack": [
+        "malloc",
+        "<alloc::raw_vec::RawVecInner>::finish_grow",
+        "openssl_rs::bn::limbs::sub_fallible",
+        "BN_sub",
+        "BN_mod_sub_quick",
+        "openssl_rs::ec::smpl::ossl_ec_GFp_simple_ladder_post",
+        "openssl_rs::ec::mult::ossl_ec_scalar_mul_ladder",
+        "EC_POINT_mul",
+        "openssl_rs::ec::ecdsa_ossl::ecdsa_sign_setup",
+        "ossl_ecdsa_simple_sign_sig",
+        "main (ecdsa_alloc_harness.c:293)"
+      ]
+    },
+    {
+      "blocks_per_op": 0.945,
+      "blocks_total": 189,
+      "bytes_per_op": 30.24,
+      "bytes_total": 6048,
+      "caller": "BN_add",
+      "caller2": "openssl_rs::ec::smpl::ossl_ec_GFp_simple_ladder_post",
+      "site": "openssl_rs::bn::limbs::sub_fallible",
+      "stack": [
+        "malloc",
+        "<alloc::raw_vec::RawVecInner>::finish_grow",
+        "openssl_rs::bn::limbs::sub_fallible",
+        "BN_add",
+        "openssl_rs::ec::smpl::ossl_ec_GFp_simple_ladder_post",
+        "openssl_rs::ec::mult::ossl_ec_scalar_mul_ladder",
+        "EC_POINT_mul",
+        "openssl_rs::ec::ecdsa_ossl::ecdsa_sign_setup",
+        "ossl_ecdsa_simple_sign_sig",
+        "main (ecdsa_alloc_harness.c:293)"
+      ]
+    },
+    {
+      "blocks_per_op": 1.0,
+      "blocks_total": 200,
+      "bytes_per_op": 32.0,
+      "bytes_total": 6400,
+      "caller": "BN_CTX_get",
+      "caller2": "openssl_rs::ec::smpl::ossl_ec_GFp_simple_field_inv",
+      "site": "BN_new",
+      "stack": [
+        "malloc",
+        "BN_new",
+        "BN_CTX_get",
+        "openssl_rs::ec::smpl::ossl_ec_GFp_simple_field_inv",
+        "openssl_rs::ec::smpl::ossl_ec_GFp_simple_ladder_post",
+        "openssl_rs::ec::mult::ossl_ec_scalar_mul_ladder",
+        "EC_POINT_mul",
+        "openssl_rs::ec::ecdsa_ossl::ecdsa_sign_setup",
+        "ossl_ecdsa_simple_sign_sig",
+        "main (ecdsa_alloc_harness.c:293)"
+      ]
+    },
+    {
+      "blocks_per_op": 1.0,
+      "blocks_total": 200,
+      "bytes_per_op": 32.0,
+      "bytes_total": 6400,
+      "caller": "openssl_rs::bn::rand::bnrand_range",
+      "caller2": "BN_priv_rand_range_ex",
+      "site": "openssl_rs::bn::rand::bnrand",
+      "stack": [
+        "malloc",
+        "CRYPTO_malloc",
+        "openssl_rs::bn::rand::bnrand",
+        "openssl_rs::bn::rand::bnrand_range",
+        "BN_priv_rand_range_ex",
+        "openssl_rs::ec::smpl::ossl_ec_GFp_simple_field_inv",
+        "openssl_rs::ec::smpl::ossl_ec_GFp_simple_ladder_post",
+        "openssl_rs::ec::mult::ossl_ec_scalar_mul_ladder",
+        "EC_POINT_mul",
+        "openssl_rs::ec::ecdsa_ossl::ecdsa_sign_setup",
+        "ossl_ecdsa_simple_sign_sig",
+        "main (ecdsa_alloc_harness.c:293)"
+      ]
+    },
+    {
+      "blocks_per_op": 1.0,
+      "blocks_total": 200,
+      "bytes_per_op": 64.0,
+      "bytes_total": 12800,
+      "caller": "RAND_get_rand_method",
+      "caller2": "RAND_priv_bytes_ex",
+      "site": "CRYPTO_THREAD_read_lock",
+      "stack": [
+        "malloc",
+        "<alloc::raw_vec::RawVecInner>::finish_grow",
+        "CRYPTO_THREAD_read_lock",
+        "RAND_get_rand_method",
+        "RAND_priv_bytes_ex",
+        "openssl_rs::bn::rand::bnrand",
+        "openssl_rs::bn::rand::bnrand_range",
+        "BN_priv_rand_range_ex",
+        "openssl_rs::ec::smpl::ossl_ec_GFp_simple_field_inv",
+        "openssl_rs::ec::smpl::ossl_ec_GFp_simple_ladder_post",
+        "openssl_rs::ec::mult::ossl_ec_scalar_mul_ladder",
+        "EC_POINT_mul",
+        "openssl_rs::ec::ecdsa_ossl::ecdsa_sign_setup",
+        "ossl_ecdsa_simple_sign_sig",
+        "main (ecdsa_alloc_harness.c:293)"
+      ]
+    },
+    {
+      "blocks_per_op": 1.0,
+      "blocks_total": 200,
+      "bytes_per_op": 24.0,
+      "bytes_total": 4800,
+      "caller": "RAND_get_rand_method",
+      "caller2": "RAND_priv_bytes_ex",
+      "site": "CRYPTO_THREAD_read_lock",
+      "stack": [
+        "malloc",
+        "CRYPTO_THREAD_read_lock",
+        "RAND_get_rand_method",
+        "RAND_priv_bytes_ex",
+        "openssl_rs::bn::rand::bnrand",
+        "openssl_rs::bn::rand::bnrand_range",
+        "BN_priv_rand_range_ex",
+        "openssl_rs::ec::smpl::ossl_ec_GFp_simple_field_inv",
+        "openssl_rs::ec::smpl::ossl_ec_GFp_simple_ladder_post",
+        "openssl_rs::ec::mult::ossl_ec_scalar_mul_ladder",
+        "EC_POINT_mul",
+        "openssl_rs::ec::ecdsa_ossl::ecdsa_sign_setup",
+        "ossl_ecdsa_simple_sign_sig",
+        "main (ecdsa_alloc_harness.c:293)"
+      ]
+    },
+    {
+      "blocks_per_op": 2.0,
+      "blocks_total": 400,
+      "bytes_per_op": 72.0,
+      "bytes_total": 14400,
+      "caller": "BN_bin2bn",
+      "caller2": "openssl_rs::bn::rand::bnrand",
+      "site": "openssl_rs::bn::bignum::from_bytes",
+      "stack": [
+        "malloc",
+        "<alloc::raw_vec::RawVecInner>::finish_grow",
+        "openssl_rs::bn::bignum::from_bytes",
+        "BN_bin2bn",
+        "openssl_rs::bn::rand::bnrand",
+        "openssl_rs::bn::rand::bnrand_range",
+        "BN_priv_rand_range_ex",
+        "openssl_rs::ec::smpl::ossl_ec_GFp_simple_field_inv",
+        "openssl_rs::ec::smpl::ossl_ec_GFp_simple_ladder_post",
+        "openssl_rs::ec::mult::ossl_ec_scalar_mul_ladder",
+        "EC_POINT_mul",
+        "openssl_rs::ec::ecdsa_ossl::ecdsa_sign_setup",
+        "ossl_ecdsa_simple_sign_sig",
+        "main (ecdsa_alloc_harness.c:293)"
+      ]
+    },
+    {
+      "blocks_per_op": 2.0,
+      "blocks_total": 400,
+      "bytes_per_op": 128.0,
+      "bytes_total": 25600,
+      "caller": "BN_mul",
+      "caller2": "openssl_rs::ec::smpl::ossl_ec_GFp_simple_field_mul",
+      "site": "openssl_rs::bn::limbs::mul_fallible",
+      "stack": [
+        "malloc",
+        "<alloc::raw_vec::RawVecInner>::finish_grow",
+        "openssl_rs::bn::limbs::mul_fallible",
+        "BN_mul",
+        "openssl_rs::ec::smpl::ossl_ec_GFp_simple_field_mul",
+        "openssl_rs::ec::smpl::ossl_ec_GFp_simple_field_inv",
+        "openssl_rs::ec::smpl::ossl_ec_GFp_simple_ladder_post",
+        "openssl_rs::ec::mult::ossl_ec_scalar_mul_ladder",
+        "EC_POINT_mul",
+        "openssl_rs::ec::ecdsa_ossl::ecdsa_sign_setup",
+        "ossl_ecdsa_simple_sign_sig",
+        "main (ecdsa_alloc_harness.c:293)"
+      ]
+    },
+    {
+      "blocks_per_op": 4.0,
+      "blocks_total": 800,
+      "bytes_per_op": 208.0,
+      "bytes_total": 41600,
+      "caller": "openssl_rs::bn::limbs::rem_fallible",
+      "caller2": "BN_nnmod",
+      "site": "openssl_rs::bn::limbs::divide_fallible",
+      "stack": [
+        "malloc",
+        "<alloc::raw_vec::RawVecInner>::finish_grow",
+        "openssl_rs::bn::limbs::divide_fallible",
+        "openssl_rs::bn::limbs::rem_fallible",
+        "BN_nnmod",
+        "openssl_rs::ec::smpl::ossl_ec_GFp_simple_field_inv",
+        "openssl_rs::ec::smpl::ossl_ec_GFp_simple_ladder_post",
+        "openssl_rs::ec::mult::ossl_ec_scalar_mul_ladder",
+        "EC_POINT_mul",
+        "openssl_rs::ec::ecdsa_ossl::ecdsa_sign_setup",
+        "ossl_ecdsa_simple_sign_sig",
+        "main (ecdsa_alloc_harness.c:293)"
+      ]
+    },
+    {
+      "blocks_per_op": 2.0,
+      "blocks_total": 400,
+      "bytes_per_op": 64.0,
+      "bytes_total": 12800,
+      "caller": "openssl_rs::ec::smpl::ossl_ec_GFp_simple_field_inv",
+      "caller2": "openssl_rs::ec::smpl::ossl_ec_GFp_simple_ladder_post",
+      "site": "openssl_rs::bn::arith::mod_inverse_impl",
+      "stack": [
+        "malloc",
+        "<alloc::raw_vec::RawVecInner>::finish_grow",
+        "openssl_rs::bn::arith::mod_inverse_impl",
+        "openssl_rs::ec::smpl::ossl_ec_GFp_simple_field_inv",
+        "openssl_rs::ec::smpl::ossl_ec_GFp_simple_ladder_post",
+        "openssl_rs::ec::mult::ossl_ec_scalar_mul_ladder",
+        "EC_POINT_mul",
+        "openssl_rs::ec::ecdsa_ossl::ecdsa_sign_setup",
+        "ossl_ecdsa_simple_sign_sig",
+        "main (ecdsa_alloc_harness.c:293)"
+      ]
+    },
+    {
+      "blocks_per_op": 6.0,
+      "blocks_total": 1200,
+      "bytes_per_op": 192.0,
+      "bytes_total": 38400,
+      "caller": "openssl_rs::bn::arith::mod_inverse_impl",
+      "caller2": "openssl_rs::ec::smpl::ossl_ec_GFp_simple_field_inv",
+      "site": "openssl_rs::bn::limbs::mod_inverse_consttime",
+      "stack": [
+        "malloc",
+        "<alloc::raw_vec::RawVecInner>::finish_grow",
+        "openssl_rs::bn::limbs::mod_inverse_consttime",
+        "openssl_rs::bn::arith::mod_inverse_impl",
+        "openssl_rs::ec::smpl::ossl_ec_GFp_simple_field_inv",
+        "openssl_rs::ec::smpl::ossl_ec_GFp_simple_ladder_post",
+        "openssl_rs::ec::mult::ossl_ec_scalar_mul_ladder",
+        "EC_POINT_mul",
+        "openssl_rs::ec::ecdsa_ossl::ecdsa_sign_setup",
+        "ossl_ecdsa_simple_sign_sig",
+        "main (ecdsa_alloc_harness.c:293)"
+      ]
+    },
+    {
+      "blocks_per_op": 12.0,
+      "blocks_total": 2400,
+      "bytes_per_op": 392.0,
+      "bytes_total": 78400,
+      "caller": "openssl_rs::bn::limbs::mod_inverse_consttime",
+      "caller2": "openssl_rs::bn::arith::mod_inverse_impl",
+      "site": "openssl_rs::runtime::alloc::try_zeroed::<u64>",
+      "stack": [
+        "malloc",
+        "<alloc::raw_vec::RawVecInner>::finish_grow",
+        "openssl_rs::runtime::alloc::try_zeroed::<u64>",
+        "openssl_rs::bn::limbs::mod_inverse_consttime",
+        "openssl_rs::bn::arith::mod_inverse_impl",
+        "openssl_rs::ec::smpl::ossl_ec_GFp_simple_field_inv",
+        "openssl_rs::ec::smpl::ossl_ec_GFp_simple_ladder_post",
+        "openssl_rs::ec::mult::ossl_ec_scalar_mul_ladder",
+        "EC_POINT_mul",
+        "openssl_rs::ec::ecdsa_ossl::ecdsa_sign_setup",
+        "ossl_ecdsa_simple_sign_sig",
+        "main (ecdsa_alloc_harness.c:293)"
+      ]
+    },
+    {
+      "blocks_per_op": 1.0,
+      "blocks_total": 200,
+      "bytes_per_op": 32.0,
+      "bytes_total": 6400,
+      "caller": "openssl_rs::bn::limbs::rem_fallible",
+      "caller2": "BN_nnmod",
+      "site": "openssl_rs::bn::limbs::divide_fallible",
+      "stack": [
+        "malloc",
+        "<alloc::raw_vec::RawVecInner>::finish_grow",
+        "openssl_rs::bn::limbs::divide_fallible",
+        "openssl_rs::bn::limbs::rem_fallible",
+        "BN_nnmod",
+        "openssl_rs::ec::ecdsa_ossl::ecdsa_sign_setup",
+        "ossl_ecdsa_simple_sign_sig",
+        "main (ecdsa_alloc_harness.c:293)"
+      ]
+    },
+    {
+      "blocks_per_op": 1.0,
+      "blocks_total": 200,
+      "bytes_per_op": 32.0,
+      "bytes_total": 6400,
+      "caller": "BN_sub",
+      "caller2": "ossl_ec_group_do_inverse_ord",
+      "site": "openssl_rs::bn::limbs::sub_fallible",
+      "stack": [
+        "malloc",
+        "<alloc::raw_vec::RawVecInner>::finish_grow",
+        "openssl_rs::bn::limbs::sub_fallible",
+        "BN_sub",
+        "ossl_ec_group_do_inverse_ord",
+        "openssl_rs::ec::ecdsa_ossl::ecdsa_sign_setup",
+        "ossl_ecdsa_simple_sign_sig",
+        "main (ecdsa_alloc_harness.c:293)"
+      ]
+    },
+    {
+      "blocks_per_op": 2.0,
+      "blocks_total": 400,
+      "bytes_per_op": 64.0,
+      "bytes_total": 12800,
+      "caller": "ossl_ec_group_do_inverse_ord",
+      "caller2": "openssl_rs::ec::ecdsa_ossl::ecdsa_sign_setup",
+      "site": "BN_mod_exp_mont_consttime",
+      "stack": [
+        "malloc",
+        "<alloc::raw_vec::RawVecInner>::finish_grow",
+        "BN_mod_exp_mont_consttime",
+        "ossl_ec_group_do_inverse_ord",
+        "openssl_rs::ec::ecdsa_ossl::ecdsa_sign_setup",
+        "ossl_ecdsa_simple_sign_sig",
+        "main (ecdsa_alloc_harness.c:293)"
+      ]
+    },
+    {
+      "blocks_per_op": 2.0,
+      "blocks_total": 400,
+      "bytes_per_op": 64.0,
+      "bytes_total": 12800,
+      "caller": "BN_mod_exp_mont_consttime",
+      "caller2": "ossl_ec_group_do_inverse_ord",
+      "site": "openssl_rs::bn::arith::mod_exp_core_consttime_from_parts_prepared",
+      "stack": [
+        "malloc",
+        "<alloc::raw_vec::RawVecInner>::finish_grow",
+        "openssl_rs::bn::arith::mod_exp_core_consttime_from_parts_prepared",
+        "BN_mod_exp_mont_consttime",
+        "ossl_ec_group_do_inverse_ord",
+        "openssl_rs::ec::ecdsa_ossl::ecdsa_sign_setup",
+        "ossl_ecdsa_simple_sign_sig",
+        "main (ecdsa_alloc_harness.c:293)"
+      ]
+    },
+    {
+      "blocks_per_op": 6.0,
+      "blocks_total": 1200,
+      "bytes_per_op": 232.0,
+      "bytes_total": 46400,
+      "caller": "openssl_rs::bn::arith::mod_exp_core_consttime_from_parts_prepared",
+      "caller2": "BN_mod_exp_mont_consttime",
+      "site": "openssl_rs::bn::arith::run_mont_ladder",
+      "stack": [
+        "malloc",
+        "<alloc::raw_vec::RawVecInner>::finish_grow",
+        "openssl_rs::bn::arith::run_mont_ladder",
+        "openssl_rs::bn::arith::mod_exp_core_consttime_from_parts_prepared",
+        "BN_mod_exp_mont_consttime",
+        "ossl_ec_group_do_inverse_ord",
+        "openssl_rs::ec::ecdsa_ossl::ecdsa_sign_setup",
+        "ossl_ecdsa_simple_sign_sig",
+        "main (ecdsa_alloc_harness.c:293)"
+      ]
+    },
+    {
+      "blocks_per_op": 3.0,
+      "blocks_total": 600,
+      "bytes_per_op": 136.0,
+      "bytes_total": 27200,
+      "caller": "openssl_rs::bn::arith::run_mont_ladder",
+      "caller2": "openssl_rs::bn::arith::mod_exp_core_consttime_from_parts_prepared",
+      "site": "openssl_rs::bn::arith::mont_mul_fallible",
+      "stack": [
+        "malloc",
+        "<alloc::raw_vec::RawVecInner>::finish_grow",
+        "openssl_rs::bn::arith::mont_mul_fallible",
+        "openssl_rs::bn::arith::run_mont_ladder",
+        "openssl_rs::bn::arith::mod_exp_core_consttime_from_parts_prepared",
+        "BN_mod_exp_mont_consttime",
+        "ossl_ec_group_do_inverse_ord",
+        "openssl_rs::ec::ecdsa_ossl::ecdsa_sign_setup",
+        "ossl_ecdsa_simple_sign_sig",
+        "main (ecdsa_alloc_harness.c:293)"
+      ]
+    },
+    {
+      "blocks_per_op": 4.0,
+      "blocks_total": 800,
+      "bytes_per_op": 128.0,
+      "bytes_total": 25600,
+      "caller": "ossl_ecdsa_simple_sign_sig",
+      "caller2": "main (ecdsa_alloc_harness.c:293)",
+      "site": "BN_to_montgomery",
+      "stack": [
+        "malloc",
+        "<alloc::raw_vec::RawVecInner>::finish_grow",
+        "BN_to_montgomery",
+        "ossl_ecdsa_simple_sign_sig",
+        "main (ecdsa_alloc_harness.c:293)"
+      ]
+    },
+    {
+      "blocks_per_op": 6.0,
+      "blocks_total": 1200,
+      "bytes_per_op": 272.0,
+      "bytes_total": 54400,
+      "caller": "BN_to_montgomery",
+      "caller2": "ossl_ecdsa_simple_sign_sig",
+      "site": "openssl_rs::bn::arith::mont_mul_fallible",
+      "stack": [
+        "malloc",
+        "<alloc::raw_vec::RawVecInner>::finish_grow",
+        "openssl_rs::bn::arith::mont_mul_fallible",
+        "BN_to_montgomery",
+        "ossl_ecdsa_simple_sign_sig",
+        "main (ecdsa_alloc_harness.c:293)"
+      ]
+    },
+    {
+      "blocks_per_op": 6.0,
+      "blocks_total": 1200,
+      "bytes_per_op": 192.0,
+      "bytes_total": 38400,
+      "caller": "ossl_ecdsa_simple_sign_sig",
+      "caller2": "main (ecdsa_alloc_harness.c:293)",
+      "site": "BN_mod_mul_montgomery",
+      "stack": [
+        "malloc",
+        "<alloc::raw_vec::RawVecInner>::finish_grow",
+        "BN_mod_mul_montgomery",
+        "ossl_ecdsa_simple_sign_sig",
+        "main (ecdsa_alloc_harness.c:293)"
+      ]
+    },
+    {
+      "blocks_per_op": 2.0,
+      "blocks_total": 400,
+      "bytes_per_op": 64.0,
+      "bytes_total": 12800,
+      "caller": "BN_mod_mul_montgomery",
+      "caller2": "ossl_ecdsa_simple_sign_sig",
+      "site": "openssl_rs::runtime::alloc::try_zeroed::<u64>",
+      "stack": [
+        "malloc",
+        "<alloc::raw_vec::RawVecInner>::finish_grow",
+        "openssl_rs::runtime::alloc::try_zeroed::<u64>",
+        "BN_mod_mul_montgomery",
+        "ossl_ecdsa_simple_sign_sig",
+        "main (ecdsa_alloc_harness.c:293)"
+      ]
+    },
+    {
+      "blocks_per_op": 6.0,
+      "blocks_total": 1200,
+      "bytes_per_op": 272.0,
+      "bytes_total": 54400,
+      "caller": "BN_mod_mul_montgomery",
+      "caller2": "ossl_ecdsa_simple_sign_sig",
+      "site": "openssl_rs::bn::arith::mont_mul_fallible",
+      "stack": [
+        "malloc",
+        "<alloc::raw_vec::RawVecInner>::finish_grow",
+        "openssl_rs::bn::arith::mont_mul_fallible",
+        "BN_mod_mul_montgomery",
+        "ossl_ecdsa_simple_sign_sig",
+        "main (ecdsa_alloc_harness.c:293)"
+      ]
+    },
+    {
+      "blocks_per_op": 2.0,
+      "blocks_total": 400,
+      "bytes_per_op": 80.0,
+      "bytes_total": 16000,
+      "caller": "ossl_ecdsa_simple_sign_sig",
+      "caller2": "main (ecdsa_alloc_harness.c:293)",
+      "site": "openssl_rs::bn::arith::mod_add_reduced_ct",
+      "stack": [
+        "malloc",
+        "<alloc::raw_vec::RawVecInner>::finish_grow",
+        "openssl_rs::bn::arith::mod_add_reduced_ct",
+        "ossl_ecdsa_simple_sign_sig",
+        "main (ecdsa_alloc_harness.c:293)"
+      ]
+    }
+  ],
+  "schema": "openssl-rs/performance/pfp24-alloc-profile/v1",
+  "subject": "candidate-baseline",
+  "totals": {
+    "blocks_per_op": 254.195,
+    "bytes_per_op": 11136.87
+  }
+}

@@ -1255,25 +1255,25 @@ pub unsafe extern "C" fn BN_consttime_swap(
 
 /// Decode big- or little-endian bytes into an optional destination, clearing the
 /// sign because a byte string is a magnitude.
+///
+/// The limbs are accumulated straight from `bytes` in least-significant-first
+/// order. The big-endian arm used to materialise a reversed byte vector first and
+/// read that; the vector had no reader other than this loop, so it was a pure
+/// per-call temporary (PFP-24: one of `BN_bin2bn`'s two allocations per call).
+/// Indexing `bytes[n - 1 - i]` visits exactly the indices the reversed vector did,
+/// and `little` is a constant at every call site, so the branch folds away — no
+/// value-dependent branch, no length-dependent access that the old copy did not
+/// already make.
 fn from_bytes(bytes: &[u8], bn: Option<&mut BigNum>, little: bool) -> bool {
-    let Some(ordered) = (if little {
-        crate::bn::alloc::try_clone_slice(bytes)
-    } else {
-        let mut v = Vec::new();
-        crate::bn::alloc::try_reserve(&mut v, bytes.len()).then(|| {
-            v.extend(bytes.iter().rev().copied());
-            v
-        })
-    }) else {
+    let Some(mut d) = crate::bn::alloc::try_zeroed(bytes.len() / 8 + 1, 0u64) else {
         return false;
     };
-    let Some(mut d) = crate::bn::alloc::try_zeroed(ordered.len() / 8 + 1, 0u64) else {
-        return false;
-    };
+    let n = bytes.len();
     let mut acc: u128 = 0;
     let mut have = 0usize;
     let mut used = 0usize;
-    for &byte in &ordered {
+    for i in 0..n {
+        let byte = if little { bytes[i] } else { bytes[n - 1 - i] };
         acc |= (byte as u128) << (8 * have);
         have += 1;
         if have == 8 {

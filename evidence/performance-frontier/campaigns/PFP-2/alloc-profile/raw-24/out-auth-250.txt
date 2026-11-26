@@ -1,0 +1,22 @@
+==56220== DHAT, a dynamic heap analysis tool
+==56220== Copyright (C) 2010-2018, and GNU GPL'd, by Mozilla Foundation
+==56220== Using Valgrind-3.19.0 and LibVEX; rerun with -h for copyright info
+==56220== Command: /tmp/harness --lib /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3 --sign-ops 250
+==56220== 
+LIB /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3
+LOADED realpath=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3 dev=57 ino=325854 size=7295816
+MAPS realpath=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3 entries=5
+CHECK ecdsa256 pub=02c5b17d076d8e27f07ea9f82d7eeb92c5f994e7d285ee083452ab244d3c54128f verify=1
+SIGN_OPS 250
+==56220== 
+==56220== Total:     775,210 bytes in 13,110 blocks
+==56220== At t-gmax: 331,614 bytes in 5,058 blocks
+==56220== At t-end:  2,037 bytes in 4 blocks
+==56220== Reads:     4,622,403 bytes
+==56220== Writes:    2,041,609 bytes
+==56220== 
+==56220== To view the resulting profile, open
+==56220==   file:///usr/libexec/valgrind/dh_view.html
+==56220== in a web browser, click on "Load...", and then select the file
+==56220==   /work/evidence/performance-frontier/campaigns/PFP-2/alloc-profile/raw-24/dhat-auth-250.json
+==56220== The text at the bottom explains the abbreviations used in the output.

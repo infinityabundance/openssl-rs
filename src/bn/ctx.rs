@@ -64,16 +64,34 @@ pub(crate) unsafe fn as_mut_ctx<'a>(p: *mut BnCtx) -> Option<&'a mut BnCtx> {
     }
 }
 
+/// `BN_CTX_POOL_SIZE` — `crypto/bn/bn_ctx.c:26`: the number of `BIGNUM`s the
+/// authority's `BN_CTX_new` puts in the first `BN_POOL_ITEM`. The authority
+/// allocates the item, not the slots one at a time, so a context's first pool
+/// growth is one allocation; here the pool is a slot *vector* whose per-`get`
+/// `push` would otherwise reallocate at 1, 2, 4, 8 slots. Reserving the same
+/// number of slots at construction reproduces the authority's one-allocation
+/// first growth. The reservation is capacity only: which slots exist, when an
+/// object is created, and every value the context hands out are unchanged.
+const BN_CTX_POOL_SIZE: usize = 16;
+
 /// A fresh context carrying `libctx`, the way the authority's `BN_CTX_new_ex` does.
 fn new_ctx(libctx: *mut c_void) -> *mut BnCtx {
-    crate::bn::alloc::try_boxed(BnCtx {
+    let mut ctx = BnCtx {
         pool: Vec::new(),
         used: 0,
         marks: Vec::new(),
         mont: core::ptr::null_mut(),
         libctx,
-    })
-    .unwrap_or(core::ptr::null_mut())
+    };
+    // Fallible, through the same seam as every other BN allocation: a context
+    // that cannot reserve its pool is reported as a failed `BN_CTX_new`, never as
+    // an abort. Only the slot vector is reserved: the mark stack's depth is the
+    // caller's nesting and there is no authority constant for it, so it keeps its
+    // ordinary growth.
+    if !crate::bn::alloc::try_reserve(&mut ctx.pool, BN_CTX_POOL_SIZE) {
+        return core::ptr::null_mut();
+    }
+    crate::bn::alloc::try_boxed(ctx).unwrap_or(core::ptr::null_mut())
 }
 
 /// `OSSL_LIB_CTX *ossl_bn_get_libctx(BN_CTX *ctx)` — `crypto/bn/bn_ctx.c:243`, declared

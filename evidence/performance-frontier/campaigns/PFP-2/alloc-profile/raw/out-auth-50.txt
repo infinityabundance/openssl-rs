@@ -1,0 +1,22 @@
+==54217== DHAT, a dynamic heap analysis tool
+==54217== Copyright (C) 2010-2018, and GNU GPL'd, by Mozilla Foundation
+==54217== Using Valgrind-3.19.0 and LibVEX; rerun with -h for copyright info
+==54217== Command: /tmp/harness --lib /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3 --sign-ops 50
+==54217== 
+LIB /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3
+LOADED realpath=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3 dev=57 ino=325854 size=7295816
+MAPS realpath=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3 entries=5
+CHECK ecdsa256 pub=02c5b17d076d8e27f07ea9f82d7eeb92c5f994e7d285ee083452ab244d3c54128f verify=1
+SIGN_OPS 50
+==54217== 
+==54217== Total:     455,010 bytes in 7,310 blocks
+==54217== At t-gmax: 331,614 bytes in 5,058 blocks
+==54217== At t-end:  2,037 bytes in 4 blocks
+==54217== Reads:     2,528,002 bytes
+==54217== Writes:    965,808 bytes
+==54217== 
+==54217== To view the resulting profile, open
+==54217==   file:///usr/libexec/valgrind/dh_view.html
+==54217== in a web browser, click on "Load...", and then select the file
+==54217==   /work/evidence/performance-frontier/campaigns/PFP-2/alloc-profile/raw/dhat-auth-50.json
+==54217== The text at the bottom explains the abbreviations used in the output.
