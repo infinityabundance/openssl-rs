@@ -125,3 +125,29 @@ Binding notes for this section:
 - `PFP-25` is the only row that aims at the frontier rather than at the gap.
   It inherits `PFP-19`: a faster arm without the courts and the audit at the
   same digest is an experiment, not a candidate.
+
+## Review-driven queue (2026-11-26, second assessment)
+
+The 26 November assessment of head `20972901d` named four obligations that were
+not rows. PFP-21, PFP-22 and PFP-23 were closed after that head (commits
+4d4979e2, fc271665, 50974780) and are not restated here; what follows is what
+remains new.
+
+| id | work package | status |
+|---|---|---|
+| PFP-26 | **Length-disclosure threat model and worst-case distribution.** The PFP-20 receipt computes about 2^-58 bits of entropy for the normalised length **assuming a uniform field element**. Intermediate projective coordinates are not uniform and are not independent under every scalar, point and calling pattern, and an attacker who chooses inputs meets a different distribution. Acceptance: state the threat model explicitly (chosen scalars, chosen points, repeated queries, which observables); compute or bound the distribution of the represented length for the coordinates the ladder actually produces at each doubling and addition, under adversarial inputs, not under uniformity; report the worst-case min-entropy over reachable distributions, or state that it is unbounded and treat the declassification as unjustified; if the worst case is not negligible, carry fixed width through `ladder_post` and defer variable-length conversion until the value is genuinely public. Every distribution-conditional figure is labelled as such and is never used as permission to declassify an intermediate secret. | TODO |
+| PFP-27 | **Admit the CIOS kernel at artefact level, with the scrutiny that found the PFP-2 leak.** The integrated CIOS kernel uses `overflowing_add`/`overflowing_sub` boolean carry handling, which is the exact construct that produced the release branch in `mont_reduce_into`. Source-level fixed loops do not guarantee branchless release machine code. Acceptance: the branch audit runs over the CIOS kernel **in the release DSO**, not the C transcription; ctgrind runs on the same artefact; every carry or borrow that reaches control flow is identified from the disassembly and either shown branchless or removed with a mask barrier; the kernel is benchmarked through the DSO rather than the C transcription; and only then is default selection considered. Records carry the digest. | TODO |
+| PFP-28 | **Source-to-artefact identity discipline for evidence carried across changes.** `evidence/performance-frontier/campaigns/PFP-6/RECORD.md` still describes its `src/bn/arith.rs` work as uncommitted although the current head contains it, and the `553e1b8c` DSO deliberately excluded those changes, so its branch and differential results must not be transferred to a DSO built from the combined head. Acceptance: every campaign record names the exact committed source and artefact digest it measures; a record whose text describes work as uncommitted carries a current committed-source identity supplement; a result measured on an artefact that excluded a later change states the exclusion and is never cited for the combined artefact; and a check refuses a claim whose cited measurement digest differs from its candidate digest, extending PFP-19's existing rule from candidates to experiment records. | TODO |
+| PFP-29 | **One whole-path constant-time and correctness checkpoint for a shipped library.** Per-engine evidence is not a statement about the library. Acceptance: one DSO digest under which every secret-bearing path that the build supports is exercised in a single stated population — ECDSA sign and verify, ECDH, RSA private, DH, and the KEMs where present — with ctgrind and the binary branch audit over the whole set, the artefact differential, and the timing rows, all at that digest; findings are reported per path so an engine-local zero is never read as a whole-path result; the checkpoint is the unit of the claim. This is the consolidation the assessment asks for in place of further experimental kernels. | TODO |
+
+Binding notes for this section:
+
+- `PFP-26` must not be satisfied by a better worded version of the uniform
+  argument. A distribution-conditional bound is admissible only if the
+  distribution is the reachable one under the stated adversary.
+- `PFP-27` inherits the STOP rule: a carry that reaches control flow on secret
+  data is a blocker for any claim about the kernel, not a performance note.
+- `PFP-28` is a records obligation with teeth: it must be enforced by a check,
+  not by prose discipline alone.
+- `PFP-29` is the only row whose result could be cited as a library-level
+  constant-time statement, and only if every path in it is covered.
