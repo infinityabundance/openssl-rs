@@ -1,0 +1,22 @@
+param	run	errors	contexts	decap_contexts	origin_sites
+512	control	0	0	0	
+512	taint-r1	1273	5	2	2x openssl_rs::ml_kem::arith::matrix_expand;2x openssl_rs::ml_kem::key::decap;1x openssl_rs::provider::ml_kem_kmgmt::ml_kem_pairwise_test;
+512	taint-r2	1273	5	2	2x openssl_rs::ml_kem::arith::matrix_expand;2x openssl_rs::ml_kem::key::decap;1x openssl_rs::provider::ml_kem_kmgmt::ml_kem_pairwise_test;
+512	taint-r3	1273	5	2	2x openssl_rs::ml_kem::arith::matrix_expand;2x openssl_rs::ml_kem::key::decap;1x openssl_rs::provider::ml_kem_kmgmt::ml_kem_pairwise_test;
+512	case-valid	1273	5	2	2x openssl_rs::ml_kem::arith::matrix_expand;2x openssl_rs::ml_kem::key::decap;1x openssl_rs::provider::ml_kem_kmgmt::ml_kem_pairwise_test;
+512	case-bit-00	1273	5	2	2x openssl_rs::ml_kem::arith::matrix_expand;2x openssl_rs::ml_kem::key::decap;1x openssl_rs::provider::ml_kem_kmgmt::ml_kem_pairwise_test;
+512	authority-taint	1272	4	0	2x matrix_expand;2x ml_kem_pairwise_test;
+768	control	0	0	0	
+768	taint-r1	2897	5	2	2x openssl_rs::ml_kem::arith::matrix_expand;2x openssl_rs::ml_kem::key::decap;1x openssl_rs::provider::ml_kem_kmgmt::ml_kem_pairwise_test;
+768	taint-r2	2897	5	2	2x openssl_rs::ml_kem::arith::matrix_expand;2x openssl_rs::ml_kem::key::decap;1x openssl_rs::provider::ml_kem_kmgmt::ml_kem_pairwise_test;
+768	taint-r3	2897	5	2	2x openssl_rs::ml_kem::arith::matrix_expand;2x openssl_rs::ml_kem::key::decap;1x openssl_rs::provider::ml_kem_kmgmt::ml_kem_pairwise_test;
+768	case-valid	2897	5	2	2x openssl_rs::ml_kem::arith::matrix_expand;2x openssl_rs::ml_kem::key::decap;1x openssl_rs::provider::ml_kem_kmgmt::ml_kem_pairwise_test;
+768	case-bit-00	2897	5	2	2x openssl_rs::ml_kem::arith::matrix_expand;2x openssl_rs::ml_kem::key::decap;1x openssl_rs::provider::ml_kem_kmgmt::ml_kem_pairwise_test;
+768	authority-taint	2896	4	0	2x matrix_expand;2x ml_kem_pairwise_test;
+1024	control	0	0	0	
+1024	taint-r1	4992	5	2	2x openssl_rs::ml_kem::arith::matrix_expand;2x openssl_rs::ml_kem::key::decap;1x openssl_rs::provider::ml_kem_kmgmt::ml_kem_pairwise_test;
+1024	taint-r2	4992	5	2	2x openssl_rs::ml_kem::arith::matrix_expand;2x openssl_rs::ml_kem::key::decap;1x openssl_rs::provider::ml_kem_kmgmt::ml_kem_pairwise_test;
+1024	taint-r3	4992	5	2	2x openssl_rs::ml_kem::arith::matrix_expand;2x openssl_rs::ml_kem::key::decap;1x openssl_rs::provider::ml_kem_kmgmt::ml_kem_pairwise_test;
+1024	case-valid	4992	5	2	2x openssl_rs::ml_kem::arith::matrix_expand;2x openssl_rs::ml_kem::key::decap;1x openssl_rs::provider::ml_kem_kmgmt::ml_kem_pairwise_test;
+1024	case-bit-00	4992	5	2	2x openssl_rs::ml_kem::arith::matrix_expand;2x openssl_rs::ml_kem::key::decap;1x openssl_rs::provider::ml_kem_kmgmt::ml_kem_pairwise_test;
+1024	authority-taint	4991	4	0	2x matrix_expand;2x ml_kem_pairwise_test;

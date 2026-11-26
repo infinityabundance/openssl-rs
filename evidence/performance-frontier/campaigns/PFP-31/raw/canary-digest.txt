@@ -1,0 +1,3 @@
+canary dso_sha256=7a039deed0565a1c1507bbe584f75c54c9f59a434dd855937da2e556ab16da60 size=17095632
+canary source: git archive HEAD extracted to court/tmp/pfp31/canary-src
+canary edit: ml_kem/key.rs implicit-rejection mask select -> branch on mask

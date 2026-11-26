@@ -1,0 +1,2 @@
+REFUSED target="ML-KEM decapsulation carrier (implicit-rejection comparison + select)" symbol="key::decap" llvm_suffix="3key5decap.llvm.15622672340991759178" reason=secret-derived-conditional-jump detail=0x300613 je 300629 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs6ml_kem3key5decap.llvm.15622672340991759178+0x3b9> condition from 0x300611: test %dl,%dl
+binary_branch_audit: FAIL-CLOSED: 1 of 31 expected targets were refused (1 by a declared comparison contract); this report is not a gate result.

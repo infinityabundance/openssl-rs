@@ -103,6 +103,64 @@ Named refusals for a declared mapping: ``inline-witness-inconsistent``,
 ``inline-carrier-missing``, ``inline-carrier-ambiguous``,
 ``inline-caller-unverified``, ``inline-call-witness-missing``,
 ``inline-constant-argument-missing``, ``inline-producer-absent``.
+
+## LLVM-suffixed local copies (``llvm_suffix``)
+
+A release optimiser may also leave the *only* out-of-line body of an internal
+function under a symbol carrying an LLVM local-symbol suffix,
+``<v0 path><len(identifier)><identifier>.llvm.<digits>``.  The exact-identifier
+rule cannot name such a symbol, and it is **not** relaxed to a prefix or
+substring test.  Instead a target may declare:
+
+    {"family": ..., "symbol": "decap", "module": "key",
+     "llvm_suffix": {"caller": "ossl_ml_kem_decap",
+                     "producer": "<compiler producer string>",
+                     "check": "<what established that this is the body>"}}
+
+The suffix is admitted **only** when the intended symbol has no out-of-line
+body, and only when the audit re-establishes every one of these facts from the
+artefact:
+
+  * a symbol matches the whole structural form exactly: the v0 length prefix
+    before the module (when given) and before the identifier must parse to
+    their exact lengths, and the symbol must end with ``.llvm.<digits>`` and
+    nothing else.  A longer identifier that merely ends with the name, or a
+    name followed by other text, does not match;
+  * exactly one such symbol exists, and exactly one symbol entry has its start
+    address (no alias masks a second body);
+  * the copy has a non-zero extent and complete disassembly (the ordinary
+    checks below);
+  * ``producer`` occurs in the artefact's bytes;
+  * ``caller`` resolves to one defined symbol with complete disassembly that
+    contains a direct ``call`` to the copy's entry.  That call site is the
+    evidence that the reviewed path reaches *this* copy; it is recorded with
+    its offset.
+
+The report records the observed suffix, extent and every call site, so the
+claim is a per-call-site witness rather than a name coincidence.  Named
+refusals: ``llvm-suffix-missing``, ``llvm-suffix-ambiguous``,
+``llvm-copy-ambiguous``, ``llvm-caller-unverified``,
+``llvm-call-witness-missing``, ``llvm-producer-absent``.
+
+## Comparison-result contract (``comparison_contract``)
+
+A target may additionally declare that no conditional transfer in its body may
+depend on the value produced by the *comparison accumulation* (the loop that
+XORs two byte streams and ORs the XORs -- an inlined ``CRYPTO_memcmp``):
+
+    "comparison_contract": {"kind": "comparison-result-branch-free",
+                            "check": "<the source-level claim>"}
+
+The audit locates the accumulation loop(s) structurally, seeds taint on their
+accumulator registers, propagates register taint over the basic-block CFG, and
+classifies every flag-reading instruction (``jcc``, ``setcc``, ``cmovcc``).  A
+`secret-derived` ``jcc`` is a named failure (``secret-derived-conditional-jump``)
+above and beyond the ordinary target checks.  `setcc`/`cmovcc` are reported but
+are branchless, so they do not fail the contract.  If no accumulation loop is
+found the contract is refused (``comparison-accumulation-missing``) rather than
+trivially satisfied.  This is a within-function may-taint analysis: it does not
+model memory, implicit flow through a previous conditional transfer, or
+interprocedural effects, and it is a review aid, not a constant-time proof.
 """
 
 from __future__ import annotations
@@ -134,12 +192,36 @@ class Inlining:
 
 
 @dataclass(frozen=True)
+class LlvmSuffix:
+    """The re-derived witness for an LLVM-suffixed local copy.
+
+    `check` records the source-level fact that the suffixed copy is this body;
+    the audit itself re-establishes the structural name, uniqueness, extent,
+    producer and direct call site.
+    """
+
+    caller: str
+    producer: str
+    check: str
+
+
+@dataclass(frozen=True)
+class ComparisonContract:
+    """A target-level claim about the comparison result's control dependence."""
+
+    kind: str
+    check: str
+
+
+@dataclass(frozen=True)
 class Target:
     family: str
     module: str | None
     symbol: str
     resolves_to: str | None = None
     inlining: Inlining | None = None
+    llvm_suffix: LlvmSuffix | None = None
+    comparison_contract: ComparisonContract | None = None
 
 
 # (family, module, short symbol name, optional inline resolution).  The short
@@ -600,24 +682,506 @@ def verify_inline_mapping(dso: str, target: Target, symtab, timeout: float,
     return carrier, witness, None
 
 
+LLVM_SUFFIX_KEYS = {"caller", "producer", "check"}
+CONTRACT_KEYS = {"kind", "check"}
+
+
+def verify_llvm_suffix(dso: str, target: Target, symtab, timeout: float,
+                       data: bytes):
+    """Re-establish a declared LLVM-suffixed local copy from the artefact.
+
+    The name is matched by its whole structural form and never by a prefix or a
+    substring: the v0 length prefix before the module and before the identifier
+    must parse to exactly their lengths, and the symbol must end at
+    ``.llvm.<digits>`` with nothing after it.  Returns
+    ``(carrier, witness, failure)``; the mapping is never admitted on the
+    inventory's word alone.
+    """
+    rule = target.llvm_suffix
+    if rule is None:
+        raise Refusal(EXIT_USAGE, "verify_llvm_suffix called without a witness")
+    if target.module is None:
+        pattern = re.compile(
+            r"(\d+)" + re.escape(target.symbol) + r"\.llvm\.(\d+)$")
+    else:
+        pattern = re.compile(
+            r"(\d+)" + re.escape(target.module) + r"(\d+)"
+            + re.escape(target.symbol) + r"\.llvm\.(\d+)$")
+    hits = []
+    for addr, size, sym in symtab:
+        m = pattern.search(sym)
+        if not m:
+            continue
+        if target.module is None:
+            if int(m.group(1)) != len(target.symbol):
+                continue
+        elif (int(m.group(1)) != len(target.module)
+              or int(m.group(2)) != len(target.symbol)):
+            continue
+        hits.append((addr, size, sym, m.group(0)))
+    if not hits:
+        return None, None, {
+            "failure": "llvm-suffix-missing",
+            "detail": ("no defined .text symbol has the exact form "
+                       f"<...{len(target.symbol)}{target.symbol}>.llvm.<digits>"),
+        }
+    if len(hits) > 1:
+        return None, None, {
+            "failure": "llvm-suffix-ambiguous",
+            "candidates": [s for _, _, s, _ in hits],
+        }
+    addr, size, sym, matched = hits[0]
+    if size == 0:
+        return None, None, {"failure": "zero-size", "symbol": sym, "addr": addr}
+    aliases = [s for a, _, s in symtab if a == addr and s != sym]
+    if aliases:
+        return None, None, {
+            "failure": "llvm-copy-ambiguous",
+            "detail": f"start address 0x{addr:x} also named by {aliases[:3]}",
+        }
+    if rule.producer.encode() not in data:
+        return None, None, {
+            "failure": "llvm-producer-absent",
+            "detail": f"producer string not in the DSO: {rule.producer!r}",
+        }
+    callers = find_exact(symtab, rule.caller)
+    if len(callers) != 1:
+        return None, None, {
+            "failure": "llvm-caller-unverified",
+            "detail": (f"caller {rule.caller!r} is "
+                       + ("not a defined symbol" if not callers else "ambiguous")),
+        }
+    caddr, csize, csym = callers[0]
+    if csize == 0:
+        return None, None, {
+            "failure": "llvm-caller-unverified",
+            "detail": f"caller {csym!r} has no declared extent",
+        }
+    try:
+        cinsns = disassemble(dso, caddr, caddr + csize, timeout)
+    except Refusal as exc:
+        return None, None, {
+            "failure": "llvm-caller-unverified",
+            "detail": f"caller {csym!r}: {exc.message}",
+        }
+    problem = disassembly_problem(cinsns, caddr, csize)
+    if problem:
+        return None, None, {
+            "failure": "llvm-caller-unverified",
+            "detail": f"caller {csym!r}: {problem}",
+        }
+    sites = [insn.addr for insn in cinsns
+             if insn.mnem in {"call", "callq"} and target_of(insn) == addr]
+    if not sites:
+        return None, None, {
+            "failure": "llvm-call-witness-missing",
+            "detail": f"caller {csym!r} has no direct call to 0x{addr:x}",
+        }
+    witness = {
+        "suffix": matched,
+        "symbol": sym, "addr": addr, "size": size,
+        "caller": csym, "caller_addr": caddr,
+        "call_addrs": sites,
+        "producer": rule.producer,
+        "check": rule.check,
+    }
+    return (addr, size, sym), witness, None
+
+
+# --- comparison-result contract --------------------------------------------
+#
+# A within-function may-taint analysis over registers.  Memory is not modelled
+# (a load does not inherit taint), a call does not clobber the tracked seeds,
+# and implicit flow through a previous conditional transfer is not propagated.
+# Those limits are stated in the report; the analysis establishes only what it
+# says: which flag-reading instructions read a register reached by data flow
+# from the located XOR/OR comparison accumulator.
+
+_REG_ALIASES: dict[str, str] = {}
+for _i in range(8, 16):
+    for _suffix in ("", "d", "w", "b", "l"):
+        _REG_ALIASES[f"r{_i}{_suffix}"] = f"r{_i}"
+for _base, _alts in {
+    "rax": ("rax", "eax", "ax", "al", "ah"),
+    "rbx": ("rbx", "ebx", "bx", "bl", "bh"),
+    "rcx": ("rcx", "ecx", "cx", "cl", "ch"),
+    "rdx": ("rdx", "edx", "dx", "dl", "dh"),
+    "rsi": ("rsi", "esi", "si", "sil"),
+    "rdi": ("rdi", "edi", "di", "dil"),
+    "rbp": ("rbp", "ebp", "bp", "bpl"),
+    "rsp": ("rsp", "esp", "sp", "spl"),
+}.items():
+    for _alt in _alts:
+        _REG_ALIASES[_alt] = _base
+
+_XMM_RE = re.compile(r"^[xyz]mm(\d+)$")
+
+
+def canon_reg(token: str) -> str | None:
+    token = token.strip()
+    if not token:
+        return None
+    m = _XMM_RE.match(token)
+    if m:
+        return f"xmm{m.group(1)}"
+    return _REG_ALIASES.get(token)
+
+
+def split_operands(ops: str) -> list[str]:
+    out: list[str] = []
+    depth = 0
+    cur = ""
+    for ch in ops:
+        if ch == "(":
+            depth += 1
+        elif ch == ")":
+            depth -= 1
+        if ch == "," and depth == 0:
+            out.append(cur.strip())
+            cur = ""
+        else:
+            cur += ch
+    if cur.strip():
+        out.append(cur.strip())
+    return out
+
+
+def operand_regs(op: str) -> set[str]:
+    regs: set[str] = set()
+    for tok in re.findall(r"%([a-z0-9]+)", op):
+        reg = canon_reg(tok)
+        if reg is not None:
+            regs.add(reg)
+    return regs
+
+
+def dest_reg(insn: Insn) -> str | None:
+    ops = split_operands(insn.ops)
+    if not ops:
+        return None
+    last = ops[-1]
+    if "(" in last or last.startswith("$") or last.startswith("*"):
+        return None
+    return canon_reg(last.lstrip("%"))
+
+
+_READ_MODIFY = {
+    "add", "sub", "and", "or", "xor", "adc", "sbb", "imul",
+    "shl", "shr", "sar", "sal", "rol", "ror", "rcl", "rcr",
+    "inc", "dec", "neg", "not", "bswap", "popcnt", "lzcnt", "tzcnt",
+}
+
+
+def step_taint(insn: Insn, taint: set[str], seed_at: dict[int, set[str]],
+               flag_taint: bool) -> None:
+    """Apply one instruction to a mutable may-taint register set."""
+    m = base_mnem(insn.mnem)
+    ops = split_operands(insn.ops)
+    d = dest_reg(insn)
+    if d is not None:
+        if ops and ops[0].startswith("$") and m in {"mov", "movabs"}:
+            taint.discard(d)
+        elif (len(ops) == 2
+              and canon_reg(ops[0].lstrip("%")) == d
+              and m in {"xor", "sub", "pxor", "psubd", "psubq", "psubb"}):
+            taint.discard(d)
+        elif insn.mnem.startswith("set"):
+            if flag_taint:
+                taint.add(d)
+            else:
+                taint.discard(d)
+        elif insn.mnem.startswith("cmov"):
+            srcs: set[str] = set()
+            for op in ops[:-1]:
+                if "(" not in op:
+                    srcs |= operand_regs(op)
+            if flag_taint or (srcs & taint):
+                taint.add(d)
+            else:
+                taint.discard(d)
+        else:
+            srcs = set()
+            for op in ops[:-1]:
+                if "(" not in op:
+                    srcs |= operand_regs(op)
+            if m in _READ_MODIFY or (len(ops) == 2 and ops[0].startswith("$")):
+                srcs.add(d)
+            if srcs & taint:
+                taint.add(d)
+            else:
+                taint.discard(d)
+    if insn.addr in seed_at:
+        taint |= seed_at[insn.addr]
+
+
+def basic_blocks(insns: list[Insn]) -> tuple[list[list[int]], dict[int, list[int]]]:
+    addr_to_idx = {insn.addr: i for i, insn in enumerate(insns)}
+    starts = {0}
+    for i, insn in enumerate(insns):
+        if is_control(insn):
+            if i + 1 < len(insns):
+                starts.add(i + 1)
+            tgt = target_of(insn)
+            if tgt is not None and tgt in addr_to_idx:
+                starts.add(addr_to_idx[tgt])
+    ordered = sorted(starts)
+    blocks = [list(range(s, ordered[k + 1] if k + 1 < len(ordered) else len(insns)))
+              for k, s in enumerate(ordered)]
+    index_of_start = {ordered[k]: k for k in range(len(ordered))}
+    succ: dict[int, list[int]] = {}
+    for k, indices in enumerate(blocks):
+        last = insns[indices[-1]]
+        out: list[int] = []
+        falls = k + 1 if k + 1 < len(blocks) else None
+        if is_jcc(last):
+            tgt = target_of(last)
+            if tgt is not None and tgt in addr_to_idx:
+                out.append(index_of_start[addr_to_idx[tgt]])
+            if falls is not None:
+                out.append(falls)
+        elif last.mnem in {"jmp", "jmpq"}:
+            tgt = target_of(last)
+            if tgt is not None and tgt in addr_to_idx:
+                out.append(index_of_start[addr_to_idx[tgt]])
+        elif last.mnem in {"ret", "retq"}:
+            pass
+        elif falls is not None:
+            out.append(falls)
+        succ[k] = out
+    return blocks, succ
+
+
+def dominators(blocks: list[list[int]], succ: dict[int, list[int]]):
+    """Classic iterative dominator sets over the basic-block CFG."""
+    allb = set(range(len(blocks)))
+    preds: dict[int, set[int]] = {k: set() for k in allb}
+    for k, outs in succ.items():
+        for s in outs:
+            preds[s].add(k)
+    dom = {k: set(allb) for k in allb}
+    dom[0] = {0}
+    changed = True
+    while changed:
+        changed = False
+        for k in sorted(allb):
+            if k == 0:
+                continue
+            if preds[k]:
+                common = set(allb)
+                for p in preds[k]:
+                    common &= dom[p]
+                new = {k} | common
+            else:
+                new = {k}
+            if new != dom[k]:
+                dom[k] = new
+                changed = True
+    return dom
+
+
+def find_comparison_loops(insns: list[Insn]):
+    """Locate XOR/OR accumulation loops and the registers they accumulate."""
+    addr_to_idx = {insn.addr: i for i, insn in enumerate(insns)}
+    blocks, succ = basic_blocks(insns)
+    dom = dominators(blocks, succ)
+    block_of_addr: dict[int, int] = {}
+    for k, indices in enumerate(blocks):
+        for idx in indices:
+            block_of_addr[insns[idx].addr] = k
+    loops = []
+    seed_at: dict[int, set[str]] = {}
+    for i, insn in enumerate(insns):
+        if not is_jcc(insn):
+            continue
+        tgt = target_of(insn)
+        if tgt is None or tgt >= insn.addr:
+            continue
+        header = block_of_addr.get(tgt)
+        if header is None or header not in dom.get(block_of_addr.get(insn.addr, -1), set()):
+            # Not a natural loop (the target does not dominate the back edge).
+            continue
+        hi = addr_to_idx.get(tgt)
+        if hi is None or hi >= i:
+            continue
+        body = insns[hi:i + 1]
+        loaded: set[str] = set()
+        for b in body:
+            if not base_mnem(b.mnem).startswith("mov"):
+                continue
+            ops = split_operands(b.ops)
+            if len(ops) >= 2 and any("(" in op for op in ops[:-1]):
+                d = dest_reg(b)
+                if d is not None:
+                    loaded.add(d)
+        xors: set[str] = set()
+        for b in body:
+            if base_mnem(b.mnem) not in {"xor", "pxor"}:
+                continue
+            ops = split_operands(b.ops)
+            regs: set[str] = set()
+            for op in ops:
+                regs |= operand_regs(op)
+            d = dest_reg(b)
+            if d is None:
+                continue
+            if any("(" in op for op in ops) or (regs & loaded):
+                xors.add(d)
+        if not xors:
+            continue
+        loop_seeds: set[str] = set()
+        for b in body:
+            if base_mnem(b.mnem) not in {"or", "por"}:
+                continue
+            regs = set()
+            for op in split_operands(b.ops):
+                regs |= operand_regs(op)
+            d = dest_reg(b)
+            if d is not None and (regs & xors):
+                loop_seeds.add(d)
+                seed_at.setdefault(b.addr, set()).add(d)
+        if loop_seeds:
+            loops.append({"start": f"0x{tgt:x}", "end": f"0x{insn.addr:x}",
+                          "seeds": sorted(loop_seeds)})
+    return loops, seed_at
+
+
+def taint_fixpoint(insns: list[Insn], seed_at: dict[int, set[str]]):
+    blocks, succ = basic_blocks(insns)
+    tin: dict[int, set[str]] = {0: set()}
+    work = [0]
+    queued = {0}
+    rounds = 0
+    while work:
+        rounds += 1
+        if rounds > 10000:
+            raise Refusal(EXIT_USAGE, "comparison-taint did not converge")
+        k = work.pop(0)
+        queued.discard(k)
+        taint = set(tin.get(k, set()))
+        for idx in blocks[k]:
+            insn = insns[idx]
+            step_taint(insn, taint, seed_at, False)
+        for s in succ[k]:
+            merged = set(tin.get(s, set())) | taint
+            if merged != tin.get(s):
+                tin[s] = merged
+                if s not in queued:
+                    queued.add(s)
+                    work.append(s)
+    return blocks, tin
+
+
+def classify_readers(insns: list[Insn], blocks: list[list[int]],
+                     tin: dict[int, set[str]], seed_at: dict[int, set[str]]):
+    """Classify every jcc/setcc/cmovcc by the taint state of its condition."""
+    readers = []
+    for k, indices in enumerate(blocks):
+        taint = set(tin.get(k, set()))
+        last_setter: int | None = None
+        for idx in indices:
+            insn = insns[idx]
+            m = base_mnem(insn.mnem)
+            interesting = (is_jcc(insn) or insn.mnem.startswith("set")
+                           or insn.mnem.startswith("cmov"))
+            flag_taint = False
+            source = "unknown"
+            if interesting:
+                if last_setter is None:
+                    cls = "undetermined"
+                else:
+                    setter = insns[last_setter]
+                    regs: set[str] = set()
+                    for op in split_operands(setter.ops):
+                        if "(" not in op:
+                            regs |= operand_regs(op)
+                    flag_taint = bool(regs & taint)
+                    cls = "secret-derived" if flag_taint else "public-bound"
+                    source = f"0x{setter.addr:x}: {setter.text}"
+                if is_jcc(insn):
+                    kind = "jcc"
+                elif insn.mnem.startswith("set"):
+                    kind = "setcc"
+                else:
+                    kind = "cmov"
+                readers.append({
+                    "kind": kind, "addr": insn.addr, "insn": insn.text,
+                    "source": source, "class": cls,
+                })
+            if m in FLAG_SETTERS:
+                last_setter = idx
+            step_taint(insn, taint, seed_at, flag_taint)
+    return readers
+
+
+def run_comparison_contract(insns: list[Insn], target: Target):
+    contract = target.comparison_contract
+    if contract is None:
+        return None, None
+    loops, seed_at = find_comparison_loops(insns)
+    if not loops:
+        return None, {
+            "failure": "comparison-accumulation-missing",
+            "detail": "no XOR/OR accumulation loop located; contract not satisfiable",
+        }
+    blocks, tin = taint_fixpoint(insns, seed_at)
+    readers = classify_readers(insns, blocks, tin, seed_at)
+    violations = [r for r in readers
+                  if r["kind"] == "jcc" and r["class"] == "secret-derived"]
+    undetermined = [r for r in readers if r["class"] == "undetermined"]
+    detail = {
+        "kind": contract.kind, "check": contract.check,
+        "loops": loops,
+        "seed_registers": sorted({r for regs in seed_at.values() for r in regs}),
+        "readers": readers,
+        "violations": violations,
+        "undetermined": undetermined,
+    }
+    if violations:
+        first = violations[0]
+        return detail, {
+            "failure": "secret-derived-conditional-jump",
+            "detail": (f"0x{first['addr']:x} {first['insn']} "
+                       f"condition from {first['source']}"),
+            "violation": first,
+        }
+    if undetermined:
+        first = undetermined[0]
+        return detail, {
+            "failure": "condition-provenance-undetermined",
+            "detail": f"0x{first['addr']:x} {first['insn']}",
+        }
+    return detail, None
+
+
 def audit(dso: str, target: Target, symtab, timeout: float,
           data: bytes) -> tuple[str, dict, list[dict]]:
     family = target.family
     label = (target.symbol if target.module is None
              else f"{target.module}::{target.symbol}")
     inline_used = False
+    llvm_used = False
     witness = None
     matches = find_symbols(symtab, target.symbol, target.module)
     if not matches:
-        if target.resolves_to is None:
+        if target.llvm_suffix is not None:
+            carrier, witness, failure = verify_llvm_suffix(
+                dso, target, symtab, timeout, data)
+            if failure is not None:
+                failure.update({"short": label})
+                return family, failure, []
+            matches = [carrier]
+            llvm_used = True
+        elif target.resolves_to is None:
             return family, {"failure": "missing", "short": label}, []
-        carrier, witness, failure = verify_inline_mapping(
-            dso, target, symtab, timeout, data)
-        if failure is not None:
-            failure.update({"short": label, "resolves_to": target.resolves_to})
-            return family, failure, []
-        matches = [carrier]
-        inline_used = True
+        else:
+            carrier, witness, failure = verify_inline_mapping(
+                dso, target, symtab, timeout, data)
+            if failure is not None:
+                failure.update({"short": label,
+                                "resolves_to": target.resolves_to})
+                return family, failure, []
+            matches = [carrier]
+            inline_used = True
     if len(matches) > 1:
         return family, {"failure": "ambiguous", "short": label,
                         "candidates": [s for _, _, s in matches]}, []
@@ -650,6 +1214,9 @@ def audit(dso: str, target: Target, symtab, timeout: float,
         "intended": label, "declared_inline": target.resolves_to is not None,
         "resolves_to": target.resolves_to,
         "inline_used": inline_used, "inline_witness": witness,
+        "llvm_used": llvm_used, "llvm_witness": witness if llvm_used else None,
+        "declared_llvm": target.llvm_suffix is not None,
+        "contract": None,
     }
     for i, insn in enumerate(insns):
         if insn.mnem == "cpuid":
@@ -689,6 +1256,12 @@ def audit(dso: str, target: Target, symtab, timeout: float,
             "guarded": guarded, "target": "?" if tgt is None else f"0x{tgt:x}",
             "dir": direction,
         })
+    if target.comparison_contract is not None:
+        detail, contract_failure = run_comparison_contract(insns, target)
+        counts["contract"] = detail
+        counts["contract_failure"] = contract_failure
+        if contract_failure is not None:
+            contract_failure.update({"short": label, "symbol": sym, "addr": addr})
     return family, counts, rows
 
 
@@ -723,6 +1296,37 @@ def _load_inlining(index: int, value) -> Inlining:
     )
 
 
+def _load_llvm_suffix(index: int, value) -> LlvmSuffix:
+    if not isinstance(value, dict) or set(value) != LLVM_SUFFIX_KEYS:
+        raise Refusal(EXIT_USAGE,
+                      f"targets inventory entry {index}: 'llvm_suffix' must have "
+                      f"exactly the keys {sorted(LLVM_SUFFIX_KEYS)}")
+    for key in sorted(LLVM_SUFFIX_KEYS):
+        if not isinstance(value[key], str) or not value[key].strip():
+            raise Refusal(EXIT_USAGE,
+                          f"targets inventory entry {index}: 'llvm_suffix.{key}' "
+                          "must be a non-empty string")
+    return LlvmSuffix(caller=value["caller"], producer=value["producer"],
+                      check=value["check"])
+
+
+def _load_contract(index: int, value) -> ComparisonContract:
+    if not isinstance(value, dict) or set(value) != CONTRACT_KEYS:
+        raise Refusal(EXIT_USAGE,
+                      f"targets inventory entry {index}: 'comparison_contract' "
+                      f"must have exactly the keys {sorted(CONTRACT_KEYS)}")
+    for key in sorted(CONTRACT_KEYS):
+        if not isinstance(value[key], str) or not value[key].strip():
+            raise Refusal(EXIT_USAGE,
+                          f"targets inventory entry {index}: "
+                          f"'comparison_contract.{key}' must be a non-empty string")
+    if value["kind"] != "comparison-result-branch-free":
+        raise Refusal(EXIT_USAGE,
+                      f"targets inventory entry {index}: unsupported "
+                      f"comparison_contract kind {value['kind']!r}")
+    return ComparisonContract(kind=value["kind"], check=value["check"])
+
+
 def load_targets(path: str | None) -> list[Target]:
     if path is None:
         targets = list(TARGETS)
@@ -737,15 +1341,20 @@ def load_targets(path: str | None) -> list[Target]:
         base_keys = ({"family", "symbol"}, {"family", "module", "symbol"})
         inline_keys = tuple(keys | {"resolves_to", "inlining"} for keys in base_keys)
         bare_mapping = tuple(keys | {"resolves_to"} for keys in base_keys)
+        allowed = tuple(
+            keys | extra
+            for keys in base_keys + inline_keys + bare_mapping
+            for extra in (set(), {"llvm_suffix"}, {"comparison_contract"},
+                          {"llvm_suffix", "comparison_contract"}))
         targets = []
         for index, entry in enumerate(document):
-            if not isinstance(entry, dict) or set(entry) not in (
-                    base_keys + inline_keys + bare_mapping):
+            if not isinstance(entry, dict) or set(entry) not in allowed:
                 raise Refusal(EXIT_USAGE,
                               f"targets inventory entry {index} must be one of "
                               f'{{"family", "symbol"}}, '
                               f'{{"family", "module", "symbol"}}, or either with '
-                              f'"resolves_to" (and its "inlining" evidence)')
+                              f'"resolves_to" (and its "inlining" evidence), '
+                              f'"llvm_suffix" and/or "comparison_contract"')
             family, symbol = entry["family"], entry["symbol"]
             module = entry.get("module")
             if not isinstance(family, str) or not family:
@@ -761,7 +1370,18 @@ def load_targets(path: str | None) -> list[Target]:
                     raise Refusal(EXIT_USAGE,
                                   f"targets inventory entry {index}: empty resolves_to")
                 inlining = _load_inlining(index, entry.get("inlining"))
-            targets.append(Target(family, module, symbol, resolves_to, inlining))
+            llvm_suffix = None
+            if "llvm_suffix" in entry:
+                llvm_suffix = _load_llvm_suffix(index, entry["llvm_suffix"])
+            if llvm_suffix is not None and resolves_to is not None:
+                raise Refusal(EXIT_USAGE,
+                              f"targets inventory entry {index}: 'llvm_suffix' and "
+                              "'resolves_to' are mutually exclusive")
+            contract = None
+            if "comparison_contract" in entry:
+                contract = _load_contract(index, entry["comparison_contract"])
+            targets.append(Target(family, module, symbol, resolves_to, inlining,
+                                  llvm_suffix, contract))
     if not targets:
         raise Refusal(EXIT_USAGE, "the expected-target inventory is empty")
     seen: set[tuple[str | None, str]] = set()
@@ -775,8 +1395,9 @@ def load_targets(path: str | None) -> list[Target]:
 
 
 def report_failure(family: str, counts: dict) -> None:
-    reason = counts["failure"]
-    detail = counts.get("detail")
+    failure = counts.get("contract_failure") or counts
+    reason = failure["failure"]
+    detail = failure.get("detail")
     extra = ""
     if reason == "ambiguous":
         extra = " candidates=" + ",".join(counts.get("candidates", []))
@@ -784,8 +1405,10 @@ def report_failure(family: str, counts: dict) -> None:
         extra += f" detail={detail}"
     maps = (f' resolves_to="{counts["resolves_to"]}"'
             if counts.get("resolves_to") else "")
+    llvm = (f' llvm_suffix="{counts["llvm_witness"]["suffix"]}"'
+            if counts.get("llvm_witness") else "")
     print(
-        f'REFUSED target="{family}" symbol="{counts["short"]}"{maps} '
+        f'REFUSED target="{family}" symbol="{counts.get("short", counts.get("intended", "?"))}"{maps}{llvm} '
         f'reason={reason}{extra}',
         file=sys.stderr,
     )
@@ -870,12 +1493,14 @@ def main(argv: list[str] | None = None) -> int:
               f"{c['insns']} | {c['jcc']} | {c['div']} | {c['cmov']} | "
               f"{c['setcc']} | {c['jo']} | {c['loop']} | {c['calls']} | {c['cpuid']} |")
 
-    failures = [(fam, c) for fam, c, _ in results if c.get("failure")]
+    failures = [(fam, c) for fam, c, _ in results
+                if c.get("failure") or c.get("contract_failure")]
     print()
     print("## Coverage")
     print()
     print(f"- expected targets: {len(targets)}")
-    print(f"- resolved uniquely and disassembled: {len(targets) - len(failures)}")
+    resolved = len([1 for _, c, _ in results if not c.get("failure")])
+    print(f"- resolved uniquely and disassembled: {resolved}")
     mapped = [(fam, c) for fam, c, _ in results
               if not c.get("failure") and c.get("inline_used")]
     if mapped:
@@ -884,12 +1509,14 @@ def main(argv: list[str] | None = None) -> int:
             print(f"  - {fam}: intended `{c['intended']}` -> carrier `{c['symbol']}`")
     print(f"- failed: {len(failures)}")
     for fam, c in failures:
+        failure = c.get("contract_failure") or c
         extra = ""
-        if c["failure"] == "ambiguous":
+        if failure["failure"] == "ambiguous":
             extra = " candidates: " + ", ".join(c.get("candidates", []))
-        if c.get("detail"):
-            extra += f" detail: {c['detail']}"
-        print(f"  - {fam} (`{c['short']}`): {c['failure']}{extra}")
+        if failure.get("detail"):
+            extra += f" detail: {failure['detail']}"
+        print(f"  - {fam} (`{failure.get('short', c.get('intended', '?'))}`): "
+              f"{failure['failure']}{extra}")
 
     declared = [(fam, c) for fam, c, _ in results if c.get("declared_inline")]
     if declared:
@@ -924,6 +1551,62 @@ def main(argv: list[str] | None = None) -> int:
             if c.get("inline_used"):
                 print()
                 print(f"- **{fam}** recorded check: {c['inline_witness']['check']}")
+
+    llvm_mapped = [(fam, c) for fam, c, _ in results
+                   if not c.get("failure") and c.get("llvm_used")]
+    if llvm_mapped:
+        print()
+        print("## LLVM-suffixed local copies declared by the inventory")
+        print()
+        print("The exact-identifier rule is unchanged. A suffixed copy is admitted "
+              "only when the whole symbol matches the v0 structural form with "
+              "exact length prefixes, no alias shares its start address, the "
+              "producer string is in this DSO, and a declared caller has a "
+              "direct call to the copy. The call site is the witness that the "
+              "reviewed path reaches this body; it does not prove source "
+              "identity beyond those facts (see the module docstring).")
+        print()
+        print("| target | observed suffix | extent | caller | direct call sites | producer |")
+        print("|---|---|---:|---|---|---|")
+        for fam, c in llvm_mapped:
+            w = c["llvm_witness"]
+            sites = ", ".join(f"+0x{a - w['caller_addr']:x}"
+                              for a in w["call_addrs"])
+            print(f"| `{c['intended']}` | `{w['suffix']}` | {w['size']} B | "
+                  f"`{w['caller']}` | {sites} | `{w['producer']}` |")
+        for fam, c in llvm_mapped:
+            print()
+            print(f"- **{fam}** recorded check: {c['llvm_witness']['check']}")
+
+    contracts = [(fam, c) for fam, c, _ in results
+                 if c.get("contract") is not None]
+    if contracts:
+        print()
+        print("## Comparison-result branch contract")
+        print()
+        print("Register taint is seeded on the XOR/OR comparison accumulation and "
+              "propagated over the basic-block CFG. `public-bound` means no "
+              "tracked comparison register reaches the condition, not that the "
+              "branch is harmless. Memory and implicit flow are not modelled.")
+        for fam, c in contracts:
+            detail = c["contract"]
+            print()
+            print(f"### {fam}")
+            print()
+            print("- accumulated registers: "
+                  + ", ".join(f"`{r}`" for r in detail["seed_registers"]))
+            for loop in detail["loops"]:
+                print(f"- accumulation loop {loop['start']}..{loop['end']}: "
+                      + ", ".join(f"`{r}`" for r in loop["seeds"]))
+            print()
+            print("| kind | addr | instruction | condition source | class |")
+            print("|---|---|---|---|---|")
+            for r in detail["readers"]:
+                print(f"| {r['kind']} | `0x{r['addr']:x}` | `{r['insn']}` | "
+                      f"`{r['source']}` | **{r['class']}** |")
+            print()
+            print(f"- secret-derived conditional jumps: {len(detail['violations'])}")
+            print(f"- undetermined conditions: {len(detail['undetermined'])}")
 
     print()
     print("## Divisions")
@@ -982,17 +1665,24 @@ def main(argv: list[str] | None = None) -> int:
     for fam, c in failures:
         report_failure(fam, c)
     if failures:
+        contract_failures = [c for _, c in failures if c.get("contract_failure")]
         print(
             f"binary_branch_audit: FAIL-CLOSED: {len(failures)} of {len(targets)} "
-            "expected targets were refused; this report is not a gate result.",
+            "expected targets were refused"
+            + (f" ({len(contract_failures)} by a declared comparison contract)"
+               if contract_failures else "")
+            + "; this report is not a gate result.",
             file=sys.stderr,
         )
         return EXIT_TARGET
     mapped_note = (f"; {len(mapped)} resolved through a verified inline mapping"
                    if mapped else "")
+    llvm_note = (f"; {len(llvm_mapped)} resolved through a verified "
+                 "LLVM-suffix witness" if llvm_mapped else "")
     print(
         f"binary_branch_audit: {len(targets)} expected targets resolved uniquely "
-        f"with complete disassembly{mapped_note}; candidate sha256={digest}",
+        f"with complete disassembly{mapped_note}{llvm_note}; "
+        f"candidate sha256={digest}",
         file=sys.stderr,
     )
     return EXIT_OK

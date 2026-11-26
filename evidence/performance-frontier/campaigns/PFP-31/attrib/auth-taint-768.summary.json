@@ -1,0 +1,25 @@
+{
+  "log": "/work/evidence/performance-frontier/campaigns/PFP-31/raw/auth-taint-768.out",
+  "contexts": 4,
+  "origin_by_bucket": {
+    "runtime": 4
+  },
+  "contexts_with_bucket_on_path": {
+    "driver": 4,
+    "runtime": 4
+  },
+  "engine_on_path": 0,
+  "origin_in_engine": 0,
+  "top_origins": [
+    {
+      "contexts": 2,
+      "loc": "in /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+      "fn": "matrix_expand"
+    },
+    {
+      "contexts": 2,
+      "loc": "in /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+      "fn": "ml_kem_pairwise_test"
+    }
+  ]
+}

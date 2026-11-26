@@ -1,0 +1,10 @@
+real_dso_sha256 5e75b6945907536959c6339eb8acb4c362495dcf4a5a781983c76ac65e2ce5ae
+canary_dso_sha256 7a039deed0565a1c1507bbe584f75c54c9f59a434dd855937da2e556ab16da60
+tool_sha256 5d54f3a1995263032fbdd23f9ccd533b50fa53b283199b2e1f43a3002cd1dfd4
+tool_lines 1692
+objdump GNU objdump (GNU Binutils for Debian) 2.40
+real_audit_exit 1
+real_jump 0x2c9067
+canary_audit_exit 1
+canary_jump 0x300613
+pfp29_inventory_exit 0

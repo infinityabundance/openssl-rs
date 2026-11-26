@@ -1,0 +1,61 @@
+==84741== Memcheck, a memory error detector
+==84741== Copyright (C) 2002-2022, and GNU GPL'd, by Julian Seward et al.
+==84741== Using Valgrind-3.19.0 and LibVEX; rerun with -h for copyright info
+==84741== Command: /work/court/tmp/pfp31/instrument/pfp31_mlkem --lib /work/court/tmp/pfp31/../pfp29/a/distribution/libcrypto.so.3 --mode malformed --param 1024 --case valid --taint
+==84741== Parent PID: 84337
+==84741== 
+==84741== Conditional jump or move depends on uninitialised value(s)
+==84741==    at 0x51D47E9: openssl_rs::ml_kem::arith::matrix_expand (in /work/court/tmp/pfp29/a/distribution/libcrypto.so.3)
+==84741==    by 0x5100737: openssl_rs::ml_kem::key::ossl_ml_kem_genkey (in /work/court/tmp/pfp29/a/distribution/libcrypto.so.3)
+==84741==    by 0x52D742A: openssl_rs::provider::ml_kem_kmgmt::ml_kem_import (in /work/court/tmp/pfp29/a/distribution/libcrypto.so.3)
+==84741==    by 0x531A277: EVP_PKEY_fromdata (in /work/court/tmp/pfp29/a/distribution/libcrypto.so.3)
+==84741==    by 0x1095B4: key_from_seed (pfp31_mlkem.c:227)
+==84741==    by 0x10A31B: main (pfp31_mlkem.c:477)
+==84741== 
+==84741== Conditional jump or move depends on uninitialised value(s)
+==84741==    at 0x51D4814: openssl_rs::ml_kem::arith::matrix_expand (in /work/court/tmp/pfp29/a/distribution/libcrypto.so.3)
+==84741==    by 0x5100737: openssl_rs::ml_kem::key::ossl_ml_kem_genkey (in /work/court/tmp/pfp29/a/distribution/libcrypto.so.3)
+==84741==    by 0x52D742A: openssl_rs::provider::ml_kem_kmgmt::ml_kem_import (in /work/court/tmp/pfp29/a/distribution/libcrypto.so.3)
+==84741==    by 0x531A277: EVP_PKEY_fromdata (in /work/court/tmp/pfp29/a/distribution/libcrypto.so.3)
+==84741==    by 0x1095B4: key_from_seed (pfp31_mlkem.c:227)
+==84741==    by 0x10A31B: main (pfp31_mlkem.c:477)
+==84741== 
+==84741== Conditional jump or move depends on uninitialised value(s)
+==84741==    at 0x5103067: openssl_rs::ml_kem::key::decap (in /work/court/tmp/pfp29/a/distribution/libcrypto.so.3)
+==84741==    by 0x51001FC: openssl_rs::ml_kem::key::ossl_ml_kem_decap (in /work/court/tmp/pfp29/a/distribution/libcrypto.so.3)
+==84741==    by 0x52D8702: openssl_rs::provider::ml_kem_kmgmt::ml_kem_pairwise_test (in /work/court/tmp/pfp29/a/distribution/libcrypto.so.3)
+==84741==    by 0x52D7492: openssl_rs::provider::ml_kem_kmgmt::ml_kem_import (in /work/court/tmp/pfp29/a/distribution/libcrypto.so.3)
+==84741==    by 0x531A277: EVP_PKEY_fromdata (in /work/court/tmp/pfp29/a/distribution/libcrypto.so.3)
+==84741==    by 0x1095B4: key_from_seed (pfp31_mlkem.c:227)
+==84741==    by 0x10A31B: main (pfp31_mlkem.c:477)
+==84741== 
+==84741== Conditional jump or move depends on uninitialised value(s)
+==84741==    at 0x52D872F: openssl_rs::provider::ml_kem_kmgmt::ml_kem_pairwise_test (in /work/court/tmp/pfp29/a/distribution/libcrypto.so.3)
+==84741==    by 0x52D7492: openssl_rs::provider::ml_kem_kmgmt::ml_kem_import (in /work/court/tmp/pfp29/a/distribution/libcrypto.so.3)
+==84741==    by 0x531A277: EVP_PKEY_fromdata (in /work/court/tmp/pfp29/a/distribution/libcrypto.so.3)
+==84741==    by 0x1095B4: key_from_seed (pfp31_mlkem.c:227)
+==84741==    by 0x10A31B: main (pfp31_mlkem.c:477)
+==84741== 
+==84741== Conditional jump or move depends on uninitialised value(s)
+==84741==    at 0x5103067: openssl_rs::ml_kem::key::decap (in /work/court/tmp/pfp29/a/distribution/libcrypto.so.3)
+==84741==    by 0x51001FC: openssl_rs::ml_kem::key::ossl_ml_kem_decap (in /work/court/tmp/pfp29/a/distribution/libcrypto.so.3)
+==84741==    by 0x52D1B24: openssl_rs::provider::ml_kem_kem::ml_kem_decapsulate (in /work/court/tmp/pfp29/a/distribution/libcrypto.so.3)
+==84741==    by 0x109337: decapsulate (pfp31_mlkem.c:275)
+==84741==    by 0x10A408: main (pfp31_mlkem.c:491)
+==84741== 
+==84741== 
+==84741== HEAP SUMMARY:
+==84741==     in use at exit: 468,520 bytes in 3,790 blocks
+==84741==   total heap usage: 15,647 allocs, 11,857 frees, 782,942 bytes allocated
+==84741== 
+==84741== LEAK SUMMARY:
+==84741==    definitely lost: 119,776 bytes in 76 blocks
+==84741==    indirectly lost: 0 bytes in 0 blocks
+==84741==      possibly lost: 43,600 bytes in 485 blocks
+==84741==    still reachable: 305,144 bytes in 3,229 blocks
+==84741==         suppressed: 0 bytes in 0 blocks
+==84741== Rerun with --leak-check=full to see details of leaked memory
+==84741== 
+==84741== Use --track-origins=yes to see where uninitialised values come from
+==84741== For lists of detected and suppressed errors, rerun with: -s
+==84741== ERROR SUMMARY: 4992 errors from 5 contexts (suppressed: 0 from 0)

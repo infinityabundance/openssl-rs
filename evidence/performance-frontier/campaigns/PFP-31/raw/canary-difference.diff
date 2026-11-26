@@ -1,0 +1,47 @@
+--- /work/src/ml_kem/key.rs	2026-11-25 07:20:58.196408692 +0000
++++ /work/court/tmp/pfp31/canary-src/src/ml_kem/key.rs	2026-11-26 09:09:11.146326519 +0000
+@@ -570,6 +570,28 @@
+     }
+ }
+ 
++// CANARY (PFP-31 negative control): model the two arms as distinct opaque
++// copies. They produce identical bytes; only the control transfer differs.
++#[inline(never)]
++unsafe fn canary_take_kr(out: *mut u8, src: *const u8) {
++    // SAFETY: canary-only; both buffers are ML_KEM_SHARED_SECRET_BYTES long.
++    unsafe {
++        for i in 0..ML_KEM_SHARED_SECRET_BYTES {
++            *out.add(i) = *src.add(i);
++        }
++    }
++}
++
++#[inline(never)]
++unsafe fn canary_take_failure_key(out: *mut u8, src: *const u8) {
++    // SAFETY: canary-only; both buffers are ML_KEM_SHARED_SECRET_BYTES long.
++    unsafe {
++        for i in (0..ML_KEM_SHARED_SECRET_BYTES).rev() {
++            *out.add(i) = *src.add(i);
++        }
++    }
++}
++
+ /// `decap(secret, ctext, tmp_ctext, tmp, mdctx, key)` — `ml_kem.c:1837-1890`, Algorithm 18.
+ ///
+ /// # Safety
+@@ -634,8 +656,13 @@
+             0,
+             CRYPTO_memcmp(ctext.cast(), tmp_ctext.cast(), (*vinfo).ctext_bytes),
+         );
+-        for i in 0..ML_KEM_SHARED_SECRET_BYTES {
+-            *secret.add(i) = constant_time_select_8(mask, kr[i], failure_key[i]);
++        // CANARY (PFP-31 negative control): a branch on the comparison result
++        // instead of the constant-time select. Two distinct `#[inline(never)]`
++        // sinks keep the optimiser from if-converting it into a data select.
++        if mask != 0 {
++            canary_take_kr(secret, kr.as_ptr());
++        } else {
++            canary_take_failure_key(secret, failure_key.as_ptr());
+         }
+         OPENSSL_cleanse(decrypted.as_mut_ptr().cast(), ML_KEM_SHARED_SECRET_BYTES);
+         OPENSSL_cleanse(kr.as_mut_ptr().cast(), kr.len());
