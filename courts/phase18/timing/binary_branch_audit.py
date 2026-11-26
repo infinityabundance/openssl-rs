@@ -59,6 +59,50 @@ length-prefixed, so the final identifier is matched only when the digits
 immediately before it parse to exactly its length; an identifier whose length
 merely *ends* with those digits is not a match.  More than one match is refused
 rather than resolved to whichever symbol came first in the table.
+
+## Inline resolution (``resolves_to``)
+
+A release optimiser may inline a small wrapper so completely that no
+out-of-line body survives, while the work it forwards to is still present under
+another symbol.  An inventory target may declare that mapping:
+
+    {"family": ..., "symbol": "wrapper",
+     "resolves_to": "wrapper_extended",
+     "inlining": {"suffix": "_extended", "caller": "caller_symbol",
+                  "constant_argument": "push $0x0",
+                  "producer": "<compiler producer string>",
+                  "check": "<what established the inlining>"}}
+
+The mapping is not taken on trust.  It is consulted **only** when the intended
+symbol has no out-of-line body, and it is admitted **only** when the audit
+re-establishes each of these facts from the artefact:
+
+  * ``resolves_to`` is exactly ``symbol + suffix``, and the symbol table carries
+    that identifier with a v0 length prefix equal to its whole length, so a
+    differently named function cannot be substituted;
+  * the carrier resolves uniquely and has a non-zero extent with complete
+    disassembly (the ordinary checks below);
+  * ``caller`` resolves to one defined symbol whose own disassembly is complete,
+    and that caller contains a direct ``call`` to the carrier's entry, so the
+    intended call path really reaches the carrier;
+  * the instruction ``constant_argument`` appears between the previous control
+    transfer and that call, so the constant the wrapper supplied (e.g. the
+    ``None`` tag of a one-line forwarder) is present at the site;
+  * ``producer`` occurs in the artefact's bytes, binding the recorded compiler
+    identity to this DSO rather than to the inventory.
+
+The report records both names, so a mapped target still shows that the intended
+target was reached.  What the mapping cannot prove is that the wrapper's source
+was inlined rather than deleted and its caller edited to the same call: those
+produce the same instruction stream.  That residual is stated here and the
+inventory's ``check`` field records the source-level fact; the audit claims only
+the facts listed above.  When the intended symbol does have an out-of-line body
+the mapping is not used and that body is audited.
+
+Named refusals for a declared mapping: ``inline-witness-inconsistent``,
+``inline-carrier-missing``, ``inline-carrier-ambiguous``,
+``inline-caller-unverified``, ``inline-call-witness-missing``,
+``inline-constant-argument-missing``, ``inline-producer-absent``.
 """
 
 from __future__ import annotations
@@ -73,9 +117,34 @@ import subprocess
 import sys
 from dataclasses import dataclass
 
-# (family, module, short symbol name).  The short name is the final
-# length-prefixed identifier of the Rust v0 mangled symbol, matched exactly so
-# that e.g. `mod_inverse_consttime` is not confused with
+@dataclass(frozen=True)
+class Inlining:
+    """The recorded justification for a target that has no out-of-line body.
+
+    Every field is re-established from the artefact at audit time; see the
+    module docstring.  `check` is a record of the source-level fact, not a
+    check the audit executes.
+    """
+
+    suffix: str
+    caller: str
+    constant_argument: str
+    producer: str
+    check: str
+
+
+@dataclass(frozen=True)
+class Target:
+    family: str
+    module: str | None
+    symbol: str
+    resolves_to: str | None = None
+    inlining: Inlining | None = None
+
+
+# (family, module, short symbol name, optional inline resolution).  The short
+# name is the final length-prefixed identifier of the Rust v0 mangled symbol,
+# matched exactly so that e.g. `mod_inverse_consttime` is not confused with
 # `BN_mod_inverse_consttime`.  When `module` is present the match additionally
 # requires the preceding v0 path component to be exactly that module, using the
 # same length-prefix check for both identifiers.  This names a free function
@@ -83,16 +152,39 @@ from dataclasses import dataclass
 # `mont_reduce_into` follows the module `p256`, whose trailing digits merge with
 # the function's length prefix).  It is an exact, more specific match; it does
 # not relax the short-name rule.
+#
+# `resolves_to`/`inlining` are used only when the optimiser left no out-of-line
+# body for the named symbol; see the module docstring.  The P-256 ladder core is
+# the observed case: `mod_exp_core_consttime_from_parts` is a one-line forwarder
+# to `..._from_parts_prepared(.., None)`, inlined into its caller `BN_mod_exp` on
+# the PFP-2 digests, so the only out-of-line body is the prepared entry point.
 TARGETS = [
-    ("Montgomery multiply (core)", None, "mont_mul_into"),
-    ("Montgomery multiply (allocating wrapper)", None, "mont_mul_fallible"),
-    ("Constant-time ladder core", None, "mod_exp_core_consttime_from_parts"),
-    ("Constant-time inversion", None, "mod_inverse_consttime"),
-    ("ECDSA scalar ladder (driver)", None, "ossl_ec_scalar_mul_ladder"),
-    ("EC ladder step (secret core)", None, "ossl_ec_GFp_simple_ladder_step"),
-    ("RSA CRT arms", None, "rsa_ossl_mod_exp"),
-    ("P-256 Montgomery reduction", "p256", "mont_reduce_into"),
-    ("P-256 x86-64 multiply", "p256", "wide_mul_x86"),
+    Target("Montgomery multiply (core)", None, "mont_mul_into"),
+    Target("Montgomery multiply (allocating wrapper)", None, "mont_mul_fallible"),
+    Target(
+        "Constant-time ladder core", None, "mod_exp_core_consttime_from_parts",
+        resolves_to="mod_exp_core_consttime_from_parts_prepared",
+        inlining=Inlining(
+            suffix="_prepared",
+            caller="BN_mod_exp",
+            constant_argument="push $0x0",
+            producer="clang LLVM (rustc version 1.98.1 (48a229cea 2026-09-01))",
+            check=(
+                "mod_exp_core_consttime_from_parts(ad, pd, md, n) is the "
+                "one-line forwarder to "
+                "mod_exp_core_consttime_from_parts_prepared(ad, pd, md, n, "
+                "None); in the release DSO its only non-test caller BN_mod_exp "
+                "calls the prepared entry directly with the None tag, so no "
+                "out-of-line body of the wrapper is emitted"
+            ),
+        ),
+    ),
+    Target("Constant-time inversion", None, "mod_inverse_consttime"),
+    Target("ECDSA scalar ladder (driver)", None, "ossl_ec_scalar_mul_ladder"),
+    Target("EC ladder step (secret core)", None, "ossl_ec_GFp_simple_ladder_step"),
+    Target("RSA CRT arms", None, "rsa_ossl_mod_exp"),
+    Target("P-256 Montgomery reduction", "p256", "mont_reduce_into"),
+    Target("P-256 x86-64 multiply", "p256", "wide_mul_x86"),
 ]
 
 FLAG_SETTERS = {
@@ -370,12 +462,162 @@ def guarded_window(insns: list[Insn], i: int) -> tuple[str, list[Insn]]:
     return "+".join(sorted(tags)), window
 
 
-def audit(dso: str, family: str, module: str | None, short: str, symtab,
-          timeout: float) -> tuple[str, dict, list[dict]]:
-    label = short if module is None else f"{module}::{short}"
-    matches = find_symbols(symtab, short, module)
+def find_exact(symtab: list[tuple[int, int, str]], name: str):
+    """Defined symbols named exactly `name`, else the exact v0 identifier match.
+
+    An ABI-exported caller is a plain C identifier (`BN_mod_exp`), which the v0
+    length-prefix rule does not apply to.  A Rust caller still resolves through
+    the same exact rule `find_symbols` uses.
+    """
+    exact = [entry for entry in symtab if entry[2] == name]
+    return exact if exact else find_symbols(symtab, name)
+
+
+def _identifier_is(symbol: str, identifier: str) -> bool:
+    """True when `symbol` ends with the v0 form `<len(identifier)><identifier>`."""
+    m = re.search(r"(\d+)" + re.escape(identifier) + r"$", symbol)
+    return m is not None and int(m.group(1)) == len(identifier)
+
+
+def verify_inline_mapping(dso: str, target: Target, symtab, timeout: float,
+                          data: bytes):
+    """Re-establish a declared `resolves_to` mapping from the artefact.
+
+    Returns ``(carrier, witness, failure)``.  On success `carrier` is the
+    ``(addr, size, symbol)`` entry to audit and `witness` is the verified call
+    path.  On any unverified fact, `failure` is a refusal dict and the caller
+    refuses the target -- the mapping is never admitted on the inventory's
+    word alone.
+    """
+    if target.resolves_to is None or target.inlining is None:
+        raise Refusal(EXIT_USAGE, "verify_inline_mapping called without a mapping")
+    rule = target.inlining
+    full = target.symbol + rule.suffix
+    # (1) the declared carrier must be exactly the target's identifier plus the
+    # recorded suffix.  A differently named function cannot be substituted,
+    # which is what makes control (c) ("an existing symbol that is not the
+    # body") detectable instead of guessed at.
+    if target.resolves_to != full:
+        return None, None, {
+            "failure": "inline-witness-inconsistent",
+            "detail": f"resolves_to={target.resolves_to} != symbol+suffix={full}",
+        }
+    carriers = [entry for entry in find_symbols(symtab, full)
+                if _identifier_is(entry[2], full)]
+    if not carriers:
+        return None, None, {
+            "failure": "inline-carrier-missing",
+            "detail": f"no defined .text symbol ends with {len(full)}{full}",
+        }
+    if len(carriers) > 1:
+        return None, None, {
+            "failure": "inline-carrier-ambiguous",
+            "candidates": [s for _, _, s in carriers],
+        }
+    carrier = carriers[0]
+    addr, size, sym = carrier
+    if size == 0:
+        return None, None, {
+            "failure": "zero-size", "symbol": sym, "addr": addr,
+        }
+    # (2) the recorded producer string must be a property of this artefact.
+    if rule.producer.encode() not in data:
+        return None, None, {
+            "failure": "inline-producer-absent",
+            "detail": f"producer string not in the DSO: {rule.producer!r}",
+        }
+    # (3) the recorded caller must exist, disassemble completely, and contain a
+    # direct call to the carrier's entry: the intended call path reaches it.
+    callers = find_exact(symtab, rule.caller)
+    if not callers:
+        return None, None, {
+            "failure": "inline-caller-unverified",
+            "detail": f"caller {rule.caller!r} is not a defined symbol",
+        }
+    if len(callers) > 1:
+        return None, None, {
+            "failure": "inline-caller-unverified",
+            "detail": f"caller {rule.caller!r} is ambiguous",
+        }
+    caddr, csize, csym = callers[0]
+    if csize == 0:
+        return None, None, {
+            "failure": "inline-caller-unverified",
+            "detail": f"caller {csym!r} has no declared extent",
+        }
+    try:
+        cinsns = disassemble(dso, caddr, caddr + csize, timeout)
+    except Refusal as exc:
+        return None, None, {
+            "failure": "inline-caller-unverified",
+            "detail": f"caller {csym!r}: {exc.message}",
+        }
+    problem = disassembly_problem(cinsns, caddr, csize)
+    if problem:
+        return None, None, {
+            "failure": "inline-caller-unverified",
+            "detail": f"caller {csym!r}: {problem}",
+        }
+    wanted = " ".join(rule.constant_argument.split())
+    site = None
+    for i, insn in enumerate(cinsns):
+        if insn.mnem not in {"call", "callq"} or target_of(insn) != addr:
+            continue
+        # (4) the wrapper's forwarded constant must be at the site: scan back to
+        # the previous control transfer (bounded by 16 instructions).
+        for j in range(i - 1, max(-1, i - 17), -1):
+            previous = cinsns[j]
+            if is_control(previous):
+                break
+            if previous.text == wanted:
+                site = (insn, previous)
+                break
+        if site is not None:
+            break
+    if site is None:
+        calls_carrier = any(
+            insn.mnem in {"call", "callq"} and target_of(insn) == addr
+            for insn in cinsns
+        )
+        return None, None, {
+            "failure": ("inline-constant-argument-missing" if calls_carrier
+                        else "inline-call-witness-missing"),
+            "detail": (f"caller {csym!r} -> 0x{addr:x}: "
+                       + (f"no instruction {wanted!r} before the call"
+                          if calls_carrier
+                          else "no direct call to the carrier")),
+        }
+    call, constant = site
+    witness = {
+        "caller": csym,
+        "call_addr": call.addr,
+        "call_offset": call.addr - caddr,
+        "constant": constant.text,
+        "carrier": sym,
+        "producer": rule.producer,
+        "check": rule.check,
+    }
+    return carrier, witness, None
+
+
+def audit(dso: str, target: Target, symtab, timeout: float,
+          data: bytes) -> tuple[str, dict, list[dict]]:
+    family = target.family
+    label = (target.symbol if target.module is None
+             else f"{target.module}::{target.symbol}")
+    inline_used = False
+    witness = None
+    matches = find_symbols(symtab, target.symbol, target.module)
     if not matches:
-        return family, {"failure": "missing", "short": label}, []
+        if target.resolves_to is None:
+            return family, {"failure": "missing", "short": label}, []
+        carrier, witness, failure = verify_inline_mapping(
+            dso, target, symtab, timeout, data)
+        if failure is not None:
+            failure.update({"short": label, "resolves_to": target.resolves_to})
+            return family, failure, []
+        matches = [carrier]
+        inline_used = True
     if len(matches) > 1:
         return family, {"failure": "ambiguous", "short": label,
                         "candidates": [s for _, _, s in matches]}, []
@@ -384,19 +626,19 @@ def audit(dso: str, family: str, module: str | None, short: str, symtab,
         # A zero-size symbol has no declared extent.  Inventing one (the audit
         # used to assume 16 bytes) would report an instruction stream for an
         # arbitrary window and count it as resolved.
-        return family, {"failure": "zero-size", "short": short,
+        return family, {"failure": "zero-size", "short": label,
                         "symbol": sym, "addr": addr}, []
     try:
         insns = disassemble(dso, addr, addr + size, timeout)
     except Refusal as exc:
         reason = "timeout" if "timeout" in exc.message else "tool-failure"
-        return family, {"failure": reason, "short": short,
+        return family, {"failure": reason, "short": label,
                         "symbol": sym, "addr": addr, "size": size,
                         "detail": exc.message}, []
     problem = disassembly_problem(insns, addr, size)
     if problem:
         reason = problem.split(":", 1)[0]
-        return family, {"failure": reason, "short": short,
+        return family, {"failure": reason, "short": label,
                         "symbol": sym, "addr": addr, "size": size,
                         "detail": problem}, []
     rows: list[dict] = []
@@ -405,6 +647,9 @@ def audit(dso: str, family: str, module: str | None, short: str, symtab,
         "jcc": 0, "div": 0, "cmov": 0, "setcc": 0, "jo": 0, "loop": 0,
         "calls": 0, "cpuid": 0, "dispatch_calls": [], "div_rows": [],
         "missing": False, "failure": None,
+        "intended": label, "declared_inline": target.resolves_to is not None,
+        "resolves_to": target.resolves_to,
+        "inline_used": inline_used, "inline_witness": witness,
     }
     for i, insn in enumerate(insns):
         if insn.mnem == "cpuid":
@@ -458,7 +703,27 @@ def scan_cpuid(dso: str, timeout: float) -> tuple[int, list[int]]:
     return len(addrs), addrs
 
 
-def load_targets(path: str | None) -> list[tuple[str, str | None, str]]:
+INLINE_KEYS = {"suffix", "caller", "constant_argument", "producer", "check"}
+
+
+def _load_inlining(index: int, value) -> Inlining:
+    if not isinstance(value, dict) or set(value) != INLINE_KEYS:
+        raise Refusal(EXIT_USAGE,
+                      f"targets inventory entry {index}: 'inlining' must have exactly "
+                      f"the keys {sorted(INLINE_KEYS)}")
+    for key in sorted(INLINE_KEYS):
+        if not isinstance(value[key], str) or not value[key].strip():
+            raise Refusal(EXIT_USAGE,
+                          f"targets inventory entry {index}: 'inlining.{key}' must be "
+                          "a non-empty string")
+    return Inlining(
+        suffix=value["suffix"], caller=value["caller"],
+        constant_argument=value["constant_argument"],
+        producer=value["producer"], check=value["check"],
+    )
+
+
+def load_targets(path: str | None) -> list[Target]:
     if path is None:
         targets = list(TARGETS)
     else:
@@ -469,14 +734,18 @@ def load_targets(path: str | None) -> list[tuple[str, str | None, str]]:
             raise Refusal(EXIT_USAGE, f"cannot read targets inventory '{path}': {exc}")
         if not isinstance(document, list) or not document:
             raise Refusal(EXIT_USAGE, f"targets inventory '{path}' must be a non-empty list")
+        base_keys = ({"family", "symbol"}, {"family", "module", "symbol"})
+        inline_keys = tuple(keys | {"resolves_to", "inlining"} for keys in base_keys)
+        bare_mapping = tuple(keys | {"resolves_to"} for keys in base_keys)
         targets = []
         for index, entry in enumerate(document):
             if not isinstance(entry, dict) or set(entry) not in (
-                    {"family", "symbol"}, {"family", "module", "symbol"}):
+                    base_keys + inline_keys + bare_mapping):
                 raise Refusal(EXIT_USAGE,
-                              f"targets inventory entry {index} must be "
-                              f'{{"family": ..., "symbol": ...}} or '
-                              f'{{"family": ..., "module": ..., "symbol": ...}}')
+                              f"targets inventory entry {index} must be one of "
+                              f'{{"family", "symbol"}}, '
+                              f'{{"family", "module", "symbol"}}, or either with '
+                              f'"resolves_to" (and its "inlining" evidence)')
             family, symbol = entry["family"], entry["symbol"]
             module = entry.get("module")
             if not isinstance(family, str) or not family:
@@ -485,15 +754,23 @@ def load_targets(path: str | None) -> list[tuple[str, str | None, str]]:
                 raise Refusal(EXIT_USAGE, f"targets inventory entry {index}: empty symbol")
             if module is not None and (not isinstance(module, str) or not module):
                 raise Refusal(EXIT_USAGE, f"targets inventory entry {index}: empty module")
-            targets.append((family, module, symbol))
+            resolves_to = entry.get("resolves_to")
+            inlining = None
+            if resolves_to is not None:
+                if not isinstance(resolves_to, str) or not resolves_to:
+                    raise Refusal(EXIT_USAGE,
+                                  f"targets inventory entry {index}: empty resolves_to")
+                inlining = _load_inlining(index, entry.get("inlining"))
+            targets.append(Target(family, module, symbol, resolves_to, inlining))
     if not targets:
         raise Refusal(EXIT_USAGE, "the expected-target inventory is empty")
     seen: set[tuple[str | None, str]] = set()
-    for _, module, symbol in targets:
-        if (module, symbol) in seen:
-            label = symbol if module is None else f"{module}::{symbol}"
+    for target in targets:
+        if (target.module, target.symbol) in seen:
+            label = (target.symbol if target.module is None
+                     else f"{target.module}::{target.symbol}")
             raise Refusal(EXIT_USAGE, f"duplicate target symbol in inventory: {label}")
-        seen.add((module, symbol))
+        seen.add((target.module, target.symbol))
     return targets
 
 
@@ -505,8 +782,11 @@ def report_failure(family: str, counts: dict) -> None:
         extra = " candidates=" + ",".join(counts.get("candidates", []))
     if detail:
         extra += f" detail={detail}"
+    maps = (f' resolves_to="{counts["resolves_to"]}"'
+            if counts.get("resolves_to") else "")
     print(
-        f'REFUSED target="{family}" symbol="{counts["short"]}" reason={reason}{extra}',
+        f'REFUSED target="{family}" symbol="{counts["short"]}"{maps} '
+        f'reason={reason}{extra}',
         file=sys.stderr,
     )
 
@@ -550,8 +830,8 @@ def main(argv: list[str] | None = None) -> int:
         symtab = symbol_table(args.dso, args.timeout)
         objdump_version = run([objdump_bin(), "--version"], args.timeout,
                               "objdump --version").splitlines()[0]
-        results = [audit(args.dso, fam, module, short, symtab, args.timeout)
-                   for fam, module, short in targets]
+        results = [audit(args.dso, target, symtab, args.timeout, data)
+                   for target in targets]
         cpuid = None
         if not args.no_cpuid_scan:
             cpuid = scan_cpuid(args.dso, args.timeout)
@@ -584,7 +864,9 @@ def main(argv: list[str] | None = None) -> int:
                 detail = f": {c['detail']}" if c.get("detail") else ""
                 print(f"| {fam} | **{c['failure']}** (`{c['short']}`{detail}) | | | | | | | | | | |")
             continue
-        print(f"| {fam} | `{c['symbol']}` @ 0x{c['addr']:x} | {c['size']} | "
+        print(f"| {fam} | `{c['symbol']}` @ 0x{c['addr']:x}"
+              + (f" (carries `{c['intended']}`)" if c.get("inline_used") else "")
+              + f" | {c['size']} | "
               f"{c['insns']} | {c['jcc']} | {c['div']} | {c['cmov']} | "
               f"{c['setcc']} | {c['jo']} | {c['loop']} | {c['calls']} | {c['cpuid']} |")
 
@@ -594,6 +876,12 @@ def main(argv: list[str] | None = None) -> int:
     print()
     print(f"- expected targets: {len(targets)}")
     print(f"- resolved uniquely and disassembled: {len(targets) - len(failures)}")
+    mapped = [(fam, c) for fam, c, _ in results
+              if not c.get("failure") and c.get("inline_used")]
+    if mapped:
+        print(f"- of those, audited through a verified inline mapping: {len(mapped)}")
+        for fam, c in mapped:
+            print(f"  - {fam}: intended `{c['intended']}` -> carrier `{c['symbol']}`")
     print(f"- failed: {len(failures)}")
     for fam, c in failures:
         extra = ""
@@ -602,6 +890,40 @@ def main(argv: list[str] | None = None) -> int:
         if c.get("detail"):
             extra += f" detail: {c['detail']}"
         print(f"  - {fam} (`{c['short']}`): {c['failure']}{extra}")
+
+    declared = [(fam, c) for fam, c, _ in results if c.get("declared_inline")]
+    if declared:
+        print()
+        print("## Inline mappings declared by the inventory")
+        print()
+        print("A mapping is admitted only when the audit re-establishes the "
+              "name derivation (`resolves_to` is `symbol` + `suffix`), the "
+              "carrier's extent, a direct call from the declared caller, the "
+              "wrapper's constant argument at that site, and the producer string "
+              "in this DSO. It does not prove the wrapper was inlined rather "
+              "than source-edited away; those are the same instructions (see the "
+              "module docstring).")
+        print()
+        print("| target | carrier | state | caller | call site | constant | carrier extent | producer |")
+        print("|---|---|---|---|---|---|---:|---|")
+        for fam, c in declared:
+            intended = c.get("intended", c.get("short"))
+            if c.get("inline_used"):
+                w = c["inline_witness"]
+                print(f"| `{intended}` | `{w['carrier']}` | **verified, audited** | "
+                      f"`{w['caller']}` | +0x{w['call_offset']:x} | "
+                      f"`{w['constant']}` | {c['size']} B | "
+                      f"`{w['producer']}` |")
+            elif c.get("failure"):
+                print(f"| `{intended}` | `{c.get('resolves_to', '?')}` | "
+                      f"**refused: {c['failure']}** | | | | | |")
+            else:
+                print(f"| `{intended}` | `{c.get('resolves_to', '?')}` | "
+                      f"not used (out-of-line body present) | | | | | |")
+        for fam, c in declared:
+            if c.get("inline_used"):
+                print()
+                print(f"- **{fam}** recorded check: {c['inline_witness']['check']}")
 
     print()
     print("## Divisions")
@@ -666,9 +988,11 @@ def main(argv: list[str] | None = None) -> int:
             file=sys.stderr,
         )
         return EXIT_TARGET
+    mapped_note = (f"; {len(mapped)} resolved through a verified inline mapping"
+                   if mapped else "")
     print(
         f"binary_branch_audit: {len(targets)} expected targets resolved uniquely "
-        f"with complete disassembly; candidate sha256={digest}",
+        f"with complete disassembly{mapped_note}; candidate sha256={digest}",
         file=sys.stderr,
     )
     return EXIT_OK
