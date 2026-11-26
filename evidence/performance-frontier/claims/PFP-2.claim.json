@@ -1,13 +1,13 @@
 {
   "author": {
-    "identity": "openssl-rs performance programme (staging session, 2026-11-25)",
+    "identity": "openssl-rs performance programme (staging session, 2026-11-26)",
     "role": "producer"
   },
   "authority": {
     "build_id": "5b4871ce9d78edeafc96f143d7d6697d943ad804",
     "id": "openssl-3.6.4-production",
     "sha256": "611e511db4273c4b6b522031fd171efce71b80661bb8310c2a21dfd18ec0efd2",
-    "verification": "every candidate and authority process proved its mapped realpath, device, inode and size against the expected on-disk DSO; raw/identity-check.tsv records both subjects",
+    "verification": "every timing, differential and cross-verification process printed LOADED realpath/dev/ino/size for the file it mapped and LIB from dladdr; the runners compared those with stat(2) on the expected on-disk DSO",
     "verified_at_recorded_digest": true,
     "version": "3.6.4"
   },
@@ -17,38 +17,31 @@
       "PFP-0 (c9a0fdd5)",
       "PFP-1 (91ac573c0)"
     ],
-    "protocol": "docs/PERFORMANCE-METHODOLOGY.md \u00a75-\u00a76, 15 paired repetitions, balanced random order, one process per subject per repetition",
+    "protocol": "docs/PERFORMANCE-METHODOLOGY.md \u00a75-\u00a76, 15 paired repetitions, balanced random order, one process per subject per repetition; the frozen distribution DSO was not rebuilt",
     "results": {
-      "path": "evidence/performance-frontier/campaigns/PFP-2/authority/results.json",
+      "path": "evidence/performance-frontier/campaigns/PFP-2/timing-83f67826/results.json",
       "present": true,
-      "sha256": "b8934a99ff80ca2285995df2fd25749e6165f2a15834697076590855565cd675"
+      "sha256": "454655e3b8ea8055c908c5c271821e0281c4ce0093340eef85195abfffc4b357"
     },
     "venue_has_pmu": false
   },
   "candidate": {
     "artefact": {
-      "label": "distribution-shaped libcrypto.so.3 built from staging HEAD 2004ea243 with the PFP-2 P-256 engine copied from wip/pfp2-p256-engine 5a3c8dc39",
-      "location": "campaign workspace court/tmp/pfp2-run/build/distribution",
-      "obligation": "The benchmarked DSO was built in the campaign workspace from an uncommitted worktree and is not committed; its digest, the changed-path digest and the build identity are tracked, the bytes are not.",
+      "label": "distribution-shaped libcrypto.so.3, PFP-2 post-fix (branch-free REDC select and mask barrier)",
+      "location": "court/tmp/pfp2-fix/distribution/libcrypto.so.3",
+      "obligation": "The frozen DSO bytes are not committed. Its build-relevant source is the committed staging commit 790685a0aa (the PFP-2 fix), and the campaign recorded a repeat build with the same digest, but this session did not rebuild from the commit. The digest identifies the benchmarked, differentialled and audited bytes.",
       "present_in_repository": false,
-      "sha256": "467527ae6a61fb217facd6f50bd1187fc25ce2dea3817d0b37c71bdd0ada9bf8"
+      "sha256": "83f67826e2ca53dd8e014fe5442d2e77ba96ee7af35eeb78a312112a4e0a7c4f"
     },
-    "binding": "uncommitted-worktree",
+    "binding": "frozen-artefact-not-rebuilt",
     "build": {
-      "changed_paths": [
-        "src/ec/mult.rs",
-        "src/ec/mod.rs",
-        "src/ec/smpl.rs",
-        "src/ec/p256.rs",
-        "src/ec/p256/tests.rs"
-      ],
-      "changed_paths_sha256": "5c63c35d69219b5d0acf08200f7514a0fce6dbf58a8b460e2abd789ad2f0dade",
       "profile": "release",
-      "recipe": "cargo build --release --lib --offline into a fresh CARGO_TARGET_DIR with CARGO_BUILD_JOBS=4, then the tracked Phase-18 distribution-shell link",
+      "recipe": "cargo build --release --lib --offline into a fresh CARGO_TARGET_DIR with CARGO_BUILD_JOBS=4, then the tracked Phase-18 distribution-shell link; performed by the campaign, not by this timing run",
+      "source_tree": "the src tree of staging 790685a0aa; current HEAD 719ef5dbcd has an identical src tree (git rev-parse HEAD:src == 790685a0aa:src)",
       "target": "x86_64-unknown-linux-gnu",
       "toolchain": "rustc 1.98.1 (48a229cea 2026-09-01)"
     },
-    "source_commit": "2004ea2430b8f04ed0aa1762768299e2bc6093ac"
+    "source_commit": "790685a0aa0aba5dc655dee9fd33904f7350cf53"
   },
   "classification": "SCOPED_OBSERVATION",
   "comparators": [
@@ -60,9 +53,9 @@
     },
     {
       "id": "pfp2-generic-kernel",
-      "identity": "SOLINAS kernel of the same candidate DSO, forced through the test-only selector; kernels/summary.json",
+      "reason": "the post-fix timing run re-used the frozen DSO and did not rebuild the test-only kernel selector; the pre-fix SOLINAS/MONT mutation control (mul 3.80x, sqr 3.69x, ladder 2.71x, debug profile) is retained in history and is not a result at this digest",
       "role": "within_candidate_mutation_control",
-      "status": "MEASURED"
+      "status": "NOT_APPLICABLE"
     },
     {
       "id": "aws-lc",
@@ -71,49 +64,77 @@
       "status": "UNAVAILABLE"
     }
   ],
+  "history": {
+    "note": "The pre-fix record is retained rather than overwritten (Earned Trust article 10). The arm's promotion is bound to the post-fix measurement above; the numbers here are not reused at the new digest.",
+    "pre_fix": {
+      "campaign_results": {
+        "path": "evidence/performance-frontier/campaigns/PFP-2/authority/results.json",
+        "present": true,
+        "sha256": "b8934a99ff80ca2285995df2fd25749e6165f2a15834697076590855565cd675"
+      },
+      "candidate_sha256": "467527ae6a61fb217facd6f50bd1187fc25ce2dea3817d0b37c71bdd0ada9bf8",
+      "ecdsa256": {
+        "authority_allocations_per_op": 29,
+        "authority_median_us": 12.742,
+        "candidate_allocations_per_op": 253.6,
+        "candidate_median_us": 238.233,
+        "paired_ratio_ci95": [
+          18.631109720810194,
+          18.749705304518663
+        ],
+        "paired_ratio_median": 18.68845640743938
+      },
+      "source_commit": "2004ea2430b8f04ed0aa1762768299e2bc6093ac"
+    }
+  },
   "instrument": {
     "identity": {
       "alloc_probe_sha256": "76b432fd428322e75f068c2d70569a281671207469348628012a389bdae1f446",
-      "analyser_note": "executed_runner_sha256 is the scratch copy court/tmp/pfp2-run/run_local.sh; it differs from runner_sha256 only by disabling the dirty-tree guard, which this session cannot satisfy without committing. The measurement harness, population, protocol and analyser are the tracked ones, invoked unchanged.",
       "analyser_sha256": "5182354dfa750d8d0e8949790163f6a02f1f8aad7a6276765d8f1fce5d1d9ab7",
-      "build_identity_sha256": "86dc69de2159521e46736c436fd0e54b6e2790141478306963463de505af5e41",
-      "emit_shell_sha256": "5290bc716600f2ec95d3975437023b370997d43188fb98edb21fb05cb2b5a7d4",
-      "executed_runner_sha256": "b08af7bc6f7fcc36f0de15e6d900b0194601a85bd6bccd35e8e7153e402108e4",
-      "extract_dh_fixtures_sha256": "bbff92ec3d06e948434a8ffa871d60fef43cdc7b8abb5b61bf02490e6413384b",
+      "branch_audit_harness_sha256": "4e61f2ef2eaffed68f73c859dc36557629e3f33eb9f93185b013b8862f095ba0",
+      "branch_audit_report_sha256": "c082c827a933eb5ce45575f929f9a0c45ae9d3345703861e75dc57f968bb96e4",
+      "differential_binary_sha256": "2ffcf3febb3d4b5f94a3cab13433f5d63996dea2610d7a8cc140317b5ea68693",
+      "differential_record_sha256": "d2d64251eab1c6d714d8deb1b1dd009f4aa25ed6fc2d3d9ae5c3e51c46c931ea",
+      "differential_source_sha256": "fd67b943889ab710af9f3c246e3119c2f28561dc6a47084ee96f5a5d5f64affc",
+      "executed_runner_note": "run_timing.sh is a bound copy of the tracked protocol that does not rebuild the candidate; bench_api.c and analyse_bench_api.py are the tracked instruments, invoked unchanged",
+      "executed_runner_sha256": "2ded3e8fcb801e64dad70d19e0da963e18643ecd67ce011047bdfc2a919e8048",
       "harness_sha256": "e1add483b9bee3158e93e2f7d84296441bb2fc5d715cbf27cfd13f80cfde263f",
-      "runner_sha256": "653994bf2e8eba9b39bdd64c73b518a8d86aca048e2ddea2c47b69c5924ebf44"
+      "preregistration_sha256": "fe5310702c0cf17b5d1566be5db25ccf859d05ed8e34b7c07f7910cb51605e02",
+      "tracked_runner_sha256": "653994bf2e8eba9b39bdd64c73b518a8d86aca048e2ddea2c47b69c5924ebf44"
     },
     "measures": [
       "cross-library single-operation latency for nine workloads, candidate versus OpenSSL 3.6.4",
-      "end-to-end P-256 ladder and field operations for the MONT, SOLINAS and ARCH kernels",
-      "allocation count per operation through the shared alloc probe"
+      "4096 scalar multiplications k*G and 4096 variable-base k*P through the exported DSO ABI",
+      "ECDSA sign-then-cross-verify in both directions, 256 signatures per direction",
+      "conditional jumps and their targets in the named P-256 and ladder functions of the distribution DSO"
     ],
-    "name": "bench_api.c with analyse_bench_api.py, plus the in-process PFP-2 kernel measurement",
+    "name": "bench_api.c with analyse_bench_api.py (timing); pfp2_dso_differential.c (DSO-bound differential); binary_branch_audit.py (branch audit)",
     "preregistration": {
-      "path": "evidence/performance-frontier/campaigns/PFP-2/authority/preregistration.json",
+      "path": "evidence/performance-frontier/campaigns/PFP-2/timing-83f67826/preregistration.json",
       "present": true,
-      "sha256": "19a97cb76640bc77ca6547a5ad7b7555128860e890ffdf695a0c65f2cc7eb93a"
+      "sha256": "fe5310702c0cf17b5d1566be5db25ccf859d05ed8e34b7c07f7910cb51605e02"
     },
     "procedure": "docs/PERFORMANCE-METHODOLOGY.md \u00a75-\u00a76",
     "repetition_count": 15,
     "samples": {
-      "location": "evidence/performance-frontier/campaigns/PFP-2, enumerated by the bound manifest",
-      "path": "evidence/performance-frontier/claims/PFP-2.raw-manifest.json",
+      "location": "evidence/performance-frontier/campaigns/PFP-2/timing-83f67826 and .../dso-differential, enumerated by the bound manifest",
+      "obligation": null,
+      "path": "evidence/performance-frontier/claims/PFP-2-postfix.raw-manifest.json",
       "present_in_repository": true,
       "repetitions": 15,
-      "sha256": "4a03086c3dde3016446b685655e9d5aa2b070b0890d85d0bca5fa753834065c6",
+      "sha256": "e01081ccb0bf5972e78916fc6777ba3c11e91950c8cf4ec7c97bacd31b364732",
       "statistic": "median over repetitions of candidate_us / authority_us",
       "unit_of_replication": "one process per subject per repetition"
     },
     "statistic": "median of paired per-repetition ratios candidate_us/authority_us; percentile bootstrap 20 000 resamples, seed 0x50465030",
-    "unit": "microseconds per call for the cross-library workloads; nanoseconds per field operation and microseconds per ladder in the kernel comparison"
+    "unit": "microseconds per call for the cross-library workloads; serialised points and ECDSA acceptance for the differential"
   },
   "obligations": {
     "attempted_discharge": [],
     "none_open_because": null,
     "open": [
       {
-        "description": "Secret ownership does not propagate through the arithmetic itself; the P-256 engine keeps fixed-width storage but the transfer window into and out of it remains open.",
+        "description": "Secret ownership does not propagate through the arithmetic itself; the P-256 engine's transfer window into and out of fixed-width storage remains open.",
         "discharged": false,
         "id": "T23"
       },
@@ -123,24 +144,34 @@
         "id": "T24"
       },
       {
-        "description": "The ECDSA per-signature allocation count falls from 273.4 to 253.6 against 29 for the authority; it is improved, not discharged.",
+        "description": "The ECDSA per-signature allocation count is 254.0 against 29 for the authority; improved from 273.4, not discharged.",
         "discharged": false,
         "id": "T29"
       },
       {
-        "description": "The candidate was built from an uncommitted worktree at 2004ea243; the changed-path digest and DSO digest are recorded, but the candidate is not reproducible from a commit.",
+        "description": "The frozen DSO bytes are not committed. Its build-relevant source is the committed 790685a0aa and a repeat build reproduced the digest, but this session did not rebuild from the commit; the digest identifies the bytes.",
         "discharged": false,
         "id": "PFP2-DIRTY-CANDIDATE"
       },
       {
-        "description": "The binary branch audit covers the P-256 mont_reduce_into and wide_mul_x86 kernels (8 of 9 targets resolve) but exits 1 because mod_exp_core_consttime_from_parts is inlined out of this DSO; the post-fix re-run at 83f67826 still exits 1 with the same 8 of 9, so there is no passing audit at any candidate digest.",
+        "description": "The write-back store_coordinate (src/ec/smpl.rs:2624) -> limbs::normalise (src/bn/limbs.rs:42) still branches on the secret top limb; it is the 4 engine-on-path contexts in the minimal population. It cannot be stored at fixed width inside this item without breaking the no-trailing-zero-limb BIGNUM representation invariant.",
         "discharged": false,
-        "id": "PFP2-BRANCH-AUDIT-INCOMPLETE"
+        "id": "PFP2-WRITEBACK-NORMALISE"
       },
       {
-        "description": "The in-crate differential courts pass, but they link the crate and are bound to the source tree, not to the distribution DSO digest.",
+        "description": "P256Scalar::admit_be_bytes uses `if ct_ge(...) != 0 { return None }`, a branch on a scalar range check. It is not on the ladder path (tests only today) and the accept/reject outcome is a required public admission decision; removing it would be a correctness bug. Reported, not fixed.",
         "discharged": false,
-        "id": "PFP2-DIFFERENTIAL-NOT-DSO-BOUND"
+        "id": "PFP2-ADMIT-BE-BYTES"
+      },
+      {
+        "description": "The DSO-bound differential exercises the internal field operations only through EC_POINT_mul and ECDSA, because p256::mont_reduce_into, p256::wide_mul_x86 and limbs::normalise have no exported entry point. No source-level test is substituted while calling the court DSO-bound.",
+        "discharged": false,
+        "id": "PFP2-DIFFERENTIAL-SCOPE"
+      },
+      {
+        "description": "The passing branch audit resolves mod_exp_core_consttime_from_parts to its _prepared carrier through a verified inline mapping; it cannot distinguish inlining from a source edit producing the same instruction stream, and it maps secret-dependence as a reviewer aid rather than establishing it. The audit is not a constant-time proof.",
+        "discharged": false,
+        "id": "PFP2-AUDIT-NOT-A-PROOF"
       },
       {
         "description": "The venue exposes no PMU and has no frequency, turbo, SMT or isolation control; every row is SCOPED_OBSERVATION.",
@@ -148,19 +179,14 @@
         "id": "PFP2-NO-PMU"
       },
       {
-        "description": "ctgrind executed the debug test binary built from the same source, not the distribution DSO; its context count is not a DSO-level result.",
+        "description": "ctgrind executed the debug test binary built from the same source, not the distribution DSO; its context count is not a DSO-level result. The DSO-level evidence is the branch audit, whose scope is stated above.",
         "discharged": false,
         "id": "PFP2-CTGRIND-TEST-BINARY"
       },
       {
-        "description": "Post-fix: the release branch at p256.rs:690 is removed and the post-fix minimal population (DSO 83f67826) has 0 engine origin contexts, but the write-back store_coordinate (ec/smpl.rs:2624) -> limbs::normalise (bn/limbs.rs:42) still branches on the secret top limb. It cannot be stored at fixed width inside this item without breaking the no-trailing-zero-limb BIGNUM invariant the exported representation relies on.",
+        "description": "The within-candidate mutation control (force the generic kernel) was measured on the pre-fix debug profile (mul 3.80x, sqr 3.69x, ladder 2.71x), not on the post-fix released DSO 83f67826; the release --test rebuild hit a recorded memory incident. The fast path's load-bearing property is therefore not re-established at this digest.",
         "discharged": false,
-        "id": "PFP2-WRITEBACK-NORMALISE"
-      },
-      {
-        "description": "Post-fix: no timing measurement is bound to the post-fix DSO 83f67826; the recorded 18.69x ecdsa256 row is the pre-fix digest. The release mutation-control rebuild aborted on LLVM allocation under the court's RLIMIT_DATA (evidence/incidents/2026-11-25-4).",
-        "discharged": false,
-        "id": "PFP2-POST-FIX-TIMING"
+        "id": "PFP2-MUTATION-CONTROL-NOT-AT-DIGEST"
       }
     ]
   },
@@ -194,38 +220,91 @@
     "undeclared": []
   },
   "post_fix": {
+    "branch_audit": {
+      "harness_sha256": "4e61f2ef2eaffed68f73c859dc36557629e3f33eb9f93185b013b8862f095ba0",
+      "kind": "BINARY_BRANCH_AUDIT",
+      "reference": "evidence/performance-frontier/campaigns/PFP-2/audit/post-fix-binary-branch-audit-83f67826.md",
+      "report_sha256": "c082c827a933eb5ce45575f929f9a0c45ae9d3345703861e75dc57f968bb96e4",
+      "result": "exit 0; 9 of 9 targets resolved with complete disassembly, 1 through a verified inline mapping"
+    },
     "candidate_sha256": "83f67826e2ca53dd8e014fe5442d2e77ba96ee7af35eeb78a312112a4e0a7c4f",
+    "ctgrind_minimal_generic": {
+      "contexts": 29,
+      "engine_origins": 0,
+      "errors": 794
+    },
     "ctgrind_minimal_mont": {
       "contexts": 188,
       "engine_on_path": 4,
       "engine_origins": 0,
       "errors": 1595
     },
-    "ctgrind_minimal_generic": {
-      "contexts": 29,
-      "engine_origins": 0,
-      "errors": 794
+    "differential": {
+      "cases": {
+        "ecdsa_sign_cross_verify_per_direction": 256,
+        "mul_g": 4096,
+        "mul_p": 4096
+      },
+      "mismatches": 0,
+      "reference": "evidence/performance-frontier/campaigns/PFP-2/dso-differential/differential-dso-bound.json",
+      "result": "PASS",
+      "seed": "0x5046503250485032"
     },
-    "note": "The REDC borrow branch is removed at source (src/ec/p256.rs). The reported measurement row is still the pre-fix digest; this post_fix block is an observation at the post-fix DSO, not a re-measurement of the timing row. The arm remains EXPERIMENT.",
-    "record": "evidence/performance-frontier/campaigns/PFP-2/ctgrind/POST-FIX.md",
-    "source_commit": "0b5c11e99"
+    "note": "The arm is promoted on the conjunction of the post-fix timing, the DSO-bound differential and the passing binary branch audit, all at 83f67826. The residuals above remain open and named.",
+    "record": "evidence/performance-frontier/campaigns/PFP-2/RESULTS-83f67826.md",
+    "source_commit": "790685a0aa0aba5dc655dee9fd33904f7350cf53",
+    "timing": {
+      "ecdsa256": {
+        "authority_allocations_per_op": 29,
+        "authority_median_us": 12.724,
+        "candidate_allocations_per_op": 254.0,
+        "candidate_median_us": 246.099,
+        "paired_ratio_ci95": [
+          19.235501016101296,
+          19.35932096824898
+        ],
+        "paired_ratio_median": 19.322765439849327
+      },
+      "reference": "evidence/performance-frontier/campaigns/PFP-2/timing-83f67826/results.json",
+      "result": "PASS (analyser accepted; LOADED identity all_ok, CHECK lines match, cross-verification accepted in both directions)"
+    }
   },
   "producer": {
     "inputs": [
       {
-        "path": "evidence/performance-frontier/campaigns/PFP-2/authority/results.json",
+        "path": "evidence/performance-frontier/campaigns/PFP-2/timing-83f67826/results.json",
         "present": true,
-        "sha256": "b8934a99ff80ca2285995df2fd25749e6165f2a15834697076590855565cd675"
+        "sha256": "454655e3b8ea8055c908c5c271821e0281c4ce0093340eef85195abfffc4b357"
       },
       {
-        "path": "evidence/performance-frontier/campaigns/PFP-2/authority/build-identity.json",
+        "path": "evidence/performance-frontier/campaigns/PFP-2/timing-83f67826/preregistration.json",
         "present": true,
-        "sha256": "3348cdc4db1033a3a161a185de5a2bec6242d314002c68b1922515afe475894c"
+        "sha256": "fe5310702c0cf17b5d1566be5db25ccf859d05ed8e34b7c07f7910cb51605e02"
       },
       {
-        "path": "evidence/performance-frontier/claims/PFP-2.raw-manifest.json",
+        "path": "evidence/performance-frontier/campaigns/PFP-2/timing-83f67826/build-identity.json",
         "present": true,
-        "sha256": "4a03086c3dde3016446b685655e9d5aa2b070b0890d85d0bca5fa753834065c6"
+        "sha256": "76491f21d08fa9dc17250f588d041ee9005865b75b554fac71cdf0ac8b37b0d7"
+      },
+      {
+        "path": "evidence/performance-frontier/campaigns/PFP-2/timing-83f67826/raw/identity-check.tsv",
+        "present": true,
+        "sha256": "de66df1b24effbb6fae9e98231c587d84ffc5545d32d597bceff29f512c1d277"
+      },
+      {
+        "path": "evidence/performance-frontier/campaigns/PFP-2/dso-differential/differential-dso-bound.json",
+        "present": true,
+        "sha256": "d2d64251eab1c6d714d8deb1b1dd009f4aa25ed6fc2d3d9ae5c3e51c46c931ea"
+      },
+      {
+        "path": "evidence/performance-frontier/campaigns/PFP-2/audit/post-fix-binary-branch-audit-83f67826.md",
+        "present": true,
+        "sha256": "c082c827a933eb5ce45575f929f9a0c45ae9d3345703861e75dc57f968bb96e4"
+      },
+      {
+        "path": "evidence/performance-frontier/claims/PFP-2-postfix.raw-manifest.json",
+        "present": true,
+        "sha256": "e01081ccb0bf5972e78916fc6777ba3c11e91950c8cf4ec7c97bacd31b364732"
       },
       {
         "path": "forensics/performance/WORKLOADS.json",
@@ -246,8 +325,9 @@
     "limits": [
       "This record binds the PFP-2 classification and its declared identity; it executes nothing.",
       "It does not establish that the cited campaign occurred as described; the campaign raw output is the record of that.",
-      "The candidate is an uncommitted worktree, so the DSO digest identifies it but the bytes are not reproducible from a commit.",
-      "The binary branch audit exits 1 on a pre-existing inlined target, so there is no passing constant-time gate at this digest.",
+      "The candidate DSO bytes are not in the repository, so the digest identifies the artefact but does not make the bytes reproducible from the checkout by inspection.",
+      "The binary branch audit is a review aid: it lists compiler-emitted conditional jumps and their targets; a reviewer maps them to the source's secret classification. It is not a constant-time proof.",
+      "The DSO-bound differential cannot call the internal field kernels directly; it exercises them only through the exported EC and ECDSA surface.",
       "A green validation is a statement about claim form, not about the truth of the measurement."
     ],
     "name": "performance_classification.py",
@@ -260,14 +340,15 @@
   "schema": "openssl-rs/performance/claim-record/v1",
   "scope": {
     "exclusions": [
-      "the candidate is an uncommitted worktree; the DSO digest identifies it, the bytes are not committed",
+      "the frozen DSO bytes are not committed; the digest and the build-relevant source commit are",
       "P-384 and P-521 still take the generic fixed-width workspace and are not measured here",
       "L4 protocol and L5 downstream workloads are not measured",
-      "the binary branch audit exits 1 on the pre-existing inlined mod_exp_core_consttime_from_parts, so it is not a gate result",
-      "ctgrind ran the debug test binary from the same source, not the distribution DSO, and is not a constant-time proof"
+      "the binary branch audit maps secret-dependence as a reviewer aid and cannot prove constant time",
+      "ctgrind ran the debug test binary from the same source, not the distribution DSO, and is not a constant-time proof",
+      "the internal field kernels have no exported entry point; the DSO differential reaches them only through EC_POINT_mul and ECDSA"
     ],
     "level": "L3",
-    "security_profile": "candidate distribution-shaped libcrypto.so.3 at digest 3ce91b53 against the recorded OpenSSL 3.6.4 authority; the P-256 engine only changes the P-256 scalar ladder, so only ecdsa256 is expected to move",
+    "security_profile": "candidate distribution-shaped libcrypto.so.3 at digest 83f67826 against the recorded OpenSSL 3.6.4 authority; the P-256 engine only changes the P-256 scalar ladder, so only ecdsa256 is expected to move",
     "workloads": [
       "dh-ffdhe2048",
       "dh-ffdhe3072",
@@ -287,7 +368,7 @@
       "SECRET_DATA",
       "PUBLIC_DATA"
     ],
-    "statement": "P-256 private scalars and ECDSA nonces are SECRET_DATA; the field prime, the group order and the base point are public. The P-256 field engine uses masked add, subtract, select, cswap and conditional subtraction with fixed loop counts; neither its selection nor its loop bounds read a value. ctgrind at the same source records no new context, but that is bounded evidence, not a constant-time proof.",
+    "statement": "P-256 private scalars and ECDSA nonces are SECRET_DATA; the field prime, the group order and the base point are public. The P-256 field engine uses masked add, subtract, select, cswap and conditional subtraction with fixed loop counts; the post-fix minimal population records 0 engine origin contexts. Four engine-on-path contexts remain in the write-back normalise, which is a named residual. Neither ctgrind nor the branch audit is a constant-time proof.",
     "tags": [
       "SECRET_DATA",
       "CONSTANT_TIME_REQUIRED",
@@ -303,7 +384,7 @@
       "smt_disabled": false,
       "turbo_disabled": false
     },
-    "description": "court container openssl-rs-court-tools:1 at the \u00a76.1 8 GiB cap, one CPU pinned with taskset -c 1; the results file records venue_has_pmu=false",
+    "description": "court container openssl-rs-court-tools:1 at the \u00a76.1 8 GiB cap, per-process RLIMIT_DATA 4 GiB, one CPU pinned with taskset -c 1; the results file records venue_has_pmu=false",
     "pmu_exposed": false
   }
 }
