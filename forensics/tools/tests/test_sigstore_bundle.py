@@ -42,8 +42,8 @@ DOCUMENT = REPO / "docs/SIGSTORE-BUNDLES.md"
 # nine-character hashes: every record declares ``baseCommit ==
 # frozenAtCandidate == that commit`` and every member digest is read from its
 # tree.
-FULL_COMMIT = "cebb10fae3ad0a9249968b6981268c5104d72c44"
-SHORT_COMMIT = "cebb10fae"
+FULL_COMMIT = "e946294ff0950d704852d06e79abd2d2bf30d60a"
+SHORT_COMMIT = "e946294ff"
 POPULATION_SELF = "evidence/a16/INVENTORY.json"
 
 

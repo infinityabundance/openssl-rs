@@ -167,8 +167,8 @@
   "schema": "openssl-rs/a16/bundle-profile/1",
   "sourceIdentity": {
     "asOf": "2026-11-24",
-    "baseCommit": "cebb10fae3ad0a9249968b6981268c5104d72c44",
-    "baseCommitShort": "cebb10fae",
+    "baseCommit": "e946294ff0950d704852d06e79abd2d2bf30d60a",
+    "baseCommitShort": "e946294ff",
     "delegatedTools": [
       {
         "path": "forensics/tools/harden.py",

@@ -17,7 +17,7 @@
     "basis": "the explicit member list below, declared at the candidate; not a live glob",
     "binding": "FROZEN",
     "files": 0,
-    "frozenAtCandidate": "cebb10fae3ad0a9249968b6981268c5104d72c44",
+    "frozenAtCandidate": "e946294ff0950d704852d06e79abd2d2bf30d60a",
     "glob": [
       "evidence/*.pem",
       "evidence/*.crt",
@@ -44,7 +44,7 @@
       "result": "NEW_SINCE_RECORD"
     },
     "files": 753,
-    "frozenAtCandidate": "cebb10fae3ad0a9249968b6981268c5104d72c44",
+    "frozenAtCandidate": "e946294ff0950d704852d06e79abd2d2bf30d60a",
     "glob": "evidence/*.json",
     "globSemantics": "tracked files matched with fnmatch.fnmatchcase; '*' matches across '/', so this covers evidence/**/*.json",
     "growthPolicy": "a verification re-hashes every member and reports a glob match that is not a member as NEW_SINCE_RECORD, counted separately; growth never changes this count, and a removed or changed member is refused with PH_REFUSED_POPULATION_DRIFT",
@@ -933,14 +933,14 @@
         "sha256": "4c858ab1867cfc14e5394daecd092f9247035e81c23575cfb96eb1fd253878db"
       },
       {
-        "bytes": 5419,
+        "bytes": 5505,
         "path": "evidence/b8/ENFORCEMENT.json",
-        "sha256": "a57026329b3171dfadfb194829f3d8706f3a72197544924b5d099705912152f4"
+        "sha256": "add8b0b6bad41c0e75dd2ba4f21720d01d9c5d431f7a5d937947f87e9fcbdf11"
       },
       {
-        "bytes": 1891,
+        "bytes": 2869,
         "path": "evidence/b8/PENDING.json",
-        "sha256": "63581cd161831246836e2e3da3464d0a88551bc7bf8e6ea23a33174e2f60c5f5"
+        "sha256": "4adfb27818925cf28a755622bdc43b2e039bc48f15901daf32bc99015b23a58d"
       },
       {
         "bytes": 1030,
@@ -4043,6 +4043,26 @@
             "sha256": "eff50c758d45e8e17926ba9989c7a1f381fca70e98d3b012a6e1d30ca2919a70"
           }
         ]
+      },
+      {
+        "files": 753,
+        "frozenAtCandidate": "cebb10fae3ad0a9249968b6981268c5104d72c44",
+        "memberCount": 753,
+        "reason": "an explicit re-freeze replaced the prior population at a new candidate; the prior freeze, member count and record digests are preserved here rather than silently overwritten.",
+        "recordDigests": [
+          {
+            "path": "evidence/a16/INVENTORY.json",
+            "sha256": "05a9faaca2170ac12305eefd76d28895a021ed26ab217ba4366d6cf46bb9a7d2"
+          },
+          {
+            "path": "evidence/a16/PROFILE.json",
+            "sha256": "6ff0975d4016cec41acb9b7a41d28538840e20e1830840c20ca0724970ca0a0f"
+          },
+          {
+            "path": "evidence/a16/CONTROLS.json",
+            "sha256": "f8cf935abfded9262ef4952b9619941519caf3535820e14d617c6446196d19a9"
+          }
+        ]
       }
     ]
   },
@@ -4053,8 +4073,8 @@
   "schema": "openssl-rs/a16/bundle-inventory/2",
   "sourceIdentity": {
     "asOf": "2026-11-24",
-    "baseCommit": "cebb10fae3ad0a9249968b6981268c5104d72c44",
-    "baseCommitShort": "cebb10fae",
+    "baseCommit": "e946294ff0950d704852d06e79abd2d2bf30d60a",
+    "baseCommitShort": "e946294ff",
     "delegatedTools": [
       {
         "path": "forensics/tools/harden.py",

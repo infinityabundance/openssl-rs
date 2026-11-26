@@ -1,7 +1,7 @@
 # Sigstore bundles — A16
 
 Status: normative. Delivered by item A16 of `docs/ETP-TODO.md`, re-frozen at
-candidate `cebb10fae3ad0a9249968b6981268c5104d72c44` (`staging`). The implementation is
+candidate `e946294ff0950d704852d06e79abd2d2bf30d60a` (`staging`). The implementation is
 `forensics/tools/sigstore_bundle.py`; the records are
 `evidence/a16/INVENTORY.json`, `evidence/a16/PROFILE.json` and
 `evidence/a16/CONTROLS.json`; the deterministic producer is
@@ -214,16 +214,19 @@ The population is a **frozen member list**, not a live glob:
 existed at the declared candidate, each bound to its `sha256` read from that
 candidate's blobs (never the working tree), and `populationFiles` is the list's
 length. The record is frozen at
-`cebb10fae3ad0a9249968b6981268c5104d72c44` (**753** members; this re-freeze
-added 159 JSON records — 31 under `evidence/performance-frontier/campaigns/PFP-2/`,
-31 under `PFP-29/`, 37 under `PFP-31/`, 2 under `PFP-34/`, 56 under `PFP-6/`
-and 2 `*.raw-manifest.json` under `claims/` — and moved
-`performance-frontier/admission/ARMS.json`, `claims/PFP-2.claim.json` and
-`etp-t14/ARTICLES.json`). This item's three own
-records are not members: the record declares them separately as
-`identityExcluded`, outside the declared cut. Eleven prior freezes are preserved
+`e946294ff0950d704852d06e79abd2d2bf30d60a` (**753** members; this re-freeze
+added and removed no member paths, and re-bound the digests of two B8 members,
+`evidence/b8/ENFORCEMENT.json` and `evidence/b8/PENDING.json`). This item's three
+own records are not members: the record declares them separately as
+`identityExcluded`, outside the declared cut. Twelve prior freezes are preserved
 inside it with their record digests, rather than overwritten: the immediately
-preceding freeze at `50974780e47c190da2f202acc24b4ac3899f8e01` (594 members),
+preceding freeze at `cebb10fae3ad0a9249968b6981268c5104d72c44` (753 members,
+which added 159 JSON records — 31 under
+`evidence/performance-frontier/campaigns/PFP-2/`, 31 under `PFP-29/`, 37 under
+`PFP-31/`, 2 under `PFP-34/`, 56 under `PFP-6/` and 2 `*.raw-manifest.json`
+under `claims/` — and moved `performance-frontier/admission/ARMS.json`,
+`claims/PFP-2.claim.json` and `etp-t14/ARTICLES.json`), then the freeze at
+`50974780e47c190da2f202acc24b4ac3899f8e01` (594 members),
 then the freeze at `34754764fd2cae3117535b741263c48e3df6cf37` (526 members),
 then the freeze at `c047cd6ca49782d939c7790a24c1cc6d50e678c0` (516 members),
 then the freeze at `38f179275913adbb320eeba698759f8086a95d36` (510 members),
