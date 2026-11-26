@@ -186,7 +186,7 @@ its result says `population: LIVE` and is not comparable to a frozen record.
 
 Every examined record parses `STRICT_OK`; no tracked evidence record is refused
 at this bound. The 175 skipped files are the large records (the population is
-about 2.16 GB, 2,157,829,177 bytes; the largest single file is 15,629,485 bytes).
+about 2.16 GB, 2,158,402,994 bytes; the largest single file is 15,629,485 bytes).
 They are reported
 `SKIPPED_SIZE` with their size and are not parsed, because reading them into a
 pure-Python parser would be the denial-of-service surface this item exists to
@@ -195,19 +195,21 @@ bound; they are streamed in 1 MiB chunks only to bind their digest.
 `STRICT_OK` or `SKIPPED_SIZE`, and the SHA-256 of every member.
 
 The count is the member list's length at the declaration
-(`a99ddf9677229487e5cf4051031e886444a189b7`, C32); it moves only through an explicit
+(`fcc8409eb53cfaf9ee8c402062db70a6b6acadbe`, C36); it moves only through an explicit
 re-freeze (`build_evidence.py --freeze-population CANDIDATE`), never because
-another item landed. That declaration supersedes `9ed7a58b423e4ec7df072f5a6f1634682420d238`
-and **grows the population from 519 to 529**: C31 added ten JSON records under
-`evidence/performance-frontier/campaigns/PFP-2/` and
-`claims/PFP-2.{claim,raw-manifest}.json`, so the count is 529, 354 examined, 354
-`STRICT_OK`, 175 `SKIPPED_SIZE`, 0 refused, and the byte total is 2,157,829,177.
-The growth is explicit (the re-freeze took C32's path set), not absorbed from a
-live glob. Four members' content had moved since the `9ed7a58b4` declaration (the
-three A16 records and `performance-frontier/admission/ARMS.json`), so the
-candidate and those digests were re-bound. The `9ed7a58b4` declaration had itself
-superseded `3ee456d4f8e6e0a62cb96e4c0a31ea0f0ec50db5` with the population grown
-from 513 to 519 (six PFP-0-refreeze records added at C28, four moved), and the
+another item landed. That declaration supersedes `a99ddf9677229487e5cf4051031e886444a189b7`
+and **grows the population from 529 to 599**: C35 added 70 JSON records under
+`evidence/performance-frontier/campaigns/PFP-2/` and `PFP-6/`, so the count is
+599, 424 examined, 424 `STRICT_OK`, 175 `SKIPPED_SIZE`, 0 refused, and the byte
+total is 2,158,402,994. The growth is explicit (the re-freeze took C36's path
+set), not absorbed from a live glob. Five members' content had moved since the
+`a99ddf967` declaration (the three A16 records,
+`performance-frontier/admission/ARMS.json` and `claims/PFP-2.claim.json`), so the
+candidate and those digests were re-bound. The `a99ddf967` declaration had itself
+superseded `9ed7a58b423e4ec7df072f5a6f1634682420d238` with the population grown
+from 519 to 529 (ten PFP-2 records added at C31, four moved), and the
+`9ed7a58b4` declaration had itself superseded `3ee456d4f8e6e0a62cb96e4c0a31ea0f0ec50db5` with the population
+grown from 513 to 519 (six PFP-0-refreeze records added at C28, four moved), and the
 `3ee456d4` declaration had itself superseded `1dac1c6e6187fc79e3c9902cfbcc67819a6ba0db` with the population
 grown from 506 to 513 (26 moved, seven FRC/performance-frontier records added),
 and the `1dac1c6e`
@@ -339,8 +341,8 @@ contracts are not changed by this reader.
 ## 10. Reproducing the evidence
 
 ```
-python3 evidence/a11/build_evidence.py --source-commit a99ddf9677229487e5cf4051031e886444a189b7
-python3 evidence/a11/build_evidence.py --freeze-population a99ddf9677229487e5cf4051031e886444a189b7
+python3 evidence/a11/build_evidence.py --source-commit fcc8409eb53cfaf9ee8c402062db70a6b6acadbe
+python3 evidence/a11/build_evidence.py --freeze-population fcc8409eb53cfaf9ee8c402062db70a6b6acadbe
 python3 forensics/tools/harden.py scan --frozen evidence/a11/SCAN.json
 python3 forensics/tools/harden.py scan 'evidence/*.json'
 python3 forensics/tools/harden.py parse evidence/a11/CONTROLS.json

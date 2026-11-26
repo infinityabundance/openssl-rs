@@ -32,7 +32,7 @@ PRODUCER = A11 / "build_evidence.py"
 TOOL = TOOLS / "harden.py"
 DOCUMENT = REPO_ROOT / "docs" / "PARSER-HARDENING.md"
 
-BASE_COMMIT = "a99ddf9677229487e5cf4051031e886444a189b7"
+BASE_COMMIT = "fcc8409eb53cfaf9ee8c402062db70a6b6acadbe"
 
 
 def _load(path: Path) -> dict:
