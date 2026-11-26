@@ -17,7 +17,7 @@
     "basis": "the explicit member list below, declared at the candidate; not a live glob",
     "binding": "FROZEN",
     "files": 0,
-    "frozenAtCandidate": "34754764fd2cae3117535b741263c48e3df6cf37",
+    "frozenAtCandidate": "50974780e47c190da2f202acc24b4ac3899f8e01",
     "glob": [
       "evidence/*.pem",
       "evidence/*.crt",
@@ -43,8 +43,8 @@
       "reason": "mutual digest binding: A11's scan population is every tracked evidence JSON and therefore contains this item's records, so this population cannot also contain A11's three records without a digest cycle. A11 absorbs this item's records; these three are declared excluded here and are reported NEW_SINCE_RECORD by growth_report, never absorbed into the frozen count.",
       "result": "NEW_SINCE_RECORD"
     },
-    "files": 526,
-    "frozenAtCandidate": "34754764fd2cae3117535b741263c48e3df6cf37",
+    "files": 594,
+    "frozenAtCandidate": "50974780e47c190da2f202acc24b4ac3899f8e01",
     "glob": "evidence/*.json",
     "globSemantics": "tracked files matched with fnmatch.fnmatchcase; '*' matches across '/', so this covers evidence/**/*.json",
     "growthPolicy": "a verification re-hashes every member and reports a glob match that is not a member as NEW_SINCE_RECORD, counted separately; growth never changes this count, and a removed or changed member is refused with PH_REFUSED_POPULATION_DRIFT",
@@ -2328,9 +2328,9 @@
         "sha256": "4a14da856982c261be0a1749cf8e738b2f149bf1dbc8255e8086d3a2d8171836"
       },
       {
-        "bytes": 19762,
+        "bytes": 36577,
         "path": "evidence/performance-frontier/admission/ARMS.json",
-        "sha256": "bb4e517a3683d701c9d162876570c0b84e93e69e14efc6c27c7b41c00959e67c"
+        "sha256": "8bf664b3e1fd94fb84f5d1fe474c4ba520f0e8945c1b13616039d97c6b31ae94"
       },
       {
         "bytes": 47910,
@@ -2433,6 +2433,291 @@
         "sha256": "b8934a99ff80ca2285995df2fd25749e6165f2a15834697076590855565cd675"
       },
       {
+        "bytes": 2886,
+        "path": "evidence/performance-frontier/campaigns/PFP-2/ctgrind/pfp20-2026-11-26/attrib/after-recheck.summary.json",
+        "sha256": "42731f717266a1a2e4104a7b154df0c8b52a17ac52adfca3c6d669d4e0f140a3"
+      },
+      {
+        "bytes": 2921,
+        "path": "evidence/performance-frontier/campaigns/PFP-2/ctgrind/pfp20-2026-11-26/attrib/after-rep2.summary.json",
+        "sha256": "7b7ed92d495ee0699ac03348d02193f82dc164914dc0cd06d0b9b41dc55324a6"
+      },
+      {
+        "bytes": 2883,
+        "path": "evidence/performance-frontier/campaigns/PFP-2/ctgrind/pfp20-2026-11-26/attrib/after-rep3.summary.json",
+        "sha256": "edee519aefe57bdbc15204912aeb8313c6a1877a557a68515768e8e4f7253080"
+      },
+      {
+        "bytes": 3042,
+        "path": "evidence/performance-frontier/campaigns/PFP-2/ctgrind/pfp20-2026-11-26/attrib/before-recheck.summary.json",
+        "sha256": "91c28dc77cbf2fb9b2309b2cc4dddec2569779979613f45466aa08d09b066bde"
+      },
+      {
+        "bytes": 3040,
+        "path": "evidence/performance-frontier/campaigns/PFP-2/ctgrind/pfp20-2026-11-26/attrib/before-rep2.summary.json",
+        "sha256": "15afdb271d97571c9edce75fe9abdea53726a7c8043781c6f7f7ceceb29ae62c"
+      },
+      {
+        "bytes": 3040,
+        "path": "evidence/performance-frontier/campaigns/PFP-2/ctgrind/pfp20-2026-11-26/attrib/before-rep3.summary.json",
+        "sha256": "5e44d23a4905e7a55bc73614d563adc481c3056c802f9a6ecb303e9109c03767"
+      },
+      {
+        "bytes": 217,
+        "path": "evidence/performance-frontier/campaigns/PFP-2/ctgrind/pfp21-2026-11-26/attrib/a-control-r1.summary.json",
+        "sha256": "741e16825de1c0ad4994f50033a03ed253e56fce3bb8c9eb009de8a3a3eb5c1e"
+      },
+      {
+        "bytes": 3005,
+        "path": "evidence/performance-frontier/campaigns/PFP-2/ctgrind/pfp21-2026-11-26/attrib/a-mul-g-bytes-r1.summary.json",
+        "sha256": "95cd01b8859a11186494c9bc5b6cec9f9bce5fa01c8081b9a6b140a7a3e6a86d"
+      },
+      {
+        "bytes": 3034,
+        "path": "evidence/performance-frontier/campaigns/PFP-2/ctgrind/pfp21-2026-11-26/attrib/a-mul-g-bytes-r2.summary.json",
+        "sha256": "29c89ca46daa7dfc40bcae94dc39a73cc64ca758220bc7d27a87857297dba61e"
+      },
+      {
+        "bytes": 3033,
+        "path": "evidence/performance-frontier/campaigns/PFP-2/ctgrind/pfp21-2026-11-26/attrib/a-mul-g-bytes-r3.summary.json",
+        "sha256": "2dfe5924c5dbbfaa52f2566d45c8834c23408bbb5eddc1317b9b3f84e30fcfb2"
+      },
+      {
+        "bytes": 2973,
+        "path": "evidence/performance-frontier/campaigns/PFP-2/ctgrind/pfp21-2026-11-26/attrib/a-mul-g-r1.summary.json",
+        "sha256": "6e29743a6e873dc1cbda003db0dd458f2ca3b5d5cb4218122a5fd3dffdc8a614"
+      },
+      {
+        "bytes": 2974,
+        "path": "evidence/performance-frontier/campaigns/PFP-2/ctgrind/pfp21-2026-11-26/attrib/a-mul-g-r2.summary.json",
+        "sha256": "839519f6caa82fb90eb8ad1285342c9b379ba5dd96fb4f02c617ed9f843b35ab"
+      },
+      {
+        "bytes": 3009,
+        "path": "evidence/performance-frontier/campaigns/PFP-2/ctgrind/pfp21-2026-11-26/attrib/a-mul-g-r3.summary.json",
+        "sha256": "b5fe0926c987c882b5f791e5350cfbabd312863975288cb35f2934862aceab11"
+      },
+      {
+        "bytes": 2983,
+        "path": "evidence/performance-frontier/campaigns/PFP-2/ctgrind/pfp21-2026-11-26/attrib/a-mul-p-r1.summary.json",
+        "sha256": "0c0953ee2663e5318605b86524eeff4c967864e841c3fca5491cbebfd19c4ea5"
+      },
+      {
+        "bytes": 2974,
+        "path": "evidence/performance-frontier/campaigns/PFP-2/ctgrind/pfp21-2026-11-26/attrib/a-mul-p-r2.summary.json",
+        "sha256": "ff499e4e4fe792d6554d8fd9f9222a2dffa322ee13c5fffc9a10b36ca9adcd98"
+      },
+      {
+        "bytes": 2983,
+        "path": "evidence/performance-frontier/campaigns/PFP-2/ctgrind/pfp21-2026-11-26/attrib/a-mul-p-r3.summary.json",
+        "sha256": "e7e9e0bdc57740bfde8cafc1d5da2393baed8481a28f7c8902eee65609de5fea"
+      },
+      {
+        "bytes": 3089,
+        "path": "evidence/performance-frontier/campaigns/PFP-2/ctgrind/pfp21-2026-11-26/attrib/a-sign-ex-k-r1.summary.json",
+        "sha256": "ce93cab67841b4ae210639d87fe21bbf56f6ac6a89f21ef2d1d14abfe44b2fac"
+      },
+      {
+        "bytes": 3079,
+        "path": "evidence/performance-frontier/campaigns/PFP-2/ctgrind/pfp21-2026-11-26/attrib/a-sign-ex-k-r2.summary.json",
+        "sha256": "bc53f2d9faf4114b7468099dba38b44c090867a84ddf9b613782e89287055f15"
+      },
+      {
+        "bytes": 3089,
+        "path": "evidence/performance-frontier/campaigns/PFP-2/ctgrind/pfp21-2026-11-26/attrib/a-sign-ex-k-r3.summary.json",
+        "sha256": "08dd450d3206651ac62f805e9d06923f17311e003b6b7e9017118c17145df849"
+      },
+      {
+        "bytes": 1336,
+        "path": "evidence/performance-frontier/campaigns/PFP-2/ctgrind/pfp21-2026-11-26/attrib/a-sign-ex-r1.summary.json",
+        "sha256": "be5db88a99e56b126d80a901b8fb488cfd42f5f856232e24639cf3a3ff859666"
+      },
+      {
+        "bytes": 1336,
+        "path": "evidence/performance-frontier/campaigns/PFP-2/ctgrind/pfp21-2026-11-26/attrib/a-sign-ex-r2.summary.json",
+        "sha256": "126c0d59cf90bb7cfcaa95efe970f61bc4d3bffae70a79283aeee94f9b7fda83"
+      },
+      {
+        "bytes": 1336,
+        "path": "evidence/performance-frontier/campaigns/PFP-2/ctgrind/pfp21-2026-11-26/attrib/a-sign-ex-r3.summary.json",
+        "sha256": "09ee3537f50d7c3a16b7f09c11bda708f94de6490c12f78e32c826164b17f73d"
+      },
+      {
+        "bytes": 3065,
+        "path": "evidence/performance-frontier/campaigns/PFP-2/ctgrind/pfp21-2026-11-26/attrib/a-sign-r1.summary.json",
+        "sha256": "ff8bd8d4159695b072abcc668bf1b8d4cde4f9570ef524b541476e1ebb5db988"
+      },
+      {
+        "bytes": 3066,
+        "path": "evidence/performance-frontier/campaigns/PFP-2/ctgrind/pfp21-2026-11-26/attrib/a-sign-r2.summary.json",
+        "sha256": "a1c3844f2d97267c9d3e6f199de1d815e16865cfe4934b8de2597088fd52f669"
+      },
+      {
+        "bytes": 3065,
+        "path": "evidence/performance-frontier/campaigns/PFP-2/ctgrind/pfp21-2026-11-26/attrib/a-sign-r3.summary.json",
+        "sha256": "696e784d90ae6b6d537754c121977a75ec45c62e6eaeac1887889bd91bf76372"
+      },
+      {
+        "bytes": 217,
+        "path": "evidence/performance-frontier/campaigns/PFP-2/ctgrind/pfp21-2026-11-26/attrib/b-control-r1.summary.json",
+        "sha256": "252bc1d68bb1eb50f90c9c67192afac42e25475c594aed1d9b5e8618a9c78ee1"
+      },
+      {
+        "bytes": 3035,
+        "path": "evidence/performance-frontier/campaigns/PFP-2/ctgrind/pfp21-2026-11-26/attrib/b-mul-g-bytes-r1.summary.json",
+        "sha256": "480909a18178d0e33981dd0ba1dc92a459760f1fa871148bea4ec1576d79d025"
+      },
+      {
+        "bytes": 3034,
+        "path": "evidence/performance-frontier/campaigns/PFP-2/ctgrind/pfp21-2026-11-26/attrib/b-mul-g-bytes-r2.summary.json",
+        "sha256": "571fa5c1553b281485426a6332493a20eba58befca2941ed8eeb6732d86f2901"
+      },
+      {
+        "bytes": 3034,
+        "path": "evidence/performance-frontier/campaigns/PFP-2/ctgrind/pfp21-2026-11-26/attrib/b-mul-g-bytes-r3.summary.json",
+        "sha256": "b5ea21628f2c8e0078b63ef0fd789cf9b2dc2c2b35ea9bf5e30602510b60aba2"
+      },
+      {
+        "bytes": 2973,
+        "path": "evidence/performance-frontier/campaigns/PFP-2/ctgrind/pfp21-2026-11-26/attrib/b-mul-g-r1.summary.json",
+        "sha256": "7b765e788026f9b9280651b322893f4d6606c8820d0420c6cd2af78f076ac38d"
+      },
+      {
+        "bytes": 2973,
+        "path": "evidence/performance-frontier/campaigns/PFP-2/ctgrind/pfp21-2026-11-26/attrib/b-mul-g-r2.summary.json",
+        "sha256": "83f702093bd5a745b2e1ed656e35f3334e442dd146e710039b7be77667fac212"
+      },
+      {
+        "bytes": 2982,
+        "path": "evidence/performance-frontier/campaigns/PFP-2/ctgrind/pfp21-2026-11-26/attrib/b-mul-g-r3.summary.json",
+        "sha256": "5778669bd466fe52c3f604bd1bbb22238d5bbe42fc6bdb9edb22c09698fbdaee"
+      },
+      {
+        "bytes": 2972,
+        "path": "evidence/performance-frontier/campaigns/PFP-2/ctgrind/pfp21-2026-11-26/attrib/b-mul-p-r1.summary.json",
+        "sha256": "cf44306a712b6d5e55449fff290f35b22033df107546ab05d43c155f249a37d8"
+      },
+      {
+        "bytes": 2973,
+        "path": "evidence/performance-frontier/campaigns/PFP-2/ctgrind/pfp21-2026-11-26/attrib/b-mul-p-r2.summary.json",
+        "sha256": "091f313110f55c0f6399d9ccd62194f5e16099389d28a7f2c992af2431e78891"
+      },
+      {
+        "bytes": 2982,
+        "path": "evidence/performance-frontier/campaigns/PFP-2/ctgrind/pfp21-2026-11-26/attrib/b-mul-p-r3.summary.json",
+        "sha256": "7a31a9b702e25e30be6cee5b797c4356a46e4a1dc6b8873e20e40373fd917285"
+      },
+      {
+        "bytes": 3089,
+        "path": "evidence/performance-frontier/campaigns/PFP-2/ctgrind/pfp21-2026-11-26/attrib/b-sign-ex-k-r1.summary.json",
+        "sha256": "96d0ee8c77996dd4309531c20f60e25635c98716f116406a5274a54032952f9f"
+      },
+      {
+        "bytes": 3079,
+        "path": "evidence/performance-frontier/campaigns/PFP-2/ctgrind/pfp21-2026-11-26/attrib/b-sign-ex-k-r2.summary.json",
+        "sha256": "8d530d3fb78909cfb20fa2744d78648260d061e2608f39c958885f6f465075d9"
+      },
+      {
+        "bytes": 3089,
+        "path": "evidence/performance-frontier/campaigns/PFP-2/ctgrind/pfp21-2026-11-26/attrib/b-sign-ex-k-r3.summary.json",
+        "sha256": "e06425947191334bae4f8bd54522246f86c67622cb76622425c50a034da1a47c"
+      },
+      {
+        "bytes": 1336,
+        "path": "evidence/performance-frontier/campaigns/PFP-2/ctgrind/pfp21-2026-11-26/attrib/b-sign-ex-r1.summary.json",
+        "sha256": "ccd539e88201bd7ff31b182273bac8b9b8db5d72bb0de9fd3c7a93d3eeff063b"
+      },
+      {
+        "bytes": 1336,
+        "path": "evidence/performance-frontier/campaigns/PFP-2/ctgrind/pfp21-2026-11-26/attrib/b-sign-ex-r2.summary.json",
+        "sha256": "93fd5b064e707687bd3ebb99bb425652c0a3a9e4b347c54bee1a5003d39a3972"
+      },
+      {
+        "bytes": 1336,
+        "path": "evidence/performance-frontier/campaigns/PFP-2/ctgrind/pfp21-2026-11-26/attrib/b-sign-ex-r3.summary.json",
+        "sha256": "5c65f3dd165be7380a817a3988935e0f519efeead2c9ec82eff4e8a41a786319"
+      },
+      {
+        "bytes": 3069,
+        "path": "evidence/performance-frontier/campaigns/PFP-2/ctgrind/pfp21-2026-11-26/attrib/b-sign-r1.summary.json",
+        "sha256": "9b22a916758c32e0947ecb3773dcfa7891a902352f568eb2af60a7f9524ba063"
+      },
+      {
+        "bytes": 3069,
+        "path": "evidence/performance-frontier/campaigns/PFP-2/ctgrind/pfp21-2026-11-26/attrib/b-sign-r2.summary.json",
+        "sha256": "94a583190afd0620940b1ca6b229ff6ec3023edc017343d432fa6128eb0978da"
+      },
+      {
+        "bytes": 3065,
+        "path": "evidence/performance-frontier/campaigns/PFP-2/ctgrind/pfp21-2026-11-26/attrib/b-sign-r3.summary.json",
+        "sha256": "0d1021417c2db62b565d9204cd5db1cc53049be6ab75ce6e309561993670929e"
+      },
+      {
+        "bytes": 3098,
+        "path": "evidence/performance-frontier/campaigns/PFP-2/ctgrind/pfp21-2026-11-26/attrib/c-mul-g-r1.summary.json",
+        "sha256": "513fab15e2126d70625b7ab9315d4f9e2b631eaadd99559c9488355912d090c3"
+      },
+      {
+        "bytes": 3097,
+        "path": "evidence/performance-frontier/campaigns/PFP-2/ctgrind/pfp21-2026-11-26/attrib/c-mul-g-r2.summary.json",
+        "sha256": "5b2ff8f5a8254ecc493eeb21474a7aef81877fbe535112fb094b53fc411e2500"
+      },
+      {
+        "bytes": 3098,
+        "path": "evidence/performance-frontier/campaigns/PFP-2/ctgrind/pfp21-2026-11-26/attrib/c-mul-g-r3.summary.json",
+        "sha256": "5ce9d00f786765d3235fca1641857e869be3b2a2d1349c41072a711d6d03c534"
+      },
+      {
+        "bytes": 27162,
+        "path": "evidence/performance-frontier/campaigns/PFP-2/ctgrind/pfp21-2026-11-26/raw/pfp21-record.json",
+        "sha256": "4de31f4e2c8a0054296bed964617e0db3197053d082271f236d4fda4a4ac797f"
+      },
+      {
+        "bytes": 2770,
+        "path": "evidence/performance-frontier/campaigns/PFP-2/ctgrind/post-fix-2026-11-26/attrib/dbg-sign.summary.json",
+        "sha256": "910d791accb08c72c9a47ea35d4a99650a6c64cd767c72df17930f663275cefd"
+      },
+      {
+        "bytes": 988,
+        "path": "evidence/performance-frontier/campaigns/PFP-2/ctgrind/post-fix-2026-11-26/attrib/minimal-generic.summary.json",
+        "sha256": "005b97f5675c5bd05a22bd28e393de9c11bcd6bf11116e50f619ba1210dc9f1f"
+      },
+      {
+        "bytes": 3038,
+        "path": "evidence/performance-frontier/campaigns/PFP-2/ctgrind/post-fix-2026-11-26/attrib/minimal-mont.summary.json",
+        "sha256": "4f01d1794ac061b665a1d1a3879fce74b4dcc889d844a3d48fd2fc0920d06880"
+      },
+      {
+        "bytes": 2806,
+        "path": "evidence/performance-frontier/campaigns/PFP-2/ctgrind/repro-2026-11-26/attrib/base-2.summary.json",
+        "sha256": "631f4f780f98dacf470d75603614da87c9ed5eb5f6e2619b96a3cbca35f57eee"
+      },
+      {
+        "bytes": 2762,
+        "path": "evidence/performance-frontier/campaigns/PFP-2/ctgrind/repro-2026-11-26/attrib/ecdsa-sign.summary.json",
+        "sha256": "1a9bdab9d6437cb1a6f7d21db1e10849f82997a7ba1d17de58f9b7b68ad954c9"
+      },
+      {
+        "bytes": 990,
+        "path": "evidence/performance-frontier/campaigns/PFP-2/ctgrind/repro-2026-11-26/attrib/p-pair-generic.summary.json",
+        "sha256": "e38513fe78f4d59961efa0a8abe3acda433bcf2e0ef6aee52786ee0706773315"
+      },
+      {
+        "bytes": 3412,
+        "path": "evidence/performance-frontier/campaigns/PFP-2/ctgrind/repro-2026-11-26/attrib/p-pair-mont.summary.json",
+        "sha256": "6637116304b100c06ec0003c7f9ae4de7a427457545348a17e537b6aa93fe1f2"
+      },
+      {
+        "bytes": 2982,
+        "path": "evidence/performance-frontier/campaigns/PFP-2/ctgrind/repro-2026-11-26/attrib/s-sign-generic-1.summary.json",
+        "sha256": "ab7de46cf98d59d16f701752098dbceb5e339645eb98412908383be1748645af"
+      },
+      {
+        "bytes": 3294,
+        "path": "evidence/performance-frontier/campaigns/PFP-2/ctgrind/repro-2026-11-26/attrib/s-sign-mont-1.summary.json",
+        "sha256": "0cf35ed1c64cb1573709815493363d7cd2ee8e5c5b5e30a7e53f185f8e5a2906"
+      },
+      {
         "bytes": 1463,
         "path": "evidence/performance-frontier/campaigns/PFP-2/ctgrind/summary.json",
         "sha256": "ee43e469eec3efc6f4463f89c7000ac2b80de07e15eb3cc60fcd5a33c170b106"
@@ -2443,9 +2728,64 @@
         "sha256": "9e6b1eb1f439e5dea96ee89af3b3c984cfefe114f9a3f8d77c20d60cac1ca556"
       },
       {
+        "bytes": 5694,
+        "path": "evidence/performance-frontier/campaigns/PFP-2/dso-differential-pfp20/differential-dso-bound.json",
+        "sha256": "d3bfe7b30ce1bcd05ba10685b089fa853c26549680581065fb4e085b8c7a66bc"
+      },
+      {
+        "bytes": 5697,
+        "path": "evidence/performance-frontier/campaigns/PFP-2/dso-differential/differential-dso-bound.json",
+        "sha256": "d2d64251eab1c6d714d8deb1b1dd009f4aa25ed6fc2d3d9ae5c3e51c46c931ea"
+      },
+      {
         "bytes": 4374,
         "path": "evidence/performance-frontier/campaigns/PFP-2/kernels/summary.json",
         "sha256": "d70322ae8638b1f69b9a01ecede82b17f8ee55d53e0244d6eac2a8e324b0ea0c"
+      },
+      {
+        "bytes": 6567,
+        "path": "evidence/performance-frontier/campaigns/PFP-2/timing-553e1b8c/build-identity.json",
+        "sha256": "c7edbb4c175751ba4ea2df33ded6937e24815af9218dbfb428e2321215f8e042"
+      },
+      {
+        "bytes": 1641,
+        "path": "evidence/performance-frontier/campaigns/PFP-2/timing-553e1b8c/fixtures/dh-fixtures.json",
+        "sha256": "ad58f88d53ab76b608a6db95e938a6065af4b2f1c2ee287006fdd30a5abed2b2"
+      },
+      {
+        "bytes": 1208,
+        "path": "evidence/performance-frontier/campaigns/PFP-2/timing-553e1b8c/preregistration.json",
+        "sha256": "d808e1234c90ca8ad1986a0f6388fcfbb2ce77037efb8e663df88358ed299bd1"
+      },
+      {
+        "bytes": 43215,
+        "path": "evidence/performance-frontier/campaigns/PFP-2/timing-553e1b8c/results.json",
+        "sha256": "44065eec75db0e78b607a65221a8d0b7131d239ef5b764e6eaca2411aaec197d"
+      },
+      {
+        "bytes": 47912,
+        "path": "evidence/performance-frontier/campaigns/PFP-2/timing-83f67826/build-identity.json",
+        "sha256": "76491f21d08fa9dc17250f588d041ee9005865b75b554fac71cdf0ac8b37b0d7"
+      },
+      {
+        "bytes": 1641,
+        "path": "evidence/performance-frontier/campaigns/PFP-2/timing-83f67826/fixtures/dh-fixtures.json",
+        "sha256": "ad58f88d53ab76b608a6db95e938a6065af4b2f1c2ee287006fdd30a5abed2b2"
+      },
+      {
+        "bytes": 1170,
+        "path": "evidence/performance-frontier/campaigns/PFP-2/timing-83f67826/preregistration.json",
+        "sha256": "fe5310702c0cf17b5d1566be5db25ccf859d05ed8e34b7c07f7910cb51605e02"
+      },
+      {
+        "bytes": 85288,
+        "path": "evidence/performance-frontier/campaigns/PFP-2/timing-83f67826/results.json",
+        "sha256": "454655e3b8ea8055c908c5c271821e0281c4ce0093340eef85195abfffc4b357"
+      },
+      {
+        "bytes": 14916,
+        "path": "evidence/performance-frontier/campaigns/PFP-6/results.json",
+        "sha256": "f7ef0a72ad2da8e89b696de8bca68c5e564067bac3b05086641589a49ff81330"
       },
       {
         "bytes": 14618,
@@ -2468,9 +2808,9 @@
         "sha256": "12229dee8ff447adc3e2de404ef4ea8b260f9136a948696a4ae21ac501e3258e"
       },
       {
-        "bytes": 13115,
+        "bytes": 28659,
         "path": "evidence/performance-frontier/claims/PFP-2.claim.json",
-        "sha256": "31ac1ad13801be211e05147c7bae03e51ba844bd5e504f6d37a1efea18dc2576"
+        "sha256": "950200bb98604cd4f814fbe13b055f34b4e6739a756a86a24558f14c98793fdf"
       },
       {
         "bytes": 35767,
@@ -2868,18 +3208,38 @@
             "sha256": "7995285550c72609272e65599ddf9845dd5b04d75b1690d1bbac63911e1af11e"
           }
         ]
+      },
+      {
+        "files": 526,
+        "frozenAtCandidate": "34754764fd2cae3117535b741263c48e3df6cf37",
+        "memberCount": 526,
+        "reason": "an explicit re-freeze replaced the prior population at a new candidate; the prior freeze, member count and record digests are preserved here rather than silently overwritten.",
+        "recordDigests": [
+          {
+            "path": "evidence/a16/INVENTORY.json",
+            "sha256": "54e95d9b47d314f6857abf1f4dc553e52e8e16a9ba92449f8a35a169346d7159"
+          },
+          {
+            "path": "evidence/a16/PROFILE.json",
+            "sha256": "b5f949660135e66651b7b853bac04387a5a7775c24acf1f67815a48ea2d5151c"
+          },
+          {
+            "path": "evidence/a16/CONTROLS.json",
+            "sha256": "eaffe8a7d4247ac078a89c73ab2bf4260d3c57c44409602b16864851112fd174"
+          }
+        ]
       }
     ]
   },
-  "populationFiles": 526,
+  "populationFiles": 594,
   "populationGlob": [
     "evidence/**/*.json"
   ],
   "schema": "openssl-rs/a16/bundle-inventory/2",
   "sourceIdentity": {
     "asOf": "2026-11-24",
-    "baseCommit": "34754764fd2cae3117535b741263c48e3df6cf37",
-    "baseCommitShort": "34754764f",
+    "baseCommit": "50974780e47c190da2f202acc24b4ac3899f8e01",
+    "baseCommitShort": "50974780e",
     "delegatedTools": [
       {
         "path": "forensics/tools/harden.py",
