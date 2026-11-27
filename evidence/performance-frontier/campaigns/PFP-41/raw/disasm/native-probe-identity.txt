@@ -1,0 +1,8 @@
+native_dso_sha256 1570ac940e81fa6af23cf3ea4a45552a048a152445596de17e8d7a53697993e0
+mont_mul_ladder_into addr=0x00000000003f91f0 size=0x0000000000002560
+=== native kernel opcode census ===
+mulx   140
+adcx   0
+adox   0
+mulq   0
+mul    140

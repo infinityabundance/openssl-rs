@@ -1,0 +1,1006 @@
+
+forensics/authorities/build/openssl-3.6.4-production/libcrypto.so.3:     file format elf64-x86-64
+
+
+Disassembly of section .text:
+
+000000000015c0c0 <bn_mul_mont>:
+  15c0c0:	mov    %r9d,%r9d
+  15c0c3:	mov    %rsp,%rax
+  15c0c6:	test   $0x3,%r9d
+  15c0cd:	jne    15c100 <bn_mul_mont+0x40>
+  15c0cf:	cmp    $0x8,%r9d
+  15c0d3:	jb     15c100 <bn_mul_mont+0x40>
+  15c0d5:	mov    0x4cdb4c(%rip),%r11d        # 629c28 <OPENSSL_ia32cap_P+0x8>
+  15c0dc:	cmp    %rsi,%rdx
+  15c0df:	jne    15c366 <bn_mul4x_mont+0x6>
+  15c0e5:	test   $0x7,%r9d
+  15c0ec:	je     15c8c3 <bn_sqr8x_mont+0x3>
+  15c0f2:	jmp    15c366 <bn_mul4x_mont+0x6>
+  15c0f7:	nopw   0x0(%rax,%rax,1)
+  15c100:	push   %rbx
+  15c101:	push   %rbp
+  15c102:	push   %r12
+  15c104:	push   %r13
+  15c106:	push   %r14
+  15c108:	push   %r15
+  15c10a:	neg    %r9
+  15c10d:	mov    %rsp,%r11
+  15c110:	lea    -0x10(%rsp,%r9,8),%r10
+  15c115:	neg    %r9
+  15c118:	and    $0xfffffffffffffc00,%r10
+  15c11f:	sub    %r10,%r11
+  15c122:	and    $0xfffffffffffff000,%r11
+  15c129:	lea    (%r10,%r11,1),%rsp
+  15c12d:	mov    (%rsp),%r11
+  15c131:	cmp    %r10,%rsp
+  15c134:	ja     15c140 <bn_mul_mont+0x80>
+  15c136:	jmp    15c151 <bn_mul_mont+0x91>
+  15c138:	nopl   0x0(%rax,%rax,1)
+  15c140:	lea    -0x1000(%rsp),%rsp
+  15c148:	mov    (%rsp),%r11
+  15c14c:	cmp    %r10,%rsp
+  15c14f:	ja     15c140 <bn_mul_mont+0x80>
+  15c151:	mov    %rax,0x8(%rsp,%r9,8)
+  15c156:	mov    %rdx,%r12
+  15c159:	mov    (%r8),%r8
+  15c15c:	mov    (%r12),%rbx
+  15c160:	mov    (%rsi),%rax
+  15c163:	xor    %r14,%r14
+  15c166:	xor    %r15,%r15
+  15c169:	mov    %r8,%rbp
+  15c16c:	mul    %rbx
+  15c16f:	mov    %rax,%r10
+  15c172:	mov    (%rcx),%rax
+  15c175:	imul   %r10,%rbp
+  15c179:	mov    %rdx,%r11
+  15c17c:	mul    %rbp
+  15c17f:	add    %rax,%r10
+  15c182:	mov    0x8(%rsi),%rax
+  15c186:	adc    $0x0,%rdx
+  15c18a:	mov    %rdx,%r13
+  15c18d:	lea    0x1(%r15),%r15
+  15c191:	jmp    15c1bd <bn_mul_mont+0xfd>
+  15c193:	data16 cs nopw 0x0(%rax,%rax,1)
+  15c19e:	xchg   %ax,%ax
+  15c1a0:	add    %rax,%r13
+  15c1a3:	mov    (%rsi,%r15,8),%rax
+  15c1a7:	adc    $0x0,%rdx
+  15c1ab:	add    %r11,%r13
+  15c1ae:	mov    %r10,%r11
+  15c1b1:	adc    $0x0,%rdx
+  15c1b5:	mov    %r13,-0x10(%rsp,%r15,8)
+  15c1ba:	mov    %rdx,%r13
+  15c1bd:	mul    %rbx
+  15c1c0:	add    %rax,%r11
+  15c1c3:	mov    (%rcx,%r15,8),%rax
+  15c1c7:	adc    $0x0,%rdx
+  15c1cb:	lea    0x1(%r15),%r15
+  15c1cf:	mov    %rdx,%r10
+  15c1d2:	mul    %rbp
+  15c1d5:	cmp    %r9,%r15
+  15c1d8:	jne    15c1a0 <bn_mul_mont+0xe0>
+  15c1da:	add    %rax,%r13
+  15c1dd:	mov    (%rsi),%rax
+  15c1e0:	adc    $0x0,%rdx
+  15c1e4:	add    %r11,%r13
+  15c1e7:	adc    $0x0,%rdx
+  15c1eb:	mov    %r13,-0x10(%rsp,%r15,8)
+  15c1f0:	mov    %rdx,%r13
+  15c1f3:	mov    %r10,%r11
+  15c1f6:	xor    %rdx,%rdx
+  15c1f9:	add    %r11,%r13
+  15c1fc:	adc    $0x0,%rdx
+  15c200:	mov    %r13,-0x8(%rsp,%r9,8)
+  15c205:	mov    %rdx,(%rsp,%r9,8)
+  15c209:	lea    0x1(%r14),%r14
+  15c20d:	jmp    15c210 <bn_mul_mont+0x150>
+  15c20f:	nop
+  15c210:	mov    (%r12,%r14,8),%rbx
+  15c214:	xor    %r15,%r15
+  15c217:	mov    %r8,%rbp
+  15c21a:	mov    (%rsp),%r10
+  15c21e:	mul    %rbx
+  15c221:	add    %rax,%r10
+  15c224:	mov    (%rcx),%rax
+  15c227:	adc    $0x0,%rdx
+  15c22b:	imul   %r10,%rbp
+  15c22f:	mov    %rdx,%r11
+  15c232:	mul    %rbp
+  15c235:	add    %rax,%r10
+  15c238:	mov    0x8(%rsi),%rax
+  15c23c:	adc    $0x0,%rdx
+  15c240:	mov    0x8(%rsp),%r10
+  15c245:	mov    %rdx,%r13
+  15c248:	lea    0x1(%r15),%r15
+  15c24c:	jmp    15c26e <bn_mul_mont+0x1ae>
+  15c24e:	xchg   %ax,%ax
+  15c250:	add    %rax,%r13
+  15c253:	mov    (%rsi,%r15,8),%rax
+  15c257:	adc    $0x0,%rdx
+  15c25b:	add    %r10,%r13
+  15c25e:	mov    (%rsp,%r15,8),%r10
+  15c262:	adc    $0x0,%rdx
+  15c266:	mov    %r13,-0x10(%rsp,%r15,8)
+  15c26b:	mov    %rdx,%r13
+  15c26e:	mul    %rbx
+  15c271:	add    %rax,%r11
+  15c274:	mov    (%rcx,%r15,8),%rax
+  15c278:	adc    $0x0,%rdx
+  15c27c:	add    %r11,%r10
+  15c27f:	mov    %rdx,%r11
+  15c282:	adc    $0x0,%r11
+  15c286:	lea    0x1(%r15),%r15
+  15c28a:	mul    %rbp
+  15c28d:	cmp    %r9,%r15
+  15c290:	jne    15c250 <bn_mul_mont+0x190>
+  15c292:	add    %rax,%r13
+  15c295:	mov    (%rsi),%rax
+  15c298:	adc    $0x0,%rdx
+  15c29c:	add    %r10,%r13
+  15c29f:	mov    (%rsp,%r15,8),%r10
+  15c2a3:	adc    $0x0,%rdx
+  15c2a7:	mov    %r13,-0x10(%rsp,%r15,8)
+  15c2ac:	mov    %rdx,%r13
+  15c2af:	xor    %rdx,%rdx
+  15c2b2:	add    %r11,%r13
+  15c2b5:	adc    $0x0,%rdx
+  15c2b9:	add    %r10,%r13
+  15c2bc:	adc    $0x0,%rdx
+  15c2c0:	mov    %r13,-0x8(%rsp,%r9,8)
+  15c2c5:	mov    %rdx,(%rsp,%r9,8)
+  15c2c9:	lea    0x1(%r14),%r14
+  15c2cd:	cmp    %r9,%r14
+  15c2d0:	jb     15c210 <bn_mul_mont+0x150>
+  15c2d6:	xor    %r14,%r14
+  15c2d9:	mov    (%rsp),%rax
+  15c2dd:	mov    %r9,%r15
+  15c2e0:	sbb    (%rcx,%r14,8),%rax
+  15c2e4:	mov    %rax,(%rdi,%r14,8)
+  15c2e8:	mov    0x8(%rsp,%r14,8),%rax
+  15c2ed:	lea    0x1(%r14),%r14
+  15c2f1:	dec    %r15
+  15c2f4:	jne    15c2e0 <bn_mul_mont+0x220>
+  15c2f6:	sbb    $0x0,%rax
+  15c2fa:	mov    $0xffffffffffffffff,%rbx
+  15c301:	xor    %rax,%rbx
+  15c304:	xor    %r14,%r14
+  15c307:	mov    %r9,%r15
+  15c30a:	mov    (%rdi,%r14,8),%rcx
+  15c30e:	mov    (%rsp,%r14,8),%rdx
+  15c312:	and    %rbx,%rcx
+  15c315:	and    %rax,%rdx
+  15c318:	mov    %r9,(%rsp,%r14,8)
+  15c31c:	or     %rcx,%rdx
+  15c31f:	mov    %rdx,(%rdi,%r14,8)
+  15c323:	lea    0x1(%r14),%r14
+  15c327:	sub    $0x1,%r15
+  15c32b:	jne    15c30a <bn_mul_mont+0x24a>
+  15c32d:	mov    0x8(%rsp,%r9,8),%rsi
+  15c332:	mov    $0x1,%rax
+  15c339:	mov    -0x30(%rsi),%r15
+  15c33d:	mov    -0x28(%rsi),%r14
+  15c341:	mov    -0x20(%rsi),%r13
+  15c345:	mov    -0x18(%rsi),%r12
+  15c349:	mov    -0x10(%rsi),%rbp
+  15c34d:	mov    -0x8(%rsi),%rbx
+  15c351:	lea    (%rsi),%rsp
+  15c354:	repz ret
+  15c356:	cs nopw 0x0(%rax,%rax,1)
+
+000000000015c360 <bn_mul4x_mont>:
+  15c360:	mov    %r9d,%r9d
+  15c363:	mov    %rsp,%rax
+  15c366:	and    $0x80100,%r11d
+  15c36d:	cmp    $0x80100,%r11d
+  15c374:	je     15cac3 <bn_mulx4x_mont+0x3>
+  15c37a:	push   %rbx
+  15c37b:	push   %rbp
+  15c37c:	push   %r12
+  15c37e:	push   %r13
+  15c380:	push   %r14
+  15c382:	push   %r15
+  15c384:	neg    %r9
+  15c387:	mov    %rsp,%r11
+  15c38a:	lea    -0x20(%rsp,%r9,8),%r10
+  15c38f:	neg    %r9
+  15c392:	and    $0xfffffffffffffc00,%r10
+  15c399:	sub    %r10,%r11
+  15c39c:	and    $0xfffffffffffff000,%r11
+  15c3a3:	lea    (%r10,%r11,1),%rsp
+  15c3a7:	mov    (%rsp),%r11
+  15c3ab:	cmp    %r10,%rsp
+  15c3ae:	ja     15c3b2 <bn_mul4x_mont+0x52>
+  15c3b0:	jmp    15c3c3 <bn_mul4x_mont+0x63>
+  15c3b2:	lea    -0x1000(%rsp),%rsp
+  15c3ba:	mov    (%rsp),%r11
+  15c3be:	cmp    %r10,%rsp
+  15c3c1:	ja     15c3b2 <bn_mul4x_mont+0x52>
+  15c3c3:	mov    %rax,0x8(%rsp,%r9,8)
+  15c3c8:	mov    %rdi,0x10(%rsp,%r9,8)
+  15c3cd:	mov    %rdx,%r12
+  15c3d0:	mov    (%r8),%r8
+  15c3d3:	mov    (%r12),%rbx
+  15c3d7:	mov    (%rsi),%rax
+  15c3da:	xor    %r14,%r14
+  15c3dd:	xor    %r15,%r15
+  15c3e0:	mov    %r8,%rbp
+  15c3e3:	mul    %rbx
+  15c3e6:	mov    %rax,%r10
+  15c3e9:	mov    (%rcx),%rax
+  15c3ec:	imul   %r10,%rbp
+  15c3f0:	mov    %rdx,%r11
+  15c3f3:	mul    %rbp
+  15c3f6:	add    %rax,%r10
+  15c3f9:	mov    0x8(%rsi),%rax
+  15c3fd:	adc    $0x0,%rdx
+  15c401:	mov    %rdx,%rdi
+  15c404:	mul    %rbx
+  15c407:	add    %rax,%r11
+  15c40a:	mov    0x8(%rcx),%rax
+  15c40e:	adc    $0x0,%rdx
+  15c412:	mov    %rdx,%r10
+  15c415:	mul    %rbp
+  15c418:	add    %rax,%rdi
+  15c41b:	mov    0x10(%rsi),%rax
+  15c41f:	adc    $0x0,%rdx
+  15c423:	add    %r11,%rdi
+  15c426:	lea    0x4(%r15),%r15
+  15c42a:	adc    $0x0,%rdx
+  15c42e:	mov    %rdi,(%rsp)
+  15c432:	mov    %rdx,%r13
+  15c435:	jmp    15c440 <bn_mul4x_mont+0xe0>
+  15c437:	nopw   0x0(%rax,%rax,1)
+  15c440:	mul    %rbx
+  15c443:	add    %rax,%r10
+  15c446:	mov    -0x10(%rcx,%r15,8),%rax
+  15c44b:	adc    $0x0,%rdx
+  15c44f:	mov    %rdx,%r11
+  15c452:	mul    %rbp
+  15c455:	add    %rax,%r13
+  15c458:	mov    -0x8(%rsi,%r15,8),%rax
+  15c45d:	adc    $0x0,%rdx
+  15c461:	add    %r10,%r13
+  15c464:	adc    $0x0,%rdx
+  15c468:	mov    %r13,-0x18(%rsp,%r15,8)
+  15c46d:	mov    %rdx,%rdi
+  15c470:	mul    %rbx
+  15c473:	add    %rax,%r11
+  15c476:	mov    -0x8(%rcx,%r15,8),%rax
+  15c47b:	adc    $0x0,%rdx
+  15c47f:	mov    %rdx,%r10
+  15c482:	mul    %rbp
+  15c485:	add    %rax,%rdi
+  15c488:	mov    (%rsi,%r15,8),%rax
+  15c48c:	adc    $0x0,%rdx
+  15c490:	add    %r11,%rdi
+  15c493:	adc    $0x0,%rdx
+  15c497:	mov    %rdi,-0x10(%rsp,%r15,8)
+  15c49c:	mov    %rdx,%r13
+  15c49f:	mul    %rbx
+  15c4a2:	add    %rax,%r10
+  15c4a5:	mov    (%rcx,%r15,8),%rax
+  15c4a9:	adc    $0x0,%rdx
+  15c4ad:	mov    %rdx,%r11
+  15c4b0:	mul    %rbp
+  15c4b3:	add    %rax,%r13
+  15c4b6:	mov    0x8(%rsi,%r15,8),%rax
+  15c4bb:	adc    $0x0,%rdx
+  15c4bf:	add    %r10,%r13
+  15c4c2:	adc    $0x0,%rdx
+  15c4c6:	mov    %r13,-0x8(%rsp,%r15,8)
+  15c4cb:	mov    %rdx,%rdi
+  15c4ce:	mul    %rbx
+  15c4d1:	add    %rax,%r11
+  15c4d4:	mov    0x8(%rcx,%r15,8),%rax
+  15c4d9:	adc    $0x0,%rdx
+  15c4dd:	lea    0x4(%r15),%r15
+  15c4e1:	mov    %rdx,%r10
+  15c4e4:	mul    %rbp
+  15c4e7:	add    %rax,%rdi
+  15c4ea:	mov    -0x10(%rsi,%r15,8),%rax
+  15c4ef:	adc    $0x0,%rdx
+  15c4f3:	add    %r11,%rdi
+  15c4f6:	adc    $0x0,%rdx
+  15c4fa:	mov    %rdi,-0x20(%rsp,%r15,8)
+  15c4ff:	mov    %rdx,%r13
+  15c502:	cmp    %r9,%r15
+  15c505:	jb     15c440 <bn_mul4x_mont+0xe0>
+  15c50b:	mul    %rbx
+  15c50e:	add    %rax,%r10
+  15c511:	mov    -0x10(%rcx,%r15,8),%rax
+  15c516:	adc    $0x0,%rdx
+  15c51a:	mov    %rdx,%r11
+  15c51d:	mul    %rbp
+  15c520:	add    %rax,%r13
+  15c523:	mov    -0x8(%rsi,%r15,8),%rax
+  15c528:	adc    $0x0,%rdx
+  15c52c:	add    %r10,%r13
+  15c52f:	adc    $0x0,%rdx
+  15c533:	mov    %r13,-0x18(%rsp,%r15,8)
+  15c538:	mov    %rdx,%rdi
+  15c53b:	mul    %rbx
+  15c53e:	add    %rax,%r11
+  15c541:	mov    -0x8(%rcx,%r15,8),%rax
+  15c546:	adc    $0x0,%rdx
+  15c54a:	mov    %rdx,%r10
+  15c54d:	mul    %rbp
+  15c550:	add    %rax,%rdi
+  15c553:	mov    (%rsi),%rax
+  15c556:	adc    $0x0,%rdx
+  15c55a:	add    %r11,%rdi
+  15c55d:	adc    $0x0,%rdx
+  15c561:	mov    %rdi,-0x10(%rsp,%r15,8)
+  15c566:	mov    %rdx,%r13
+  15c569:	xor    %rdi,%rdi
+  15c56c:	add    %r10,%r13
+  15c56f:	adc    $0x0,%rdi
+  15c573:	mov    %r13,-0x8(%rsp,%r15,8)
+  15c578:	mov    %rdi,(%rsp,%r15,8)
+  15c57c:	lea    0x1(%r14),%r14
+  15c580:	mov    (%r12,%r14,8),%rbx
+  15c584:	xor    %r15,%r15
+  15c587:	mov    (%rsp),%r10
+  15c58b:	mov    %r8,%rbp
+  15c58e:	mul    %rbx
+  15c591:	add    %rax,%r10
+  15c594:	mov    (%rcx),%rax
+  15c597:	adc    $0x0,%rdx
+  15c59b:	imul   %r10,%rbp
+  15c59f:	mov    %rdx,%r11
+  15c5a2:	mul    %rbp
+  15c5a5:	add    %rax,%r10
+  15c5a8:	mov    0x8(%rsi),%rax
+  15c5ac:	adc    $0x0,%rdx
+  15c5b0:	mov    %rdx,%rdi
+  15c5b3:	mul    %rbx
+  15c5b6:	add    %rax,%r11
+  15c5b9:	mov    0x8(%rcx),%rax
+  15c5bd:	adc    $0x0,%rdx
+  15c5c1:	add    0x8(%rsp),%r11
+  15c5c6:	adc    $0x0,%rdx
+  15c5ca:	mov    %rdx,%r10
+  15c5cd:	mul    %rbp
+  15c5d0:	add    %rax,%rdi
+  15c5d3:	mov    0x10(%rsi),%rax
+  15c5d7:	adc    $0x0,%rdx
+  15c5db:	add    %r11,%rdi
+  15c5de:	lea    0x4(%r15),%r15
+  15c5e2:	adc    $0x0,%rdx
+  15c5e6:	mov    %rdi,(%rsp)
+  15c5ea:	mov    %rdx,%r13
+  15c5ed:	jmp    15c5f0 <bn_mul4x_mont+0x290>
+  15c5ef:	nop
+  15c5f0:	mul    %rbx
+  15c5f3:	add    %rax,%r10
+  15c5f6:	mov    -0x10(%rcx,%r15,8),%rax
+  15c5fb:	adc    $0x0,%rdx
+  15c5ff:	add    -0x10(%rsp,%r15,8),%r10
+  15c604:	adc    $0x0,%rdx
+  15c608:	mov    %rdx,%r11
+  15c60b:	mul    %rbp
+  15c60e:	add    %rax,%r13
+  15c611:	mov    -0x8(%rsi,%r15,8),%rax
+  15c616:	adc    $0x0,%rdx
+  15c61a:	add    %r10,%r13
+  15c61d:	adc    $0x0,%rdx
+  15c621:	mov    %r13,-0x18(%rsp,%r15,8)
+  15c626:	mov    %rdx,%rdi
+  15c629:	mul    %rbx
+  15c62c:	add    %rax,%r11
+  15c62f:	mov    -0x8(%rcx,%r15,8),%rax
+  15c634:	adc    $0x0,%rdx
+  15c638:	add    -0x8(%rsp,%r15,8),%r11
+  15c63d:	adc    $0x0,%rdx
+  15c641:	mov    %rdx,%r10
+  15c644:	mul    %rbp
+  15c647:	add    %rax,%rdi
+  15c64a:	mov    (%rsi,%r15,8),%rax
+  15c64e:	adc    $0x0,%rdx
+  15c652:	add    %r11,%rdi
+  15c655:	adc    $0x0,%rdx
+  15c659:	mov    %rdi,-0x10(%rsp,%r15,8)
+  15c65e:	mov    %rdx,%r13
+  15c661:	mul    %rbx
+  15c664:	add    %rax,%r10
+  15c667:	mov    (%rcx,%r15,8),%rax
+  15c66b:	adc    $0x0,%rdx
+  15c66f:	add    (%rsp,%r15,8),%r10
+  15c673:	adc    $0x0,%rdx
+  15c677:	mov    %rdx,%r11
+  15c67a:	mul    %rbp
+  15c67d:	add    %rax,%r13
+  15c680:	mov    0x8(%rsi,%r15,8),%rax
+  15c685:	adc    $0x0,%rdx
+  15c689:	add    %r10,%r13
+  15c68c:	adc    $0x0,%rdx
+  15c690:	mov    %r13,-0x8(%rsp,%r15,8)
+  15c695:	mov    %rdx,%rdi
+  15c698:	mul    %rbx
+  15c69b:	add    %rax,%r11
+  15c69e:	mov    0x8(%rcx,%r15,8),%rax
+  15c6a3:	adc    $0x0,%rdx
+  15c6a7:	add    0x8(%rsp,%r15,8),%r11
+  15c6ac:	adc    $0x0,%rdx
+  15c6b0:	lea    0x4(%r15),%r15
+  15c6b4:	mov    %rdx,%r10
+  15c6b7:	mul    %rbp
+  15c6ba:	add    %rax,%rdi
+  15c6bd:	mov    -0x10(%rsi,%r15,8),%rax
+  15c6c2:	adc    $0x0,%rdx
+  15c6c6:	add    %r11,%rdi
+  15c6c9:	adc    $0x0,%rdx
+  15c6cd:	mov    %rdi,-0x20(%rsp,%r15,8)
+  15c6d2:	mov    %rdx,%r13
+  15c6d5:	cmp    %r9,%r15
+  15c6d8:	jb     15c5f0 <bn_mul4x_mont+0x290>
+  15c6de:	mul    %rbx
+  15c6e1:	add    %rax,%r10
+  15c6e4:	mov    -0x10(%rcx,%r15,8),%rax
+  15c6e9:	adc    $0x0,%rdx
+  15c6ed:	add    -0x10(%rsp,%r15,8),%r10
+  15c6f2:	adc    $0x0,%rdx
+  15c6f6:	mov    %rdx,%r11
+  15c6f9:	mul    %rbp
+  15c6fc:	add    %rax,%r13
+  15c6ff:	mov    -0x8(%rsi,%r15,8),%rax
+  15c704:	adc    $0x0,%rdx
+  15c708:	add    %r10,%r13
+  15c70b:	adc    $0x0,%rdx
+  15c70f:	mov    %r13,-0x18(%rsp,%r15,8)
+  15c714:	mov    %rdx,%rdi
+  15c717:	mul    %rbx
+  15c71a:	add    %rax,%r11
+  15c71d:	mov    -0x8(%rcx,%r15,8),%rax
+  15c722:	adc    $0x0,%rdx
+  15c726:	add    -0x8(%rsp,%r15,8),%r11
+  15c72b:	adc    $0x0,%rdx
+  15c72f:	lea    0x1(%r14),%r14
+  15c733:	mov    %rdx,%r10
+  15c736:	mul    %rbp
+  15c739:	add    %rax,%rdi
+  15c73c:	mov    (%rsi),%rax
+  15c73f:	adc    $0x0,%rdx
+  15c743:	add    %r11,%rdi
+  15c746:	adc    $0x0,%rdx
+  15c74a:	mov    %rdi,-0x10(%rsp,%r15,8)
+  15c74f:	mov    %rdx,%r13
+  15c752:	xor    %rdi,%rdi
+  15c755:	add    %r10,%r13
+  15c758:	adc    $0x0,%rdi
+  15c75c:	add    (%rsp,%r9,8),%r13
+  15c760:	adc    $0x0,%rdi
+  15c764:	mov    %r13,-0x8(%rsp,%r15,8)
+  15c769:	mov    %rdi,(%rsp,%r15,8)
+  15c76d:	cmp    %r9,%r14
+  15c770:	jb     15c580 <bn_mul4x_mont+0x220>
+  15c776:	mov    0x10(%rsp,%r9,8),%rdi
+  15c77b:	lea    -0x4(%r9),%r15
+  15c77f:	mov    (%rsp),%rax
+  15c783:	mov    0x8(%rsp),%rdx
+  15c788:	shr    $0x2,%r15
+  15c78c:	lea    (%rsp),%rsi
+  15c790:	xor    %r14,%r14
+  15c793:	sub    (%rcx),%rax
+  15c796:	mov    0x10(%rsi),%rbx
+  15c79a:	mov    0x18(%rsi),%rbp
+  15c79e:	sbb    0x8(%rcx),%rdx
+  15c7a2:	mov    %rax,(%rdi,%r14,8)
+  15c7a6:	mov    %rdx,0x8(%rdi,%r14,8)
+  15c7ab:	sbb    0x10(%rcx,%r14,8),%rbx
+  15c7b0:	mov    0x20(%rsi,%r14,8),%rax
+  15c7b5:	mov    0x28(%rsi,%r14,8),%rdx
+  15c7ba:	sbb    0x18(%rcx,%r14,8),%rbp
+  15c7bf:	mov    %rbx,0x10(%rdi,%r14,8)
+  15c7c4:	mov    %rbp,0x18(%rdi,%r14,8)
+  15c7c9:	sbb    0x20(%rcx,%r14,8),%rax
+  15c7ce:	mov    0x30(%rsi,%r14,8),%rbx
+  15c7d3:	mov    0x38(%rsi,%r14,8),%rbp
+  15c7d8:	sbb    0x28(%rcx,%r14,8),%rdx
+  15c7dd:	lea    0x4(%r14),%r14
+  15c7e1:	dec    %r15
+  15c7e4:	jne    15c7a2 <bn_mul4x_mont+0x442>
+  15c7e6:	mov    %rax,(%rdi,%r14,8)
+  15c7ea:	mov    0x20(%rsi,%r14,8),%rax
+  15c7ef:	sbb    0x10(%rcx,%r14,8),%rbx
+  15c7f4:	mov    %rdx,0x8(%rdi,%r14,8)
+  15c7f9:	sbb    0x18(%rcx,%r14,8),%rbp
+  15c7fe:	mov    %rbx,0x10(%rdi,%r14,8)
+  15c803:	sbb    $0x0,%rax
+  15c807:	mov    %rbp,0x18(%rdi,%r14,8)
+  15c80c:	pxor   %xmm0,%xmm0
+  15c810:	movq   %rax,%xmm4
+  15c815:	pcmpeqd %xmm5,%xmm5
+  15c819:	pshufd $0x0,%xmm4,%xmm4
+  15c81e:	mov    %r9,%r15
+  15c821:	pxor   %xmm4,%xmm5
+  15c825:	shr    $0x2,%r15
+  15c829:	xor    %eax,%eax
+  15c82b:	jmp    15c830 <bn_mul4x_mont+0x4d0>
+  15c82d:	nopl   (%rax)
+  15c830:	movdqa (%rsp,%rax,1),%xmm1
+  15c835:	movdqu (%rdi,%rax,1),%xmm2
+  15c83a:	pand   %xmm4,%xmm1
+  15c83e:	pand   %xmm5,%xmm2
+  15c842:	movdqa 0x10(%rsp,%rax,1),%xmm3
+  15c848:	movdqa %xmm0,(%rsp,%rax,1)
+  15c84d:	por    %xmm2,%xmm1
+  15c851:	movdqu 0x10(%rdi,%rax,1),%xmm2
+  15c857:	movdqu %xmm1,(%rdi,%rax,1)
+  15c85c:	pand   %xmm4,%xmm3
+  15c860:	pand   %xmm5,%xmm2
+  15c864:	movdqa %xmm0,0x10(%rsp,%rax,1)
+  15c86a:	por    %xmm2,%xmm3
+  15c86e:	movdqu %xmm3,0x10(%rdi,%rax,1)
+  15c874:	lea    0x20(%rax),%rax
+  15c878:	dec    %r15
+  15c87b:	jne    15c830 <bn_mul4x_mont+0x4d0>
+  15c87d:	mov    0x8(%rsp,%r9,8),%rsi
+  15c882:	mov    $0x1,%rax
+  15c889:	mov    -0x30(%rsi),%r15
+  15c88d:	mov    -0x28(%rsi),%r14
+  15c891:	mov    -0x20(%rsi),%r13
+  15c895:	mov    -0x18(%rsi),%r12
+  15c899:	mov    -0x10(%rsi),%rbp
+  15c89d:	mov    -0x8(%rsi),%rbx
+  15c8a1:	lea    (%rsi),%rsp
+  15c8a4:	repz ret
+  15c8a6:	data16 cs nopw 0x0(%rax,%rax,1)
+  15c8b1:	data16 cs nopw 0x0(%rax,%rax,1)
+  15c8bc:	nopl   0x0(%rax)
+
+000000000015c8c0 <bn_sqr8x_mont>:
+  15c8c0:	mov    %rsp,%rax
+  15c8c3:	push   %rbx
+  15c8c4:	push   %rbp
+  15c8c5:	push   %r12
+  15c8c7:	push   %r13
+  15c8c9:	push   %r14
+  15c8cb:	push   %r15
+  15c8cd:	mov    %r9d,%r10d
+  15c8d0:	shl    $0x3,%r9d
+  15c8d4:	shl    $0x5,%r10
+  15c8d8:	neg    %r9
+  15c8db:	lea    -0x40(%rsp,%r9,2),%r11
+  15c8e0:	mov    %rsp,%rbp
+  15c8e3:	mov    (%r8),%r8
+  15c8e6:	sub    %rsi,%r11
+  15c8e9:	and    $0xfff,%r11
+  15c8f0:	cmp    %r11,%r10
+  15c8f3:	jb     15c900 <bn_sqr8x_mont+0x40>
+  15c8f5:	sub    %r11,%rbp
+  15c8f8:	lea    -0x40(%rbp,%r9,2),%rbp
+  15c8fd:	jmp    15c91e <bn_sqr8x_mont+0x5e>
+  15c8ff:	nop
+  15c900:	lea    0xfc0(,%r9,2),%r10
+  15c908:	lea    -0x40(%rbp,%r9,2),%rbp
+  15c90d:	sub    %r10,%r11
+  15c910:	mov    $0x0,%r10
+  15c917:	cmovb  %r10,%r11
+  15c91b:	sub    %r11,%rbp
+  15c91e:	and    $0xffffffffffffffc0,%rbp
+  15c922:	mov    %rsp,%r11
+  15c925:	sub    %rbp,%r11
+  15c928:	and    $0xfffffffffffff000,%r11
+  15c92f:	lea    (%r11,%rbp,1),%rsp
+  15c933:	mov    (%rsp),%r10
+  15c937:	cmp    %rbp,%rsp
+  15c93a:	ja     15c940 <bn_sqr8x_mont+0x80>
+  15c93c:	jmp    15c951 <bn_sqr8x_mont+0x91>
+  15c93e:	xchg   %ax,%ax
+  15c940:	lea    -0x1000(%rsp),%rsp
+  15c948:	mov    (%rsp),%r10
+  15c94c:	cmp    %rbp,%rsp
+  15c94f:	ja     15c940 <bn_sqr8x_mont+0x80>
+  15c951:	mov    %r9,%r10
+  15c954:	neg    %r9
+  15c957:	mov    %r8,0x20(%rsp)
+  15c95c:	mov    %rax,0x28(%rsp)
+  15c961:	movq   %rcx,%xmm2
+  15c966:	pxor   %xmm0,%xmm0
+  15c96a:	movq   %rdi,%xmm1
+  15c96f:	movq   %r10,%xmm3
+  15c974:	mov    0x4cd2ae(%rip),%eax        # 629c28 <OPENSSL_ia32cap_P+0x8>
+  15c97a:	and    $0x80100,%eax
+  15c97f:	cmp    $0x80100,%eax
+  15c984:	jne    15c9a0 <bn_sqr8x_mont+0xe0>
+  15c986:	call   15f460 <bn_sqrx8x_internal>
+  15c98b:	lea    (%r8,%rcx,1),%rbx
+  15c98f:	mov    %rcx,%r9
+  15c992:	mov    %rcx,%rdx
+  15c995:	movq   %xmm1,%rdi
+  15c99a:	sar    $0x5,%rcx
+  15c99e:	jmp    15c9c0 <bn_sqr8x_mont+0x100>
+  15c9a0:	call   15e0e0 <bn_sqr8x_internal>
+  15c9a5:	lea    (%rdi,%r9,1),%rbx
+  15c9a9:	mov    %r9,%rcx
+  15c9ac:	mov    %r9,%rdx
+  15c9af:	movq   %xmm1,%rdi
+  15c9b4:	sar    $0x5,%rcx
+  15c9b8:	jmp    15c9c0 <bn_sqr8x_mont+0x100>
+  15c9ba:	nopw   0x0(%rax,%rax,1)
+  15c9c0:	mov    (%rbx),%r12
+  15c9c3:	mov    0x8(%rbx),%r13
+  15c9c7:	mov    0x10(%rbx),%r14
+  15c9cb:	mov    0x18(%rbx),%r15
+  15c9cf:	lea    0x20(%rbx),%rbx
+  15c9d3:	sbb    0x0(%rbp),%r12
+  15c9d7:	sbb    0x8(%rbp),%r13
+  15c9db:	sbb    0x10(%rbp),%r14
+  15c9df:	sbb    0x18(%rbp),%r15
+  15c9e3:	lea    0x20(%rbp),%rbp
+  15c9e7:	mov    %r12,(%rdi)
+  15c9ea:	mov    %r13,0x8(%rdi)
+  15c9ee:	mov    %r14,0x10(%rdi)
+  15c9f2:	mov    %r15,0x18(%rdi)
+  15c9f6:	lea    0x20(%rdi),%rdi
+  15c9fa:	inc    %rcx
+  15c9fd:	jne    15c9c0 <bn_sqr8x_mont+0x100>
+  15c9ff:	sbb    $0x0,%rax
+  15ca03:	lea    (%rbx,%r9,1),%rbx
+  15ca07:	lea    (%rdi,%r9,1),%rdi
+  15ca0b:	movq   %rax,%xmm1
+  15ca10:	pxor   %xmm0,%xmm0
+  15ca14:	pshufd $0x0,%xmm1,%xmm1
+  15ca19:	mov    0x28(%rsp),%rsi
+  15ca1e:	jmp    15ca20 <bn_sqr8x_mont+0x160>
+  15ca20:	movdqa (%rbx),%xmm2
+  15ca24:	movdqa 0x10(%rbx),%xmm3
+  15ca29:	lea    0x20(%rbx),%rbx
+  15ca2d:	movdqu (%rdi),%xmm4
+  15ca31:	movdqu 0x10(%rdi),%xmm5
+  15ca36:	lea    0x20(%rdi),%rdi
+  15ca3a:	movdqa %xmm0,-0x20(%rbx)
+  15ca3f:	movdqa %xmm0,-0x10(%rbx)
+  15ca44:	movdqa %xmm0,-0x20(%rbx,%rdx,1)
+  15ca4a:	movdqa %xmm0,-0x10(%rbx,%rdx,1)
+  15ca50:	pcmpeqd %xmm1,%xmm0
+  15ca54:	pand   %xmm1,%xmm2
+  15ca58:	pand   %xmm1,%xmm3
+  15ca5c:	pand   %xmm0,%xmm4
+  15ca60:	pand   %xmm0,%xmm5
+  15ca64:	pxor   %xmm0,%xmm0
+  15ca68:	por    %xmm2,%xmm4
+  15ca6c:	por    %xmm3,%xmm5
+  15ca70:	movdqu %xmm4,-0x20(%rdi)
+  15ca75:	movdqu %xmm5,-0x10(%rdi)
+  15ca7a:	add    $0x20,%r9
+  15ca7e:	jne    15ca20 <bn_sqr8x_mont+0x160>
+  15ca80:	mov    $0x1,%rax
+  15ca87:	mov    -0x30(%rsi),%r15
+  15ca8b:	mov    -0x28(%rsi),%r14
+  15ca8f:	mov    -0x20(%rsi),%r13
+  15ca93:	mov    -0x18(%rsi),%r12
+  15ca97:	mov    -0x10(%rsi),%rbp
+  15ca9b:	mov    -0x8(%rsi),%rbx
+  15ca9f:	lea    (%rsi),%rsp
+  15caa2:	repz ret
+  15caa4:	data16 cs nopw 0x0(%rax,%rax,1)
+  15caaf:	data16 cs nopw 0x0(%rax,%rax,1)
+  15caba:	nopw   0x0(%rax,%rax,1)
+
+000000000015cac0 <bn_mulx4x_mont>:
+  15cac0:	mov    %rsp,%rax
+  15cac3:	push   %rbx
+  15cac4:	push   %rbp
+  15cac5:	push   %r12
+  15cac7:	push   %r13
+  15cac9:	push   %r14
+  15cacb:	push   %r15
+  15cacd:	shl    $0x3,%r9d
+  15cad1:	xor    %r10,%r10
+  15cad4:	sub    %r9,%r10
+  15cad7:	mov    (%r8),%r8
+  15cada:	lea    -0x48(%rsp,%r10,1),%rbp
+  15cadf:	and    $0xffffffffffffff80,%rbp
+  15cae3:	mov    %rsp,%r11
+  15cae6:	sub    %rbp,%r11
+  15cae9:	and    $0xfffffffffffff000,%r11
+  15caf0:	lea    (%r11,%rbp,1),%rsp
+  15caf4:	mov    (%rsp),%r10
+  15caf8:	cmp    %rbp,%rsp
+  15cafb:	ja     15cb00 <bn_mulx4x_mont+0x40>
+  15cafd:	jmp    15cb11 <bn_mulx4x_mont+0x51>
+  15caff:	nop
+  15cb00:	lea    -0x1000(%rsp),%rsp
+  15cb08:	mov    (%rsp),%r10
+  15cb0c:	cmp    %rbp,%rsp
+  15cb0f:	ja     15cb00 <bn_mulx4x_mont+0x40>
+  15cb11:	lea    (%rdx,%r9,1),%r10
+  15cb15:	mov    %r9,(%rsp)
+  15cb19:	shr    $0x5,%r9
+  15cb1d:	mov    %r10,0x10(%rsp)
+  15cb22:	sub    $0x1,%r9
+  15cb26:	mov    %r8,0x18(%rsp)
+  15cb2b:	mov    %rdi,0x20(%rsp)
+  15cb30:	mov    %rax,0x28(%rsp)
+  15cb35:	mov    %r9,0x30(%rsp)
+  15cb3a:	jmp    15cb40 <bn_mulx4x_mont+0x80>
+  15cb3c:	nopl   0x0(%rax)
+  15cb40:	lea    0x8(%rdx),%rdi
+  15cb44:	mov    (%rdx),%rdx
+  15cb47:	lea    0x60(%rsp),%rbx
+  15cb4c:	mov    %rdx,%r9
+  15cb4f:	mulx   (%rsi),%r8,%rax
+  15cb54:	mulx   0x8(%rsi),%r11,%r14
+  15cb5a:	add    %rax,%r11
+  15cb5d:	mov    %rdi,0x8(%rsp)
+  15cb62:	mulx   0x10(%rsi),%r12,%r13
+  15cb68:	adc    %r14,%r12
+  15cb6b:	adc    $0x0,%r13
+  15cb6f:	mov    %r8,%rdi
+  15cb72:	imul   0x18(%rsp),%r8
+  15cb78:	xor    %rbp,%rbp
+  15cb7b:	mulx   0x18(%rsi),%rax,%r14
+  15cb81:	mov    %r8,%rdx
+  15cb84:	lea    0x20(%rsi),%rsi
+  15cb88:	adcx   %rax,%r13
+  15cb8e:	adcx   %rbp,%r14
+  15cb94:	mulx   (%rcx),%rax,%r10
+  15cb99:	adcx   %rax,%rdi
+  15cb9f:	adox   %r11,%r10
+  15cba5:	mulx   0x8(%rcx),%rax,%r11
+  15cbab:	adcx   %rax,%r10
+  15cbb1:	adox   %r12,%r11
+  15cbb7:	mulx   0x10(%rcx),%rax,%r12
+  15cbc0:	mov    0x30(%rsp),%rdi
+  15cbc5:	mov    %r10,-0x20(%rbx)
+  15cbc9:	adcx   %rax,%r11
+  15cbcf:	adox   %r13,%r12
+  15cbd5:	mulx   0x18(%rcx),%rax,%r15
+  15cbdb:	mov    %r9,%rdx
+  15cbde:	mov    %r11,-0x18(%rbx)
+  15cbe2:	adcx   %rax,%r12
+  15cbe8:	adox   %rbp,%r15
+  15cbee:	lea    0x20(%rcx),%rcx
+  15cbf2:	mov    %r12,-0x10(%rbx)
+  15cbf6:	jmp    15cc00 <bn_mulx4x_mont+0x140>
+  15cbf8:	nopl   0x0(%rax,%rax,1)
+  15cc00:	adcx   %rbp,%r15
+  15cc06:	mulx   (%rsi),%r10,%rax
+  15cc0b:	adcx   %r14,%r10
+  15cc11:	mulx   0x8(%rsi),%r11,%r14
+  15cc17:	adcx   %rax,%r11
+  15cc1d:	mulx   0x10(%rsi),%r12,%rax
+  15cc23:	adcx   %r14,%r12
+  15cc29:	mulx   0x18(%rsi),%r13,%r14
+  15cc2f:	addr32 addr32 mov %r8,%rdx
+  15cc34:	adcx   %rax,%r13
+  15cc3a:	adcx   %rbp,%r14
+  15cc40:	lea    0x20(%rsi),%rsi
+  15cc44:	lea    0x20(%rbx),%rbx
+  15cc48:	adox   %r15,%r10
+  15cc4e:	mulx   (%rcx),%rax,%r15
+  15cc53:	adcx   %rax,%r10
+  15cc59:	adox   %r15,%r11
+  15cc5f:	mulx   0x8(%rcx),%rax,%r15
+  15cc65:	adcx   %rax,%r11
+  15cc6b:	adox   %r15,%r12
+  15cc71:	mulx   0x10(%rcx),%rax,%r15
+  15cc77:	mov    %r10,-0x28(%rbx)
+  15cc7b:	adcx   %rax,%r12
+  15cc81:	mov    %r11,-0x20(%rbx)
+  15cc85:	adox   %r15,%r13
+  15cc8b:	mulx   0x18(%rcx),%rax,%r15
+  15cc91:	mov    %r9,%rdx
+  15cc94:	mov    %r12,-0x18(%rbx)
+  15cc98:	adcx   %rax,%r13
+  15cc9e:	adox   %rbp,%r15
+  15cca4:	lea    0x20(%rcx),%rcx
+  15cca8:	mov    %r13,-0x10(%rbx)
+  15ccac:	dec    %rdi
+  15ccaf:	jne    15cc00 <bn_mulx4x_mont+0x140>
+  15ccb5:	mov    (%rsp),%rax
+  15ccb9:	mov    0x8(%rsp),%rdi
+  15ccbe:	adc    %rbp,%r15
+  15ccc1:	add    %r15,%r14
+  15ccc4:	sbb    %r15,%r15
+  15ccc7:	mov    %r14,-0x8(%rbx)
+  15cccb:	jmp    15cce0 <bn_mulx4x_mont+0x220>
+  15cccd:	data16 cs nopw 0x0(%rax,%rax,1)
+  15ccd8:	nopl   0x0(%rax,%rax,1)
+  15cce0:	mov    (%rdi),%rdx
+  15cce3:	lea    0x8(%rdi),%rdi
+  15cce7:	sub    %rax,%rsi
+  15ccea:	mov    %r15,(%rbx)
+  15cced:	lea    0x60(%rsp),%rbx
+  15ccf2:	sub    %rax,%rcx
+  15ccf5:	mulx   (%rsi),%r8,%r11
+  15ccfa:	xor    %ebp,%ebp
+  15ccfc:	mov    %rdx,%r9
+  15ccff:	mulx   0x8(%rsi),%r14,%r12
+  15cd05:	adox   -0x20(%rbx),%r8
+  15cd0c:	adcx   %r14,%r11
+  15cd12:	mulx   0x10(%rsi),%r15,%r13
+  15cd18:	adox   -0x18(%rbx),%r11
+  15cd1f:	adcx   %r15,%r12
+  15cd25:	adox   -0x10(%rbx),%r12
+  15cd2c:	adcx   %rbp,%r13
+  15cd32:	adox   %rbp,%r13
+  15cd38:	mov    %rdi,0x8(%rsp)
+  15cd3d:	mov    %r8,%r15
+  15cd40:	imul   0x18(%rsp),%r8
+  15cd46:	xor    %ebp,%ebp
+  15cd48:	mulx   0x18(%rsi),%rax,%r14
+  15cd4e:	mov    %r8,%rdx
+  15cd51:	adcx   %rax,%r13
+  15cd57:	adox   -0x8(%rbx),%r13
+  15cd5e:	adcx   %rbp,%r14
+  15cd64:	lea    0x20(%rsi),%rsi
+  15cd68:	adox   %rbp,%r14
+  15cd6e:	mulx   (%rcx),%rax,%r10
+  15cd73:	adcx   %rax,%r15
+  15cd79:	adox   %r11,%r10
+  15cd7f:	mulx   0x8(%rcx),%rax,%r11
+  15cd85:	adcx   %rax,%r10
+  15cd8b:	adox   %r12,%r11
+  15cd91:	mulx   0x10(%rcx),%rax,%r12
+  15cd97:	mov    %r10,-0x20(%rbx)
+  15cd9b:	adcx   %rax,%r11
+  15cda1:	adox   %r13,%r12
+  15cda7:	mulx   0x18(%rcx),%rax,%r15
+  15cdad:	mov    %r9,%rdx
+  15cdb0:	mov    %r11,-0x18(%rbx)
+  15cdb4:	lea    0x20(%rcx),%rcx
+  15cdb8:	adcx   %rax,%r12
+  15cdbe:	adox   %rbp,%r15
+  15cdc4:	mov    0x30(%rsp),%rdi
+  15cdc9:	mov    %r12,-0x10(%rbx)
+  15cdcd:	jmp    15cde0 <bn_mulx4x_mont+0x320>
+  15cdcf:	data16 cs nopw 0x0(%rax,%rax,1)
+  15cdda:	nopw   0x0(%rax,%rax,1)
+  15cde0:	mulx   (%rsi),%r10,%rax
+  15cde5:	adcx   %rbp,%r15
+  15cdeb:	adox   %r14,%r10
+  15cdf1:	mulx   0x8(%rsi),%r11,%r14
+  15cdf7:	adcx   (%rbx),%r10
+  15cdfd:	adox   %rax,%r11
+  15ce03:	mulx   0x10(%rsi),%r12,%rax
+  15ce09:	adcx   0x8(%rbx),%r11
+  15ce10:	adox   %r14,%r12
+  15ce16:	mulx   0x18(%rsi),%r13,%r14
+  15ce1c:	mov    %r8,%rdx
+  15ce1f:	adcx   0x10(%rbx),%r12
+  15ce26:	adox   %rax,%r13
+  15ce2c:	adcx   0x18(%rbx),%r13
+  15ce33:	adox   %rbp,%r14
+  15ce39:	lea    0x20(%rsi),%rsi
+  15ce3d:	lea    0x20(%rbx),%rbx
+  15ce41:	adcx   %rbp,%r14
+  15ce47:	adox   %r15,%r10
+  15ce4d:	mulx   (%rcx),%rax,%r15
+  15ce52:	adcx   %rax,%r10
+  15ce58:	adox   %r15,%r11
+  15ce5e:	mulx   0x8(%rcx),%rax,%r15
+  15ce64:	adcx   %rax,%r11
+  15ce6a:	adox   %r15,%r12
+  15ce70:	mulx   0x10(%rcx),%rax,%r15
+  15ce76:	mov    %r10,-0x28(%rbx)
+  15ce7a:	adcx   %rax,%r12
+  15ce80:	adox   %r15,%r13
+  15ce86:	mulx   0x18(%rcx),%rax,%r15
+  15ce8c:	mov    %r9,%rdx
+  15ce8f:	mov    %r11,-0x20(%rbx)
+  15ce93:	mov    %r12,-0x18(%rbx)
+  15ce97:	adcx   %rax,%r13
+  15ce9d:	adox   %rbp,%r15
+  15cea3:	lea    0x20(%rcx),%rcx
+  15cea7:	mov    %r13,-0x10(%rbx)
+  15ceab:	dec    %rdi
+  15ceae:	jne    15cde0 <bn_mulx4x_mont+0x320>
+  15ceb4:	mov    (%rsp),%rax
+  15ceb8:	mov    0x8(%rsp),%rdi
+  15cebd:	adc    %rbp,%r15
+  15cec0:	sub    (%rbx),%rbp
+  15cec3:	adc    %r15,%r14
+  15cec6:	sbb    %r15,%r15
+  15cec9:	mov    %r14,-0x8(%rbx)
+  15cecd:	cmp    0x10(%rsp),%rdi
+  15ced2:	jne    15cce0 <bn_mulx4x_mont+0x220>
+  15ced8:	lea    0x40(%rsp),%rbx
+  15cedd:	sub    %rax,%rcx
+  15cee0:	neg    %r15
+  15cee3:	mov    %rax,%rdx
+  15cee6:	shr    $0x5,%rax
+  15ceea:	mov    0x20(%rsp),%rdi
+  15ceef:	jmp    15cf00 <bn_mulx4x_mont+0x440>
+  15cef1:	data16 cs nopw 0x0(%rax,%rax,1)
+  15cefc:	nopl   0x0(%rax)
+  15cf00:	mov    (%rbx),%r11
+  15cf03:	mov    0x8(%rbx),%r12
+  15cf07:	mov    0x10(%rbx),%r13
+  15cf0b:	mov    0x18(%rbx),%r14
+  15cf0f:	lea    0x20(%rbx),%rbx
+  15cf13:	sbb    (%rcx),%r11
+  15cf16:	sbb    0x8(%rcx),%r12
+  15cf1a:	sbb    0x10(%rcx),%r13
+  15cf1e:	sbb    0x18(%rcx),%r14
+  15cf22:	lea    0x20(%rcx),%rcx
+  15cf26:	mov    %r11,(%rdi)
+  15cf29:	mov    %r12,0x8(%rdi)
+  15cf2d:	mov    %r13,0x10(%rdi)
+  15cf31:	mov    %r14,0x18(%rdi)
+  15cf35:	lea    0x20(%rdi),%rdi
+  15cf39:	dec    %rax
+  15cf3c:	jne    15cf00 <bn_mulx4x_mont+0x440>
+  15cf3e:	sbb    $0x0,%r15
+  15cf42:	lea    0x40(%rsp),%rbx
+  15cf47:	sub    %rdx,%rdi
+  15cf4a:	movq   %r15,%xmm1
+  15cf4f:	pxor   %xmm0,%xmm0
+  15cf53:	pshufd $0x0,%xmm1,%xmm1
+  15cf58:	mov    0x28(%rsp),%rsi
+  15cf5d:	jmp    15cf60 <bn_mulx4x_mont+0x4a0>
+  15cf5f:	nop
+  15cf60:	movdqa (%rbx),%xmm2
+  15cf64:	movdqa 0x10(%rbx),%xmm3
+  15cf69:	lea    0x20(%rbx),%rbx
+  15cf6d:	movdqu (%rdi),%xmm4
+  15cf71:	movdqu 0x10(%rdi),%xmm5
+  15cf76:	lea    0x20(%rdi),%rdi
+  15cf7a:	movdqa %xmm0,-0x20(%rbx)
+  15cf7f:	movdqa %xmm0,-0x10(%rbx)
+  15cf84:	pcmpeqd %xmm1,%xmm0
+  15cf88:	pand   %xmm1,%xmm2
+  15cf8c:	pand   %xmm1,%xmm3
+  15cf90:	pand   %xmm0,%xmm4
+  15cf94:	pand   %xmm0,%xmm5
+  15cf98:	pxor   %xmm0,%xmm0
+  15cf9c:	por    %xmm2,%xmm4
+  15cfa0:	por    %xmm3,%xmm5
+  15cfa4:	movdqu %xmm4,-0x20(%rdi)
+  15cfa9:	movdqu %xmm5,-0x10(%rdi)
+  15cfae:	sub    $0x20,%rdx
+  15cfb2:	jne    15cf60 <bn_mulx4x_mont+0x4a0>
+  15cfb4:	mov    %rdx,(%rbx)
+  15cfb7:	mov    $0x1,%rax
+  15cfbe:	mov    -0x30(%rsi),%r15
+  15cfc2:	mov    -0x28(%rsi),%r14
+  15cfc6:	mov    -0x20(%rsi),%r13
+  15cfca:	mov    -0x18(%rsi),%r12
+  15cfce:	mov    -0x10(%rsi),%rbp
+  15cfd2:	mov    -0x8(%rsi),%rbx
+  15cfd6:	lea    (%rsi),%rsp
+  15cfd9:	repz ret
+  15cfdb:	rex.WRB outsl %ds:(%rsi),(%dx)
+  15cfdd:	outsb  %ds:(%rsi),(%dx)
+  15cfde:	je     15d047 <bn_mul_mont_gather5+0x7>
+  15cfe0:	outsl  %ds:(%rsi),(%dx)
+  15cfe1:	insl   (%dx),%es:(%rdi)
+  15cfe2:	gs jb  15d05e <bn_mul_mont_gather5+0x1e>
+  15cfe5:	and    %cl,0x75(%rbp)
+  15cfe8:	insb   (%dx),%es:(%rdi)
+  15cfe9:	je     15d054 <bn_mul_mont_gather5+0x14>
+  15cfeb:	jo     15d059 <bn_mul_mont_gather5+0x19>
+  15cfed:	imul   $0x6e6f6974,0x61(%rbx),%esp
+  15cff4:	and    %ah,0x6f(%rsi)
+  15cff7:	jb     15d019 <bn_mulx4x_mont+0x559>
+  15cff9:	js     15d033 <bn_mulx4x_mont+0x573>
+  15cffb:	ss pop %rdi
+  15cffd:	ss xor $0x2c,%al
+  15d000:	and    %al,0x52(%rbx)
+  15d003:	pop    %rcx
+  15d004:	push   %rax
+  15d005:	push   %rsp
+  15d006:	rex.WRXB
+  15d007:	rex.RXB
+  15d008:	rex.B
+  15d009:	rex.WRB push %r11
+  15d00b:	and    %ah,0x79(%rdx)
+  15d00e:	and    %bh,(%rax,%rbp,2)
+  15d011:	je     15d087 <bn_mul_mont_gather5+0x47>
+  15d013:	jo     15d088 <bn_mul_mont_gather5+0x48>
+  15d015:	cmp    (%rdi),%ch
+  15d017:	(bad)
+  15d018:	imul   $0x6f632e62,0x75(%eax,%ebp,2),%esi
+  15d021:	insl   (%dx),%es:(%rdi)
+  15d022:	(bad)
+  15d023:	outsl  %fs:(%rsi),(%dx)
+  15d025:	je     15d054 <bn_mul_mont_gather5+0x14>
+  15d027:	(bad)
+  15d028:	jae    15d097 <bn_mul_mont_gather5+0x57>
+  15d02a:	ds add %cl,(%rdi)
+  15d02d:	(bad)
+  15d02e:	add    %spl,0x2e(%rsi)
+  15d032:	nopl   0x0(%rax,%rax,1)
+  15d03a:	nopw   0x0(%rax,%rax,1)

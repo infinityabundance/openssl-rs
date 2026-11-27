@@ -1,0 +1,16 @@
+date 2026-11-27T21:15:22Z
+source_commit 74599ccfc3325138c05d0399d4844781df3b5513
+source_src_tree 2200c5cee7c24357b814cc950033a32929e71a59
+build_relevant_dirty_begin
+
+build_relevant_dirty_end
+arith_rs_sha256 92057de39ec2333437a18f744132da9e0f1927725db62a31b261b01eb15f9739
+cargo_lock_sha256 95e8fd837792b69a69798c3884dfc4000bee28d87c58fd3bf4cd5f597e62c2d9
+rustc rustc 1.98.1 (48a229cea 2026-09-01)
+cargo cargo 1.98.1 (797e8a9bc 2026-08-05)
+cc cc (Debian 12.2.0-14+deb12u1) 12.2.0
+target_triple x86_64-unknown-linux-gnu
+profile release
+flags cargo build --release --lib --offline; CARGO_BUILD_JOBS=1
+shell_source_sha256 efa0fbce5c0e96ab7ddd539f7b798f4ad893f5c120c99cb44077f7c74ea65606
+version_script_sha256 75fb6eff05e5cf7677f46f03fb8ed6e7bbaa24a96f1e20702f74c524e1b51275

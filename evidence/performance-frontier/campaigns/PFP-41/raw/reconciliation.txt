@@ -1,0 +1,8 @@
+region counts: n16 pro=100 body=272 tail=227 | n32 prod=19 rfull=20 rlast=10 pref=4 rsetup=14 rtail=8 fsub=16 mask=12 ftail=22
+
+n=4  specialised         total=333     products=32    per-product=10.41
+n=16 specialised         total=4679    products=512   per-product=9.14
+n=32 specialised         total=21163   products=2048  per-product=10.33
+generic n=16 (core)      tight-core=4992    (16*(8*19+8*20)); the campaign's 6,457 leaves 1465 for tails/final
+
+n=32 outer-iteration body = 640  (prefix 4 + product 16*19 + rsetup 14 + reduc 15*20+10 + rtail 8)

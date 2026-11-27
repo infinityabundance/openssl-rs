@@ -1,0 +1,85 @@
+0000000000163730 t openssl_rs::bn::arith::mont_mul_fallible
+0000000000164497 t <std::sync::once_lock::OnceLock<openssl_rs::ec::p256::fixed_base::Table<openssl_rs::ec::p256::Mont<openssl_rs::ec::p256::FieldDomain>>>>::initialize::<<std::sync::once_lock::OnceLock<openssl_rs::ec::p256::fixed_base::Table<openssl_rs::ec::p256::Mont<openssl_rs::ec::p256::FieldDomain>>>>::get_or_init<openssl_rs::ec::p256::fixed_base::mont_table::{closure#0}>::{closure#0}, !>
+00000000002d1be0 t openssl_rs::bn::arith::run_mont_ladder
+00000000002d3b80 t openssl_rs::bn::arith::mont_mul_ladder_into
+000000000033d4e0 t core::ptr::drop_glue::<openssl_rs::ec::p256::P256Ladder<openssl_rs::ec::p256::Mont<openssl_rs::ec::p256::FieldDomain>>>
+000000000033dfa0 t core::ptr::drop_glue::<openssl_rs::ec::p256::P256Projective<openssl_rs::ec::p256::Mont<openssl_rs::ec::p256::FieldDomain>>>
+000000000033ede0 t core::ptr::drop_glue::<openssl_rs::ec::p256::fixed_base::Affine>
+000000000033eee0 t core::ptr::drop_glue::<[openssl_rs::ec::p256::P256Projective<openssl_rs::ec::p256::Mont<openssl_rs::ec::p256::FieldDomain>>]>
+000000000033f1a0 t openssl_rs::ec::mult::p256_ladder_run::<openssl_rs::ec::p256::Mont<openssl_rs::ec::p256::FieldDomain>>
+000000000033f6e0 t openssl_rs::ec::mult::p256_ladder_run::<openssl_rs::ec::p256::Arch>
+000000000033fc40 t openssl_rs::ec::mult::p256_ladder_run::<openssl_rs::ec::p256::Solinas>
+00000000003401a0 t openssl_rs::ec::p256::fixed_base::rcb_add::<openssl_rs::ec::p256::Mont<openssl_rs::ec::p256::FieldDomain>>
+0000000000344510 t openssl_rs::ec::p256::fixed_base::table_mul::<openssl_rs::ec::p256::Mont<openssl_rs::ec::p256::FieldDomain>>
+0000000000346e60 t openssl_rs::ec::p256::fixed_base::to_affine::<openssl_rs::ec::p256::Mont<openssl_rs::ec::p256::FieldDomain>>
+0000000000347480 t openssl_rs::ec::p256::fixed_base::build_table::advance::<openssl_rs::ec::p256::Mont<openssl_rs::ec::p256::FieldDomain>>
+0000000000347790 t <std::sync::once::Once>::call_once_force::<<std::sync::once_lock::OnceLock<openssl_rs::ec::p256::fixed_base::Table<openssl_rs::ec::p256::Mont<openssl_rs::ec::p256::FieldDomain>>>>::initialize<<std::sync::once_lock::OnceLock<openssl_rs::ec::p256::fixed_base::Table<openssl_rs::ec::p256::Mont<openssl_rs::ec::p256::FieldDomain>>>>::get_or_init<openssl_rs::ec::p256::fixed_base::mont_table::{closure#0}>::{closure#0}, !>::{closure#0}>::{closure#0}
+0000000000349020 t <<std::sync::once::Once>::call_once_force<<std::sync::once_lock::OnceLock<openssl_rs::ec::p256::fixed_base::Table<openssl_rs::ec::p256::Mont<openssl_rs::ec::p256::FieldDomain>>>>::initialize<<std::sync::once_lock::OnceLock<openssl_rs::ec::p256::fixed_base::Table<openssl_rs::ec::p256::Mont<openssl_rs::ec::p256::FieldDomain>>>>::get_or_init<openssl_rs::ec::p256::fixed_base::mont_table::{closure#0}>::{closure#0}, !>::{closure#0}>::{closure#0} as core::ops::function::FnOnce<(&std::sync::once::OnceState,)>>::call_once::{shim:vtable#0}
+000000000037ff50 t openssl_rs::ec::p256::fixed_base::try_inverse_order
+00000000003802e0 t openssl_rs::ec::p256::fixed_base::admits
+000000000041acd0 t <openssl_rs::ec::p256::SecretLimbs4>::copy_from
+000000000041c100 t <openssl_rs::ec::p256::P256Field<openssl_rs::ec::p256::Mont<openssl_rs::ec::p256::FieldDomain>>>::add_assign
+000000000041c5b0 t <openssl_rs::ec::p256::P256Field<openssl_rs::ec::p256::Mont<openssl_rs::ec::p256::FieldDomain>>>::sub_assign
+000000000041c950 t <openssl_rs::ec::p256::P256Field<openssl_rs::ec::p256::Mont<openssl_rs::ec::p256::FieldDomain>>>::to_canonical
+000000000041cb30 t <openssl_rs::ec::p256::P256Field<openssl_rs::ec::p256::Mont<openssl_rs::ec::p256::FieldDomain>>>::double_assign
+000000000041cfa0 t <openssl_rs::ec::p256::P256Field<openssl_rs::ec::p256::Mont<openssl_rs::ec::p256::FieldDomain>>>::from_canonical
+000000000041d390 t <openssl_rs::ec::p256::P256Field<openssl_rs::ec::p256::Arch>>::to_canonical
+000000000041d390 t <openssl_rs::ec::p256::P256Field<openssl_rs::ec::p256::Solinas>>::to_canonical
+000000000041d3b0 t <openssl_rs::ec::p256::P256Scalar>::to_canonical
+000000000041d590 t <openssl_rs::ec::p256::P256Scalar>::from_canonical_reduced
+000000000041d980 t <openssl_rs::ec::p256::P256Scalar>::invert
+000000000041e2b0 t <openssl_rs::ec::p256::P256Ladder<openssl_rs::ec::p256::Mont<openssl_rs::ec::p256::FieldDomain>>>::new
+000000000041e380 t <openssl_rs::ec::p256::P256Ladder<openssl_rs::ec::p256::Mont<openssl_rs::ec::p256::FieldDomain>>>::load
+000000000041e620 t <openssl_rs::ec::p256::P256Ladder<openssl_rs::ec::p256::Mont<openssl_rs::ec::p256::FieldDomain>>>::step
+000000000041f8b0 t <openssl_rs::ec::p256::P256Ladder<openssl_rs::ec::p256::Arch>>::cswap
+000000000041f8b0 t <openssl_rs::ec::p256::P256Ladder<openssl_rs::ec::p256::Mont<openssl_rs::ec::p256::FieldDomain>>>::cswap
+000000000041f8b0 t <openssl_rs::ec::p256::P256Ladder<openssl_rs::ec::p256::Solinas>>::cswap
+000000000041f9d0 t <openssl_rs::ec::p256::P256Ladder<openssl_rs::ec::p256::Arch>>::new
+000000000041f9d0 t <openssl_rs::ec::p256::P256Ladder<openssl_rs::ec::p256::Solinas>>::new
+000000000041fb10 t <openssl_rs::ec::p256::P256Ladder<openssl_rs::ec::p256::Arch>>::load
+000000000041fb10 t <openssl_rs::ec::p256::P256Ladder<openssl_rs::ec::p256::Solinas>>::load
+000000000041fdf0 t <openssl_rs::ec::p256::P256Ladder<openssl_rs::ec::p256::Arch>>::step
+00000000004210b0 t <openssl_rs::ec::p256::P256Ladder<openssl_rs::ec::p256::Solinas>>::step
+00000000004233f0 t openssl_rs::ec::p256::wide_mul_x86
+0000000000423580 t openssl_rs::ec::p256::limbs_from_be
+00000000004235b0 t openssl_rs::ec::p256::limbs_from_slice
+0000000000423600 t openssl_rs::ec::p256::mont_reduce_into
+0000000000423a40 t openssl_rs::ec::p256::select_field_kernel
+0000000000457740 t <openssl_rs::ec::p256::SecretLanes as core::ops::drop::Drop>::drop
+0000000000457a30 t <openssl_rs::ec::p256::Canonical4 as core::ops::drop::Drop>::drop
+0000000000457a30 t <openssl_rs::ec::p256::SecretLimbs4 as core::ops::drop::Drop>::drop
+0000000000457f70 t <openssl_rs::ec::p256::Canonical32 as core::ops::drop::Drop>::drop
+000000000045a910 t <openssl_rs::ec::p256::Arch as openssl_rs::ec::p256::FieldKernel<openssl_rs::ec::p256::FieldDomain>>::add
+000000000045a910 t <openssl_rs::ec::p256::Mont<openssl_rs::ec::p256::FieldDomain> as openssl_rs::ec::p256::FieldKernel<openssl_rs::ec::p256::FieldDomain>>::add
+000000000045a910 t <openssl_rs::ec::p256::Solinas as openssl_rs::ec::p256::FieldKernel<openssl_rs::ec::p256::FieldDomain>>::add
+000000000045aa40 t <openssl_rs::ec::p256::Mont<openssl_rs::ec::p256::FieldDomain> as openssl_rs::ec::p256::FieldKernel<openssl_rs::ec::p256::FieldDomain>>::mul
+000000000045ade0 t <openssl_rs::ec::p256::Mont<openssl_rs::ec::p256::FieldDomain> as openssl_rs::ec::p256::FieldKernel<openssl_rs::ec::p256::FieldDomain>>::sqr
+000000000045b130 t <openssl_rs::ec::p256::Arch as openssl_rs::ec::p256::FieldKernel<openssl_rs::ec::p256::FieldDomain>>::sub
+000000000045b130 t <openssl_rs::ec::p256::Mont<openssl_rs::ec::p256::FieldDomain> as openssl_rs::ec::p256::FieldKernel<openssl_rs::ec::p256::FieldDomain>>::sub
+000000000045b130 t <openssl_rs::ec::p256::Solinas as openssl_rs::ec::p256::FieldKernel<openssl_rs::ec::p256::FieldDomain>>::sub
+000000000045b1e0 t <openssl_rs::ec::p256::Arch as openssl_rs::ec::p256::FieldKernel<openssl_rs::ec::p256::FieldDomain>>::select
+000000000045b1e0 t <openssl_rs::ec::p256::Mont<openssl_rs::ec::p256::FieldDomain> as openssl_rs::ec::p256::FieldKernel<openssl_rs::ec::p256::FieldDomain>>::select
+000000000045b1e0 t <openssl_rs::ec::p256::Solinas as openssl_rs::ec::p256::FieldKernel<openssl_rs::ec::p256::FieldDomain>>::select
+000000000045b4c0 t <openssl_rs::ec::p256::Arch as openssl_rs::ec::p256::FieldKernel<openssl_rs::ec::p256::FieldDomain>>::from_limbs
+000000000045b4c0 t <openssl_rs::ec::p256::Solinas as openssl_rs::ec::p256::FieldKernel<openssl_rs::ec::p256::FieldDomain>>::from_limbs
+000000000045c330 t <openssl_rs::ec::p256::Solinas as openssl_rs::ec::p256::FieldKernel<openssl_rs::ec::p256::FieldDomain>>::mul
+000000000045d1c0 t <openssl_rs::ec::p256::Solinas as openssl_rs::ec::p256::FieldKernel<openssl_rs::ec::p256::FieldDomain>>::sqr
+000000000045dfe0 t <openssl_rs::ec::p256::Arch as openssl_rs::ec::p256::FieldKernel<openssl_rs::ec::p256::FieldDomain>>::cswap
+000000000045dfe0 t <openssl_rs::ec::p256::Solinas as openssl_rs::ec::p256::FieldKernel<openssl_rs::ec::p256::FieldDomain>>::cswap
+000000000045e070 t <openssl_rs::ec::p256::Arch as openssl_rs::ec::p256::FieldKernel<openssl_rs::ec::p256::FieldDomain>>::reduce
+000000000045e070 t <openssl_rs::ec::p256::Solinas as openssl_rs::ec::p256::FieldKernel<openssl_rs::ec::p256::FieldDomain>>::reduce
+000000000045f030 t <openssl_rs::ec::p256::Arch as openssl_rs::ec::p256::FieldKernel<openssl_rs::ec::p256::FieldDomain>>::to_limbs
+000000000045f030 t <openssl_rs::ec::p256::Solinas as openssl_rs::ec::p256::FieldKernel<openssl_rs::ec::p256::FieldDomain>>::to_limbs
+000000000045fce0 t <openssl_rs::ec::p256::Arch as openssl_rs::ec::p256::FieldKernel<openssl_rs::ec::p256::FieldDomain>>::mul
+0000000000460370 t <openssl_rs::ec::p256::Arch as openssl_rs::ec::p256::FieldKernel<openssl_rs::ec::p256::FieldDomain>>::sqr
+00000000005a0310 t openssl_rs::provider::mlx_kmgmt::mlx_p256_kem_new
+00000000005a0e30 t openssl_rs::provider::mlx_kmgmt::mlx_p256_kem_gen_init
+000000000069df4e r openssl_rs::ec::curve_data::_EC_sm2p256v1_DATA
+000000000069f2de r openssl_rs::ec::curve_data::_EC_brainpoolP256r1_DATA
+000000000069f39e r openssl_rs::ec::curve_data::_EC_brainpoolP256t1_DATA
+00000000008658f8 d openssl_rs::ec::curve_data::_EC_sm2p256v1
+0000000000865bd8 d openssl_rs::ec::curve_data::_EC_brainpoolP256r1
+0000000000865bf8 d openssl_rs::ec::curve_data::_EC_brainpoolP256t1
+00000000008be5d0 d openssl_rs::provider::mlx_kmgmt::MLX_P256_KEM_KMGMT_FUNCTIONS
+00000000008dcd28 d openssl_rs::ec::p256::fixed_base::MONT_TABLE
+00000000008de568 d openssl_rs::ec::p256::default_kernel_id::SELECTED

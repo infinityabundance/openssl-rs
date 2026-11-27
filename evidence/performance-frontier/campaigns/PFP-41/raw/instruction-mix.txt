@@ -1,0 +1,20 @@
+range                 insns    mem rsp/rbp  spill%  mix
+n4.full                 333     93      68   20.4%  mul=36(10.8%) adc=56(16.8%) add/sub=53(15.9%) mov(reg)=103(30.9%) load=27(8.1%) store=31(9.3%) cmov/setcc=8(2.4%) other=19(5.7%)
+n4.core                 283     65      47   16.6%  mul=36(12.7%) adc=56(19.8%) add/sub=48(17.0%) mov(reg)=96(33.9%) load=25(8.8%) store=16(5.7%) cmov/setcc=6(2.1%)
+n4.final_sub_mask        50     28      21   42.0%  add/sub=5(10.0%) mov(reg)=7(14.0%) load=2(4.0%) store=15(30.0%) cmov/setcc=2(4.0%) other=19(38.0%)
+n16.prologue            100     98      39   39.0%  load=49(49.0%) store=48(48.0%) other=3(3.0%)
+n16.outer_body          272     82      80   29.4%  mul=33(12.1%) adc=63(23.2%) add/sub=63(23.2%) mov(reg)=78(28.7%) load=5(1.8%) store=23(8.5%) cmov/setcc=2(0.7%) other=5(1.8%)
+n16.tail                227    193     132   58.1%  add/sub=17(7.5%) mov(reg)=13(5.7%) load=49(21.6%) store=91(40.1%) branch=1(0.4%) cmov/setcc=2(0.9%) other=54(23.8%)
+n32.prologue             21      8       1    4.8%  adc=1(4.8%) add/sub=2(9.5%) mov(reg)=6(28.6%) load=3(14.3%) store=2(9.5%) branch=2(9.5%) other=5(23.8%)
+n32.outer_prefix          4      2       0    0.0%  mov(reg)=1(25.0%) load=1(25.0%) other=2(50.0%)
+n32.product_inner        19      6       0    0.0%  mul=2(10.5%) adc=2(10.5%) add/sub=5(26.3%) mov(reg)=2(10.5%) store=2(10.5%) cmov/setcc=2(10.5%) other=4(21.1%)
+n32.reduce_setup         14      4       0    0.0%  mul=2(14.3%) adc=1(7.1%) add/sub=2(14.3%) mov(reg)=4(28.6%) load=1(7.1%) store=1(7.1%) cmov/setcc=1(7.1%) other=2(14.3%)
+n32.reduce_inner         20      6       0    0.0%  mul=2(10.0%) adc=2(10.0%) add/sub=5(25.0%) mov(reg)=2(10.0%) store=2(10.0%) branch=1(5.0%) cmov/setcc=2(10.0%) other=4(20.0%)
+n32.outer_tail            8      4       0    0.0%  adc=1(12.5%) add/sub=2(25.0%) load=1(12.5%) store=2(25.0%) branch=1(12.5%) other=1(12.5%)
+n32.final_sub            16      7       0    0.0%  add/sub=4(25.0%) mov(reg)=1(6.2%) load=2(12.5%) store=2(12.5%) cmov/setcc=3(18.8%) other=4(25.0%)
+n32.mask                 12      7       4   33.3%  mov(reg)=1(8.3%) load=2(16.7%) store=3(25.0%) other=6(50.0%)
+n32.final_tail           22     10       6   27.3%  mov(reg)=2(9.1%) load=3(13.6%) store=3(13.6%) branch=2(9.1%) other=12(54.5%)
+gen.product_inner        19      7       0    0.0%  mul=2(10.5%) adc=2(10.5%) add/sub=4(21.1%) mov(reg)=2(10.5%) store=2(10.5%) cmov/setcc=2(10.5%) other=5(26.3%)
+gen.reduce_inner         20      8       0    0.0%  mul=2(10.0%) adc=2(10.0%) add/sub=4(20.0%) mov(reg)=2(10.0%) store=2(10.0%) cmov/setcc=2(10.0%) other=6(30.0%)
+
+listings written to /work/evidence/performance-frontier/campaigns/PFP-41/raw/loop-bodies.dis

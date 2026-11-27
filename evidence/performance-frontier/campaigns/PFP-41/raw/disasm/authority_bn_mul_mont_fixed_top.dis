@@ -1,0 +1,105 @@
+
+forensics/authorities/build/openssl-3.6.4-production/libcrypto.so.3:     file format elf64-x86-64
+
+
+Disassembly of section .text:
+
+0000000000144410 <bn_mul_mont_fixed_top>:
+  144410:	push   %r15
+  144412:	push   %r14
+  144414:	mov    %rcx,%r14
+  144417:	push   %r13
+  144419:	mov    %rdx,%r13
+  14441c:	push   %r12
+  14441e:	mov    %r8,%r12
+  144421:	push   %rbp
+  144422:	mov    %rsi,%rbp
+  144425:	push   %rbx
+  144426:	sub    $0x18,%rsp
+  14442a:	mov    0x20(%rcx),%ebx
+  14442d:	mov    0x8(%rdx),%eax
+  144430:	mov    %rdi,0x8(%rsp)
+  144435:	mov    0x8(%rsi),%r15d
+  144439:	lea    -0x2(%rbx),%edx
+  14443c:	cmp    $0x1fe,%edx
+  144442:	ja     14444d <bn_mul_mont_fixed_top+0x3d>
+  144444:	cmp    %ebx,%r15d
+  144447:	je     1444e8 <bn_mul_mont_fixed_top+0xd8>
+  14444d:	add    %eax,%r15d
+  144450:	add    %ebx,%ebx
+  144452:	cmp    %ebx,%r15d
+  144455:	jle    144470 <bn_mul_mont_fixed_top+0x60>
+  144457:	xor    %ebx,%ebx
+  144459:	add    $0x18,%rsp
+  14445d:	mov    %ebx,%eax
+  14445f:	pop    %rbx
+  144460:	pop    %rbp
+  144461:	pop    %r12
+  144463:	pop    %r13
+  144465:	pop    %r14
+  144467:	pop    %r15
+  144469:	ret
+  14446a:	nopw   0x0(%rax,%rax,1)
+  144470:	mov    %r12,%rdi
+  144473:	call   13a630 <BN_CTX_start>
+  144478:	mov    %r12,%rdi
+  14447b:	call   13a7d0 <BN_CTX_get>
+  144480:	mov    %rax,%rbx
+  144483:	test   %rax,%rax
+  144486:	je     1444e0 <bn_mul_mont_fixed_top+0xd0>
+  144488:	cmp    %r13,%rbp
+  14448b:	je     1444c8 <bn_mul_mont_fixed_top+0xb8>
+  14448d:	mov    %r12,%rcx
+  144490:	mov    %r13,%rdx
+  144493:	mov    %rbp,%rsi
+  144496:	mov    %rax,%rdi
+  144499:	call   145bb0 <bn_mul_fixed_top>
+  14449e:	test   %eax,%eax
+  1444a0:	je     1444e0 <bn_mul_mont_fixed_top+0xd0>
+  1444a2:	mov    0x8(%rsp),%rdi
+  1444a7:	mov    %rbx,%rsi
+  1444aa:	mov    %r14,%rdx
+  1444ad:	xor    %ebx,%ebx
+  1444af:	call   144080 <bn_from_montgomery_word>
+  1444b4:	test   %eax,%eax
+  1444b6:	setne  %bl
+  1444b9:	mov    %r12,%rdi
+  1444bc:	call   13a750 <BN_CTX_end>
+  1444c1:	jmp    144459 <bn_mul_mont_fixed_top+0x49>
+  1444c3:	nopl   0x0(%rax,%rax,1)
+  1444c8:	mov    %r12,%rdx
+  1444cb:	mov    %rbp,%rsi
+  1444ce:	mov    %rax,%rdi
+  1444d1:	call   14c100 <bn_sqr_fixed_top>
+  1444d6:	test   %eax,%eax
+  1444d8:	jne    1444a2 <bn_mul_mont_fixed_top+0x92>
+  1444da:	nopw   0x0(%rax,%rax,1)
+  1444e0:	xor    %ebx,%ebx
+  1444e2:	jmp    1444b9 <bn_mul_mont_fixed_top+0xa9>
+  1444e4:	nopl   0x0(%rax)
+  1444e8:	cmp    %eax,%r15d
+  1444eb:	jne    14444d <bn_mul_mont_fixed_top+0x3d>
+  1444f1:	mov    %r15d,%esi
+  1444f4:	call   142e70 <bn_wexpand>
+  1444f9:	test   %rax,%rax
+  1444fc:	je     144457 <bn_mul_mont_fixed_top+0x47>
+  144502:	mov    0x8(%rsp),%rax
+  144507:	mov    0x18(%r14),%rcx
+  14450b:	mov    %r15d,%r9d
+  14450e:	lea    0x48(%r14),%r8
+  144512:	mov    0x0(%r13),%rdx
+  144516:	mov    0x0(%rbp),%rsi
+  14451a:	mov    (%rax),%rdi
+  14451d:	call   15c0c0 <bn_mul_mont>
+  144522:	test   %eax,%eax
+  144524:	jne    144533 <bn_mul_mont_fixed_top+0x123>
+  144526:	mov    0x8(%rbp),%r15d
+  14452a:	mov    0x8(%r13),%eax
+  14452e:	jmp    14444d <bn_mul_mont_fixed_top+0x3d>
+  144533:	mov    0x8(%rsp),%rcx
+  144538:	mov    0x10(%rbp),%eax
+  14453b:	mov    $0x1,%ebx
+  144540:	xor    0x10(%r13),%eax
+  144544:	mov    %eax,0x10(%rcx)
+  144547:	mov    %r15d,0x8(%rcx)
+  14454b:	jmp    144459 <bn_mul_mont_fixed_top+0x49>
