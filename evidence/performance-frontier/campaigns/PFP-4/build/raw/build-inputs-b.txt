@@ -1,0 +1,24 @@
+label b
+git_head 5ac6fddc53f5ca2a63912f51c07188b9b63f71dd
+head_src_tree 9291723eff9f27ff5937619c1b92870de939a47b
+working_tree_dirty_paths
+ M src/ec/lib.rs
+ M src/ec/p256.rs
+ M src/ec/p256/fixed_base.rs
+ M src/ec/p256/tests.rs
+source_tree_fingerprint 4e05841492051be7ca3655196af353b642f6753df11152ae7f0141135815b2ca
+source_files 887
+cargo_lock_sha256 95e8fd837792b69a69798c3884dfc4000bee28d87c58fd3bf4cd5f597e62c2d9
+rustc rustc 1.98.1 (48a229cea 2026-09-01)
+cargo cargo 1.98.1 (797e8a9bc 2026-08-05)
+cc cc (Debian 12.2.0-14+deb12u1) 12.2.0
+target_triple x86_64-unknown-linux-gnu
+profile release
+flags cargo build --release --lib --offline; CARGO_BUILD_JOBS=4
+shell_source /work/artifacts/phase2/shell/libcrypto.shell.rs sha256=efa0fbce5c0e96ab7ddd539f7b798f4ad893f5c120c99cb44077f7c74ea65606
+version_script /work/artifacts/phase2/libcrypto.ld sha256=75fb6eff05e5cf7677f46f03fb8ed6e7bbaa24a96f1e20702f74c524e1b51275
+archive_sha256 10bb388a2f46c5199ef69f331b181f9ced3dfc3cb31639ff2aafc76eaaba9aa0
+dso /work/court/tmp/pfp4-b/distribution/libcrypto.so.3
+dso_sha256 4e6ec312313b3f1ef68ec9c0c4fc698a76f334ee9da38a6fcdfa7d8945c53e77
+dso_size 17140352
+dso_build_id f38d4d5ce9641bebfd302db772d4802f269e0ed1

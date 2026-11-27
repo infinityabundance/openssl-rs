@@ -2356,6 +2356,12 @@ pub unsafe extern "C" fn ossl_ec_group_simple_order_bits(group: *const EcGroup) 
 /// through `bn_mod_exp_mont_fixed_top` so the result is fixed-top. No Montgomery data or no
 /// context is a failure, not a fallback.
 ///
+/// PFP-4: when — and only when — the group is the standard P-256 group, its generator is the
+/// tracked one and its method is the plain ladder ([`crate::ec::p256::fixed_base::admits`]'s
+/// exact predicate, the same one the fixed-base `k·G` arm uses), the inverse runs on the
+/// fixed-width order kernel as `x^(n-2) mod n` over the **public** exponent `n-2`. Every other
+/// group, generator, curve and method keeps the generic path below unchanged.
+///
 /// Secret classification: the modulus and the exponent (`order-2`) are public curve
 /// parameters, while `x` is the ECDSA nonce in `ecdsa_sign_setup` (and the SM2 nonce in
 /// `sm2_sig_gen`), so it is secret on the signing reach; the verify reach passes the
@@ -2381,6 +2387,14 @@ unsafe fn ec_field_inverse_mod_ord(
 
         if (*group).mont_data.is_null() {
             return 0;
+        }
+
+        // PFP-4: the standard P-256 group only. The specialised Fermat inverse is
+        // branch-free in the secret (the exponent is the public constant `n-2`);
+        // every other group keeps the generic ladder. `store_coordinate` reports a
+        // write-back failure as 0, which is this function's own failure answer.
+        if let Some(ret) = crate::ec::p256::fixed_base::try_inverse_order(group, r, x) {
+            return ret;
         }
 
         if ctx.is_null() {

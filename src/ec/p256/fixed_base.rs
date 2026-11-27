@@ -666,6 +666,58 @@ pub(crate) unsafe fn try_fixed_base_mul(
     }
 }
 
+/// Attempt `k⁻¹ mod n` on the fixed-width order engine.
+///
+/// `None` means the call is not admitted — a group, generator, curve or method
+/// that [`admits`] refuses, or a negative or wider-than-four-limb operand — and
+/// the caller must keep the generic Fermat inverse. `Some(1)` is a written
+/// result; `Some(0)` is a write-back failure.
+///
+/// The operand is reduced modulo the order branch-free, exactly as
+/// [`try_fixed_base_mul`] reduces a scalar, so a non-canonical value yields the
+/// same residue the generic path's Montgomery base reduction yields. The value
+/// `0` maps to `0`, which is what `0^(n-2) mod n` is.
+///
+/// # Safety
+///
+/// `group` is a live group; `r` and `x` are live `BIGNUM`s and `r` may alias
+/// `x`. The caller (`ec_field_inverse_mod_ord`) establishes all three.
+pub(crate) unsafe fn try_inverse_order(
+    group: *const EcGroup,
+    r: *mut BigNum,
+    x: *const BigNum,
+) -> Option<c_int> {
+    // SAFETY: the caller guarantees the live objects above. The operand is
+    // copied out before `r` is written, so `r` aliasing `x` is safe.
+    unsafe {
+        if r.is_null() || x.is_null() {
+            return None;
+        }
+        if !admits(group) {
+            return None;
+        }
+
+        // `neg` and the limb count are public operand metadata; a negative or
+        // wider-than-four-limb value keeps the generic path's semantics.
+        let mut ordinary = [0u64; LIMBS];
+        {
+            let operand = &*x;
+            if operand.neg != 0 || operand.d.len() > LIMBS {
+                return None;
+            }
+            ordinary[..operand.d.len()].copy_from_slice(&operand.d);
+        }
+
+        let scalar = P256Scalar::from_canonical_reduced(&ordinary);
+        let inverse = scalar.invert();
+        let canonical = inverse.to_canonical();
+        if !store_coordinate(r, canonical.as_limbs()) {
+            return Some(0);
+        }
+        Some(1)
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
@@ -921,6 +973,16 @@ mod tests {
             assert!(!fast.is_null() && !ladder.is_null());
             let generator = EC_GROUP_get0_generator(group);
             assert!(!generator.is_null());
+
+            // The order inverse uses the same predicate: a refused group keeps the
+            // generic Fermat path.
+            let operand = bn(vec![0x1234_5678_9abc_def0]);
+            let mut inverse = bn(Vec::new());
+            assert_eq!(
+                try_inverse_order(group, &mut inverse, &operand),
+                None,
+                "the inverse arm must be refused on the same predicate"
+            );
 
             let scalar = bn(vec![0x1234_5678_9abc_def0, 0x0fed_cba9_8765_4321]);
             let before = probe::count();
@@ -1280,5 +1342,100 @@ mod tests {
         // The raw Jacobian mix is cheaper; the admitted arm is RCB because the
         // Jacobian addition is not complete. Record the measured relationship.
         assert!(jac_mix < rcb_mix);
+    }
+
+    /// PFP-4: on the admitted group the specialised order inverse must equal the
+    /// generic Fermat body (`ec_field_inverse_mod_ord`'s
+    /// `bn_mod_exp_mont_fixed_top`) limb for limb, including non-canonical
+    /// operands, the nonce-shaped distribution and the aliased `r == x` call the
+    /// signing path makes.
+    #[test]
+    fn the_order_inverse_matches_the_generic_fermat_path() {
+        use crate::bn::exp::bn_mod_exp_mont_fixed_top;
+        use crate::ec::lib::ossl_ec_group_do_inverse_ord;
+
+        const CASES: usize = 4096;
+        // SAFETY: every object lives here; `Ctx` releases the group and context.
+        unsafe {
+            let c = Ctx::new();
+            assert!(admits(c.group), "the standard group must be admitted");
+            let order = (*c.group).order;
+            let mont = (*c.group).mont_data;
+            let mut e_limbs = ORDER_MODULUS.to_vec();
+            e_limbs[0] -= 2;
+            let e = bn(e_limbs);
+
+            let mut rng = Rng(0x5046_5034_4f52_4445);
+            for case in 0..CASES {
+                let x = match case {
+                    0 => bn(Vec::new()),
+                    1 => bn(vec![1]),
+                    2 => bn(vec![2]),
+                    3 => {
+                        let mut v = ORDER_MODULUS.to_vec();
+                        v[0] -= 1;
+                        bn(v)
+                    }
+                    4 => {
+                        let mut v = ORDER_MODULUS.to_vec();
+                        v[0] -= 2;
+                        bn(v)
+                    }
+                    // One non-zero limb in each of the four positions.
+                    5..=8 => {
+                        let mut v = vec![0u64; LIMBS];
+                        v[case - 5] = 0x0123_4567_89ab_cdef;
+                        bn(v)
+                    }
+                    // Top limb clear (a value below 2^192).
+                    9 => bn(vec![0x0123_4567_89ab_cdef, 0xfedc_ba98_7654_3210, 7, 0]),
+                    // Non-canonical: at or above the order, still four limbs.
+                    10 => bn(vec![Limb::MAX; LIMBS]),
+                    11 => bn(vec![u64::MAX, u64::MAX, u64::MAX, 0]),
+                    _ => {
+                        let v: Vec<Limb> = (0..LIMBS).map(|_| rng.next()).collect();
+                        if case % 2 == 0 {
+                            bn(v)
+                        } else {
+                            reduce_mod_order(&v)
+                        }
+                    }
+                };
+
+                let mut generic = bn(Vec::new());
+                assert_eq!(
+                    bn_mod_exp_mont_fixed_top(&mut generic, &x, &e, order, ptr::null_mut(), mont),
+                    1,
+                    "case {case}: the generic Fermat inverse must succeed"
+                );
+
+                let mut fast = bn(Vec::new());
+                assert_eq!(
+                    try_inverse_order(c.group, &mut fast, &x),
+                    Some(1),
+                    "case {case}: the admitted arm must answer"
+                );
+                assert_eq!(
+                    fast.d, generic.d,
+                    "case {case}: specialised inverse differs from the generic Fermat path"
+                );
+                assert_eq!(fast.neg, 0);
+
+                // The signing path passes the same object as `r` and `x`.
+                let mut aliased = bn(x.d.clone());
+                let alias: *mut BigNum = &raw mut aliased;
+                assert_eq!(
+                    ossl_ec_group_do_inverse_ord(c.group, alias, alias, c.ctx),
+                    1,
+                    "case {case}: the aliased call must succeed"
+                );
+                assert_eq!(
+                    aliased.d, generic.d,
+                    "case {case}: aliased result differs from the generic path"
+                );
+            }
+
+            println!("PFP-4 order inverse differential: {CASES} cases, 0 mismatches");
+        }
     }
 }

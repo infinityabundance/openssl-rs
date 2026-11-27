@@ -1,0 +1,113 @@
+{
+  "log": "/work/evidence/performance-frontier/campaigns/PFP-4/ctgrind/raw/candidate-sign-r1.out",
+  "contexts": 120,
+  "per_class": {
+    "E": 96,
+    "C": 14,
+    "D": 10
+  },
+  "engine_on_path": 0,
+  "origin_in_engine": 0,
+  "top_origins": [
+    {
+      "contexts": 47,
+      "loc": "in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so",
+      "fn": "memmove"
+    },
+    {
+      "contexts": 10,
+      "loc": "in /work/court/tmp/pfp4-a/distribution/libcrypto.so.3",
+      "fn": "openssl_rs::bn::limbs::divide_fallible"
+    },
+    {
+      "contexts": 9,
+      "loc": "in /work/court/tmp/pfp4-a/distribution/libcrypto.so.3",
+      "fn": "BN_to_montgomery"
+    },
+    {
+      "contexts": 8,
+      "loc": "in /work/court/tmp/pfp4-a/distribution/libcrypto.so.3",
+      "fn": "<alloc::raw_vec::RawVecInner>::finish_grow"
+    },
+    {
+      "contexts": 7,
+      "loc": "in /work/court/tmp/pfp4-a/distribution/libcrypto.so.3",
+      "fn": "BN_mod_mul_montgomery"
+    },
+    {
+      "contexts": 4,
+      "loc": "in /work/court/tmp/pfp4-a/distribution/libcrypto.so.3",
+      "fn": "openssl_rs::ec::smpl::ossl_ec_GFp_simple_is_at_infinity"
+    },
+    {
+      "contexts": 4,
+      "loc": "unix.rs:13",
+      "fn": "alloc"
+    },
+    {
+      "contexts": 4,
+      "loc": "in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so",
+      "fn": "malloc"
+    },
+    {
+      "contexts": 4,
+      "loc": "in /work/court/tmp/pfp4-a/distribution/libcrypto.so.3",
+      "fn": "BN_nnmod"
+    },
+    {
+      "contexts": 4,
+      "loc": "in /work/court/tmp/pfp4-a/distribution/libcrypto.so.3",
+      "fn": "<openssl_rs::ec::EcdsaSig as openssl_rs::runtime::bio::owned::CtxDestroy>::destroy_body"
+    },
+    {
+      "contexts": 3,
+      "loc": "in /work/court/tmp/pfp4-a/distribution/libcrypto.so.3",
+      "fn": "BN_bn2binpad"
+    },
+    {
+      "contexts": 3,
+      "loc": "in /work/court/tmp/pfp4-a/distribution/libcrypto.so.3",
+      "fn": "openssl_rs::ec::ecdsa_ossl::ecdsa_sign_setup"
+    },
+    {
+      "contexts": 3,
+      "loc": "in /work/court/tmp/pfp4-a/distribution/libcrypto.so.3",
+      "fn": "openssl_rs::ec::smpl::ossl_ec_GFp_simple_point_get_affine_coordinates"
+    },
+    {
+      "contexts": 2,
+      "loc": "in /work/court/tmp/pfp4-a/distribution/libcrypto.so.3",
+      "fn": "BN_ucmp"
+    },
+    {
+      "contexts": 2,
+      "loc": "in /work/court/tmp/pfp4-a/distribution/libcrypto.so.3",
+      "fn": "BN_copy"
+    },
+    {
+      "contexts": 1,
+      "loc": "in /work/court/tmp/pfp4-a/distribution/libcrypto.so.3",
+      "fn": "openssl_rs::bn::limbs::and_fallible"
+    },
+    {
+      "contexts": 1,
+      "loc": "in /work/court/tmp/pfp4-a/distribution/libcrypto.so.3",
+      "fn": "openssl_rs::bn::bignum::ossl_bn_mask_bits_fixed_top"
+    },
+    {
+      "contexts": 1,
+      "loc": "in /work/court/tmp/pfp4-a/distribution/libcrypto.so.3",
+      "fn": "openssl_rs::bn::rand::ossl_bn_gen_dsa_nonce_fixed_top"
+    },
+    {
+      "contexts": 1,
+      "loc": "in /work/court/tmp/pfp4-a/distribution/libcrypto.so.3",
+      "fn": "EC_POINT_get_affine_coordinates"
+    },
+    {
+      "contexts": 1,
+      "loc": "in /work/court/tmp/pfp4-a/distribution/libcrypto.so.3",
+      "fn": "openssl_rs::bn::arith::mod_add_reduced_ct"
+    }
+  ]
+}

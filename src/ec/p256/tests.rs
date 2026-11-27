@@ -64,6 +64,25 @@ fn oracle_sub(a: &[Limb; LIMBS], b: &[Limb; LIMBS], m: &[Limb; LIMBS]) -> Vec<Li
     oracle_add(&a, &to_array4(&mb), m)
 }
 
+/// Reference square-and-multiply over the public exponent `exp`, using the
+/// crate's generic `bn::limbs` arithmetic. A different implementation of the
+/// same mathematics from the P-256 kernel, so agreement is a differential check,
+/// not a restatement.
+fn oracle_pow(base: &[Limb; LIMBS], exp: &[Limb; LIMBS], m: &[Limb; LIMBS]) -> [Limb; LIMBS] {
+    let base = canonical(base, m);
+    let mut acc = [0u64; LIMBS];
+    acc[0] = 1;
+    let mut bit = 256;
+    while bit > 0 {
+        bit -= 1;
+        acc = to_array4(&oracle_mul(&acc, &acc, m));
+        if (exp[bit / 64] >> (bit % 64)) & 1 == 1 {
+            acc = to_array4(&oracle_mul(&acc, &base, m));
+        }
+    }
+    acc
+}
+
 /// Deterministic pseudo-random limbs (xorshift64), so the sweep is reproducible.
 struct XorShift(u64);
 
@@ -555,6 +574,70 @@ fn the_field_and_order_domains_stay_separate() {
     let point = P256Projective::infinity(&Solinas);
     assert_eq!(point.z.is_zero_mask(), Limb::MAX, "infinity has z = 0");
     assert_eq!(point.x.is_zero_mask(), Limb::MAX);
+}
+
+/// PFP-4: the order-domain Fermat inverse over the public exponent `q-2`.
+///
+/// Every case is checked twice: against an independent `bn::limbs`
+/// square-and-multiply (the generic mathematics) and by the defining identity
+/// `k · k⁻¹ ≡ 1 (mod q)` computed with the same reference arithmetic. The
+/// population covers the exceptional values, one non-zero limb in each position,
+/// a clear top limb, and 4,096 nonce-shaped residues.
+#[test]
+fn the_order_inverse_is_fermat_and_round_trips() {
+    let q = ORDER_MODULUS;
+    let mut q_minus_2 = q;
+    q_minus_2[0] -= 2;
+    let mut q_minus_1 = q;
+    q_minus_1[0] -= 1;
+
+    let mut cases: Vec<[Limb; LIMBS]> =
+        vec![[0; LIMBS], [1, 0, 0, 0], [2, 0, 0, 0], q_minus_2, q_minus_1];
+    // One non-zero limb in each position.
+    for position in 0..LIMBS {
+        let mut v = [0u64; LIMBS];
+        v[position] = 0x9e37_79b9_7f4a_7c15;
+        cases.push(v);
+    }
+    // Top limb clear: values below 2^192.
+    cases.push([1, 0, 0, 0]);
+    cases.push([0, 1, 0, 0]);
+    cases.push([0xffff_ffff_ffff_ffff, 0x8000_0000_0000_0000, 1, 0]);
+
+    // Nonce-shaped distribution: uniform residues in `[0, q)`.
+    let mut rng = XorShift(0x5046_5034_494e_5652);
+    for _ in 0..4096 {
+        cases.push(random_canonical(&mut rng, &q));
+    }
+
+    let total = cases.len();
+    let mut mismatches = 0usize;
+    let mut round_trip = 0usize;
+    for (case, value) in cases.iter().enumerate() {
+        let inverse = P256Scalar::from_canonical_reduced(value)
+            .invert()
+            .to_canonical();
+        let inverse = to_array4(inverse.as_limbs());
+        let expected = oracle_pow(value, &q_minus_2, &q);
+        if as_vec(&inverse) != as_vec(&expected) {
+            mismatches += 1;
+        }
+        if value.iter().all(|&limb| limb == 0) {
+            // `0^(q-2) = 0`: the generic Fermat path does not fail and neither
+            // does this one.
+            assert_eq!(inverse, [0; LIMBS], "case {case}: zero maps to zero");
+            continue;
+        }
+        assert_eq!(
+            as_vec(&to_array4(&oracle_mul(value, &inverse, &q))),
+            vec![1],
+            "case {case}: k · k^-1 must be 1 mod q"
+        );
+        round_trip += 1;
+    }
+
+    assert_eq!(mismatches, 0, "{total} cases, {mismatches} mismatches");
+    println!("PFP-4 order inverse: {total} cases, 0 mismatches, {round_trip} round-trips verified");
 }
 
 /// Every secret owner wipes its storage on an early return and during an

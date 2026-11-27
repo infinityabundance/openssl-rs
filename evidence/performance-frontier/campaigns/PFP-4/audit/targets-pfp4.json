@@ -1,0 +1,9 @@
+[
+  {"family": "Order-inverse admission and write-back", "symbol": "try_inverse_order"},
+  {"family": "Order Fermat inverse schedule (P256Scalar, kernel inlined)", "symbol": "invert"},
+  {"family": "Order reduction into Montgomery form", "symbol": "from_canonical_reduced"},
+  {"family": "P-256 Montgomery reduction (shared kernel)", "module": "p256", "symbol": "mont_reduce_into"},
+  {"family": "P-256 x86-64 multiply (shared kernel)", "module": "p256", "symbol": "wide_mul_x86"},
+  {"family": "Branchless BIGNUM normalisation (write-back)", "symbol": "normalise_branchless"},
+  {"family": "BIGNUM write-back (declassification boundary)", "symbol": "store_coordinate"}
+]

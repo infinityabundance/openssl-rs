@@ -1,0 +1,4 @@
+LIB /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3
+LOADED realpath=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3 dev=57 ino=325854 size=7295816
+MAPS realpath=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3 entries=5
+CROSS sign path=/work/evidence/performance-frontier/campaigns/PFP-4/timing-4e6ec312/raw/cross-03-authority.sig bytes=72 pub=02c5b17d076d8e27f07ea9f82d7eeb92c5f994e7d285ee083452ab244d3c54128f

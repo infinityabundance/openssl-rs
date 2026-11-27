@@ -141,6 +141,19 @@ pub(crate) const ORDER_MODULUS: [Limb; LIMBS] = [
     0xFFFF_FFFF_0000_0000,
 ];
 
+/// `q - 2`, the public Fermat exponent used for an order inversion.
+///
+/// `q` is prime, so `k^(q-2) ≡ k^-1 (mod q)` for every `k` not divisible by
+/// `q`, and `0^(q-2) = 0` exactly as the authority's generic Fermat path
+/// produces. The value is a compile-time constant, so the square-and-multiply
+/// schedule below is public and cannot be selected by a secret.
+pub(crate) const ORDER_MINUS_2: [Limb; LIMBS] = [
+    0xF3B9_CAC2_FC63_254F,
+    0xBCE6_FAAD_A717_9E84,
+    0xFFFF_FFFF_FFFF_FFFF,
+    0xFFFF_FFFF_0000_0000,
+];
+
 /// `-p^-1 mod 2^64`. `p[0]` is all ones, whose inverse is itself, so the
 /// negated inverse is one.
 const FIELD_N0: Limb = 1;
@@ -1404,6 +1417,46 @@ impl P256Scalar {
         let mut out = SecretLimbs4::zero();
         Self::KERNEL.reduce(out.limbs_mut(), wide);
         Self { limbs: out }
+    }
+
+    /// The multiplicative identity, in Montgomery representation.
+    pub(crate) fn one() -> Self {
+        let mut ordinary = [0u64; LIMBS];
+        ordinary[0] = 1;
+        Self::from_canonical_reduced(&ordinary)
+    }
+
+    /// `out = self²`.
+    pub(crate) fn sqr(&self, out: &mut Self) {
+        Self::KERNEL.sqr(out.limbs.limbs_mut(), self.limbs());
+    }
+
+    /// `self^(q-2) mod q` — the Fermat inverse.
+    ///
+    /// The exponent is the public compile-time constant [`ORDER_MINUS_2`], so the
+    /// square-and-multiply schedule is a **public constant**: the branch on an
+    /// exponent bit and the fixed iteration count reveal nothing about `self`,
+    /// which only ever enters the kernel's fixed-pattern multiplications. This is
+    /// the same discipline as the field inverse over `p-2`
+    /// ([`fixed_base`](p256/fixed_base) `invert`), applied to the order domain.
+    ///
+    /// `q` is prime, so every non-zero residue inverts; `0` maps to `0`, matching
+    /// the authority's `x^(q-2) mod q` over a zero base.
+    pub(crate) fn invert(&self) -> Self {
+        let mut result = Self::one();
+        let mut bit = 256;
+        while bit > 0 {
+            bit -= 1;
+            let mut squared = Self::zero();
+            result.sqr(&mut squared);
+            result = squared;
+            if (ORDER_MINUS_2[bit / 64] >> (bit % 64)) & 1 == 1 {
+                let mut product = Self::zero();
+                result.mul(self, &mut product);
+                result = product;
+            }
+        }
+        result
     }
 
     pub(crate) fn is_zero_mask(&self) -> Limb {

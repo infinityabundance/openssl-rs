@@ -834,38 +834,237 @@
       },
       "candidate": {
         "artefact": {
-          "label": "PFP-3 post-fix distribution DSO ecbefb7d, the subject profiled for the PFP-4 W3 bound; no PFP-4 candidate was produced",
-          "sha256": "ecbefb7d4ecd05cb08f5ade57e64ce2cd81de24bcd68b0c236a8640a18559053"
+          "label": "distribution-shaped libcrypto.so.3 from staging HEAD 5ac6fddc5 with the uncommitted PFP-4 order-inverse change; two clean rebuilds agree",
+          "sha256": "4e6ec312313b3f1ef68ec9c0c4fc698a76f334ee9da38a6fcdfa7d8945c53e77"
         },
-        "build_profile": "release, x86_64-unknown-linux-gnu; src tree 49809764f (PFP-3 branch-free admission)",
-        "source_commit": "49809764f82fff0649c677ea183e843401fa934a"
+        "build_profile": "release, x86_64-unknown-linux-gnu, rustc 1.98.1; staging HEAD 5ac6fddc53f5ca2a63912f51c07188b9b63f71dd with uncommitted build-relevant changes in src/ec/lib.rs, src/ec/p256.rs, src/ec/p256/fixed_base.rs and src/ec/p256/tests.rs (source-tree fingerprint 4e05841492051be7ca3655196af353b642f6753df11152ae7f0141135815b2ca, 887 files; build_relevant_clean=false); two independent clean builds reproduce DSO 4e6ec312 and archive 10bb388a2f46c5199ef69f331b181f9ced3dfc3cb31639ff2aafc76eaaba9aa0 byte for byte",
+        "source_commit": "5ac6fddc53f5ca2a63912f51c07188b9b63f71dd"
       },
-      "constant_time_audit": null,
-      "description": "PFP-4 W3 bound over the ECDSA P-256 signing pipeline at digest ecbefb7d: k*G 85.77% of wall (80.93% of instructions), outside-k*G 14.23%; the PFP-4 scalar arithmetic + reduction + s expression + export is 0.45% of wall (Amdahl 1.005x) and was not implemented; the order inversion (12.7% wall) is a separate follow-up. Evidence: evidence/performance-frontier/campaigns/PFP-4/BOUND.md.",
-      "differential_courts": null,
-      "measurement": null,
+      "constant_time_audit": {
+        "kind": "CTGRIND_PLUS_BRANCH_AUDIT",
+        "candidate_sha256": "4e6ec312313b3f1ef68ec9c0c4fc698a76f334ee9da38a6fcdfa7d8945c53e77",
+        "harness_kind": "pfp4_dso_ct.c: the PFP-3 DSO harness plus one sign-nonce population that marks the installed RAND_METHOD output undefined; limb-value taint, LOADED/MAPS/FOREIGN identity, negative control and the PFP-2 attribution classifier are unchanged",
+        "harness_sha256": "81f73b05e54427a034eef34c4c94cc5066d99f4e47be261edec346d4cb8cf95e",
+        "harness_source_sha256": "c45afa69d2fba29b73948bd59fa158eadd498d83fdb23e04d86cfd6b2edf4f74",
+        "branch_audit": {
+          "path": "evidence/performance-frontier/campaigns/PFP-4/audit/raw/audit-pfp4.md",
+          "present": true,
+          "sha256": "6abfd3e529f4e6e56c59277814b1ce7785e21945fbdc90ff0013b86268881995"
+        },
+        "ctgrind": {
+          "engine_on_path": 0,
+          "engine_origins": 0,
+          "secret_derived_conditional_transfers": 0,
+          "finding": "none. Candidate sign (d tainted) and sign-nonce (d and the RAND source tainted) each report 0 engine-on-path and 0 engine-origin contexts; the pre-existing nonce-rejection branch in bn::rand is observed (class C), so the tainted nonce reaches the inverse; the before artefact (generic inverse) reads the same 0. The pre-PFP-20 sensitivity control still reports 4 engine-on-path per repetition.",
+          "populations": {
+            "control": {
+              "errors": [
+                0
+              ],
+              "contexts": [
+                0
+              ]
+            },
+            "sign": {
+              "errors": [
+                123,
+                123,
+                123
+              ],
+              "contexts": [
+                120,
+                120,
+                120
+              ]
+            },
+            "sign_nonce": {
+              "errors": [
+                123,
+                123,
+                123
+              ],
+              "contexts": [
+                120,
+                120,
+                120
+              ]
+            },
+            "before_sign": {
+              "errors": [
+                122,
+                122,
+                122
+              ],
+              "contexts": [
+                119,
+                119,
+                119
+              ]
+            },
+            "before_sign_nonce": {
+              "errors": [
+                122,
+                122,
+                122
+              ],
+              "contexts": [
+                119,
+                119,
+                119
+              ]
+            }
+          },
+          "sensitivity_control": {
+            "artefact": "83f67826e2ca53dd8e014fe5442d2e77ba96ee7af35eeb78a312112a4e0a7c4f",
+            "engine_on_path_per_repetition": 4,
+            "limit": "predates the comb and exercises the P-256 ladder, establishing that the classifier sees P-256 frames; it does not reach the new inverse, and a branchy-inverse mutant was not built"
+          }
+        },
+        "branch_audit_carriers_classification": {
+          "P256Scalar::invert": {
+            "jcc": 2,
+            "cmov": 0,
+            "setcc": 0,
+            "class": "both public: the fixed 256-iteration loop counter and the bt test of the compile-time constant n-2"
+          },
+          "try_inverse_order": {
+            "jcc": 10,
+            "cmov": 1,
+            "setcc": 0,
+            "class": "pointer nullness, admits result, neg, limb count <= 4, Vec capacity/len and the copy-loop counter; the single cmovne is in that copy loop"
+          },
+          "from_canonical_reduced": {
+            "jcc": 0,
+            "cmov": 0,
+            "setcc": 0
+          },
+          "P256Scalar::to_canonical": {
+            "jcc": 0,
+            "cmov": 0,
+            "setcc": 0
+          },
+          "ossl_ec_group_do_inverse_ord": {
+            "jcc": 11,
+            "cmov": 0,
+            "setcc": 1,
+            "class": "method-column and mont_data nullness, allocation/return tags and the ctx stack counter; setne normalises the public success flag"
+          },
+          "mont_reduce_into": {
+            "jcc": 2,
+            "cmov": 0,
+            "setcc": 2,
+            "class": "pre-existing fixed REDC length and masks"
+          },
+          "wide_mul_x86": {
+            "jcc": 0,
+            "cmov": 0,
+            "setcc": 9,
+            "class": "pre-existing carry masks"
+          },
+          "normalise_branchless": {
+            "jcc": 5,
+            "cmov": 5,
+            "setcc": 0,
+            "class": "pre-existing; Vec length/capacity, not limb values"
+          },
+          "store_coordinate": {
+            "jcc": 10,
+            "cmov": 5,
+            "setcc": 0,
+            "class": "pre-existing; allocation capacity and normalised length"
+          }
+        },
+        "result": "PASS: zero engine-on-path and zero engine-origin contexts with the private scalar and the nonce source tainted; the before artefact reads the same 0; the sensitivity control reports 4 engine-on-path per repetition; every jcc/setcc/cmov in the new carrier is classified public-bound; BINSEC -checkct and a branchy-inverse mutation control are NOT_RUN and recorded",
+        "reference": {
+          "path": "evidence/performance-frontier/campaigns/PFP-4/AUDIT.md",
+          "present": true,
+          "sha256": "9824cec93e9073c44e88db8ddbdd61ef2f5bfab36fc7ca14dc7bd5edad94d8fc"
+        }
+      },
+      "description": "order inversion replaced at DSO 4e6ec312: P256Scalar::invert computes k^(n-2) mod n over the public compile-time exponent in the audited Mont<OrderDomain> kernel, admitted only under PFP-3's fixed_base::admits predicate, with the generic bn_mod_exp_mont_fixed_top kept for every other group/generator/curve/method and for negative or wider-than-four-limb operands; 0 -> 0 and non-canonical reduction are preserved; DSO-bound 4,096 supplied-nonce and 4,096 deterministic-nonce signatures are byte-identical to the authority; the W3-bound pipeline conversion remains refused and unimplemented",
+      "differential_courts": {
+        "candidate_sha256": "4e6ec312313b3f1ef68ec9c0c4fc698a76f334ee9da38a6fcdfa7d8945c53e77",
+        "note": "at 4e6ec312: 4,096 sign-ex signatures (defining equation per case, ECDSA_sign_ex DER equal to ECDSA_do_sign_ex) and 4,096 sign-rand signatures through ECDSA_do_sign with deterministic nonces (exercising the new inverse) are byte-identical to the authority; 4,096/4,096 cross-verification in both directions per mode under one public key; in-crate 4,108 Fermat cases, 4,107 round-trips and 4,096 BigNum-vs-generic cases, 0 mismatches",
+        "reference": {
+          "path": "evidence/performance-frontier/campaigns/PFP-4/differential/raw/comparison.tsv",
+          "present": true,
+          "sha256": "d3ba09bb3a46c2f6490ec21d359a4ff53cbae7442922ee74e6641221e9772e44"
+        },
+        "result": "PASS"
+      },
+      "measurement": {
+        "candidate_sha256": "4e6ec312313b3f1ef68ec9c0c4fc698a76f334ee9da38a6fcdfa7d8945c53e77",
+        "classification": "SCOPED_OBSERVATION",
+        "identity": {
+          "instrument": "cross-library single-operation latency, 15 paired processes pinned to one CPU, median of paired ratios with a 20,000-resample percentile bootstrap",
+          "population": "40d1537b1a86851a17c49636cd5620704c4836bf6153074fd964f1c3a4fe691e",
+          "source": "5ac6fddc53f5ca2a63912f51c07188b9b63f71dd with the uncommitted PFP-4 changes (build_relevant_clean=false); two fresh builds reproduce 4e6ec312",
+          "target": "x86_64-unknown-linux-gnu release",
+          "tool": "courts/phase18/timing/bench_api.c, courts/performance-frontier/baseline/analyse_bench_api.py, timing-4e6ec312/run_timing.sh"
+        },
+        "population": {
+          "digest": "40d1537b1a86851a17c49636cd5620704c4836bf6153074fd964f1c3a4fe691e",
+          "frozen_at": "c9a0fdd58429ef13ca9b25ddccbc84a832787277",
+          "frozen_before_execution": true
+        },
+        "record": {
+          "path": "evidence/performance-frontier/campaigns/PFP-4/timing-4e6ec312/results.json",
+          "present": true,
+          "sha256": "9064e6fce2eaedbb0bc8001f0e50b718a687dbd94a6da1cd8e9bb3ec0ad692e9"
+        },
+        "ecdsa256": {
+          "candidate_us": 130.957,
+          "authority_us": 12.752,
+          "ratio": 10.28,
+          "ci95": [
+            10.26,
+            10.31
+          ],
+          "previous_ratio": 10.58,
+          "previous_ci95": [
+            10.55,
+            10.62
+          ],
+          "bound_reference": "~9.1x reference / 9.24x absolute ceiling; the shortfall is recorded, not discharged"
+        }
+      },
       "queue_item": "PFP-4",
       "reuse": null,
       "shortcuts": [],
-      "status": "EXPERIMENT",
+      "status": "CANDIDATE",
       "timing_obligations": {
         "attempted_discharge": [],
         "none_open_because": null,
         "open": [
           {
-            "description": "The W3 bound forbids the pipeline conversion: the PFP-4 scalar arithmetic, reduction, s expression and export are 0.45% of signing wall time, so no candidate was built.",
+            "description": "ecdsa256 measured 10.28x [10.26, 10.31], an improvement over the PFP-3 10.58x [10.55, 10.62] but short of the ~9.1x reference and the 9.24x absolute ceiling; the portable Mont<OrderDomain> kernel makes the inverse ~14us, not the ~7us extrapolated from the field inverse's callgrind share, and the generic ladder it replaces is only ~17us.",
             "discharged": false,
-            "id": "PFP4-W3-BOUND"
+            "id": "PFP4-TIMING-SHORTFALL"
           },
           {
-            "description": "The only material remainder is the order inversion (~12.7% wall); a dedicated constant-time 4-limb inverse is a separate task and was not implemented or measured.",
+            "description": "BINSEC -checkct was not run; the branch audit is a source-review classification of emitted instructions, not a binary taint proof.",
             "discharged": false,
-            "id": "PFP4-ORDER-INVERSION"
+            "id": "PFP4-BINSEC"
           },
           {
-            "description": "No 4,096-signature differential, defining-equation, round-trip, taint or binary branch audit was run because there is no implementation to gate.",
+            "description": "A dedicated branchy-inverse mutation control was not built; the ctgrind sensitivity control exercises the P-256 ladder, not the new inverse.",
             "discharged": false,
-            "id": "PFP4-GATES-NOT-RUN"
+            "id": "PFP4-MUTATION-CONTROL"
+          },
+          {
+            "description": "The candidate is the uncommitted working tree on 5ac6fddc5; it is reproducible from the recorded source fingerprint and two builds, but not from a commit.",
+            "discharged": false,
+            "id": "PFP4-DIRTY-CANDIDATE"
+          },
+          {
+            "description": "The PFP-4 pipeline conversion (fixed-width scalar admission, field-to-order reduction, s-expression rework, export) remains refused by the W3 bound: that subset is 0.45% of signing wall time (Amdahl 1.005x) and was not implemented.",
+            "discharged": false,
+            "id": "PFP4-PIPELINE-REFUSED"
+          },
+          {
+            "description": "The consumer dependency closure is not discharged; this arm is a performance candidate, not SAFE_COMPATIBLE, and asserts no safety or compatibility conclusion.",
+            "discharged": false,
+            "id": "PFP4-SAFE-COMPATIBLE"
           }
         ]
       }

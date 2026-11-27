@@ -1,0 +1,17 @@
+candidate	control	1	0	0
+candidate	sign	1	123	120
+candidate	sign	2	123	120
+candidate	sign	3	123	120
+candidate	sign-nonce	1	123	120
+candidate	sign-nonce	2	123	120
+candidate	sign-nonce	3	123	120
+before	control	1	0	0
+before	sign	1	122	119
+before	sign	2	122	119
+before	sign	3	122	119
+before	sign-nonce	1	122	119
+before	sign-nonce	2	122	119
+before	sign-nonce	3	122	119
+sensitivity	mul-g-fixed	1	1605	196
+sensitivity	mul-g-fixed	2	1605	198
+sensitivity	mul-g-fixed	3	1615	207

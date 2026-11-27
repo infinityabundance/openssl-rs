@@ -1,72 +1,102 @@
-# PFP-4 conversion receipt — W3 bound, no implementation
+# PFP-4 conversion receipt — order inversion replaced at `4e6ec312`
 
-- **Source identity.** `staging` `0f8904d69` (docs-only; the `src/` tree equals
-  `49809764f`, the PFP-3 branch-free admission). No source file was changed by
-  this batch: `src/**/*.rs` is untouched, the `CRYPTO_*` seam and every
-  `#[repr(C)]` layout are unchanged, and no `unsafe` operation was added.
-- **Subject.** The PFP-3 post-fix distribution DSO
-  `ecbefb7d4ecd05cb08f5ade57e64ce2cd81de24bcd68b0c236a8640a18559053`
-  (`court/tmp/pfp3-d/distribution/libcrypto.so.3`), the **same digest** as the
-  PFP-3 timing record (`ecdsa256` 10.58× [10.55, 10.62]). Authority
-  `611e511d…`. The profiling harness proves the mapped file by
-  `dladdr`/`stat` (`dev_ino_match=1 size_match=1`).
-- **Authority contract.** OpenSSL 3.6.4's P-256 signing pipeline
-  (`ecdsa_sign_setup` + `ossl_ecdsa_simple_sign_sig`): nonce draw, `k·G`,
-  affine `x`, `r = x mod n`, `k⁻¹ = k^(n−2) mod n` via `bn_mod_exp_mont_fixed_top`,
-  `s = (m + r·d)·k⁻¹ mod n`, DER export. The W3 analysis does not change it; it
-  measures it.
-- **Ownership before / after.** Before and after: identical. Nothing was
-  converted.
-- **Unsafe — eliminated / relocated / hidden.** 0 / 0 / **0**. No code change.
-- **Boundary size.** No new boundary. The design sketch
-  ([`DESIGN.md`](DESIGN.md)) would reuse the existing `P256Scalar` and PFP-3's
-  `admits`; it is not implemented.
-- **Obligations discharged.** The W3 profiling obligation, at one digest:
-  * wall decomposition (`profile/profile-wall.txt`): `sign` 134.307 µs,
-    `k·G` 115.193 µs (**85.77 %**), outside-`k·G` **14.23 %**;
-  * independent instruction attribution (`profile/callgrind-sign.out`):
-    `k·G` 80.93 %, order inverse 15.91 %, nonce 2.39 %, `s` expression + export
-    **0.48 %**;
-  * Amdahl: the entire non-`k·G` fraction is bounded by **1.166×** (best ratio
-    **9.07×**); the PFP-4 scalar/reduction/expression/export subset is bounded
-    by **1.005×**.
-- **Obligations retained / NOT_RUN (with the gate that would run them).**
-  * 4,096 deterministic-nonce signatures vs the authority — **NOT_RUN**: no
-    implementation exists to test (would be Task 3.1).
-  * Defining-equation and round-trip — **NOT_RUN**: same reason (Task 3.2–3.3).
-  * `cargo test --lib -- ec`, full library suite, `fmt`, `clippy -D warnings` —
-    **NOT_RUN**: no source change; the last recorded run is PFP-3's 2,484
-    passed / 0 failed / 54 ignored at the same `src` tree.
-  * New-digest rebuild, DSO digest, reproducibility — **NOT_RUN**: no new
-    binary; the profiled digest `ecbefb7d` is PFP-3's two-independent-clean-build
-    digest.
-  * ctgrind on signing with the private scalar and nonce marked secret —
-    **NOT_RUN**: no new carrier (Task 4.2).
-  * Binary branch audit over new carriers — **NOT_RUN**: no new carrier
-    (Task 4.3).
-  * `ecdsa256` at a new digest vs 10.58× [10.55, 10.62] — **NOT_RUN**: no new
-    digest; the bound says the change cannot move the ratio beyond 9.07× at the
-    absolute ceiling (Task 4.4).
-- **Compatibility tested.** Nothing to test: no behaviour changed. The harness
-  reproduced the PFP-3 public key `03b1c46f…` and derived `r` at the same DSO.
-- **Does every remaining unsafe op have an explicit validity contract?** Yes —
-  the inventory is unchanged from PFP-3, because no unsafe operation was added.
-- **Divergence classification.** None: this batch changes no implementation. The
-  finding is a *performance* finding (the dominant cost is `k·G`, not scalar
-  arithmetic), recorded so the programme does not spend effort where the bound
-  forbids a gain.
-- **Arm register.** A `PFP-4` **`EXPERIMENT`** arm is recorded honestly in
-  `evidence/performance-frontier/admission/ARMS.json`: it names the profiled
-  digest and carries the bound as its description, with `measurement`,
-  `differential_courts` and `constant_time_audit` **null**, because no PFP-4
-  candidate exists and nothing was measured as a candidate. It is not a
-  `CANDIDATE`; a candidate needs a measurement, a differential court and a clean
-  binary audit at one digest, and this batch produced none of those.
+- **Source identity.** `staging` `5ac6fddc53f5ca2a63912f51c07188b9b63f71dd`
+  with four uncommitted build-relevant files:
+  `src/ec/lib.rs`, `src/ec/p256.rs`, `src/ec/p256/fixed_base.rs`,
+  `src/ec/p256/tests.rs`. Source-tree fingerprint
+  `4e05841492051be7ca3655196af353b642f6753df11152ae7f0141135815b2ca` (887 files),
+  unchanged across the build. The campaign does not commit.
+- **Candidate.** Distribution DSO SHA-256
+  `4e6ec312313b3f1ef68ec9c0c4fc698a76f334ee9da38a6fcdfa7d8945c53e77`, build-id
+  `f38d4d5ce9641bebfd302db772d4802f269e0ed1`, archive
+  `10bb388a2f46c5199ef69f331b181f9ced3dfc3cb31639ff2aafc76eaaba9aa0`. **Two
+  independent clean builds** (`build_pfp4.sh a` and `b`, fresh target dirs)
+  produced the identical digest and build-id. Authority
+  `611e511db4273c4b6b522031fd171efce71b80661bb8310c2a21dfd18ec0efd2`.
+- **Authority contract.** OpenSSL 3.6.4 signing: `k⁻¹ = k^(n−2) mod n` via
+  `bn_mod_exp_mont_fixed_top` (Fermat, fixed-top), then
+  `s = (m + r·d)·k⁻¹ mod n` and DER export. The replaced component is exactly
+  that Fermat inverse; the `s` expression and export are untouched.
+- **Ownership before / after.** Unchanged. The new code adds a compile-time
+  exponent constant and a fixed-width residue value (`P256Scalar`), which owns
+  no allocation and cleanses on `Drop`. No ownership, borrow or lifetime
+  obligation changed.
+- **Unsafe — eliminated / relocated / hidden.** 0 / 0 / **0**. One new audited
+  boundary was added: `unsafe fn try_inverse_order` with a `# Safety` contract
+  (live group; live `BIGNUM`s; `r` may alias `x`). Its body has three raw
+  dereferences, each with a `SAFETY:` comment; the operand is copied out before
+  the write, so the signing call's `r == x == k` aliasing is sound.
+  `unsafe_op_in_unsafe_fn`, `undocumented_unsafe_blocks` and `missing_safety_doc`
+  remain enforced, and `cargo clippy --all-targets -- -D warnings` passes.
+- **Boundary size.** One new function on the existing `admits`
+  (`src/ec/p256/fixed_base.rs`) and `store_coordinate` (`src/ec/smpl.rs`)
+  contracts; the kernel and domain types are reused unchanged. The `CRYPTO_*`
+  seam and every `#[repr(C)]` layout are untouched.
+- **Obligations discharged.**
+  * Inverse correctness: 4,108 in-crate cases vs an independent `bn::limbs`
+    Fermat oracle (0 mismatches), 4,107 `k·k⁻¹ ≡ 1 (mod n)` round-trips,
+    4,096 BigNum-level cases vs the generic `bn_mod_exp_mont_fixed_top` body
+    (0 mismatches, including non-canonical operands and the aliased call).
+  * DSO differential at the candidate digest: 4,096 supplied-nonce `sign-ex`
+    signatures with the defining equation checked for each and `ECDSA_sign_ex`
+    DER equal to `ECDSA_do_sign_ex`, and 4,096 `sign-rand` signatures through the
+    shipped `ECDSA_do_sign` with deterministic nonces (which exercises the new
+    inverse). Both modes are byte-identical to the authority and cross-verify
+    4,096/4,096 in both directions under one public key.
+  * T27 (`bn::arith::mod_add_reduced_ct` at the `s = s + m` site) is unchanged;
+    the `s` expression and export were not touched.
+  * Constant-time: ctgrind with the private scalar tainted and with the
+    private scalar **and** the nonce source tainted reports 0 engine-on-path and
+    0 engine-origin contexts; the sensitivity control reports 4 engine-on-path
+    contexts per repetition. The branch audit classifies every `jcc`/`setcc`/
+    `cmov` in the new carrier as public-bound; `invert` has exactly two
+    conditional jumps, the fixed loop counter and the public exponent-bit test.
+  * `cargo test --lib -- ec`: 649 passed, 0 failed, 13 ignored. Full library:
+    2,487 passed, 0 failed, 54 ignored. `fmt` and `clippy -D warnings` pass.
+  * `ecdsa256` measured at the candidate digest: **10.28× [10.26, 10.31]**,
+    candidate 130.957 µs vs authority 12.752 µs.
+- **Obligations retained / NOT_RUN (and why).**
+  * The timing target was **not met**. The bound's realistic expectation was
+    ≈9.9× (halving the inversion) and its absolute ceiling 9.24×; the task's
+    reference was ≈9.1×. 10.28× improves the PFP-3 10.58× [10.55, 10.62] by
+    0.30× (candidate ~3.5 µs faster) but misses the bound. The measured inverse
+    costs ~14 µs, not the ~7 µs the design extrapolated from the field inverse's
+    callgrind share; `P256Scalar` uses the portable `Mont<OrderDomain>`
+    schoolbook/REDC kernel (425 operations), and the generic ladder it replaces
+    costs only ~17 µs. Recorded as a shortfall, not a success.
+  * BINSEC `-checkct` was **NOT_RUN**; the branch audit is a source-review
+    classification of emitted instructions, not a binary taint proof.
+  * A dedicated branchy-inverse mutation control was **NOT_RUN**; the
+    sensitivity control exercises the P-256 ladder rather than the inverse.
+    This is recorded as a limitation of the ctgrind evidence.
+- **Compatibility tested.** `ECDSA_do_sign` and `ECDSA_do_sign_ex`/
+  `ECDSA_sign_ex` with supplied nonces are byte-identical to the authority over
+  4,096 cases each; the same public key is derived; custom methods, modified
+  generators/orders/curves and foreign methods still fail `admits` and keep the
+  generic inverse (the existing refusal tests now also assert the inverse arm
+  refuses). Retries and error-site coordinates are untouched; the hook runs
+  after `mont_data` nullness, so the generic failure answer is preserved.
+- **Does every remaining unsafe op have an explicit validity contract?** Yes.
+  The one new `unsafe fn` states provenance/aliasing/liveness; every new raw
+  dereference carries `SAFETY:`. The reused kernel and write-back retain PFP-2/
+  PFP-20/PFP-3 contracts.
+- **Divergence classification.** No behavioural divergence was found at the
+  candidate digest. The deliberate performance divergence is recorded above;
+  the pipeline conversion remains refused by the W3 bound (0.45 % of wall) and
+  was not attempted. `k·G` is unchanged.
+- **Arm register.** The `PFP-4` arm in
+  `evidence/performance-frontier/admission/ARMS.json` is updated to name the
+  candidate `4e6ec312`, its measurement (`ecdsa256` 10.28×), the differential
+  courts, and the ctgrind-plus-audit record, with the honest shortfall and the
+  remaining open obligations. It is not `SAFE_COMPATIBLE`; the consumer
+  dependency closure is not discharged.
 
 ## Decision
 
-**PARTIAL.** The W3 rule is the reason: the entire non-`k·G` remainder is
-14.2 % and the PFP-4 arithmetic is 0.45 %, so the pipeline conversion cannot
-move `ecdsa256`. The only material remainder is the order inversion (≈12.7 %
-wall), recorded as a separate follow-up. `k·G` (85.8 %) remains the frontier and
-belongs to PFP-3/W5.
+**DONE** by the stated criteria: the inversion is replaced, the audit is clean
+and every correctness gate passes at one candidate digest. The performance
+shortfall against the bound is recorded honestly (10.28× measured versus the
+≈9.1× reference / 9.24× ceiling). The pipeline conversion stays refused by the
+bound. Evidence: [`RESULTS.md`](RESULTS.md), [`AUDIT.md`](AUDIT.md),
+[`CTGRIND.md`](CTGRIND.md), `build/`, `differential/`, `ctgrind/`, `audit/`,
+`timing-4e6ec312/`.

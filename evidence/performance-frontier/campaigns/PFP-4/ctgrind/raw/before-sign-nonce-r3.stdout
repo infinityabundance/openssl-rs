@@ -1,0 +1,8 @@
+BASE fbase=0x4e3a000 saddr=0x52d5370
+LOADED realpath=/work/court/tmp/pfp3-d/distribution/libcrypto.so.3 dev=57 ino=2047015 size=17123976
+MAPS realpath=/work/court/tmp/pfp3-d/distribution/libcrypto.so.3 entries=5
+FOREIGN libcrypto=0
+HARNESS mode=sign-nonce iters=0 taint=1
+TAINT what=nonce-randomness source=RAND_bytes
+TAINT what=d limbs=4 bits=256
+RESULT mode=sign-nonce ok=1 marked=1

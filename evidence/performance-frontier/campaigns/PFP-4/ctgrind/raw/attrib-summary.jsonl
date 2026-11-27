@@ -1,0 +1,17 @@
+{"log": "before-control-r1.out", "contexts": 0, "per_class": {}, "engine_on_path": 0}
+{"log": "before-sign-nonce-r1.out", "contexts": 119, "per_class": {"E": 95, "C": 14, "D": 10}, "engine_on_path": 0}
+{"log": "before-sign-nonce-r2.out", "contexts": 119, "per_class": {"E": 95, "C": 14, "D": 10}, "engine_on_path": 0}
+{"log": "before-sign-nonce-r3.out", "contexts": 119, "per_class": {"E": 95, "C": 14, "D": 10}, "engine_on_path": 0}
+{"log": "before-sign-r1.out", "contexts": 119, "per_class": {"E": 95, "C": 14, "D": 10}, "engine_on_path": 0}
+{"log": "before-sign-r2.out", "contexts": 119, "per_class": {"E": 95, "C": 14, "D": 10}, "engine_on_path": 0}
+{"log": "before-sign-r3.out", "contexts": 119, "per_class": {"E": 95, "C": 14, "D": 10}, "engine_on_path": 0}
+{"log": "candidate-control-r1.out", "contexts": 0, "per_class": {}, "engine_on_path": 0}
+{"log": "candidate-sign-nonce-r1.out", "contexts": 120, "per_class": {"E": 96, "C": 14, "D": 10}, "engine_on_path": 0}
+{"log": "candidate-sign-nonce-r2.out", "contexts": 120, "per_class": {"E": 96, "C": 14, "D": 10}, "engine_on_path": 0}
+{"log": "candidate-sign-nonce-r3.out", "contexts": 120, "per_class": {"E": 96, "C": 14, "D": 10}, "engine_on_path": 0}
+{"log": "candidate-sign-r1.out", "contexts": 120, "per_class": {"E": 96, "C": 14, "D": 10}, "engine_on_path": 0}
+{"log": "candidate-sign-r2.out", "contexts": 120, "per_class": {"E": 96, "C": 14, "D": 10}, "engine_on_path": 0}
+{"log": "candidate-sign-r3.out", "contexts": 120, "per_class": {"E": 96, "C": 14, "D": 10}, "engine_on_path": 0}
+{"log": "sensitivity-mul-g-fixed-r1.out", "contexts": 196, "per_class": {"E": 89, "D": 7, "C": 100}, "engine_on_path": 4}
+{"log": "sensitivity-mul-g-fixed-r2.out", "contexts": 198, "per_class": {"E": 91, "D": 7, "C": 100}, "engine_on_path": 4}
+{"log": "sensitivity-mul-g-fixed-r3.out", "contexts": 207, "per_class": {"E": 101, "D": 7, "C": 99}, "engine_on_path": 4}

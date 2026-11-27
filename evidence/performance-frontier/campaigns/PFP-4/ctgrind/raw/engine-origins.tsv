@@ -1,0 +1,13 @@
+subject	mode	rep	contexts	engine_on_path	origin_in_engine
+candidate	sign	1	120	0	0
+candidate	sign	2	120	0	0
+candidate	sign	3	120	0	0
+candidate	sign-nonce	1	120	0	0
+candidate	sign-nonce	2	120	0	0
+candidate	sign-nonce	3	120	0	0
+before	sign	1	119	0	0
+before	sign	2	119	0	0
+before	sign	3	119	0	0
+before	sign-nonce	1	119	0	0
+before	sign-nonce	2	119	0	0
+before	sign-nonce	3	119	0	0
