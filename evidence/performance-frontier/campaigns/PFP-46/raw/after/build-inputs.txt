@@ -1,0 +1,31 @@
+date=2026-11-27T22:39:01Z
+source_commit=4fcd2cc4c31ddffcaa365b40f5a51052759c7478
+dirty_src= M src/bn/arith.rs;
+arith_sha256=25a87a8c397f19fac94c97086f3552c52d5eb69e5849de5cd095dbbcccd8e98b
+rustc=rustc 1.98.1 (48a229cea 2026-09-01)
+cargo=cargo 1.98.1 (797e8a9bc 2026-08-05)
+cc=cc (Debian 12.2.0-14+deb12u1) 12.2.0
+profile=release
+archive_sha256=aaed910dd86dcc851c8e11faaf691ad12b5792e772d635ebb894e00e23f71a07
+dso_sha256=b890760cc44473071840b811c70a8ecc8e6a856fbabd03527582420e741fbc46
+dso_size=17128944
+mont_mul_ladder_into addr=0x000000000033b710 size=0x0000000000002232
+=== BMI2 wrapper symbols ===
+000000000033aa80 0000000000000413 t openssl_rs::bn::arith::mont_mul_cios_bmi2_4
+000000000033aea0 0000000000000338 t openssl_rs::bn::arith::mont_mul_cios_bmi2_6
+000000000033b1e0 000000000000052a t openssl_rs::bn::arith::mont_mul_cios_bmi2_9
+000000000033dc30 00000000000009e0 t openssl_rs::bn::arith::mont_mul_cios_bmi2_16
+000000000033e610 000000000000020e t openssl_rs::bn::arith::mont_mul_cios_bmi2_32
+000000000033e820 000000000000020e t openssl_rs::bn::arith::mont_mul_cios_bmi2_48
+000000000033ea30 000000000000020e t openssl_rs::bn::arith::mont_mul_cios_bmi2_64
+000000000033ec40 0000000000000214 t openssl_rs::bn::arith::mont_mul_cios_bmi2_128
+=== opcode census (whole DSO .text via the kernel + wrappers) ===
+mont_mul_ladder_into: mulq=95 mulx=0 adcx=0 adox=0 
+openssl_rs::bn::arith::mont_mul_cios_bmi2_4 insns=264 mulx=32 mulq=0 adcx=0 adox=0
+openssl_rs::bn::arith::mont_mul_cios_bmi2_6 insns=207 mulx=12 mulq=0 adcx=0 adox=0
+openssl_rs::bn::arith::mont_mul_cios_bmi2_9 insns=313 mulx=18 mulq=0 adcx=0 adox=0
+openssl_rs::bn::arith::mont_mul_cios_bmi2_16 insns=546 mulx=32 mulq=0 adcx=0 adox=0
+openssl_rs::bn::arith::mont_mul_cios_bmi2_32 insns=135 mulx=5 mulq=0 adcx=0 adox=0
+openssl_rs::bn::arith::mont_mul_cios_bmi2_48 insns=135 mulx=5 mulq=0 adcx=0 adox=0
+openssl_rs::bn::arith::mont_mul_cios_bmi2_64 insns=135 mulx=5 mulq=0 adcx=0 adox=0
+openssl_rs::bn::arith::mont_mul_cios_bmi2_128 insns=135 mulx=5 mulq=0 adcx=0 adox=0

@@ -1,0 +1,14 @@
+tag=bmi2
+date=2026-11-27T21:40:21Z
+source_commit=4fcd2cc4c31ddffcaa365b40f5a51052759c7478
+src_tree=0181f90193fd0de86d26cd714e701380340ee432
+arith_sha256=2d0f42cce3c93a78babb8e96d89e854a570ba51ea4d338d3ab615bec2906e992
+dirty_src=
+rustc=rustc 1.98.1 (48a229cea 2026-09-01)
+cargo=cargo 1.98.1 (797e8a9bc 2026-08-05)
+cc=cc (Debian 12.2.0-14+deb12u1) 12.2.0
+rustflags=-C target-feature=+bmi2
+archive_sha256=07c47c57d6958aed2e732719f3136ddea0582d5e11dcec8524c9b7af6623ef1a
+dso_sha256=b7aded1b82a50827fb93819c1767e7ffde3c222a934defd14d28a4fc0a429808
+dso_size=17100976
+mont_mul_ladder_into addr=0x00000000001972d0 size=0x000000000000206c

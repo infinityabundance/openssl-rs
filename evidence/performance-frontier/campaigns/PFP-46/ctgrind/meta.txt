@@ -1,0 +1,7 @@
+source_commit=4fcd2cc4c31ddffcaa365b40f5a51052759c7478
+arith_rs_sha256=24755704dcb3817de83ce02c17e5b82d1eb7d54d2bfed0f7c209ef8b1a798b7f
+test_binary_sha256=139b0349151975b875976d886acaa962ca661f431c312a5ab0a5b820337c85fc
+test_profile=debug, CARGO_PROFILE_TEST_DEBUG=0
+valgrind=valgrind-3.19.0
+venue=openssl-rs-court-tools:1 (base court image has no valgrind)
+note=debug test binary; source-bound, not DSO-bound; not a constant-time proof

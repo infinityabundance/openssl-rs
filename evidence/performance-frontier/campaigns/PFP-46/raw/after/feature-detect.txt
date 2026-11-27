@@ -1,0 +1,1 @@
+std_detect (same rustc/std as the DSO): bmi2=true adx=true avx2=true

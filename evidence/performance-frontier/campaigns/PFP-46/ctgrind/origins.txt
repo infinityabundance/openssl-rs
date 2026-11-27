@@ -1,0 +1,6 @@
+--- cpuid-valgrind.log
+origins: none
+--- exponent_taint.log
+origins: none
+--- negative_control.log
+==55== Conditional jump or move depends on uninitialised value(s)

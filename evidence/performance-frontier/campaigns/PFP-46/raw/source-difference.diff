@@ -1,0 +1,126 @@
+diff --git a/src/bn/arith.rs b/src/bn/arith.rs
+index 0bd09468..148b63c0 100644
+--- a/src/bn/arith.rs
++++ b/src/bn/arith.rs
+@@ -2001,7 +2001,18 @@ fn mont_mul_cios_into(
+ ///
+ /// Returns `false` on any geometry mismatch (a public length check), writing
+ /// nothing.
+-#[inline]
++///
++/// **Inlining is profile-dependent, deliberately.** In an optimised build the
++/// runtime BMI2 dispatch needs this safe body inlined into the
++/// `#[target_feature(enable = "bmi2")]` wrappers below: that is what lets LLVM
++/// select the BMI2 encoding (`mulx`) for the same source. An unoptimised build
++/// does not need it, and forcing it there copies the body into every caller's
++/// frame; `ssl::statem::statem_srvr::tls13_handshake_and_write_fit_a_32_kib_thread_stack`
++/// pins a 32 KiB server stack, so the test profile keeps the body out of line
++/// exactly as it was before this change. Neither branch changes the schedule or
++/// the result.
++#[cfg_attr(not(debug_assertions), inline(always))]
++#[cfg_attr(debug_assertions, inline(never))]
+ fn mont_mul_cios_fixed<const N: usize, const ACC: usize>(
+     a: &[Limb],
+     b: &[Limb],
+@@ -2075,6 +2086,54 @@ fn mont_mul_cios_fixed<const N: usize, const ACC: usize>(
+     true
+ }
+ 
++/// Define one monomorphic `#[target_feature(enable = "bmi2")]` CIOS wrapper.
++///
++/// The wrapper's body is exactly the safe [`mont_mul_cios_fixed`] kernel — no
++/// intrinsics and no assembly. `#[target_feature]` may not be applied to a
++/// generic function, hence one monomorphic wrapper per admitted width; each is
++/// `unsafe fn` because the feature is a caller obligation.
++#[cfg(target_arch = "x86_64")]
++macro_rules! define_bmi2_cios_wrapper {
++    ($name:ident, $n:literal, $acc:literal) => {
++        /// # Safety
++        ///
++        /// The CPU must support BMI2. The only caller is the dispatch block in
++        /// [`mont_mul_cios_dispatch`] (boundary `BN-CIOS-BMI2-DISPATCH`), which
++        /// gates every wrapper on `is_x86_feature_detected!("bmi2")`.
++        #[target_feature(enable = "bmi2")]
++        unsafe fn $name(
++            a: &[Limb],
++            b: &[Limb],
++            out: &mut [Limb],
++            m: &[Limb],
++            n0: Limb,
++            t: &mut [Limb],
++            diff: &mut [Limb],
++        ) -> bool {
++            // The body is the portable kernel, unchanged and safe. Inlining it
++            // under this target feature is the whole optimisation.
++            mont_mul_cios_fixed::<$n, $acc>(a, b, out, m, n0, t, diff)
++        }
++    };
++}
++
++#[cfg(target_arch = "x86_64")]
++define_bmi2_cios_wrapper!(mont_mul_cios_bmi2_4, 4, 6);
++#[cfg(target_arch = "x86_64")]
++define_bmi2_cios_wrapper!(mont_mul_cios_bmi2_6, 6, 8);
++#[cfg(target_arch = "x86_64")]
++define_bmi2_cios_wrapper!(mont_mul_cios_bmi2_9, 9, 11);
++#[cfg(target_arch = "x86_64")]
++define_bmi2_cios_wrapper!(mont_mul_cios_bmi2_16, 16, 18);
++#[cfg(target_arch = "x86_64")]
++define_bmi2_cios_wrapper!(mont_mul_cios_bmi2_32, 32, 34);
++#[cfg(target_arch = "x86_64")]
++define_bmi2_cios_wrapper!(mont_mul_cios_bmi2_48, 48, 50);
++#[cfg(target_arch = "x86_64")]
++define_bmi2_cios_wrapper!(mont_mul_cios_bmi2_64, 64, 66);
++#[cfg(target_arch = "x86_64")]
++define_bmi2_cios_wrapper!(mont_mul_cios_bmi2_128, 128, 130);
++
+ /// Dispatch a CIOS multiply to the compile-time-width kernel when the modulus'
+ /// limb count is one of the specialised widths, and to the generic slice kernel
+ /// for everything else.
+@@ -2085,6 +2144,13 @@ fn mont_mul_cios_fixed<const N: usize, const ACC: usize>(
+ /// width that is not listed here keeps the previous code exactly. The widths are
+ /// the RSA/DH limb counts (16, 32, 48, 64, 128) and the two EC order widths that
+ /// the ladder reaches (4 for P-256, 6 for P-384, 9 for P-521).
++///
++/// **Runtime instruction selection, one unsafe site.** When the CPU advertises
++/// BMI2, the same safe kernel body is run from a `#[target_feature(enable =
++/// "bmi2")]` wrapper, which lets LLVM emit `mulx` instead of the `mul`/`setb`/
++/// `adc` sequence. The boundary `BN-CIOS-BMI2-DISPATCH` is the single `unsafe`
++/// block below; a CPU without BMI2, or a non-`x86_64` target, takes the safe
++/// portable match and is byte-for-byte the previous code.
+ fn mont_mul_cios_dispatch(
+     a: &[Limb],
+     b: &[Limb],
+@@ -2097,6 +2163,32 @@ fn mont_mul_cios_dispatch(
+     if !mont_geometry_ok(a, b, out, diff, m, t) {
+         return false;
+     }
++    #[cfg(target_arch = "x86_64")]
++    {
++        if std::is_x86_feature_detected!("bmi2") {
++            // Boundary BN-CIOS-BMI2-DISPATCH (BOUNDARY_COVERED).
++            //
++            // SAFETY: the runtime test immediately above returned true, so the
++            // BMI2 precondition of every wrapper called here holds. Each wrapper
++            // has const `N` equal to the public limb count in its arm, so it
++            // sees exactly the geometry the portable arm would; the body it runs
++            // is the same safe `mont_mul_cios_fixed`. The `_` arm is the safe
++            // generic slice kernel and needs no feature.
++            return unsafe {
++                match m.len() {
++                    4 => mont_mul_cios_bmi2_4(a, b, out, m, n0, t, diff),
++                    6 => mont_mul_cios_bmi2_6(a, b, out, m, n0, t, diff),
++                    9 => mont_mul_cios_bmi2_9(a, b, out, m, n0, t, diff),
++                    16 => mont_mul_cios_bmi2_16(a, b, out, m, n0, t, diff),
++                    32 => mont_mul_cios_bmi2_32(a, b, out, m, n0, t, diff),
++                    48 => mont_mul_cios_bmi2_48(a, b, out, m, n0, t, diff),
++                    64 => mont_mul_cios_bmi2_64(a, b, out, m, n0, t, diff),
++                    128 => mont_mul_cios_bmi2_128(a, b, out, m, n0, t, diff),
++                    _ => mont_mul_cios_into(a, b, out, m, n0, t, diff),
++                }
++            };
++        }
++    }
+     match m.len() {
+         4 => mont_mul_cios_fixed::<4, 6>(a, b, out, m, n0, t, diff),
+         6 => mont_mul_cios_fixed::<6, 8>(a, b, out, m, n0, t, diff),

@@ -1,0 +1,142 @@
+
+court/tmp/pfp46/after/libcrypto.so.3:     file format elf64-x86-64
+
+
+Disassembly of section .text:
+
+000000000033e820 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith21mont_mul_cios_bmi2_48>:
+  33e820:	push   %rbp
+  33e821:	push   %r15
+  33e823:	push   %r14
+  33e825:	push   %r13
+  33e827:	push   %r12
+  33e829:	push   %rbx
+  33e82a:	sub    $0x18,%rsp
+  33e82e:	mov    0x50(%rsp),%r10
+  33e833:	cmp    $0x32,%r10
+  33e837:	jb     33ea18 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith21mont_mul_cios_bmi2_48+0x1f8>
+  33e83d:	mov    %r9,%rbx
+  33e840:	mov    %rcx,%r15
+  33e843:	mov    %rsi,%r13
+  33e846:	mov    %rdi,%rbp
+  33e849:	mov    %rdx,0x10(%rsp)
+  33e84e:	mov    0x58(%rsp),%r14
+  33e853:	xor    %r12d,%r12d
+  33e856:	mov    $0x190,%edx
+  33e85b:	mov    %r9,%rdi
+  33e85e:	xor    %esi,%esi
+  33e860:	mov    %r8,0x8(%rsp)
+  33e865:	call   *0x59500d(%rip)        # 8d3878 <memset@GLIBC_2.2.5>
+  33e86b:	mov    0x8(%rsp),%r10
+  33e870:	mov    (%r15),%rax
+  33e873:	jmp    33e8b1 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith21mont_mul_cios_bmi2_48+0x91>
+  33e875:	data16 cs nopw 0x0(%rax,%rax,1)
+  33e880:	add    $0x8,%r12
+  33e884:	add    0x180(%rbx),%rdi
+  33e88b:	mov    %rdi,0x178(%rbx)
+  33e892:	mov    0x188(%rbx),%rcx
+  33e899:	adc    $0x0,%rcx
+  33e89d:	mov    %rcx,0x180(%rbx)
+  33e8a4:	cmp    $0x180,%r12
+  33e8ab:	je     33e988 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith21mont_mul_cios_bmi2_48+0x168>
+  33e8b1:	mov    0x0(%r13,%r12,1),%rdx
+  33e8b6:	mov    $0x1,%ecx
+  33e8bb:	xor    %esi,%esi
+  33e8bd:	nopl   (%rax)
+  33e8c0:	mulx   -0x8(%rbp,%rcx,8),%r8,%rdi
+  33e8c7:	xor    %r9d,%r9d
+  33e8ca:	add    -0x8(%rbx,%rcx,8),%rsi
+  33e8cf:	setb   %r9b
+  33e8d3:	add    %r8,%rsi
+  33e8d6:	adc    %rdi,%r9
+  33e8d9:	mulx   0x0(%rbp,%rcx,8),%r8,%rdi
+  33e8e0:	mov    %rsi,-0x8(%rbx,%rcx,8)
+  33e8e5:	xor    %esi,%esi
+  33e8e7:	add    (%rbx,%rcx,8),%r9
+  33e8eb:	setb   %sil
+  33e8ef:	add    %r8,%r9
+  33e8f2:	adc    %rdi,%rsi
+  33e8f5:	mov    %r9,(%rbx,%rcx,8)
+  33e8f9:	add    $0x2,%rcx
+  33e8fd:	cmp    $0x31,%rcx
+  33e901:	jne    33e8c0 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith21mont_mul_cios_bmi2_48+0xa0>
+  33e903:	xor    %ecx,%ecx
+  33e905:	add    %rsi,0x180(%rbx)
+  33e90c:	setb   %cl
+  33e90f:	mov    %rcx,0x188(%rbx)
+  33e916:	mov    (%rbx),%rcx
+  33e919:	mov    %rcx,%rdx
+  33e91c:	imul   %r10,%rdx
+  33e920:	mulx   %rax,%rdi,%rsi
+  33e925:	add    %rcx,%rdi
+  33e928:	adc    $0x0,%rsi
+  33e92c:	mov    $0x2,%ecx
+  33e931:	data16 data16 data16 data16 data16 cs nopw 0x0(%rax,%rax,1)
+  33e940:	mulx   -0x8(%r15,%rcx,8),%r9,%r8
+  33e947:	xor    %edi,%edi
+  33e949:	add    -0x8(%rbx,%rcx,8),%rsi
+  33e94e:	setb   %dil
+  33e952:	add    %r9,%rsi
+  33e955:	adc    %r8,%rdi
+  33e958:	mov    %rsi,-0x10(%rbx,%rcx,8)
+  33e95d:	cmp    $0x30,%rcx
+  33e961:	je     33e880 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith21mont_mul_cios_bmi2_48+0x60>
+  33e967:	mulx   (%r15,%rcx,8),%r9,%r8
+  33e96d:	xor    %esi,%esi
+  33e96f:	add    (%rbx,%rcx,8),%rdi
+  33e973:	setb   %sil
+  33e977:	add    %r9,%rdi
+  33e97a:	adc    %r8,%rsi
+  33e97d:	mov    %rdi,-0x8(%rbx,%rcx,8)
+  33e982:	add    $0x2,%rcx
+  33e986:	jmp    33e940 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith21mont_mul_cios_bmi2_48+0x120>
+  33e988:	mov    $0x1,%edx
+  33e98d:	xor    %eax,%eax
+  33e98f:	nop
+  33e990:	mov    -0x8(%rbx,%rdx,8),%rsi
+  33e995:	sub    -0x8(%r15,%rdx,8),%rsi
+  33e99a:	setb   %dil
+  33e99e:	sub    %rax,%rsi
+  33e9a1:	setb   %al
+  33e9a4:	mov    %rsi,-0x8(%r14,%rdx,8)
+  33e9a9:	or     %dil,%al
+  33e9ac:	mov    (%rbx,%rdx,8),%rsi
+  33e9b0:	add    $0xff,%al
+  33e9b2:	sbb    (%r15,%rdx,8),%rsi
+  33e9b6:	mov    %rsi,(%r14,%rdx,8)
+  33e9ba:	setb   %al
+  33e9bd:	movzbl %al,%eax
+  33e9c0:	add    $0x2,%rdx
+  33e9c4:	cmp    $0x31,%rdx
+  33e9c8:	jne    33e990 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith21mont_mul_cios_bmi2_48+0x170>
+  33e9ca:	xor    $0x1,%rax
+  33e9ce:	or     %rcx,%rax
+  33e9d1:	mov    %rax,%rcx
+  33e9d4:	neg    %rcx
+  33e9d7:	dec    %rax
+  33e9da:	xor    %esi,%esi
+  33e9dc:	mov    %rsp,%rdx
+  33e9df:	mov    0x10(%rsp),%r9
+  33e9e4:	mov    0x50(%rsp),%r10
+  33e9e9:	nopl   0x0(%rax)
+  33e9f0:	mov    (%r14,%rsi,8),%rdi
+  33e9f4:	mov    (%rbx,%rsi,8),%r8
+  33e9f8:	mov    %rcx,(%rsp)
+  33e9fc:	and    (%rsp),%rdi
+  33ea00:	mov    %rax,(%rsp)
+  33ea04:	and    (%rsp),%r8
+  33ea08:	or     %rdi,%r8
+  33ea0b:	mov    %r8,(%r9,%rsi,8)
+  33ea0f:	inc    %rsi
+  33ea12:	cmp    $0x30,%rsi
+  33ea16:	jne    33e9f0 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith21mont_mul_cios_bmi2_48+0x1d0>
+  33ea18:	cmp    $0x32,%r10
+  33ea1c:	setae  %al
+  33ea1f:	add    $0x18,%rsp
+  33ea23:	pop    %rbx
+  33ea24:	pop    %r12
+  33ea26:	pop    %r13
+  33ea28:	pop    %r14
+  33ea2a:	pop    %r15
+  33ea2c:	pop    %rbp
+  33ea2d:	ret

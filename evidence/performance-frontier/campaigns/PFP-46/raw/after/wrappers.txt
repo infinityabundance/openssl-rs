@@ -1,0 +1,8 @@
+000000000033aa80 0000000000000413 openssl_rs::bn::arith::mont_mul_cios_bmi2_4
+000000000033aea0 0000000000000338 openssl_rs::bn::arith::mont_mul_cios_bmi2_6
+000000000033b1e0 000000000000052a openssl_rs::bn::arith::mont_mul_cios_bmi2_9
+000000000033dc30 00000000000009e0 openssl_rs::bn::arith::mont_mul_cios_bmi2_16
+000000000033e610 000000000000020e openssl_rs::bn::arith::mont_mul_cios_bmi2_32
+000000000033e820 000000000000020e openssl_rs::bn::arith::mont_mul_cios_bmi2_48
+000000000033ea30 000000000000020e openssl_rs::bn::arith::mont_mul_cios_bmi2_64
+000000000033ec40 0000000000000214 openssl_rs::bn::arith::mont_mul_cios_bmi2_128

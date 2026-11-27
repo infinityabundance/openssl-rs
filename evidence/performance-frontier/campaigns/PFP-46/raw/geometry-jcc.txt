@@ -1,0 +1,5 @@
+# PFP-46 geometry-jcc allowlist.
+# mont_mul_ladder_into 0x33b74b is the mont_geometry_ok early return: its flags
+# come from or/xor over slice lengths and pointers (public geometry). It is the
+# same check M-A1 recorded at 0x2fa80b; it is not a secret value.
+mont_mul_ladder_into 33b74b

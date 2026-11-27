@@ -1,0 +1,10 @@
+mont_mul_ladder_into: jcc=32 setcc=52 cmovcc=0  (class-a=32, class-b-flag=52, secret-derived-control=0)
+mont_mul_cios_bmi2_128: jcc=6 setcc=9 cmovcc=0  (class-a=7, class-b-flag=8, secret-derived-control=0)
+mont_mul_cios_bmi2_16: jcc=2 setcc=5 cmovcc=0  (class-a=3, class-b-flag=4, secret-derived-control=0)
+mont_mul_cios_bmi2_32: jcc=6 setcc=9 cmovcc=0  (class-a=7, class-b-flag=8, secret-derived-control=0)
+mont_mul_cios_bmi2_4: jcc=1 setcc=9 cmovcc=0  (class-a=2, class-b-flag=8, secret-derived-control=0)
+mont_mul_cios_bmi2_48: jcc=6 setcc=9 cmovcc=0  (class-a=7, class-b-flag=8, secret-derived-control=0)
+mont_mul_cios_bmi2_6: jcc=2 setcc=5 cmovcc=0  (class-a=3, class-b-flag=4, secret-derived-control=0)
+mont_mul_cios_bmi2_64: jcc=6 setcc=9 cmovcc=0  (class-a=7, class-b-flag=8, secret-derived-control=0)
+mont_mul_cios_bmi2_9: jcc=2 setcc=5 cmovcc=0  (class-a=3, class-b-flag=4, secret-derived-control=0)
+sites=175 -> evidence/performance-frontier/campaigns/PFP-46/raw/after/branch-classification.tsv
