@@ -1,0 +1,13 @@
+[package]
+name = "ma7-harness"
+version = "0.0.0"
+edition = "2021"
+
+# Standalone: this harness is a measurement instrument, never a workspace member
+# of the converted crate.
+[workspace]
+
+# Match the converted crate's release profile (Cargo.toml sets only
+# `overflow-checks = true`; every other release knob is Cargo's default).
+[profile.release]
+overflow-checks = true

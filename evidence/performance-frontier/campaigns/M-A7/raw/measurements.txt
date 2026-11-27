@@ -1,0 +1,104 @@
+# M-A7 harness, standalone release build (overflow-checks=true, default opt-level=3)
+# host:  13th Gen Intel(R) Core(TM) i9-13900K
+# nproc=30 rustc=rustc 1.98.1 (48a229cea 2026-09-01)
+# run A: taskset -c 0-29
+=== run A (taskset -c 2) ===
+DIFF width=4 pairs=20000 mismatches=0
+DIFF width=16 pairs=20000 mismatches=0
+SAMPLE round=0 width=4 cios_ns=13.1934 cs_ns=33.4372 width=16 cios_ns=183.1153 cs_ns=500.9111
+SAMPLE round=1 width=4 cios_ns=19.5101 cs_ns=33.7512 width=16 cios_ns=183.8130 cs_ns=509.4788
+SAMPLE round=2 width=4 cios_ns=13.2897 cs_ns=33.6083 width=16 cios_ns=181.9972 cs_ns=498.0385
+SAMPLE round=3 width=4 cios_ns=13.1178 cs_ns=33.2580 width=16 cios_ns=182.2561 cs_ns=503.2858
+SAMPLE round=4 width=4 cios_ns=16.1708 cs_ns=68.6935 width=16 cios_ns=185.3758 cs_ns=499.9464
+SAMPLE round=5 width=4 cios_ns=13.0885 cs_ns=33.5253 width=16 cios_ns=188.6048 cs_ns=503.2344
+SAMPLE round=6 width=4 cios_ns=13.6285 cs_ns=34.9258 width=16 cios_ns=190.0834 cs_ns=506.8252
+SAMPLE round=7 width=4 cios_ns=13.1399 cs_ns=33.6537 width=16 cios_ns=187.2467 cs_ns=511.7305
+SAMPLE round=8 width=4 cios_ns=13.6183 cs_ns=35.0248 width=16 cios_ns=188.2181 cs_ns=503.3229
+SAMPLE round=9 width=4 cios_ns=13.1080 cs_ns=33.5619 width=16 cios_ns=183.2774 cs_ns=500.3255
+SAMPLE round=10 width=4 cios_ns=13.1145 cs_ns=34.6134 width=16 cios_ns=189.5120 cs_ns=514.6726
+SAMPLE round=11 width=4 cios_ns=13.1110 cs_ns=33.2959 width=16 cios_ns=190.6514 cs_ns=516.5853
+SAMPLE round=12 width=4 cios_ns=13.2965 cs_ns=34.6378 width=16 cios_ns=189.1703 cs_ns=528.1372
+SAMPLE round=13 width=4 cios_ns=12.9746 cs_ns=36.7280 width=16 cios_ns=186.7464 cs_ns=500.0679
+SAMPLE round=14 width=4 cios_ns=13.3622 cs_ns=34.8096 width=16 cios_ns=266.6517 cs_ns=526.5821
+SAMPLE round=15 width=4 cios_ns=13.1327 cs_ns=33.6284 width=16 cios_ns=186.2589 cs_ns=500.7210
+SAMPLE round=16 width=4 cios_ns=13.4232 cs_ns=34.3546 width=16 cios_ns=187.2618 cs_ns=500.0656
+SAMPLE round=17 width=4 cios_ns=13.1294 cs_ns=33.1865 width=16 cios_ns=182.7902 cs_ns=507.8453
+SAMPLE round=18 width=4 cios_ns=13.8065 cs_ns=34.2447 width=16 cios_ns=191.4000 cs_ns=521.6396
+SAMPLE round=19 width=4 cios_ns=13.1283 cs_ns=33.5058 width=16 cios_ns=184.7922 cs_ns=505.8175
+SAMPLE round=20 width=4 cios_ns=13.4843 cs_ns=34.4740 width=16 cios_ns=188.7432 cs_ns=515.9701
+SAMPLE round=21 width=4 cios_ns=13.1275 cs_ns=33.3235 width=16 cios_ns=184.9365 cs_ns=500.1167
+SAMPLE round=22 width=4 cios_ns=13.3921 cs_ns=34.4729 width=16 cios_ns=189.9630 cs_ns=523.3251
+SAMPLE round=23 width=4 cios_ns=13.1623 cs_ns=33.4761 width=16 cios_ns=184.1930 cs_ns=500.6848
+SAMPLE round=24 width=4 cios_ns=13.5455 cs_ns=34.5122 width=16 cios_ns=188.7727 cs_ns=505.1380
+SAMPLE round=25 width=4 cios_ns=13.1339 cs_ns=33.1618 width=16 cios_ns=184.6195 cs_ns=498.8096
+SAMPLE round=26 width=4 cios_ns=13.5898 cs_ns=34.3231 width=16 cios_ns=188.7317 cs_ns=506.3012
+SAMPLE round=27 width=4 cios_ns=13.1422 cs_ns=33.1846 width=16 cios_ns=182.0765 cs_ns=500.8185
+SAMPLE round=28 width=4 cios_ns=13.6332 cs_ns=34.5958 width=16 cios_ns=188.7314 cs_ns=513.3450
+SAMPLE round=29 width=4 cios_ns=13.2548 cs_ns=33.4987 width=16 cios_ns=182.8123 cs_ns=504.8095
+SAMPLE round=30 width=4 cios_ns=13.5619 cs_ns=34.5129 width=16 cios_ns=188.1396 cs_ns=507.7816
+SAMPLE round=31 width=4 cios_ns=13.0905 cs_ns=33.4013 width=16 cios_ns=185.2752 cs_ns=498.4126
+SAMPLE round=32 width=4 cios_ns=13.5534 cs_ns=34.9060 width=16 cios_ns=188.0686 cs_ns=504.7476
+SAMPLE round=33 width=4 cios_ns=13.1317 cs_ns=33.4100 width=16 cios_ns=182.0028 cs_ns=503.5798
+SAMPLE round=34 width=4 cios_ns=13.3441 cs_ns=34.5307 width=16 cios_ns=188.5050 cs_ns=514.1674
+SAMPLE round=35 width=4 cios_ns=13.1483 cs_ns=33.1687 width=16 cios_ns=184.7672 cs_ns=501.1020
+SAMPLE round=36 width=4 cios_ns=13.6578 cs_ns=34.7364 width=16 cios_ns=187.9472 cs_ns=511.7055
+SAMPLE round=37 width=4 cios_ns=13.0917 cs_ns=33.7013 width=16 cios_ns=185.2980 cs_ns=500.1721
+SAMPLE round=38 width=4 cios_ns=13.6111 cs_ns=34.8897 width=16 cios_ns=189.6940 cs_ns=507.1071
+SAMPLE round=39 width=4 cios_ns=13.1082 cs_ns=33.2728 width=16 cios_ns=182.4805 cs_ns=495.8361
+SAMPLE round=40 width=4 cios_ns=13.5570 cs_ns=34.4566 width=16 cios_ns=188.3006 cs_ns=510.9085
+SUMMARY width=4 kernel=cios median_ns=13.2548 min_ns=12.9746
+SUMMARY width=4 kernel=carry_save median_ns=33.7512 min_ns=33.1618
+RATIO width=4 median_cs_over_cios=2.54634 min_cs_over_cios=2.55590
+SUMMARY width=16 kernel=cios median_ns=187.2467 min_ns=181.9972
+SUMMARY width=16 kernel=carry_save median_ns=504.8095 min_ns=495.8361
+RATIO width=16 median_cs_over_cios=2.69596 min_cs_over_cios=2.72442
+=== run B (taskset -c 6) ===
+DIFF width=4 pairs=20000 mismatches=0
+DIFF width=16 pairs=20000 mismatches=0
+SAMPLE round=0 width=4 cios_ns=13.1079 cs_ns=33.7011 width=16 cios_ns=183.1795 cs_ns=536.2256
+SAMPLE round=1 width=4 cios_ns=13.6050 cs_ns=35.8701 width=16 cios_ns=182.3649 cs_ns=501.4091
+SAMPLE round=2 width=4 cios_ns=13.1264 cs_ns=33.6023 width=16 cios_ns=181.9045 cs_ns=505.0999
+SAMPLE round=3 width=4 cios_ns=13.4383 cs_ns=36.8997 width=16 cios_ns=189.7134 cs_ns=518.3745
+SAMPLE round=4 width=4 cios_ns=13.1305 cs_ns=34.7054 width=16 cios_ns=188.9983 cs_ns=530.0321
+SAMPLE round=5 width=4 cios_ns=13.5910 cs_ns=35.8088 width=16 cios_ns=183.8159 cs_ns=536.9284
+SAMPLE round=6 width=4 cios_ns=14.2580 cs_ns=34.6998 width=16 cios_ns=191.0530 cs_ns=518.6437
+SAMPLE round=7 width=4 cios_ns=13.8848 cs_ns=34.2730 width=16 cios_ns=183.3060 cs_ns=579.2873
+SAMPLE round=8 width=4 cios_ns=13.2050 cs_ns=33.3387 width=16 cios_ns=182.5030 cs_ns=537.1216
+SAMPLE round=9 width=4 cios_ns=13.6498 cs_ns=35.9321 width=16 cios_ns=183.2621 cs_ns=509.0324
+SAMPLE round=10 width=4 cios_ns=13.1818 cs_ns=33.7323 width=16 cios_ns=182.0290 cs_ns=523.0210
+SAMPLE round=11 width=4 cios_ns=13.3811 cs_ns=34.9481 width=16 cios_ns=182.3091 cs_ns=507.5194
+SAMPLE round=12 width=4 cios_ns=13.1047 cs_ns=33.5303 width=16 cios_ns=183.0277 cs_ns=502.3831
+SAMPLE round=13 width=4 cios_ns=13.3516 cs_ns=34.1922 width=16 cios_ns=181.6235 cs_ns=512.6721
+SAMPLE round=14 width=4 cios_ns=13.1322 cs_ns=33.5245 width=16 cios_ns=182.3382 cs_ns=500.4694
+SAMPLE round=15 width=4 cios_ns=13.5692 cs_ns=34.4936 width=16 cios_ns=183.0006 cs_ns=538.1297
+SAMPLE round=16 width=4 cios_ns=13.1366 cs_ns=33.4561 width=16 cios_ns=182.6589 cs_ns=509.2624
+SAMPLE round=17 width=4 cios_ns=13.5849 cs_ns=36.0653 width=16 cios_ns=182.1570 cs_ns=514.6919
+SAMPLE round=18 width=4 cios_ns=13.1350 cs_ns=33.3169 width=16 cios_ns=182.1212 cs_ns=505.7660
+SAMPLE round=19 width=4 cios_ns=13.6094 cs_ns=34.3310 width=16 cios_ns=188.7363 cs_ns=530.0226
+SAMPLE round=20 width=4 cios_ns=12.9687 cs_ns=33.4246 width=16 cios_ns=183.9185 cs_ns=506.0666
+SAMPLE round=21 width=4 cios_ns=16.3559 cs_ns=36.9666 width=16 cios_ns=187.7095 cs_ns=524.5305
+SAMPLE round=22 width=4 cios_ns=14.0329 cs_ns=32.9845 width=16 cios_ns=193.6729 cs_ns=516.3791
+SAMPLE round=23 width=4 cios_ns=14.8275 cs_ns=36.1145 width=16 cios_ns=187.8173 cs_ns=546.8852
+SAMPLE round=24 width=4 cios_ns=13.0879 cs_ns=34.5831 width=16 cios_ns=187.4712 cs_ns=532.8832
+SAMPLE round=25 width=4 cios_ns=13.6024 cs_ns=35.9631 width=16 cios_ns=182.0918 cs_ns=523.3770
+SAMPLE round=26 width=4 cios_ns=13.0938 cs_ns=34.3963 width=16 cios_ns=182.5902 cs_ns=515.7644
+SAMPLE round=27 width=4 cios_ns=13.5355 cs_ns=34.7549 width=16 cios_ns=182.3156 cs_ns=509.7035
+SAMPLE round=28 width=4 cios_ns=13.2350 cs_ns=35.0999 width=16 cios_ns=182.4538 cs_ns=515.3921
+SAMPLE round=29 width=4 cios_ns=13.5769 cs_ns=37.5392 width=16 cios_ns=186.0790 cs_ns=523.7983
+SAMPLE round=30 width=4 cios_ns=14.2181 cs_ns=34.8537 width=16 cios_ns=182.6584 cs_ns=525.0812
+SAMPLE round=31 width=4 cios_ns=16.7847 cs_ns=34.8529 width=16 cios_ns=181.4769 cs_ns=508.6933
+SAMPLE round=32 width=4 cios_ns=13.1266 cs_ns=33.8701 width=16 cios_ns=194.2181 cs_ns=518.5606
+SAMPLE round=33 width=4 cios_ns=14.8694 cs_ns=35.6158 width=16 cios_ns=187.3819 cs_ns=532.7134
+SAMPLE round=34 width=4 cios_ns=13.1165 cs_ns=33.4409 width=16 cios_ns=181.7106 cs_ns=506.7007
+SAMPLE round=35 width=4 cios_ns=13.5954 cs_ns=34.3429 width=16 cios_ns=181.3344 cs_ns=516.5450
+SAMPLE round=36 width=4 cios_ns=13.1019 cs_ns=33.3284 width=16 cios_ns=181.8346 cs_ns=501.7438
+SAMPLE round=37 width=4 cios_ns=13.6166 cs_ns=34.2357 width=16 cios_ns=182.3600 cs_ns=516.5546
+SAMPLE round=38 width=4 cios_ns=13.1236 cs_ns=33.5600 width=16 cios_ns=182.9691 cs_ns=499.0372
+SAMPLE round=39 width=4 cios_ns=13.5866 cs_ns=34.1360 width=16 cios_ns=180.9876 cs_ns=510.3377
+SAMPLE round=40 width=4 cios_ns=13.1033 cs_ns=33.3728 width=16 cios_ns=181.7408 cs_ns=498.2001
+SUMMARY width=4 kernel=cios median_ns=13.4383 min_ns=12.9687
+SUMMARY width=4 kernel=carry_save median_ns=34.3429 min_ns=32.9845
+RATIO width=4 median_cs_over_cios=2.55559 min_cs_over_cios=2.54339
+SUMMARY width=16 kernel=cios median_ns=182.6584 min_ns=180.9876
+SUMMARY width=16 kernel=carry_save median_ns=516.3791 min_ns=498.2001
+RATIO width=16 median_cs_over_cios=2.82702 min_cs_over_cios=2.75268

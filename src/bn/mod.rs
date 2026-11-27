@@ -38,6 +38,13 @@ pub(crate) mod alloc;
 pub mod arith;
 pub mod bignum;
 pub mod blinding;
+// M-A7's carry-save (redundant-accumulator) CIOS prototype. Safe Rust, a measurement
+// and correctness candidate only; nothing in the arithmetic paths calls it until the
+// crossover says it wins. Crate-internal, so no ledger row moves. The module is
+// deliberately unused by the library until an admission decision, so the dead-code
+// allowance states that prototype status honestly (it disappears on integration).
+#[allow(dead_code)]
+pub(crate) mod carry_save;
 // Phase 12.8's `crypto/bn/bn_srp.c`: the ten SRP (RFC 5054) `ossl_bn_*` constants that
 // `crypto/srp/srp_lib.c`'s `knowngN[]` table reads. Every name is crate-internal; none is
 // an export, so no ledger row moves when it lands.
