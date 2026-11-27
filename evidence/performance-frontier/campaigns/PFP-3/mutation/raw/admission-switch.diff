@@ -1,0 +1,11 @@
+--- src/ec/p256/fixed_base.rs	2026-11-27 07:58:12.197892181 +0000
++++ /work/court/tmp/pfp3-mut/srcroot/src/ec/p256/fixed_base.rs	2026-11-27 08:16:13.945741836 +0000
+@@ -544,7 +544,7 @@
+         {
+             return false;
+         }
+-        true
++       false
+     }
+ }
+ 

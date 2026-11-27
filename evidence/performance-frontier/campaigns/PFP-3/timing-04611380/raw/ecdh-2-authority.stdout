@@ -1,0 +1,6 @@
+LOADED realpath=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3 dev=57 ino=325854 size=7295816
+MAPS realpath=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3 entries=5
+FOREIGN libcrypto=0
+HARNESS mode=ecdh iters=20 taint=0
+RESULT mode=ecdh ok=1 marked=0
+TIME mode=ecdh iters=20 ns_per_op=32804.6

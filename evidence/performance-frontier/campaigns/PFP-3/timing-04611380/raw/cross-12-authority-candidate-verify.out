@@ -1,0 +1,4 @@
+LIB /work/court/tmp/pfp3-c/distribution/libcrypto.so.3
+LOADED realpath=/work/court/tmp/pfp3-c/distribution/libcrypto.so.3 dev=57 ino=2042958 size=17128536
+MAPS realpath=/work/court/tmp/pfp3-c/distribution/libcrypto.so.3 entries=5
+CROSS verify path=/work/evidence/performance-frontier/campaigns/PFP-3/timing-04611380/raw/cross-12-authority.sig ok=1 pub=02c5b17d076d8e27f07ea9f82d7eeb92c5f994e7d285ee083452ab244d3c54128f

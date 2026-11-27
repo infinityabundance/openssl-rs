@@ -1,0 +1,2512 @@
+{
+  "carriers": {
+    "Affine export (to_affine: Fermat inversion)": {
+      "addr": "0x22bca0",
+      "cmov_rows": [],
+      "counts": {
+        "cmov": 0,
+        "div": 0,
+        "insns": 326,
+        "jcc": 2,
+        "setcc": 0
+      },
+      "jcc_rows": [
+        {
+          "addr": "0x22bd14",
+          "dir": "fwd",
+          "guarded": "call+memory",
+          "jcc": "jae",
+          "off": "+0x74",
+          "setter": "0x22bd10: add $0xffffffffffffffff,%rbx",
+          "src": "reg/arith",
+          "target": "0x22bf11"
+        },
+        {
+          "addr": "0x22be16",
+          "dir": "back",
+          "guarded": "call+memory",
+          "jcc": "jae",
+          "off": "+0x176",
+          "setter": "0x22be12: bt %rbx,%rax",
+          "src": "reg/arith",
+          "target": "0x22bd10"
+        }
+      ],
+      "note": "to_affine<Mont<FieldDomain>>: invert(base p-2) + canonical export",
+      "setcc_rows": [],
+      "size": 1557,
+      "symbol": "_RINvNtNtNtCsfBoMNNx3tZr_10openssl_rs2ec4p25610fixed_base9to_affineINtB4_4MontNtB4_11FieldDomainEEB8_"
+    },
+    "Comb (table_mul: select + double + add)": {
+      "addr": "0x229350",
+      "cmov_rows": [],
+      "counts": {
+        "cmov": 0,
+        "div": 0,
+        "insns": 1619,
+        "jcc": 2,
+        "setcc": 2
+      },
+      "jcc_rows": [
+        {
+          "addr": "0x22af88",
+          "dir": "back",
+          "guarded": "memory",
+          "jcc": "jne",
+          "off": "+0x1c38",
+          "setter": "0x22af82: cmp $0x5a0,%rax",
+          "src": "reg/arith",
+          "target": "0x229dc0"
+        },
+        {
+          "addr": "0x22bbf4",
+          "dir": "back",
+          "guarded": "memory",
+          "jcc": "jne",
+          "off": "+0x28a4",
+          "setter": "0x22bbf1: test %rax,%rax",
+          "src": "reg/arith",
+          "target": "0x229430"
+        }
+      ],
+      "note": "table_mul<Mont<FieldDomain>>: 64 doublings + 64 masked selects + adds",
+      "setcc_rows": [
+        {
+          "addr": "0x2297c1",
+          "insn": "setb %al",
+          "off": "+0x471",
+          "src": "reg/arith"
+        },
+        {
+          "addr": "0x229dd5",
+          "insn": "sete %al",
+          "off": "+0xa85",
+          "src": "mem"
+        }
+      ],
+      "size": 10574,
+      "symbol": "_RINvNtNtNtCsfBoMNNx3tZr_10openssl_rs2ec4p25610fixed_base9table_mulINtB4_4MontNtB4_11FieldDomainEEB8_"
+    },
+    "Fixed-base entry and admission (inlined into wNAF)": {
+      "addr": "0x240800",
+      "cmov_rows": [
+        {
+          "addr": "0x240e5b",
+          "insn": "cmova %rax,%r13",
+          "off": "+0x65b",
+          "src": "reg/arith"
+        },
+        {
+          "addr": "0x240ea7",
+          "insn": "cmovne %rax,%rcx",
+          "off": "+0x6a7",
+          "src": "reg/arith"
+        },
+        {
+          "addr": "0x240ed3",
+          "insn": "cmovne %rax,%rcx",
+          "off": "+0x6d3",
+          "src": "reg/arith"
+        },
+        {
+          "addr": "0x240f01",
+          "insn": "cmovne %rax,%rcx",
+          "off": "+0x701",
+          "src": "reg/arith"
+        },
+        {
+          "addr": "0x240f2e",
+          "insn": "cmovne %rax,%rcx",
+          "off": "+0x72e",
+          "src": "reg/arith"
+        },
+        {
+          "addr": "0x240f7a",
+          "insn": "cmove %r15,%rax",
+          "off": "+0x77a",
+          "src": "reg/arith"
+        },
+        {
+          "addr": "0x240fa5",
+          "insn": "cmovne %rax,%rcx",
+          "off": "+0x7a5",
+          "src": "reg/arith"
+        },
+        {
+          "addr": "0x240fd7",
+          "insn": "cmovne %rax,%rcx",
+          "off": "+0x7d7",
+          "src": "reg/arith"
+        },
+        {
+          "addr": "0x2410dd",
+          "insn": "cmove %r14,%rax",
+          "off": "+0x8dd",
+          "src": "reg/arith"
+        },
+        {
+          "addr": "0x241101",
+          "insn": "cmove %r14,%rax",
+          "off": "+0x901",
+          "src": "reg/arith"
+        },
+        {
+          "addr": "0x24114a",
+          "insn": "cmove %r14,%rax",
+          "off": "+0x94a",
+          "src": "reg/arith"
+        },
+        {
+          "addr": "0x241212",
+          "insn": "cmove %r14,%rax",
+          "off": "+0xa12",
+          "src": "reg/arith"
+        },
+        {
+          "addr": "0x241237",
+          "insn": "cmove %r14,%rax",
+          "off": "+0xa37",
+          "src": "reg/arith"
+        },
+        {
+          "addr": "0x24127a",
+          "insn": "cmove %r14,%rax",
+          "off": "+0xa7a",
+          "src": "reg/arith"
+        },
+        {
+          "addr": "0x241394",
+          "insn": "cmovne %rax,%rcx",
+          "off": "+0xb94",
+          "src": "reg/arith"
+        },
+        {
+          "addr": "0x241493",
+          "insn": "cmova %rax,%r13",
+          "off": "+0xc93",
+          "src": "reg/arith"
+        },
+        {
+          "addr": "0x2414c6",
+          "insn": "cmovne %rax,%rcx",
+          "off": "+0xcc6",
+          "src": "reg/arith"
+        },
+        {
+          "addr": "0x241687",
+          "insn": "cmove %r14,%rax",
+          "off": "+0xe87",
+          "src": "reg/arith"
+        },
+        {
+          "addr": "0x2416a9",
+          "insn": "cmove %r14,%rax",
+          "off": "+0xea9",
+          "src": "reg/arith"
+        },
+        {
+          "addr": "0x2416ea",
+          "insn": "cmove %r14,%rax",
+          "off": "+0xeea",
+          "src": "reg/arith"
+        },
+        {
+          "addr": "0x24170e",
+          "insn": "cmove %r14,%rax",
+          "off": "+0xf0e",
+          "src": "reg/arith"
+        },
+        {
+          "addr": "0x241730",
+          "insn": "cmove %r14,%rax",
+          "off": "+0xf30",
+          "src": "reg/arith"
+        },
+        {
+          "addr": "0x24174f",
+          "insn": "cmovne %rax,%rcx",
+          "off": "+0xf4f",
+          "src": "reg/arith"
+        },
+        {
+          "addr": "0x24179e",
+          "insn": "cmove %r14,%rax",
+          "off": "+0xf9e",
+          "src": "reg/arith"
+        },
+        {
+          "addr": "0x2417c2",
+          "insn": "cmove %r14,%rax",
+          "off": "+0xfc2",
+          "src": "reg/arith"
+        },
+        {
+          "addr": "0x2417fa",
+          "insn": "cmove %r14,%rax",
+          "off": "+0xffa",
+          "src": "reg/arith"
+        },
+        {
+          "addr": "0x24181e",
+          "insn": "cmove %r14,%rax",
+          "off": "+0x101e",
+          "src": "reg/arith"
+        },
+        {
+          "addr": "0x241869",
+          "insn": "cmove %r14,%rax",
+          "off": "+0x1069",
+          "src": "reg/arith"
+        },
+        {
+          "addr": "0x24188d",
+          "insn": "cmove %r14,%rax",
+          "off": "+0x108d",
+          "src": "reg/arith"
+        },
+        {
+          "addr": "0x241b43",
+          "insn": "cmovne %rax,%rcx",
+          "off": "+0x1343",
+          "src": "reg/arith"
+        },
+        {
+          "addr": "0x241b90",
+          "insn": "cmovne %rax,%rcx",
+          "off": "+0x1390",
+          "src": "reg/arith"
+        },
+        {
+          "addr": "0x241bc8",
+          "insn": "cmovae %rax,%rsi",
+          "off": "+0x13c8",
+          "src": "reg/arith"
+        },
+        {
+          "addr": "0x241c73",
+          "insn": "cmovne %rax,%rcx",
+          "off": "+0x1473",
+          "src": "reg/arith"
+        }
+      ],
+      "counts": {
+        "cmov": 33,
+        "div": 4,
+        "insns": 1525,
+        "jcc": 186,
+        "setcc": 5
+      },
+      "jcc_rows": [
+        {
+          "addr": "0x240839",
+          "dir": "fwd",
+          "guarded": "memory",
+          "jcc": "je",
+          "off": "+0x39",
+          "setter": "0x24082c: test %r11,%r11",
+          "src": "reg/arith",
+          "target": "0x240b6b"
+        },
+        {
+          "addr": "0x240863",
+          "dir": "fwd",
+          "guarded": "memory",
+          "jcc": "je",
+          "off": "+0x63",
+          "setter": "0x240860: cmp %rcx,%rax",
+          "src": "reg/arith",
+          "target": "0x240b6b"
+        },
+        {
+          "addr": "0x240872",
+          "dir": "back",
+          "guarded": "memory",
+          "jcc": "je",
+          "off": "+0x72",
+          "setter": "0x240869: cmpq $0x0,(%rsi,%rcx,1)",
+          "src": "mem",
+          "target": "0x240860"
+        },
+        {
+          "addr": "0x24087b",
+          "dir": "fwd",
+          "guarded": "memory",
+          "jcc": "je",
+          "off": "+0x7b",
+          "setter": "0x240878: test %rcx,%rcx",
+          "src": "reg/arith",
+          "target": "0x240b6b"
+        },
+        {
+          "addr": "0x2408a3",
+          "dir": "fwd",
+          "guarded": "memory",
+          "jcc": "je",
+          "off": "+0xa3",
+          "setter": "0x2408a0: cmp %r9,%rdx",
+          "src": "reg/arith",
+          "target": "0x240b6b"
+        },
+        {
+          "addr": "0x2408b2",
+          "dir": "back",
+          "guarded": "arithmetic/control",
+          "jcc": "je",
+          "off": "+0xb2",
+          "setter": "0x2408a9: cmpq $0x0,(%rax,%r9,1)",
+          "src": "mem",
+          "target": "0x2408a0"
+        },
+        {
+          "addr": "0x2408b7",
+          "dir": "fwd",
+          "guarded": "arithmetic/control",
+          "jcc": "je",
+          "off": "+0xb7",
+          "setter": "0x2408b4: cmp %r11,%r13",
+          "src": "reg/arith",
+          "target": "0x240b34"
+        },
+        {
+          "addr": "0x2408cd",
+          "dir": "fwd",
+          "guarded": "arithmetic/control",
+          "jcc": "je",
+          "off": "+0xcd",
+          "setter": "0x2408ca: test %r9b,%dl",
+          "src": "reg/arith",
+          "target": "0x240b34"
+        },
+        {
+          "addr": "0x2408df",
+          "dir": "fwd",
+          "guarded": "memory",
+          "jcc": "je",
+          "off": "+0xdf",
+          "setter": "0x2408dc: test %r15,%r15",
+          "src": "reg/arith",
+          "target": "0x240b24"
+        },
+        {
+          "addr": "0x2408ec",
+          "dir": "fwd",
+          "guarded": "memory",
+          "jcc": "je",
+          "off": "+0xec",
+          "setter": "0x2408e9: test %r10,%r10",
+          "src": "reg/arith",
+          "target": "0x240b24"
+        },
+        {
+          "addr": "0x2408f9",
+          "dir": "fwd",
+          "guarded": "memory",
+          "jcc": "je",
+          "off": "+0xf9",
+          "setter": "0x2408f6: test %r9,%r9",
+          "src": "reg/arith",
+          "target": "0x240b24"
+        },
+        {
+          "addr": "0x240906",
+          "dir": "fwd",
+          "guarded": "memory",
+          "jcc": "je",
+          "off": "+0x106",
+          "setter": "0x240903: test %r8,%r8",
+          "src": "reg/arith",
+          "target": "0x240b24"
+        },
+        {
+          "addr": "0x240918",
+          "dir": "fwd",
+          "guarded": "memory",
+          "jcc": "je",
+          "off": "+0x118",
+          "setter": "0x240915: test %rdx,%rdx",
+          "src": "reg/arith",
+          "target": "0x240b24"
+        },
+        {
+          "addr": "0x240925",
+          "dir": "fwd",
+          "guarded": "memory",
+          "jcc": "je",
+          "off": "+0x125",
+          "setter": "0x240922: test %r11,%r11",
+          "src": "reg/arith",
+          "target": "0x240b24"
+        },
+        {
+          "addr": "0x240935",
+          "dir": "fwd",
+          "guarded": "memory",
+          "jcc": "je",
+          "off": "+0x135",
+          "setter": "0x240932: test %rbx,%rbx",
+          "src": "reg/arith",
+          "target": "0x240b24"
+        },
+        {
+          "addr": "0x240945",
+          "dir": "fwd",
+          "guarded": "memory",
+          "jcc": "je",
+          "off": "+0x145",
+          "setter": "0x240942: test %rdx,%rdx",
+          "src": "reg/arith",
+          "target": "0x240b24"
+        },
+        {
+          "addr": "0x240962",
+          "dir": "fwd",
+          "guarded": "memory",
+          "jcc": "jne",
+          "off": "+0x162",
+          "setter": "0x24095f: or %rbx,%rdx",
+          "src": "reg/arith",
+          "target": "0x240b24"
+        },
+        {
+          "addr": "0x240970",
+          "dir": "fwd",
+          "guarded": "memory",
+          "jcc": "jne",
+          "off": "+0x170",
+          "setter": "0x240968: cmpq $0x0,0x118(%r11)",
+          "src": "mem",
+          "target": "0x240b24"
+        },
+        {
+          "addr": "0x24097e",
+          "dir": "fwd",
+          "guarded": "memory",
+          "jcc": "jne",
+          "off": "+0x17e",
+          "setter": "0x240976: cmpq $0x0,0x120(%r11)",
+          "src": "mem",
+          "target": "0x240b24"
+        },
+        {
+          "addr": "0x24098c",
+          "dir": "fwd",
+          "guarded": "memory",
+          "jcc": "jne",
+          "off": "+0x18c",
+          "setter": "0x240984: cmpq $0x0,0x128(%r11)",
+          "src": "mem",
+          "target": "0x240b24"
+        },
+        {
+          "addr": "0x2409a0",
+          "dir": "fwd",
+          "guarded": "memory",
+          "jcc": "jne",
+          "off": "+0x1a0",
+          "setter": "0x240999: cmp %rbx,0x1a8(%r11)",
+          "src": "mem",
+          "target": "0x240b24"
+        },
+        {
+          "addr": "0x2409ab",
+          "dir": "fwd",
+          "guarded": "memory",
+          "jcc": "jne",
+          "off": "+0x1ab",
+          "setter": "0x2409a6: cmpq $0x4,0x10(%r10)",
+          "src": "mem",
+          "target": "0x240b24"
+        },
+        {
+          "addr": "0x2409ef",
+          "dir": "fwd",
+          "guarded": "memory",
+          "jcc": "jne",
+          "off": "+0x1ef",
+          "setter": "0x2409ec: or %r10b,%dil",
+          "src": "reg/arith",
+          "target": "0x240b24"
+        },
+        {
+          "addr": "0x240a1c",
+          "dir": "fwd",
+          "guarded": "memory",
+          "jcc": "jne",
+          "off": "+0x21c",
+          "setter": "0x240a16: cmp $0xffff,%esi",
+          "src": "reg/arith",
+          "target": "0x240b24"
+        },
+        {
+          "addr": "0x240a60",
+          "dir": "fwd",
+          "guarded": "memory",
+          "jcc": "jne",
+          "off": "+0x260",
+          "setter": "0x240a5c: cmp $0x4,%rdi",
+          "src": "reg/arith",
+          "target": "0x240b1e"
+        },
+        {
+          "addr": "0x240a8f",
+          "dir": "fwd",
+          "guarded": "memory",
+          "jcc": "jne",
+          "off": "+0x28f",
+          "setter": "0x240a89: cmp $0xffff,%esi",
+          "src": "reg/arith",
+          "target": "0x240b1e"
+        },
+        {
+          "addr": "0x240ae9",
+          "dir": "fwd",
+          "guarded": "memory",
+          "jcc": "jne",
+          "off": "+0x2e9",
+          "setter": "0x240ae5: cmp $0x4,%rdi",
+          "src": "reg/arith",
+          "target": "0x240b1e"
+        },
+        {
+          "addr": "0x240b18",
+          "dir": "fwd",
+          "guarded": "arithmetic/control",
+          "jcc": "je",
+          "off": "+0x318",
+          "setter": "0x240b12: cmp $0xffff,%esi",
+          "src": "reg/arith",
+          "target": "0x241eea"
+        },
+        {
+          "addr": "0x240b3e",
+          "dir": "fwd",
+          "guarded": "memory",
+          "jcc": "jne",
+          "off": "+0x33e",
+          "setter": "0x240b3b: or %r13,%rax",
+          "src": "reg/arith",
+          "target": "0x240b6b"
+        },
+        {
+          "addr": "0x240b46",
+          "dir": "fwd",
+          "guarded": "memory",
+          "jcc": "je",
+          "off": "+0x346",
+          "setter": "0x240b43: cmp %r11,%rdx",
+          "src": "reg/arith",
+          "target": "0x240c25"
+        },
+        {
+          "addr": "0x240b6e",
+          "dir": "fwd",
+          "guarded": "memory",
+          "jcc": "je",
+          "off": "+0x36e",
+          "setter": "0x240b6b: test %r13,%r13",
+          "src": "reg/arith",
+          "target": "0x240c25"
+        },
+        {
+          "addr": "0x240b7b",
+          "dir": "fwd",
+          "guarded": "memory",
+          "jcc": "je",
+          "off": "+0x37b",
+          "setter": "0x240b78: test %r12,%r12",
+          "src": "reg/arith",
+          "target": "0x240ff1"
+        },
+        {
+          "addr": "0x240b9f",
+          "dir": "fwd",
+          "guarded": "memory",
+          "jcc": "je",
+          "off": "+0x39f",
+          "setter": "0x240b92: test %rax,%rax",
+          "src": "reg/arith",
+          "target": "0x241175"
+        },
+        {
+          "addr": "0x240baa",
+          "dir": "fwd",
+          "guarded": "memory",
+          "jcc": "je",
+          "off": "+0x3aa",
+          "setter": "0x240ba5: cmpq $0x0,0x10(%rax)",
+          "src": "mem",
+          "target": "0x241175"
+        },
+        {
+          "addr": "0x240bc3",
+          "dir": "fwd",
+          "guarded": "memory",
+          "jcc": "je",
+          "off": "+0x3c3",
+          "setter": "0x240bc0: test %rax,%rax",
+          "src": "reg/arith",
+          "target": "0x241169"
+        },
+        {
+          "addr": "0x240bd4",
+          "dir": "fwd",
+          "guarded": "memory",
+          "jcc": "jne",
+          "off": "+0x3d4",
+          "setter": "0x240bd0: cmp (%r12),%rcx",
+          "src": "mem",
+          "target": "0x241170"
+        },
+        {
+          "addr": "0x240beb",
+          "dir": "fwd",
+          "guarded": "memory",
+          "jcc": "je",
+          "off": "+0x3eb",
+          "setter": "0x240be9: test %esi,%esi",
+          "src": "reg/arith",
+          "target": "0x241299"
+        },
+        {
+          "addr": "0x240bf9",
+          "dir": "fwd",
+          "guarded": "arithmetic/control",
+          "jcc": "je",
+          "off": "+0x3f9",
+          "setter": "0x240bf6: test %r8d,%r8d",
+          "src": "reg/arith",
+          "target": "0x240c04"
+        },
+        {
+          "addr": "0x240bfe",
+          "dir": "fwd",
+          "guarded": "memory",
+          "jcc": "jne",
+          "off": "+0x3fe",
+          "setter": "0x240bfb: cmp %r8d,%esi",
+          "src": "reg/arith",
+          "target": "0x241170"
+        },
+        {
+          "addr": "0x240c07",
+          "dir": "fwd",
+          "guarded": "memory",
+          "jcc": "jne",
+          "off": "+0x407",
+          "setter": "0x240c04: cmp (%rdx),%rcx",
+          "src": "mem",
+          "target": "0x241170"
+        },
+        {
+          "addr": "0x240c12",
+          "dir": "fwd",
+          "guarded": "arithmetic/control",
+          "jcc": "je",
+          "off": "+0x412",
+          "setter": "0x240c10: test %ecx,%ecx",
+          "src": "reg/arith",
+          "target": "0x2412a2"
+        },
+        {
+          "addr": "0x240c1a",
+          "dir": "fwd",
+          "guarded": "arithmetic/control",
+          "jcc": "jne",
+          "off": "+0x41a",
+          "setter": "0x240c18: cmp %ecx,%esi",
+          "src": "reg/arith",
+          "target": "0x241170"
+        },
+        {
+          "addr": "0x240c72",
+          "dir": "fwd",
+          "guarded": "call+memory",
+          "jcc": "jb",
+          "off": "+0x472",
+          "setter": "0x240c6f: add %r14,%r13",
+          "src": "reg/arith",
+          "target": "0x2411b7"
+        },
+        {
+          "addr": "0x240ccf",
+          "dir": "fwd",
+          "guarded": "call+memory",
+          "jcc": "je",
+          "off": "+0x4cf",
+          "setter": "0x240ccb: cmp $0xffffffffffffffff,%r13",
+          "src": "reg/arith",
+          "target": "0x241ebc"
+        },
+        {
+          "addr": "0x240d14",
+          "dir": "fwd",
+          "guarded": "memory",
+          "jcc": "je",
+          "off": "+0x514",
+          "setter": "0x240d11: test %r12,%r12",
+          "src": "reg/arith",
+          "target": "0x240e87"
+        },
+        {
+          "addr": "0x240d34",
+          "dir": "fwd",
+          "guarded": "arithmetic/control",
+          "jcc": "je",
+          "off": "+0x534",
+          "setter": "0x240d2c: test %rdi,%rdi",
+          "src": "reg/arith",
+          "target": "0x240eeb"
+        },
+        {
+          "addr": "0x240d3d",
+          "dir": "fwd",
+          "guarded": "arithmetic/control",
+          "jcc": "je",
+          "off": "+0x53d",
+          "setter": "0x240d3a: test %rbx,%rbx",
+          "src": "reg/arith",
+          "target": "0x240eeb"
+        },
+        {
+          "addr": "0x240d46",
+          "dir": "fwd",
+          "guarded": "memory",
+          "jcc": "je",
+          "off": "+0x546",
+          "setter": "0x240d43: test %r13,%r13",
+          "src": "reg/arith",
+          "target": "0x240eeb"
+        },
+        {
+          "addr": "0x240d51",
+          "dir": "fwd",
+          "guarded": "memory",
+          "jcc": "jb",
+          "off": "+0x551",
+          "setter": "0x240d4c: add 0x58(%rsp),%r15",
+          "src": "mem",
+          "target": "0x241ec5"
+        },
+        {
+          "addr": "0x240d69",
+          "dir": "fwd",
+          "guarded": "memory",
+          "jcc": "je",
+          "off": "+0x569",
+          "setter": "?",
+          "src": "unknown",
+          "target": "0x241005"
+        },
+        {
+          "addr": "0x240d9a",
+          "dir": "fwd",
+          "guarded": "memory",
+          "jcc": "jae",
+          "off": "+0x59a",
+          "setter": "0x240d95: cmp 0x58(%rsp),%r15",
+          "src": "mem",
+          "target": "0x240da5"
+        },
+        {
+          "addr": "0x240db5",
+          "dir": "fwd",
+          "guarded": "arithmetic/control",
+          "jcc": "ja",
+          "off": "+0x5b5",
+          "setter": "0x240db0: cmp $0x7cf,%eax",
+          "src": "reg/arith",
+          "target": "0x240df0"
+        },
+        {
+          "addr": "0x240dc1",
+          "dir": "fwd",
+          "guarded": "arithmetic/control",
+          "jcc": "ja",
+          "off": "+0x5c1",
+          "setter": "0x240dbc: cmp $0x31f,%eax",
+          "src": "reg/arith",
+          "target": "0x240df0"
+        },
+        {
+          "addr": "0x240dcd",
+          "dir": "fwd",
+          "guarded": "arithmetic/control",
+          "jcc": "ja",
+          "off": "+0x5cd",
+          "setter": "0x240dc8: cmp $0x12b,%eax",
+          "src": "reg/arith",
+          "target": "0x240df0"
+        },
+        {
+          "addr": "0x240dd7",
+          "dir": "fwd",
+          "guarded": "memory",
+          "jcc": "ja",
+          "off": "+0x5d7",
+          "setter": "0x240dd4: cmp $0x45,%eax",
+          "src": "reg/arith",
+          "target": "0x240df0"
+        },
+        {
+          "addr": "0x240e06",
+          "dir": "fwd",
+          "guarded": "memory",
+          "jcc": "jb",
+          "off": "+0x606",
+          "setter": "0x240e03: add %rax,%rbp",
+          "src": "reg/arith",
+          "target": "0x241eda"
+        },
+        {
+          "addr": "0x240e24",
+          "dir": "fwd",
+          "guarded": "call+memory",
+          "jcc": "jae",
+          "off": "+0x624",
+          "setter": "0x240e1f: cmp 0x58(%rsp),%r15",
+          "src": "mem",
+          "target": "0x240e2f"
+        },
+        {
+          "addr": "0x240e4f",
+          "dir": "fwd",
+          "guarded": "memory",
+          "jcc": "je",
+          "off": "+0x64f",
+          "setter": "0x240e4c: test %rax,%rax",
+          "src": "reg/arith",
+          "target": "0x2410cc"
+        },
+        {
+          "addr": "0x240e6e",
+          "dir": "back",
+          "guarded": "memory",
+          "jcc": "jne",
+          "off": "+0x66e",
+          "setter": "0x240e66: dec %r14",
+          "src": "reg/arith",
+          "target": "0x240d90"
+        },
+        {
+          "addr": "0x240e7c",
+          "dir": "fwd",
+          "guarded": "arithmetic/control",
+          "jcc": "jne",
+          "off": "+0x67c",
+          "setter": "0x240e79: test %r14,%r14",
+          "src": "reg/arith",
+          "target": "0x241018"
+        },
+        {
+          "addr": "0x240e94",
+          "dir": "fwd",
+          "guarded": "call+memory",
+          "jcc": "je",
+          "off": "+0x694",
+          "setter": "0x240e8c: test %rdi,%rdi",
+          "src": "reg/arith",
+          "target": "0x240eb9"
+        },
+        {
+          "addr": "0x240ebc",
+          "dir": "fwd",
+          "guarded": "memory",
+          "jcc": "je",
+          "off": "+0x6bc",
+          "setter": "0x240eb9: test %rbx,%rbx",
+          "src": "reg/arith",
+          "target": "0x240fba"
+        },
+        {
+          "addr": "0x240eee",
+          "dir": "fwd",
+          "guarded": "call+memory",
+          "jcc": "je",
+          "off": "+0x6ee",
+          "setter": "0x240eeb: test %rdi,%rdi",
+          "src": "reg/arith",
+          "target": "0x240f13"
+        },
+        {
+          "addr": "0x240f1b",
+          "dir": "fwd",
+          "guarded": "call+memory",
+          "jcc": "je",
+          "off": "+0x71b",
+          "setter": "0x240f13: test %rbx,%rbx",
+          "src": "reg/arith",
+          "target": "0x240f43"
+        },
+        {
+          "addr": "0x240f4a",
+          "dir": "fwd",
+          "guarded": "memory",
+          "jcc": "je",
+          "off": "+0x74a",
+          "setter": "0x240f47: test %rdi,%rdi",
+          "src": "reg/arith",
+          "target": "0x240f94"
+        },
+        {
+          "addr": "0x240f92",
+          "dir": "back",
+          "guarded": "call+memory",
+          "jcc": "jne",
+          "off": "+0x792",
+          "setter": "0x240f8f: test %rdi,%rdi",
+          "src": "reg/arith",
+          "target": "0x240f70"
+        },
+        {
+          "addr": "0x240fc0",
+          "dir": "fwd",
+          "guarded": "call+memory",
+          "jcc": "je",
+          "off": "+0x7c0",
+          "setter": "0x240fbd: test %r13,%r13",
+          "src": "reg/arith",
+          "target": "0x2418a1"
+        },
+        {
+          "addr": "0x241012",
+          "dir": "fwd",
+          "guarded": "memory",
+          "jcc": "je",
+          "off": "+0x812",
+          "setter": "0x24100f: test %r14,%r14",
+          "src": "reg/arith",
+          "target": "0x2414dd"
+        },
+        {
+          "addr": "0x241025",
+          "dir": "fwd",
+          "guarded": "memory",
+          "jcc": "je",
+          "off": "+0x825",
+          "setter": "0x24101d: test %rax,%rax",
+          "src": "reg/arith",
+          "target": "0x2411c3"
+        },
+        {
+          "addr": "0x24103f",
+          "dir": "fwd",
+          "guarded": "call+memory",
+          "jcc": "je",
+          "off": "+0x83f",
+          "setter": "0x241037: cmpb $0x0,0x88(%rsp)",
+          "src": "mem",
+          "target": "0x2411f5"
+        },
+        {
+          "addr": "0x24106c",
+          "dir": "fwd",
+          "guarded": "memory",
+          "jcc": "je",
+          "off": "+0x86c",
+          "setter": "0x241069: test %rax,%rax",
+          "src": "reg/arith",
+          "target": "0x2411dd"
+        },
+        {
+          "addr": "0x24107d",
+          "dir": "fwd",
+          "guarded": "memory",
+          "jcc": "jbe",
+          "off": "+0x87d",
+          "setter": "0x24107a: cmp %r13,%rcx",
+          "src": "reg/arith",
+          "target": "0x2412ff"
+        },
+        {
+          "addr": "0x24108e",
+          "dir": "fwd",
+          "guarded": "memory",
+          "jcc": "jo",
+          "off": "+0x88e",
+          "setter": "0x24108b: mul %rsi",
+          "src": "reg/arith",
+          "target": "0x2422f5"
+        },
+        {
+          "addr": "0x2410a0",
+          "dir": "fwd",
+          "guarded": "arithmetic/control",
+          "jcc": "jae",
+          "off": "+0x8a0",
+          "setter": "0x24109d: cmp %rax,%rcx",
+          "src": "reg/arith",
+          "target": "0x2413be"
+        },
+        {
+          "addr": "0x2410a9",
+          "dir": "fwd",
+          "guarded": "arithmetic/control",
+          "jcc": "je",
+          "off": "+0x8a9",
+          "setter": "0x2410a6: test %rsi,%rsi",
+          "src": "reg/arith",
+          "target": "0x24230a"
+        },
+        {
+          "addr": "0x2410b9",
+          "dir": "fwd",
+          "guarded": "division",
+          "jcc": "je",
+          "off": "+0x8b9",
+          "setter": "0x2410b5: shr $0x20,%rax",
+          "src": "reg/arith",
+          "target": "0x241354"
+        },
+        {
+          "addr": "0x241120",
+          "dir": "fwd",
+          "guarded": "call+memory",
+          "jcc": "je",
+          "off": "+0x920",
+          "setter": "0x24111d: test %rdi,%rdi",
+          "src": "reg/arith",
+          "target": "0x241704"
+        },
+        {
+          "addr": "0x241162",
+          "dir": "back",
+          "guarded": "arithmetic/control",
+          "jcc": "jne",
+          "off": "+0x962",
+          "setter": "0x24115f: test %rdi,%rdi",
+          "src": "reg/arith",
+          "target": "0x241140"
+        },
+        {
+          "addr": "0x2411b1",
+          "dir": "back",
+          "guarded": "memory",
+          "jcc": "jae",
+          "off": "+0x9b1",
+          "setter": "0x2411ae: add %r14,%r13",
+          "src": "reg/arith",
+          "target": "0x240c78"
+        },
+        {
+          "addr": "0x2411cb",
+          "dir": "fwd",
+          "guarded": "call+memory",
+          "jcc": "jne",
+          "off": "+0x9cb",
+          "setter": "0x2411c3: cmpb $0x0,0x98(%rsp)",
+          "src": "mem",
+          "target": "0x2414e2"
+        },
+        {
+          "addr": "0x241254",
+          "dir": "fwd",
+          "guarded": "call+memory",
+          "jcc": "je",
+          "off": "+0xa54",
+          "setter": "0x241251: test %rdi,%rdi",
+          "src": "reg/arith",
+          "target": "0x241704"
+        },
+        {
+          "addr": "0x241292",
+          "dir": "back",
+          "guarded": "arithmetic/control",
+          "jcc": "jne",
+          "off": "+0xa92",
+          "setter": "0x24128f: test %rdi,%rdi",
+          "src": "reg/arith",
+          "target": "0x241270"
+        },
+        {
+          "addr": "0x24129c",
+          "dir": "back",
+          "guarded": "call+memory",
+          "jcc": "jne",
+          "off": "+0xa9c",
+          "setter": "0x241299: cmp (%rdx),%rcx",
+          "src": "mem",
+          "target": "0x241170"
+        },
+        {
+          "addr": "0x2412b1",
+          "dir": "back",
+          "guarded": "memory",
+          "jcc": "jne",
+          "off": "+0xab1",
+          "setter": "0x2412af: test %eax,%eax",
+          "src": "reg/arith",
+          "target": "0x241175"
+        },
+        {
+          "addr": "0x2412d6",
+          "dir": "fwd",
+          "guarded": "arithmetic/control",
+          "jcc": "je",
+          "off": "+0xad6",
+          "setter": "0x2412d3: test %rsi,%rsi",
+          "src": "reg/arith",
+          "target": "0x242313"
+        },
+        {
+          "addr": "0x2412e9",
+          "dir": "fwd",
+          "guarded": "division",
+          "jcc": "je",
+          "off": "+0xae9",
+          "setter": "0x2412e5: shr $0x20,%rdx",
+          "src": "reg/arith",
+          "target": "0x241ba5"
+        },
+        {
+          "addr": "0x241308",
+          "dir": "fwd",
+          "guarded": "memory",
+          "jcc": "je",
+          "off": "+0xb08",
+          "setter": "0x241304: cmp $0xffffffffffffffff,%rdx",
+          "src": "reg/arith",
+          "target": "0x2422fe"
+        },
+        {
+          "addr": "0x24136b",
+          "dir": "fwd",
+          "guarded": "call+memory",
+          "jcc": "jbe",
+          "off": "+0xb6b",
+          "setter": "0x241367: cmp 0x10(%rcx),%rax",
+          "src": "mem",
+          "target": "0x2413ab"
+        },
+        {
+          "addr": "0x2413b8",
+          "dir": "fwd",
+          "guarded": "memory",
+          "jcc": "jb",
+          "off": "+0xbb8",
+          "setter": "0x2413ab: add 0x58(%rsp),%rax",
+          "src": "mem",
+          "target": "0x24236f"
+        },
+        {
+          "addr": "0x2413ce",
+          "dir": "fwd",
+          "guarded": "memory",
+          "jcc": "jae",
+          "off": "+0xbce",
+          "setter": "0x2413cb: cmp %rax,%r14",
+          "src": "reg/arith",
+          "target": "0x2414b5"
+        },
+        {
+          "addr": "0x2413f9",
+          "dir": "fwd",
+          "guarded": "memory",
+          "jcc": "jae",
+          "off": "+0xbf9",
+          "setter": "0x2413ef: cmp 0x48(%rsp),%r14",
+          "src": "mem",
+          "target": "0x241424"
+        },
+        {
+          "addr": "0x24140f",
+          "dir": "fwd",
+          "guarded": "memory",
+          "jcc": "jb",
+          "off": "+0xc0f",
+          "setter": "0x24140c: sub %rsi,%rax",
+          "src": "reg/arith",
+          "target": "0x241c47"
+        },
+        {
+          "addr": "0x24145b",
+          "dir": "fwd",
+          "guarded": "memory",
+          "jcc": "je",
+          "off": "+0xc5b",
+          "setter": "0x241458: test %rax,%rax",
+          "src": "reg/arith",
+          "target": "0x241b32"
+        },
+        {
+          "addr": "0x24147a",
+          "dir": "fwd",
+          "guarded": "memory",
+          "jcc": "je",
+          "off": "+0xc7a",
+          "setter": "0x241476: cmpq $0x0,(%rdi)",
+          "src": "mem",
+          "target": "0x241b69"
+        },
+        {
+          "addr": "0x2414af",
+          "dir": "back",
+          "guarded": "call+memory",
+          "jcc": "jne",
+          "off": "+0xcaf",
+          "setter": "0x2414a7: cmp %r14,0x90(%rsp)",
+          "src": "mem",
+          "target": "0x2413ef"
+        },
+        {
+          "addr": "0x2414e6",
+          "dir": "fwd",
+          "guarded": "memory",
+          "jcc": "je",
+          "off": "+0xce6",
+          "setter": "0x2414e2: cmp $0xffffffffffffffff,%rbp",
+          "src": "reg/arith",
+          "target": "0x241ece"
+        },
+        {
+          "addr": "0x24150a",
+          "dir": "fwd",
+          "guarded": "memory",
+          "jcc": "je",
+          "off": "+0xd0a",
+          "setter": "0x241507: test %rax,%rax",
+          "src": "reg/arith",
+          "target": "0x241676"
+        },
+        {
+          "addr": "0x241529",
+          "dir": "fwd",
+          "guarded": "memory",
+          "jcc": "je",
+          "off": "+0xd29",
+          "setter": "0x241526: test %rcx,%rcx",
+          "src": "reg/arith",
+          "target": "0x241639"
+        },
+        {
+          "addr": "0x241562",
+          "dir": "fwd",
+          "guarded": "memory",
+          "jcc": "je",
+          "off": "+0xd62",
+          "setter": "0x24155f: test %rcx,%rcx",
+          "src": "reg/arith",
+          "target": "0x24233a"
+        },
+        {
+          "addr": "0x24156e",
+          "dir": "fwd",
+          "guarded": "memory",
+          "jcc": "je",
+          "off": "+0xd6e",
+          "setter": "0x241568: cmpq $0x0,0x40(%rsp)",
+          "src": "mem",
+          "target": "0x241b0f"
+        },
+        {
+          "addr": "0x241584",
+          "dir": "fwd",
+          "guarded": "arithmetic/control",
+          "jcc": "ja",
+          "off": "+0xd84",
+          "setter": "0x241580: cmp $0x40,%rcx",
+          "src": "reg/arith",
+          "target": "0x242353"
+        },
+        {
+          "addr": "0x241595",
+          "dir": "fwd",
+          "guarded": "memory",
+          "jcc": "jne",
+          "off": "+0xd95",
+          "setter": "0x241592: test %rax,%rax",
+          "src": "reg/arith",
+          "target": "0x241620"
+        },
+        {
+          "addr": "0x2415a8",
+          "dir": "fwd",
+          "guarded": "memory",
+          "jcc": "je",
+          "off": "+0xda8",
+          "setter": "0x2415a3: cmpq $0x0,0x50(%rax)",
+          "src": "mem",
+          "target": "0x241770"
+        },
+        {
+          "addr": "0x2415c8",
+          "dir": "fwd",
+          "guarded": "memory",
+          "jcc": "je",
+          "off": "+0xdc8",
+          "setter": "0x2415c5: test %rax,%rax",
+          "src": "reg/arith",
+          "target": "0x241764"
+        },
+        {
+          "addr": "0x2415ec",
+          "dir": "fwd",
+          "guarded": "call",
+          "jcc": "je",
+          "off": "+0xdec",
+          "setter": "0x2415e9: test %rax,%rax",
+          "src": "reg/arith",
+          "target": "0x24173e"
+        },
+        {
+          "addr": "0x2415f9",
+          "dir": "fwd",
+          "guarded": "memory",
+          "jcc": "je",
+          "off": "+0xdf9",
+          "setter": "0x2415f7: test %eax,%eax",
+          "src": "reg/arith",
+          "target": "0x24173e"
+        },
+        {
+          "addr": "0x241615",
+          "dir": "back",
+          "guarded": "arithmetic/control",
+          "jcc": "jne",
+          "off": "+0xe15",
+          "setter": "0x241612: test %rcx,%rcx",
+          "src": "reg/arith",
+          "target": "0x241580"
+        },
+        {
+          "addr": "0x241633",
+          "dir": "back",
+          "guarded": "memory",
+          "jcc": "jne",
+          "off": "+0xe33",
+          "setter": "0x24162b: cmp %rcx,%r14",
+          "src": "reg/arith",
+          "target": "0x241552"
+        },
+        {
+          "addr": "0x241640",
+          "dir": "fwd",
+          "guarded": "call+memory",
+          "jcc": "je",
+          "off": "+0xe40",
+          "setter": "0x24163d: cmp %rax,%rbx",
+          "src": "reg/arith",
+          "target": "0x2418b6"
+        },
+        {
+          "addr": "0x2416c8",
+          "dir": "fwd",
+          "guarded": "call+memory",
+          "jcc": "je",
+          "off": "+0xec8",
+          "setter": "0x2416c5: test %rdi,%rdi",
+          "src": "reg/arith",
+          "target": "0x241704"
+        },
+        {
+          "addr": "0x241702",
+          "dir": "back",
+          "guarded": "call+memory",
+          "jcc": "jne",
+          "off": "+0xf02",
+          "setter": "0x2416ff: test %rdi,%rdi",
+          "src": "reg/arith",
+          "target": "0x2416e0"
+        },
+        {
+          "addr": "0x2417dc",
+          "dir": "fwd",
+          "guarded": "call+memory",
+          "jcc": "je",
+          "off": "+0xfdc",
+          "setter": "0x2417d9: test %rdi,%rdi",
+          "src": "reg/arith",
+          "target": "0x241814"
+        },
+        {
+          "addr": "0x241812",
+          "dir": "back",
+          "guarded": "call+memory",
+          "jcc": "jne",
+          "off": "+0x1012",
+          "setter": "0x24180f: test %rdi,%rdi",
+          "src": "reg/arith",
+          "target": "0x2417f0"
+        },
+        {
+          "addr": "0x24183e",
+          "dir": "fwd",
+          "guarded": "call+memory",
+          "jcc": "je",
+          "off": "+0x103e",
+          "setter": "0x24183b: test %rdi,%rdi",
+          "src": "reg/arith",
+          "target": "0x24185f"
+        },
+        {
+          "addr": "0x24185d",
+          "dir": "back",
+          "guarded": "call+memory",
+          "jcc": "jne",
+          "off": "+0x105d",
+          "setter": "0x24185a: test %rdi,%rdi",
+          "src": "reg/arith",
+          "target": "0x241850"
+        },
+        {
+          "addr": "0x2418cc",
+          "dir": "fwd",
+          "guarded": "arithmetic/control",
+          "jcc": "je",
+          "off": "+0x10cc",
+          "setter": "0x2418c9: test %rax,%rax",
+          "src": "reg/arith",
+          "target": "0x241a75"
+        },
+        {
+          "addr": "0x2418d5",
+          "dir": "fwd",
+          "guarded": "memory",
+          "jcc": "je",
+          "off": "+0x10d5",
+          "setter": "0x2418d2: test %rbx,%rbx",
+          "src": "reg/arith",
+          "target": "0x241a87"
+        },
+        {
+          "addr": "0x2418fe",
+          "dir": "fwd",
+          "guarded": "memory",
+          "jcc": "je",
+          "off": "+0x10fe",
+          "setter": "0x2418fb: cmp %rbx,%r12",
+          "src": "reg/arith",
+          "target": "0x241a87"
+        },
+        {
+          "addr": "0x241915",
+          "dir": "fwd",
+          "guarded": "memory",
+          "jcc": "jae",
+          "off": "+0x1115",
+          "setter": "0x241910: cmp 0x58(%rsp),%r12",
+          "src": "mem",
+          "target": "0x241925"
+        },
+        {
+          "addr": "0x241935",
+          "dir": "fwd",
+          "guarded": "memory",
+          "jcc": "je",
+          "off": "+0x1135",
+          "setter": "0x241933: test %eax,%eax",
+          "src": "reg/arith",
+          "target": "0x241ae9"
+        },
+        {
+          "addr": "0x241945",
+          "dir": "back",
+          "guarded": "memory",
+          "jcc": "jbe",
+          "off": "+0x1145",
+          "setter": "0x241940: cmpq $0x1,(%rax,%r12,8)",
+          "src": "mem",
+          "target": "0x2418f8"
+        },
+        {
+          "addr": "0x24196a",
+          "dir": "fwd",
+          "guarded": "memory",
+          "jcc": "je",
+          "off": "+0x116a",
+          "setter": "0x241968: test %eax,%eax",
+          "src": "reg/arith",
+          "target": "0x241ae9"
+        },
+        {
+          "addr": "0x24197c",
+          "dir": "fwd",
+          "guarded": "arithmetic/control",
+          "jcc": "je",
+          "off": "+0x117c",
+          "setter": "0x241979: test %rcx,%rcx",
+          "src": "reg/arith",
+          "target": "0x24233a"
+        },
+        {
+          "addr": "0x24198c",
+          "dir": "fwd",
+          "guarded": "arithmetic/control",
+          "jcc": "ja",
+          "off": "+0x118c",
+          "setter": "0x241988: cmp $0x40,%rcx",
+          "src": "reg/arith",
+          "target": "0x242353"
+        },
+        {
+          "addr": "0x24199d",
+          "dir": "back",
+          "guarded": "memory",
+          "jcc": "jne",
+          "off": "+0x119d",
+          "setter": "0x24199a: test %rax,%rax",
+          "src": "reg/arith",
+          "target": "0x2418f8"
+        },
+        {
+          "addr": "0x2419b5",
+          "dir": "fwd",
+          "guarded": "memory",
+          "jcc": "je",
+          "off": "+0x11b5",
+          "setter": "0x2419b2: test %rax,%rax",
+          "src": "reg/arith",
+          "target": "0x241c92"
+        },
+        {
+          "addr": "0x2419cb",
+          "dir": "fwd",
+          "guarded": "memory",
+          "jcc": "jne",
+          "off": "+0x11cb",
+          "setter": "0x2419c8: cmp (%rsi),%r9",
+          "src": "mem",
+          "target": "0x241add"
+        },
+        {
+          "addr": "0x2419e0",
+          "dir": "fwd",
+          "guarded": "memory",
+          "jcc": "je",
+          "off": "+0x11e0",
+          "setter": "0x2419de: test %edi,%edi",
+          "src": "reg/arith",
+          "target": "0x241a30"
+        },
+        {
+          "addr": "0x2419e9",
+          "dir": "fwd",
+          "guarded": "arithmetic/control",
+          "jcc": "je",
+          "off": "+0x11e9",
+          "setter": "0x2419e6: test %r8d,%r8d",
+          "src": "reg/arith",
+          "target": "0x2419f4"
+        },
+        {
+          "addr": "0x2419ee",
+          "dir": "fwd",
+          "guarded": "memory",
+          "jcc": "jne",
+          "off": "+0x11ee",
+          "setter": "0x2419eb: cmp %r8d,%edi",
+          "src": "reg/arith",
+          "target": "0x241add"
+        },
+        {
+          "addr": "0x2419f7",
+          "dir": "fwd",
+          "guarded": "memory",
+          "jcc": "jne",
+          "off": "+0x11f7",
+          "setter": "0x2419f4: cmp (%rdx),%r9",
+          "src": "mem",
+          "target": "0x241add"
+        },
+        {
+          "addr": "0x241a04",
+          "dir": "fwd",
+          "guarded": "arithmetic/control",
+          "jcc": "je",
+          "off": "+0x1204",
+          "setter": "0x241a01: test %r8d,%r8d",
+          "src": "reg/arith",
+          "target": "0x241a0f"
+        },
+        {
+          "addr": "0x241a09",
+          "dir": "fwd",
+          "guarded": "memory",
+          "jcc": "jne",
+          "off": "+0x1209",
+          "setter": "0x241a06: cmp %r8d,%edi",
+          "src": "reg/arith",
+          "target": "0x241add"
+        },
+        {
+          "addr": "0x241a17",
+          "dir": "fwd",
+          "guarded": "memory",
+          "jcc": "jne",
+          "off": "+0x1217",
+          "setter": "0x241a14: cmp (%rcx),%r9",
+          "src": "mem",
+          "target": "0x241add"
+        },
+        {
+          "addr": "0x241a24",
+          "dir": "fwd",
+          "guarded": "arithmetic/control",
+          "jcc": "je",
+          "off": "+0x1224",
+          "setter": "0x241a21: test %r8d,%r8d",
+          "src": "reg/arith",
+          "target": "0x241a47"
+        },
+        {
+          "addr": "0x241a29",
+          "dir": "fwd",
+          "guarded": "arithmetic/control",
+          "jcc": "je",
+          "off": "+0x1229",
+          "setter": "0x241a26: cmp %r8d,%edi",
+          "src": "reg/arith",
+          "target": "0x241a47"
+        },
+        {
+          "addr": "0x241a33",
+          "dir": "fwd",
+          "guarded": "memory",
+          "jcc": "jne",
+          "off": "+0x1233",
+          "setter": "0x241a30: cmp (%rdx),%r9",
+          "src": "mem",
+          "target": "0x241add"
+        },
+        {
+          "addr": "0x241a41",
+          "dir": "fwd",
+          "guarded": "call+memory",
+          "jcc": "jne",
+          "off": "+0x1241",
+          "setter": "0x241a3e: cmp (%rcx),%r9",
+          "src": "mem",
+          "target": "0x241add"
+        },
+        {
+          "addr": "0x241a55",
+          "dir": "fwd",
+          "guarded": "memory",
+          "jcc": "je",
+          "off": "+0x1255",
+          "setter": "0x241a53: test %eax,%eax",
+          "src": "reg/arith",
+          "target": "0x241ae9"
+        },
+        {
+          "addr": "0x241a6a",
+          "dir": "back",
+          "guarded": "arithmetic/control",
+          "jcc": "jne",
+          "off": "+0x126a",
+          "setter": "0x241a67: test %rcx,%rcx",
+          "src": "reg/arith",
+          "target": "0x241988"
+        },
+        {
+          "addr": "0x241a99",
+          "dir": "fwd",
+          "guarded": "call+memory",
+          "jcc": "je",
+          "off": "+0x1299",
+          "setter": "0x241a96: test %rax,%rax",
+          "src": "reg/arith",
+          "target": "0x241ae9"
+        },
+        {
+          "addr": "0x241abc",
+          "dir": "fwd",
+          "guarded": "memory",
+          "jcc": "je",
+          "off": "+0x12bc",
+          "setter": "0x241aab: test %eax,%eax",
+          "src": "reg/arith",
+          "target": "0x241af8"
+        },
+        {
+          "addr": "0x241acf",
+          "dir": "fwd",
+          "guarded": "arithmetic/control",
+          "jcc": "jbe",
+          "off": "+0x12cf",
+          "setter": "0x241ac3: cmp $0x7fffffff,%r13",
+          "src": "reg/arith",
+          "target": "0x241c9e"
+        },
+        {
+          "addr": "0x241b13",
+          "dir": "fwd",
+          "guarded": "memory",
+          "jcc": "jae",
+          "off": "+0x1313",
+          "setter": "0x241b0f: cmp $0x41,%rcx",
+          "src": "reg/arith",
+          "target": "0x242353"
+        },
+        {
+          "addr": "0x241bb4",
+          "dir": "fwd",
+          "guarded": "memory",
+          "jcc": "je",
+          "off": "+0x13b4",
+          "setter": "0x241bb0: cmp $0xffffffffffffffff,%rsi",
+          "src": "reg/arith",
+          "target": "0x242322"
+        },
+        {
+          "addr": "0x241bd3",
+          "dir": "fwd",
+          "guarded": "arithmetic/control",
+          "jcc": "jb",
+          "off": "+0x13d3",
+          "setter": "0x241bcf: sub $0x1,%rcx",
+          "src": "reg/arith",
+          "target": "0x24232e"
+        },
+        {
+          "addr": "0x241bdd",
+          "dir": "fwd",
+          "guarded": "memory",
+          "jcc": "jae",
+          "off": "+0x13dd",
+          "setter": "0x241bd9: cmp $0x41,%rdx",
+          "src": "reg/arith",
+          "target": "0x242347"
+        },
+        {
+          "addr": "0x241bf6",
+          "dir": "fwd",
+          "guarded": "memory",
+          "jcc": "jo",
+          "off": "+0x13f6",
+          "setter": "0x241bf3: mul %rdx",
+          "src": "reg/arith",
+          "target": "0x242360"
+        },
+        {
+          "addr": "0x241c05",
+          "dir": "fwd",
+          "guarded": "memory",
+          "jcc": "jne",
+          "off": "+0x1405",
+          "setter": "0x241c01: cmp %rax,0x28(%rcx)",
+          "src": "mem",
+          "target": "0x241c3b"
+        },
+        {
+          "addr": "0x241c30",
+          "dir": "back",
+          "guarded": "arithmetic/control",
+          "jcc": "jae",
+          "off": "+0x1430",
+          "setter": "0x241c2d: add %r14,%r13",
+          "src": "reg/arith",
+          "target": "0x240c78"
+        },
+        {
+          "addr": "0x241ca1",
+          "dir": "fwd",
+          "guarded": "memory",
+          "jcc": "je",
+          "off": "+0x14a1",
+          "setter": "0x241c9e: test %r13,%r13",
+          "src": "reg/arith",
+          "target": "0x24237b"
+        },
+        {
+          "addr": "0x241cca",
+          "dir": "fwd",
+          "guarded": "arithmetic/control",
+          "jcc": "jle",
+          "off": "+0x14ca",
+          "setter": "0x241cb6: cmpl $0x1,0x58(%rsp)",
+          "src": "mem",
+          "target": "0x241e28"
+        },
+        {
+          "addr": "0x241cd3",
+          "dir": "fwd",
+          "guarded": "memory",
+          "jcc": "jne",
+          "off": "+0x14d3",
+          "setter": "0x241cd0: test %r12d,%r12d",
+          "src": "reg/arith",
+          "target": "0x241cee"
+        },
+        {
+          "addr": "0x241ce8",
+          "dir": "fwd",
+          "guarded": "memory",
+          "jcc": "je",
+          "off": "+0x14e8",
+          "setter": "0x241ce6: test %eax,%eax",
+          "src": "reg/arith",
+          "target": "0x241e3f"
+        },
+        {
+          "addr": "0x241cff",
+          "dir": "back",
+          "guarded": "arithmetic/control",
+          "jcc": "je",
+          "off": "+0x14ff",
+          "setter": "0x241cf6: cmpq $0x0,0x90(%rsp)",
+          "src": "mem",
+          "target": "0x241cb6"
+        },
+        {
+          "addr": "0x241d26",
+          "dir": "fwd",
+          "guarded": "memory",
+          "jcc": "je",
+          "off": "+0x1526",
+          "setter": "0x241d24: test %eax,%eax",
+          "src": "reg/arith",
+          "target": "0x241e9e"
+        },
+        {
+          "addr": "0x241d37",
+          "dir": "back",
+          "guarded": "memory",
+          "jcc": "je",
+          "off": "+0x1537",
+          "setter": "0x241d2f: cmp %r15,0x90(%rsp)",
+          "src": "mem",
+          "target": "0x241cb6"
+        },
+        {
+          "addr": "0x241d46",
+          "dir": "back",
+          "guarded": "memory",
+          "jcc": "jbe",
+          "off": "+0x1546",
+          "setter": "0x241d42: cmp %rbp,(%rax,%r15,8)",
+          "src": "mem",
+          "target": "0x241d2c"
+        },
+        {
+          "addr": "0x241d59",
+          "dir": "back",
+          "guarded": "arithmetic/control",
+          "jcc": "je",
+          "off": "+0x1559",
+          "setter": "0x241d56: test %r14d,%r14d",
+          "src": "reg/arith",
+          "target": "0x241d2c"
+        },
+        {
+          "addr": "0x241d63",
+          "dir": "fwd",
+          "guarded": "arithmetic/control",
+          "jcc": "je",
+          "off": "+0x1563",
+          "setter": "0x241d61: cmp %eax,%ebx",
+          "src": "reg/arith",
+          "target": "0x241d90"
+        },
+        {
+          "addr": "0x241d68",
+          "dir": "fwd",
+          "guarded": "memory",
+          "jcc": "jne",
+          "off": "+0x1568",
+          "setter": "0x241d65: test %r12d,%r12d",
+          "src": "reg/arith",
+          "target": "0x241d87"
+        },
+        {
+          "addr": "0x241d81",
+          "dir": "fwd",
+          "guarded": "memory",
+          "jcc": "je",
+          "off": "+0x1581",
+          "setter": "0x241d7f: test %eax,%eax",
+          "src": "reg/arith",
+          "target": "0x241e9e"
+        },
+        {
+          "addr": "0x241db3",
+          "dir": "back",
+          "guarded": "memory",
+          "jcc": "je",
+          "off": "+0x15b3",
+          "setter": "0x241db0: test %r12d,%r12d",
+          "src": "reg/arith",
+          "target": "0x241d09"
+        },
+        {
+          "addr": "0x241dc9",
+          "dir": "fwd",
+          "guarded": "memory",
+          "jcc": "je",
+          "off": "+0x15c9",
+          "setter": "0x241dc7: test %eax,%eax",
+          "src": "reg/arith",
+          "target": "0x241e9e"
+        },
+        {
+          "addr": "0x241de4",
+          "dir": "back",
+          "guarded": "call+memory",
+          "jcc": "je",
+          "off": "+0x15e4",
+          "setter": "0x241de1: test %rax,%rax",
+          "src": "reg/arith",
+          "target": "0x241d2c"
+        },
+        {
+          "addr": "0x241df8",
+          "dir": "back",
+          "guarded": "call+memory",
+          "jcc": "jne",
+          "off": "+0x15f8",
+          "setter": "0x241df6: test %eax,%eax",
+          "src": "reg/arith",
+          "target": "0x241d2c"
+        },
+        {
+          "addr": "0x241e2b",
+          "dir": "fwd",
+          "guarded": "memory",
+          "jcc": "je",
+          "off": "+0x162b",
+          "setter": "0x241e28: test %r12d,%r12d",
+          "src": "reg/arith",
+          "target": "0x241e53"
+        },
+        {
+          "addr": "0x241e55",
+          "dir": "fwd",
+          "guarded": "memory",
+          "jcc": "je",
+          "off": "+0x1655",
+          "setter": "0x241e53: test %ebx,%ebx",
+          "src": "reg/arith",
+          "target": "0x241e70"
+        },
+        {
+          "addr": "0x241e6e",
+          "dir": "fwd",
+          "guarded": "call+memory",
+          "jcc": "je",
+          "off": "+0x166e",
+          "setter": "0x241e6c: test %eax,%eax",
+          "src": "reg/arith",
+          "target": "0x241e9e"
+        },
+        {
+          "addr": "0x241ef4",
+          "dir": "back",
+          "guarded": "memory",
+          "jcc": "jne",
+          "off": "+0x16f4",
+          "setter": "0x241eea: cmp $0x1,%rcx",
+          "src": "reg/arith",
+          "target": "0x240b24"
+        },
+        {
+          "addr": "0x241efe",
+          "dir": "back",
+          "guarded": "memory",
+          "jcc": "jne",
+          "off": "+0x16fe",
+          "setter": "0x241efa: cmpq $0x1,(%rax)",
+          "src": "mem",
+          "target": "0x240b24"
+        },
+        {
+          "addr": "0x241f0d",
+          "dir": "back",
+          "guarded": "memory",
+          "jcc": "je",
+          "off": "+0x170d",
+          "setter": "0x241f09: cmpl $0x0,0x28(%rax)",
+          "src": "mem",
+          "target": "0x240b24"
+        },
+        {
+          "addr": "0x241f1f",
+          "dir": "back",
+          "guarded": "memory",
+          "jcc": "je",
+          "off": "+0x171f",
+          "setter": "0x241f1c: test %rsi,%rsi",
+          "src": "reg/arith",
+          "target": "0x240b24"
+        },
+        {
+          "addr": "0x241f31",
+          "dir": "back",
+          "guarded": "memory",
+          "jcc": "je",
+          "off": "+0x1731",
+          "setter": "0x241f2e: test %rax,%rax",
+          "src": "reg/arith",
+          "target": "0x240b24"
+        },
+        {
+          "addr": "0x241f8b",
+          "dir": "back",
+          "guarded": "memory",
+          "jcc": "jne",
+          "off": "+0x178b",
+          "setter": "0x241f87: cmp $0x4,%rdx",
+          "src": "reg/arith",
+          "target": "0x240b1e"
+        },
+        {
+          "addr": "0x241fbe",
+          "dir": "back",
+          "guarded": "memory",
+          "jcc": "jne",
+          "off": "+0x17be",
+          "setter": "0x241fb8: cmp $0xffff,%ecx",
+          "src": "reg/arith",
+          "target": "0x240b1e"
+        },
+        {
+          "addr": "0x242018",
+          "dir": "back",
+          "guarded": "memory",
+          "jcc": "jne",
+          "off": "+0x1818",
+          "setter": "0x242014: cmp $0x4,%rax",
+          "src": "reg/arith",
+          "target": "0x240b1e"
+        },
+        {
+          "addr": "0x24204a",
+          "dir": "back",
+          "guarded": "memory",
+          "jcc": "jne",
+          "off": "+0x184a",
+          "setter": "0x242045: cmp $0xffff,%eax",
+          "src": "reg/arith",
+          "target": "0x240b1e"
+        },
+        {
+          "addr": "0x24205c",
+          "dir": "back",
+          "guarded": "memory",
+          "jcc": "jne",
+          "off": "+0x185c",
+          "setter": "0x242050: cmpl $0x0,0x18(%r12)",
+          "src": "mem",
+          "target": "0x240b24"
+        },
+        {
+          "addr": "0x24206b",
+          "dir": "back",
+          "guarded": "memory",
+          "jcc": "ja",
+          "off": "+0x186b",
+          "setter": "0x242067: cmp $0x4,%rdx",
+          "src": "reg/arith",
+          "target": "0x240b24"
+        },
+        {
+          "addr": "0x242138",
+          "dir": "back",
+          "guarded": "call",
+          "jcc": "je",
+          "off": "+0x1938",
+          "setter": "0x242135: test $0x1,%cl",
+          "src": "reg/arith",
+          "target": "0x240b1e"
+        },
+        {
+          "addr": "0x242145",
+          "dir": "back",
+          "guarded": "call+memory",
+          "jcc": "jne",
+          "off": "+0x1945",
+          "setter": "0x242143: test %al,%al",
+          "src": "reg/arith",
+          "target": "0x240b1e"
+        },
+        {
+          "addr": "0x2421fb",
+          "dir": "fwd",
+          "guarded": "call+memory",
+          "jcc": "jne",
+          "off": "+0x19fb",
+          "setter": "0x2421f9: test %eax,%eax",
+          "src": "reg/arith",
+          "target": "0x2423bf"
+        },
+        {
+          "addr": "0x242269",
+          "dir": "fwd",
+          "guarded": "call+memory",
+          "jcc": "je",
+          "off": "+0x1a69",
+          "setter": "0x242267: test %al,%al",
+          "src": "reg/arith",
+          "target": "0x242384"
+        },
+        {
+          "addr": "0x242287",
+          "dir": "fwd",
+          "guarded": "call+memory",
+          "jcc": "je",
+          "off": "+0x1a87",
+          "setter": "0x242285: test %al,%al",
+          "src": "reg/arith",
+          "target": "0x242384"
+        },
+        {
+          "addr": "0x2422a5",
+          "dir": "fwd",
+          "guarded": "call+memory",
+          "jcc": "je",
+          "off": "+0x1aa5",
+          "setter": "0x2422a3: test %al,%al",
+          "src": "reg/arith",
+          "target": "0x242384"
+        }
+      ],
+      "note": "ossl_ec_wNAF_mul: try_fixed_base_mul + admits + ct_ge inlined here",
+      "setcc_rows": [
+        {
+          "addr": "0x2408c0",
+          "insn": "setne %dl",
+          "off": "+0xc0",
+          "src": "reg/arith"
+        },
+        {
+          "addr": "0x2408c6",
+          "insn": "sete %r9b",
+          "off": "+0xc6",
+          "src": "reg/arith"
+        },
+        {
+          "addr": "0x2409e0",
+          "insn": "setne %r10b",
+          "off": "+0x1e0",
+          "src": "reg/arith"
+        },
+        {
+          "addr": "0x2409e8",
+          "insn": "setne %dil",
+          "off": "+0x1e8",
+          "src": "reg/arith"
+        },
+        {
+          "addr": "0x241d8b",
+          "insn": "sete %al",
+          "off": "+0x158b",
+          "src": "reg/arith"
+        }
+      ],
+      "size": 7223,
+      "symbol": "_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2ec4mult16ossl_ec_wNAF_mul"
+    },
+    "RCB complete addition (secret path)": {
+      "addr": "0x224fe0",
+      "cmov_rows": [],
+      "counts": {
+        "cmov": 0,
+        "div": 0,
+        "insns": 3389,
+        "jcc": 0,
+        "setcc": 40
+      },
+      "jcc_rows": [],
+      "note": "rcb_add<Mont<FieldDomain>>: the complete addition carrier",
+      "setcc_rows": [
+        {
+          "addr": "0x2250fe",
+          "insn": "setb %r9b",
+          "off": "+0x11e",
+          "src": "reg/arith"
+        },
+        {
+          "addr": "0x22511f",
+          "insn": "setb %al",
+          "off": "+0x13f",
+          "src": "reg/arith"
+        },
+        {
+          "addr": "0x22513f",
+          "insn": "setb %dl",
+          "off": "+0x15f",
+          "src": "reg/arith"
+        },
+        {
+          "addr": "0x225184",
+          "insn": "setb %r9b",
+          "off": "+0x1a4",
+          "src": "reg/arith"
+        },
+        {
+          "addr": "0x22528b",
+          "insn": "setb %r14b",
+          "off": "+0x2ab",
+          "src": "reg/arith"
+        },
+        {
+          "addr": "0x2252af",
+          "insn": "setb %r8b",
+          "off": "+0x2cf",
+          "src": "reg/arith"
+        },
+        {
+          "addr": "0x2252d3",
+          "insn": "setb %r11b",
+          "off": "+0x2f3",
+          "src": "reg/arith"
+        },
+        {
+          "addr": "0x22532c",
+          "insn": "setb %cl",
+          "off": "+0x34c",
+          "src": "reg/arith"
+        },
+        {
+          "addr": "0x22555d",
+          "insn": "setb %r9b",
+          "off": "+0x57d",
+          "src": "reg/arith"
+        },
+        {
+          "addr": "0x22556b",
+          "insn": "setb %cl",
+          "off": "+0x58b",
+          "src": "mem"
+        },
+        {
+          "addr": "0x22557d",
+          "insn": "setb %al",
+          "off": "+0x59d",
+          "src": "mem"
+        },
+        {
+          "addr": "0x2255ba",
+          "insn": "setb %r9b",
+          "off": "+0x5da",
+          "src": "reg/arith"
+        },
+        {
+          "addr": "0x22593b",
+          "insn": "setb %r8b",
+          "off": "+0x95b",
+          "src": "reg/arith"
+        },
+        {
+          "addr": "0x225b30",
+          "insn": "setb %dl",
+          "off": "+0xb50",
+          "src": "reg/arith"
+        },
+        {
+          "addr": "0x225cc6",
+          "insn": "setb %dl",
+          "off": "+0xce6",
+          "src": "mem"
+        },
+        {
+          "addr": "0x225d81",
+          "insn": "setb %r14b",
+          "off": "+0xda1",
+          "src": "mem"
+        },
+        {
+          "addr": "0x225e71",
+          "insn": "setb %bpl",
+          "off": "+0xe91",
+          "src": "reg/arith"
+        },
+        {
+          "addr": "0x225e84",
+          "insn": "setb %sil",
+          "off": "+0xea4",
+          "src": "mem"
+        },
+        {
+          "addr": "0x225e90",
+          "insn": "setb %r10b",
+          "off": "+0xeb0",
+          "src": "mem"
+        },
+        {
+          "addr": "0x225f30",
+          "insn": "setb %r11b",
+          "off": "+0xf50",
+          "src": "reg/arith"
+        },
+        {
+          "addr": "0x2264cf",
+          "insn": "setb %al",
+          "off": "+0x14ef",
+          "src": "reg/arith"
+        },
+        {
+          "addr": "0x2264e0",
+          "insn": "setb %al",
+          "off": "+0x1500",
+          "src": "mem"
+        },
+        {
+          "addr": "0x2264f5",
+          "insn": "setb %dil",
+          "off": "+0x1515",
+          "src": "mem"
+        },
+        {
+          "addr": "0x226536",
+          "insn": "setb %r9b",
+          "off": "+0x1556",
+          "src": "reg/arith"
+        },
+        {
+          "addr": "0x226b71",
+          "insn": "setb %bl",
+          "off": "+0x1b91",
+          "src": "reg/arith"
+        },
+        {
+          "addr": "0x226ea1",
+          "insn": "setb %bpl",
+          "off": "+0x1ec1",
+          "src": "reg/arith"
+        },
+        {
+          "addr": "0x226eac",
+          "insn": "setb %al",
+          "off": "+0x1ecc",
+          "src": "mem"
+        },
+        {
+          "addr": "0x226ebc",
+          "insn": "setb %r12b",
+          "off": "+0x1edc",
+          "src": "mem"
+        },
+        {
+          "addr": "0x226f09",
+          "insn": "setb %r15b",
+          "off": "+0x1f29",
+          "src": "reg/arith"
+        },
+        {
+          "addr": "0x227368",
+          "insn": "setb %bl",
+          "off": "+0x2388",
+          "src": "reg/arith"
+        },
+        {
+          "addr": "0x227972",
+          "insn": "setb %bl",
+          "off": "+0x2992",
+          "src": "reg/arith"
+        },
+        {
+          "addr": "0x227ca4",
+          "insn": "setb %bl",
+          "off": "+0x2cc4",
+          "src": "reg/arith"
+        },
+        {
+          "addr": "0x228418",
+          "insn": "setb %dl",
+          "off": "+0x3438",
+          "src": "reg/arith"
+        },
+        {
+          "addr": "0x228426",
+          "insn": "setb %dl",
+          "off": "+0x3446",
+          "src": "mem"
+        },
+        {
+          "addr": "0x228438",
+          "insn": "setb %dil",
+          "off": "+0x3458",
+          "src": "mem"
+        },
+        {
+          "addr": "0x22846a",
+          "insn": "setb %r9b",
+          "off": "+0x348a",
+          "src": "reg/arith"
+        },
+        {
+          "addr": "0x228aa4",
+          "insn": "setb %r10b",
+          "off": "+0x3ac4",
+          "src": "reg/arith"
+        },
+        {
+          "addr": "0x228abc",
+          "insn": "setb %dl",
+          "off": "+0x3adc",
+          "src": "mem"
+        },
+        {
+          "addr": "0x228ac9",
+          "insn": "setb %dil",
+          "off": "+0x3ae9",
+          "src": "mem"
+        },
+        {
+          "addr": "0x228afc",
+          "insn": "setb %r9b",
+          "off": "+0x3b1c",
+          "src": "reg/arith"
+        }
+      ],
+      "size": 17258,
+      "symbol": "_RINvNtNtNtCsfBoMNNx3tZr_10openssl_rs2ec4p25610fixed_base7rcb_addINtB4_4MontNtB4_11FieldDomainEEB8_"
+    },
+    "Table advance (build_table::advance)": {
+      "addr": "0x233b60",
+      "cmov_rows": [],
+      "counts": {
+        "cmov": 0,
+        "div": 0,
+        "insns": 168,
+        "jcc": 1,
+        "setcc": 0
+      },
+      "jcc_rows": [
+        {
+          "addr": "0x233ddd",
+          "dir": "back",
+          "guarded": "memory",
+          "jcc": "jne",
+          "off": "+0x27d",
+          "setter": "0x233dda: dec %rbp",
+          "src": "reg/arith",
+          "target": "0x233ba0"
+        }
+      ],
+      "note": "build_table::advance<Mont<FieldDomain>>: COLUMNS public doublings",
+      "setcc_rows": [],
+      "size": 771,
+      "symbol": "_RINvNvNtNtNtCsfBoMNNx3tZr_10openssl_rs2ec4p25610fixed_base11build_table7advanceINtB6_4MontNtB6_11FieldDomainEEBa_"
+    },
+    "Table construction (build_table)": {
+      "addr": "0x224640",
+      "cmov_rows": [],
+      "counts": {
+        "cmov": 0,
+        "div": 0,
+        "insns": 423,
+        "jcc": 1,
+        "setcc": 0
+      },
+      "jcc_rows": [
+        {
+          "addr": "0x224edf",
+          "dir": "back",
+          "guarded": "memory",
+          "jcc": "jne",
+          "off": "+0x89f",
+          "setter": "0x224edb: cmp $0x10,%r13",
+          "src": "reg/arith",
+          "target": "0x224ce0"
+        }
+      ],
+      "note": "build_table<Mont<FieldDomain>>: public generator table",
+      "setcc_rows": [],
+      "size": 2458,
+      "symbol": "_RINvNtNtNtCsfBoMNNx3tZr_10openssl_rs2ec4p25610fixed_base11build_tableINtB4_4MontNtB4_11FieldDomainEEB8_"
+    }
+  },
+  "dso": "/work/court/tmp/pfp3-ctgrind/a/libcrypto.so.3",
+  "dso_sha256": "04611380847a708a591a9786734915c4295cc0e164d94025dc937b797ffb15d4",
+  "refused": []
+}

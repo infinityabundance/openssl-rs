@@ -1,0 +1,30 @@
+populations (errors / contexts per repetition; class union; engine)
+  a/control            errors=[0] contexts=[0] class={} engine_on_path=0 origin_in_engine=0
+  a/mul-g              errors=[3621, 3606, 3670] contexts=[200, 197, 233] class={'E': 157, 'D': 5, 'C': 71} engine_on_path=0 origin_in_engine=0
+  a/mul-g-bytes        errors=[3632, 3597, 3646] contexts=[209, 186, 225] class={'C': 66, 'E': 157, 'D': 5} engine_on_path=0 origin_in_engine=0
+  a/mul-g-fixed        errors=[1, 1, 1] contexts=[1, 1, 1] class={'D': 1} engine_on_path=0 origin_in_engine=0
+  a/mul-p              errors=[3660, 3621, 3635] contexts=[228, 201, 217] class={'E': 151, 'D': 5, 'C': 72} engine_on_path=0 origin_in_engine=0
+  a/sign               errors=[123, 123, 123] contexts=[120, 120, 120] class={'E': 95, 'C': 14, 'D': 11} engine_on_path=0 origin_in_engine=0
+  a/sign-ex            errors=[24, 24, 24] contexts=[24, 24, 24] class={'E': 23, 'C': 1} engine_on_path=0 origin_in_engine=0
+  a/sign-ex-k          errors=[33017, 32968, 33017] contexts=[450, 417, 449] class={'C': 214, 'E': 232, 'D': 5} engine_on_path=0 origin_in_engine=0
+  c/mul-g-fixed        errors=[1595, 1605, 1605] contexts=[187, 199, 198] class={'E': 92, 'D': 7, 'C': 100} engine_on_path=4 origin_in_engine=0
+top origins a/mul-g-fixed:
+     1  in /work/court/tmp/pfp3-ctgrind/a/libcrypto.so.3  openssl_rs::ec::mult::ossl_ec_wNAF_mul
+top origins a/mul-g:
+    32  in /work/court/tmp/pfp3-ctgrind/a/libcrypto.so.3  BN_nnmod
+    29  in /work/court/tmp/pfp3-ctgrind/a/libcrypto.so.3  openssl_rs::bn::limbs::divide_fallible
+    22  in /work/court/tmp/pfp3-ctgrind/a/libcrypto.so.3  openssl_rs::bn::limbs::mul_fallible
+    19  in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so  memset
+    13  in /work/court/tmp/pfp3-ctgrind/a/libcrypto.so.3  BN_mul
+    12  in /work/court/tmp/pfp3-ctgrind/a/libcrypto.so.3  openssl_rs::bn::limbs::sub_fallible
+    12  in /work/court/tmp/pfp3-ctgrind/a/libcrypto.so.3  BN_sub
+    10  in /work/court/tmp/pfp3-ctgrind/a/libcrypto.so.3  BN_uadd
+top origins a/sign:
+    47  in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so  memmove
+    10  in /work/court/tmp/pfp3-ctgrind/a/libcrypto.so.3  openssl_rs::bn::limbs::divide_fallible
+     9  in /work/court/tmp/pfp3-ctgrind/a/libcrypto.so.3  BN_to_montgomery
+     8  in /work/court/tmp/pfp3-ctgrind/a/libcrypto.so.3  <alloc::raw_vec::RawVecInner>::finish_grow
+     6  in /work/court/tmp/pfp3-ctgrind/a/libcrypto.so.3  BN_mod_mul_montgomery
+     4  in /work/court/tmp/pfp3-ctgrind/a/libcrypto.so.3  openssl_rs::ec::smpl::ossl_ec_GFp_simple_is_at_infinity
+     4  unix.rs:13  alloc
+     4  in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so  malloc

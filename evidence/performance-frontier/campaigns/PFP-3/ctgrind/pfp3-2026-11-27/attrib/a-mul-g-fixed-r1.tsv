@@ -1,0 +1,2 @@
+idx	kind	class	origin_loc	origin_fn	engine_on_path	bn_on_path	nearest_loc	nearest_fn	stack
+1	Conditional jump or move	D	in /work/court/tmp/pfp3-ctgrind/a/libcrypto.so.3	openssl_rs::ec::mult::ossl_ec_wNAF_mul	0	0	in /work/court/tmp/pfp3-ctgrind/a/libcrypto.so.3	openssl_rs::ec::mult::ossl_ec_wNAF_mul	openssl_rs::ec::mult::ossl_ec_wNAF_mul <- EC_POINT_mul <- op_mul <- main

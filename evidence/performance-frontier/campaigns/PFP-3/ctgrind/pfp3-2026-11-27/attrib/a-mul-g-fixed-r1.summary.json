@@ -1,0 +1,16 @@
+{
+  "log": "/work/evidence/performance-frontier/campaigns/PFP-3/ctgrind/pfp3-2026-11-27/raw/a-mul-g-fixed-r1.out",
+  "contexts": 1,
+  "per_class": {
+    "D": 1
+  },
+  "engine_on_path": 0,
+  "origin_in_engine": 0,
+  "top_origins": [
+    {
+      "contexts": 1,
+      "loc": "in /work/court/tmp/pfp3-ctgrind/a/libcrypto.so.3",
+      "fn": "openssl_rs::ec::mult::ossl_ec_wNAF_mul"
+    }
+  ]
+}

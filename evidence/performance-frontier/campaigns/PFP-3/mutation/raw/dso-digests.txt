@@ -1,0 +1,10 @@
+candidate_a_sha256=04611380847a708a591a9786734915c4295cc0e164d94025dc937b797ffb15d4
+mutation_b_sha256=e4b2cb6e204443e1d696ceb8241b439100e9f0317a3de879400812db7cb3ac73
+mutation_b_path=/work/court/tmp/pfp3-mut/distribution/libcrypto.so.3
+mutation_b_size=17082568
+mutation_b_build_id=d162c62063c30303178bba9f75d4dccd8290a97f
+mutation_archive_sha256=60220c33a33ab5559f3a4d3b52d3052da5e68ade260945cdf46b976fd98b6298
+switch=src/ec/p256/fixed_base.rs admits final true -> false (B only)
+repository_src_fingerprint_before=ca5cc146006b4d771fc4b9a9ffd8109199f25c61ef7de0d9e90160232bd2d46a
+repository_src_fingerprint_after=ca5cc146006b4d771fc4b9a9ffd8109199f25c61ef7de0d9e90160232bd2d46a
+rustc=rustc 1.98.1 (48a229cea 2026-09-01)

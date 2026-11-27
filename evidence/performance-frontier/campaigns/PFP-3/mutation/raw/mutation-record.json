@@ -1,0 +1,21 @@
+{
+  "callgrind_ir_per_op": {
+    "a": 2389818.3125,
+    "b": 4898523.25
+  },
+  "candidate_a_sha256": "04611380847a708a591a9786734915c4295cc0e164d94025dc937b797ffb15d4",
+  "differential_mul_g": {
+    "a_mismatches": 0,
+    "b_mismatches": 0,
+    "count": 4096
+  },
+  "ir_ratio_b_over_a": 2.049747139511887,
+  "mutation_b_sha256": "e4b2cb6e204443e1d696ceb8241b439100e9f0317a3de879400812db7cb3ac73",
+  "wall_iters": 200,
+  "wall_ns_per_op_median": {
+    "a": 119355.6,
+    "b": 233870.9
+  },
+  "wall_ratio_b_over_a": 1.95944639380138,
+  "wall_reps": 9
+}

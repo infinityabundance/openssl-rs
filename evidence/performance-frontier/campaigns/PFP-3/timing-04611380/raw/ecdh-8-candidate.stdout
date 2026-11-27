@@ -1,0 +1,6 @@
+LOADED realpath=/work/court/tmp/pfp3-c/distribution/libcrypto.so.3 dev=57 ino=2042958 size=17128536
+MAPS realpath=/work/court/tmp/pfp3-c/distribution/libcrypto.so.3 entries=5
+FOREIGN libcrypto=0
+HARNESS mode=ecdh iters=20 taint=0
+RESULT mode=ecdh ok=1 marked=0
+TIME mode=ecdh iters=20 ns_per_op=222603.9

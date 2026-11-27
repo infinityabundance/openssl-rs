@@ -1,0 +1,8 @@
+BASE fbase=0x7f0bc0a00000 saddr=0x7f0bc0ee2080
+LOADED realpath=/work/court/tmp/pfp3-ctgrind/a/libcrypto.so.3 dev=57 ino=2042974 size=17128536
+MAPS realpath=/work/court/tmp/pfp3-ctgrind/a/libcrypto.so.3 entries=5
+FOREIGN libcrypto=0
+HARNESS mode=mul-g-fixed iters=200 taint=1
+TAINT what=k limbs=4 bits=256
+RESULT mode=mul-g-fixed ok=1 marked=1
+TIME mode=mul-g-fixed iters=200 ns_per_op=116232.8

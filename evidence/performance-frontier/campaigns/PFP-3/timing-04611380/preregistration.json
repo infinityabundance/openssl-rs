@@ -1,0 +1,30 @@
+{
+  "campaign": "PFP-3",
+  "cross_verification_repetitions": [
+    "00",
+    "03",
+    "06",
+    "09",
+    "12",
+    "14"
+  ],
+  "exclusions": "none may be introduced after execution",
+  "exhaustion_policy": "a failed or resource-exhausted run is BLOCKED, never PASS",
+  "frozen_subject": "the distribution DSO at 04611380 built by build_pfp3.sh from clean commit 289f11187; no rebuild inside the run",
+  "multiplicity": "Holm-Bonferroni across the declared workload family (alpha=0.05)",
+  "ordering": {
+    "authority_first_blocks": 7,
+    "candidate_first_blocks": 8,
+    "kind": "balanced pseudo-random within each repetition",
+    "realised_file": "raw/run-order.tsv",
+    "seed": "0x50465030"
+  },
+  "protocol_document": "docs/PERFORMANCE-METHODOLOGY.md",
+  "repetitions": 15,
+  "schema": "openssl-rs/performance/preregistration/v1",
+  "statistic": "median of paired per-repetition ratios candidate_us/authority_us",
+  "stopping_rule": "fixed repetition count; no early stop and no replacement",
+  "uncertainty": "percentile bootstrap, 20000 resamples, seed 0x50465030",
+  "unit_of_replication": "one process per subject per repetition",
+  "warmup": "one unrecorded pair before repetition 00; excluded from statistics"
+}

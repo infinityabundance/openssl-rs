@@ -1,52 +1,78 @@
-# PFP-3 — constant-time taint and binary branch audit: **NOT_RUN at `04611380…`**
+# PFP-3 — constant-time taint and binary branch audit at `04611380…`
 
-No ctgrind context count and no `jcc`/`setcc`/`cmov` classification exists for
-the new fixed-base code at DSO `04611380847a708a591a9786734915c4295cc0e164d94025dc937b797ffb15d4`.
-Both instruments were deferred this session; **no constant-time claim is made**
-(Earned Trust article 8: a constant-time result is not a proof of constant time,
-and here there is not even a result).
+**Status: STOP.** Both instruments now exist at the digest and both find the
+same defect: the fixed-base admission contains **one secret-derived conditional
+transfer**. The PFP-3 row cannot be `DONE` and the arm cannot be `CANDIDATE`
+until it is removed or shown not to depend on the secret in the admitted
+population.
 
-## What the code does by construction, and what that does **not** prove
+## The finding
 
-These are design statements, not audit findings:
+`src/ec/p256/fixed_base.rs`, `try_fixed_base_mul`:
 
-* **Selection is a full scan with a mask.** `select_point` reads all 15 non-zero
-  table entries and folds the match with a full-width mask derived from
-  `ct_eq_u64`; the secret column value is never used as an index. Cost is fixed
-  at 15 masked selects of three field elements per column, 64 columns.
-* **The comb loop is fixed.** 64 iterations, one doubling and one complete
-  addition per iteration, independent of the scalar.
-* **The point formulas branch on no value.** `rcb_add` is the complete RCB
-  addition; doubling is the same formula at `P = Q`. Field add/sub/mul/sqr are
-  the PFP-2 kernels, whose own evidence is at `553e1b8c`, not at this digest.
-* **Inversion branches only on the public exponent `p-2`.** Square-and-multiply
-  over a compile-time constant exponent; the secret base only feeds field
-  multiplies.
-* **Affine export uses masks.** `z` is written as `1 & !infinity_mask` and
-  `z_is_one` from the same mask; the absolute-length normalisation is PFP-20's
-  branchless `store_coordinate`.
+```rust
+if ct_ge(&k, &ORDER_MODULUS) != 0 {
+    return None;
+}
+```
 
-**Obligations that an audit would have to check, not assume:**
+`ct_ge` is branchless, but its result is a function of the secret scalar `k`,
+and `return None` is a conditional jump on it. In the release DSO the
+instruction is `je` at `ossl_ec_wNAF_mul+0x1938` (file vaddr `0x242138`,
+condition `test $0x1,%cl`); `try_fixed_base_mul` is inlined into the `ec::mult`
+driver, so the frame is named `ossl_ec_wNAF_mul`, not a `::ec::p256::` frame.
 
-1. The admission check branches on the scalar's *metadata* (`neg != 0`,
-   `d.len() > 4`) before taking the fast path. These mirror the authority's own
-   unusual-input handling in `ossl_ec_scalar_mul_ladder`, but a branch on scalar
-   metadata must be shown not to depend on the secret value for the admitted
-   population.
-2. The compiler may if-convert a masked select into a conditional branch; only
-   the binary audit can see that. The PFP-2 lesson (`mont_reduce_into`'s
-   borrow predicate) is directly applicable to `ct_eq_u64` and `fselect`.
-3. `store_coordinate`'s allocation size must be fixed (it is: `Canonical4`
-   always exposes four limbs), but this must be confirmed at the artefact.
+* ctgrind (`mul-g-fixed`, four limb values of `k` tainted): **1 context per
+  repetition**, `Conditional jump or move depends on uninitialised value(s)`,
+  origins attributed by `--track-origins=yes` to the harness's `mark_bn_values`
+  taint. engine-on-path 0, engine-origin 0 — the fixed-base code is inlined,
+  so the classifier's frame is the driver.
+* branch audit: the exact same `je` is in the carrier rows; the RCB add/double
+  and comb carriers have **0 secret-derived jcc** (see below).
+* mutation control: the comb is load-bearing (2.05× instructions, 1.96× wall
+  versus the admission-off fallback), so this is not a dead-code artefact.
 
-## What would be run
+For the admitted population (`k < n`, always true for a generated nonce) the
+branch is never taken, so the observable leak is the (always-false) predicate,
+not the scalar bits. That does not make it a constant-time path: the task and
+the standing standard forbid a secret-dependent early exit, so it is recorded as
+a STOP rather than argued away.
 
-The PFP-2 harnesses, unchanged, rebound to `04611380…`:
-`ctgrind/pfp21_dso_ct.c` (DSO-level valgrind memcheck, secret scalar tainted,
-minimal and sign populations) and
-`courts/phase18/timing/binary_branch_audit.py` against this DSO, with the PFP-34
-coverage set extended to the new `fixed_base` symbols. A secret-derived
-conditional transfer there is a STOP, not a note.
+## The rest of the new code is branch-bound in public data
 
-Until that is run, the constant-time conjunct is `NOT_RUN`; the PFP-3 row is
-`PARTIAL`.
+| carrier | jcc | cmov | setcc | classification |
+|---|---:|---:|---:|---|
+| `rcb_add` | 0 | 0 | 40 | branch-free; setcc are carry/borrow masks |
+| `table_mul` (comb) | 2 | 0 | 2 | fixed loop counters |
+| `to_affine` (invert) | 2 | 0 | 0 | loop + public exponent bit |
+| `build_table` | 1 | 0 | 0 | public table loop |
+| `advance` | 1 | 0 | 0 | public doubling loop |
+
+The single secret-derived transfer is enumerated above. The audit's shared
+inventory resolves 31/31 and exits 0; the five generic carriers are admitted by
+an exact-symbol driver that imports the auditor's own disassembler and
+byte-coverage check (see `audit/AUDIT.md`).
+
+## PFP-3's three original audit targets, now answered at the artefact
+
+1. **Scalar-metadata admission branch** — `neg` and `d.len()` are not tainted
+   by the harness and are read from the `BIGNUM` header; the audit shows no
+   tainted branch from them. **Resolved public-bound.**
+2. **If-conversion of the masked select** — `table_mul` has 2 jcc (loop
+   counters); `rcb_add` has 0 jcc; the mask fold is not lowered to a branch.
+   **Resolved branch-free.**
+3. **Fixed-size write-back** — `to_affine` is 2 public jcc; `store_coordinate`
+   does not appear as a secret-dependent context. **Resolved.**
+
+The one item those three did not name is the `ct_ge` range check — the audit
+found it.
+
+## What remains before a pass
+
+Remove the secret-dependent admission early exit, or establish that the branch
+predicate is independent of the secret for the admitted population without
+branching on a secret-derived value (e.g. move the in-range requirement to a
+caller that already classifies it as public validity input). That is a `src/`
+change and is out of scope for this verification batch; the defect is reported,
+not repaired. Evidence: `ctgrind/pfp3-2026-11-27/CTGRIND.md`,
+`audit/AUDIT.md`, `mutation/MUTATION.md`.

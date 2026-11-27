@@ -1,0 +1,28 @@
+==170104== Memcheck, a memory error detector
+==170104== Copyright (C) 2002-2022, and GNU GPL'd, by Julian Seward et al.
+==170104== Using Valgrind-3.19.0 and LibVEX; rerun with -h for copyright info
+==170104== Command: /work/court/tmp/pfp3-ctgrind/instrument/pfp3_dso_ct --lib /work/court/tmp/pfp3-ctgrind/a/libcrypto.so.3 --mode mul-g-fixed
+==170104== Parent PID: 169957
+==170104== 
+==170104== Conditional jump or move depends on uninitialised value(s)
+==170104==    at 0x507C138: openssl_rs::ec::mult::ossl_ec_wNAF_mul (in /work/court/tmp/pfp3-ctgrind/a/libcrypto.so.3)
+==170104==    by 0x531C174: EC_POINT_mul (in /work/court/tmp/pfp3-ctgrind/a/libcrypto.so.3)
+==170104==    by 0x10971E: op_mul (pfp3_dso_ct.c:457)
+==170104==    by 0x10ACEF: main (pfp3_dso_ct.c:622)
+==170104== 
+==170104== 
+==170104== HEAP SUMMARY:
+==170104==     in use at exit: 232,842 bytes in 2,663 blocks
+==170104==   total heap usage: 13,498 allocs, 10,835 frees, 476,831 bytes allocated
+==170104== 
+==170104== LEAK SUMMARY:
+==170104==    definitely lost: 64 bytes in 2 blocks
+==170104==    indirectly lost: 16 bytes in 2 blocks
+==170104==      possibly lost: 24,432 bytes in 379 blocks
+==170104==    still reachable: 208,330 bytes in 2,280 blocks
+==170104==         suppressed: 0 bytes in 0 blocks
+==170104== Rerun with --leak-check=full to see details of leaked memory
+==170104== 
+==170104== Use --track-origins=yes to see where uninitialised values come from
+==170104== For lists of detected and suppressed errors, rerun with: -s
+==170104== ERROR SUMMARY: 1 errors from 1 contexts (suppressed: 0 from 0)
