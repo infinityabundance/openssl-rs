@@ -265,3 +265,42 @@ how rows get stranded, which is exactly what happened earlier in this campaign.
 | PFP-36 | **Window driver classification at the admitted digest.** The window driver's 100 conditional jumps and 2 conditional moves are enumerated but were not freshly classified after CIOS was admitted. Acceptance: every `jcc`, `setcc` and `cmov` in the window driver and the ladder carrier is classified at the admitted digest, secret-derived entries are enumerated or shown absent, and a canary confirms the audit still fires. | TODO |
 | PFP-37 | **DSO-bound secret-exponent taint.** The release-artefact exponent evidence is currently source-bound to a test binary, and debug-build cleanliness must not be inherited by an optimised build. Acceptance: the exponent taint is measured against the distribution DSO itself, with a sensitivity control on a canary artefact, and the record states which conjunct moved from `SOURCE` to `ARTEFACT`. | TODO |
 | PFP-38 | **Compile-time width specialisation of the Montgomery kernel.** The current CIOS uses dynamically sized slices and generic loops. Acceptance: specialised widths for the 4, 16, 32, 48, 64 and 128-limb cases with the generic implementation retained as the differential reference; each width differentially checked and audited in the artefact; a width that does not win is recorded as a negative result. FIOS and almost-Montgomery stay open — CIOS is the measured winner, not a demonstrated global optimum. | TODO |
+
+## Multi-accumulator arithmetic frontier (2026-11-27)
+
+A research programme, recorded in full. **Nothing here is a result.** The
+premise is a distinction worth keeping: x86 exposes two usable architectural
+carry flags, so "eight flag chains" is impossible for assembly and for Rust
+alike; the hypothesis under test is that carry *dependencies* can be removed
+from the critical path instead of chained through flags, in safe Rust, with the
+memory-safety constraints intact.
+
+Hardware note that governs the arms: the recorded i9-13900K supports `avx2`,
+`adx`, `bmi2`, `vaes`, `vpclmulqdq` and **not** `avx512f` or `avx512ifma`. So
+every IFMA arm requires a separate qualified venue and none may be claimed from
+this machine.
+
+| id | arm | acceptance | status |
+|---|---|---|---|
+| M-A0 | **Reference.** The admitted CIOS kernel as the incumbent for every comparison, with its differential and its audit at a named digest. | TODO |
+| M-A1 | **Fixed-width native Rust specialisation.** Compile-time widths for the 4, 16, 32, 48, 64 and 128-limb cases, controlled unrolling, the generic kernel retained as the differential reference. | TODO |
+| M-A2 | **Reduced-radix scalar arithmetic.** Unsaturated limbs with spare bits (candidate radices 2^26, 2^28, 2^32, 2^43, 2^51, 2^52, 2^56) so carries are deferred and settled in a pass, with an explicit accumulation bound per coefficient. Must state the extra-limb cost and the settling cost, and must be measured, not assumed to win. | TODO |
+| M-A3 to M-A6 | **Multi-accumulator streams at 2, 4, 8 and 16.** The count is a hypothesis, not a target: each arm must state its dependency graph, its accumulator bound and its measured result, and a lower count that wins is a valid answer. | TODO |
+| M-A7 | **Carry-save accumulation.** Redundant sum/carry pairs with a final propagation; bounds and canonicality obligations stated. | TODO |
+| M-A8 | **Parallel-prefix normalisation.** Replace serial carry propagation with a prefix tree where the propagation cannot be removed; report the operation-count increase against the dependency-depth decrease. | TODO |
+| M-A9 | **Formula-level and lane-level vectorisation.** Independent field operations executed together, and SIMD lanes across them; per-lane independence must be shown, not assumed. | TODO |
+| M-A10 | **Residue number systems.** Experimental only: independent channels with no positional carries, with the conversion, reconstruction, range, canonicality and base-extension side-channel costs stated before any measurement. | TODO |
+| M-A11 | **Combined synthesis search.** A generator that emits competing implementations over radix, stream count, normalisation frequency, reduction strategy, unrolling and target features, each with its own arithmetic specification, range obligations and measured result. Admission is the fastest admitted verified implementation per workload and platform, never the largest stream count. | TODO |
+| Z1 | **ZERO_UNSAFE portable kernels.** Safe Rust with automatic vectorisation only, no assembly and no concealed unsafe dependency; dependency, symbol and link-map inspection proves the absence. | TODO |
+| Z2 | **ZERO_UNSAFE feature-qualified artefacts.** Whole builds targeting a qualified processor with the features enabled at compile time, so intrinsics are callable from safe code; deployment requirements enforced and recorded. | TODO |
+| Z3 | **Runtime feature capability.** The residual `unsafe` at runtime dispatch is bounded to one line per path and classified `BOUNDARY_COVERED`; removing it entirely needs a compiler-recognised feature proof, which does not exist and is recorded as a language-level research direction rather than claimed. | TODO |
+| C1 | **Compiler contribution.** Investigate lowering independent carry and accumulation graphs to architecture-appropriate schedules (dual flag chains where appropriate, register-based streams, vectorised multiply-add, deferred normalisation). Research only: no compiler fork in this repository, no third-party backend. Relevant background: the long-standing LLVM ADCX/ADOX lowering limitation. | TODO |
+| L1-L4 | **Four independent correctness lanes.** A mathematical arbitrary-precision oracle; Fiat Cryptography as an independent verified arithmetic reference; s2n-bignum as an optimised machine-level reference; and the OpenSSL-RS incumbent as the regression reference. Agreement is differential evidence over tested inputs, never universal correctness, and no reference is a production dependency — separation is proven by dependency, symbol, link-map and artifact inspection. | TODO |
+
+**Order and the stopping rule.** M-A2 first because it needs no new machinery;
+then M-A1 and the stream arms; M-A9 and the IFMA-related arms only on a venue
+that has the features; M-A10 last and experimental. P-256 field arithmetic and
+the 1024-bit Montgomery operations under RSA-2048 CRT are the two regimes to
+test, because they differ substantially. **Any arm that is slower is recorded
+as a negative result with its numbers**, and no arm may be admitted on an
+operation count alone — the dedicated-squaring refutation is the precedent.
