@@ -1,0 +1,7 @@
+ladder jcc=14
+ladder setcc=18
+driver cmovcc=2
+driver jcc=100
+driver setcc=18
+fallible jcc=31
+fallible setcc=10

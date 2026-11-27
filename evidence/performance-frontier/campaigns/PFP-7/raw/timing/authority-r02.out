@@ -1,0 +1,9 @@
+LIB /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3
+RESULT priv-nopad n=205 min_ns=340405.0 median_ns=343216.0 mean_ns=364031.5
+OUTLIER i=0 ns=1442318
+OUTLIER i=1 ns=1070276
+OUTLIER i=2 ns=1056673
+OUTLIER i=3 ns=918981
+OUTLIER count=4 of 205
+BLOCKMED ns=351034.8 blocks=344711.6,350980.2,351034.8,351090.1,353443.1
+DONE priv-nopad

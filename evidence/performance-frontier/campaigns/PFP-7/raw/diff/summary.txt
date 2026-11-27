@@ -1,0 +1,10 @@
+/work/evidence/performance-frontier/campaigns/PFP-7/harness/pfp7_diff.c: In function ‘main’:
+/work/evidence/performance-frontier/campaigns/PFP-7/harness/pfp7_diff.c:278:13: warning: ‘memset’ specified size between 18446744071562067968 and 18446744073709551615 exceeds maximum object size 9223372036854775807 [-Wstringop-overflow=]
+  278 |             memset(out, 0xaa, (size_t)len);
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/work/evidence/performance-frontier/campaigns/PFP-7/harness/pfp7_diff.c:235:17: warning: ‘memset’ specified size between 18446744071562067968 and 18446744073709551615 exceeds maximum object size 9223372036854775807 [-Wstringop-overflow=]
+  235 |                 memset(out, 0xaa, (size_t)len);
+      |                 ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+candidate lines: 4185 authority lines: 4185
+DIFF_RESULT=IDENTICAL
+zero-length synthetic answers: 0

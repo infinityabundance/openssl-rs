@@ -1177,6 +1177,104 @@
           }
         ]
       }
+    },
+    {
+      "arm_id": "PFP-7",
+      "assurance": {
+        "safe_compatible": false,
+        "semantic_assurance": false
+      },
+      "candidate": {
+        "artefact": {
+          "label": "distribution-shaped libcrypto.so.3 from clean staging 05ee177a3 (the PFP-6 CIOS-admitted artefact; no PFP-7 source change). Two independent clean builds agree byte for byte on archive c01b2b1f4070ce4fbca329f2ca1057c51ca352f18e5c93879839d9f05027f489 and on this DSO.",
+          "sha256": "6d002db20c815e252d1672a72b654f40844c2a1b24400cfbdfce5d1eaf828f39"
+        },
+        "build_profile": "release, x86_64-unknown-linux-gnu, rustc 1.98.1 (48a229cea); cargo build --release --lib --offline, CARGO_BUILD_JOBS=4; build-relevant tree clean at 05ee177a3",
+        "source_commit": "05ee177a3d0d6e7ef7a80e466a1cba5b6ea765c2"
+      },
+      "constant_time_audit": {
+        "branch_audit": {
+          "path": "evidence/performance-frontier/campaigns/PFP-7/AUDIT.md",
+          "present": true,
+          "sha256": "c2f564efc25f67b12bbef49a99b4dfa1c9168d84e3f73e46c6ca1455aa7c087c"
+        },
+        "candidate_sha256": "6d002db20c815e252d1672a72b654f40844c2a1b24400cfbdfce5d1eaf828f39",
+        "finding": "PFP7-NO-SECRET-DERIVED-TRANSFER: none found on the CRT exponentiation path; the interleaving question is vacuous because no interleaved carrier was built.",
+        "harness_sha256": "e541f1c897aa42962e754de5118158e289ac9b749376d5d43896fbca808f2067",
+        "instrument": "valgrind 3.19.0 memcheck with VALGRIND_MAKE_MEM_UNDEFINED on d, dmp1, dmq1, p, q (source-bound test binary 5509e5cd...) plus disasm_sites.py over this digest's objdump of the carriers",
+        "kind": "CTGRIND_PLUS_BRANCH_AUDIT",
+        "reference": {
+          "path": "evidence/performance-frontier/campaigns/PFP-7/raw/taint/sites.txt",
+          "present": true,
+          "sha256": "9b9ceececc4f147990685a6cf8d7297e39286bcc5ce91207f82c968e6289d0d7"
+        },
+        "result": "ctgrind 96,668 errors/112 contexts (exponents+primes) and 97,546/106 (moduli), inside the recorded PFP-1/PFP-5 band; 0 sites in run_mont_ladder / run_mont_ladder_window / select_window_digit / mont_mul_ladder_into; control fires (102->109 conditional jumps). Branch audit: mont_mul_ladder_into 14 jcc/18 setcc/0 cmovcc, all public; run_mont_ladder 100/18/2 with both cmovb on length comparisons; 0 secret-derived transfers. No interleaved carrier exists in this build. Neither instrument is a constant-time proof."
+      },
+      "description": "RSA CRT dual engine: scalar interleaving of the two CRT halves was measured and REFUSED. At DSO 6d002db2 (the PFP-6 artefact, reproduced from clean staging 05ee177a3) the two exponentiations are 89.4% of the refresh-free private operation (577 of 645.7 us; 16.3M of 18.22M instructions), and the kernel retires IPC 4.62 of a 6-wide machine at 1,399 cycles per Montgomery multiplication. The only positive ceiling is the issue-width floor (6457/6 instructions -> 1.30x kernel, 1.26x op), which needs IPC 6.0; the measured fused loop costs 1.1132x [1.1102, 1.1151] per multiplication (1.0183x on an ADX build; slower in every run, faster in none), so the attainable change is 0.91x. No source changed. Protection verified at the digest: each CRT half and the recombination are caught by the result check with blinding on and off; the deterministic differential is byte-identical on 4,185 lines including 16 zero-length synthetic answers; ctgrind shows no ladder-carrier site and the branch audit no secret-derived transfer. Timing: latency 1.879x, sustained throughput 2.302x, row statistic 2.4897x versus the authority.",
+      "differential_courts": {
+        "candidate_sha256": "6d002db20c815e252d1672a72b654f40844c2a1b24400cfbdfce5d1eaf828f39",
+        "reference": {
+          "path": "evidence/performance-frontier/campaigns/PFP-7/raw/diff/summary.txt",
+          "present": true,
+          "sha256": "05c283a514592a6bd7c0bfeb5c518235554580b9523ba334b701edf2741e9577"
+        },
+        "result": "PASS"
+      },
+      "measurement": {
+        "candidate_sha256": "6d002db20c815e252d1672a72b654f40844c2a1b24400cfbdfce5d1eaf828f39",
+        "classification": "SCOPED_OBSERVATION",
+        "identity": {
+          "instrument": "15 paired process repetitions per arm, arms alternated, taskset -c 1, 205 calls per process; latency = min per call, throughput = 1/mean per call, blockmed = median of five 20-call batch means; median of paired per-repetition ratios, 95% percentile bootstrap (20,000 resamples, seed 0x50465037); two independent runs",
+          "population": "5c89015fd5f65398ec350b719992012ea9c69c3663f226bc5501a378e6d0bf89",
+          "source": "staging 05ee177a3d0d6e7ef7a80e466a1cba5b6ea765c2 (build-relevant tree clean); DSO 6d002db2..., authority 611e511d...; sequential RSA-2048 private operation, the unchanged build",
+          "target": "x86_64 i9-13900K (adx avx2 bmi2 vaes vpclmulqdq; no avx512f, no avx512ifma), court openssl-rs-court-tools:1, rustc 1.98.1 release",
+          "tool": "evidence/performance-frontier/campaigns/PFP-7/harness/pfp7_rsa.c + harness/timing.sh; per-call clock_gettime(CLOCK_MONOTONIC)"
+        },
+        "population": {
+          "digest": "5c89015fd5f65398ec350b719992012ea9c69c3663f226bc5501a378e6d0bf89",
+          "frozen_before_execution": true
+        },
+        "record": {
+          "path": "evidence/performance-frontier/campaigns/PFP-7/raw/timing/summary.txt",
+          "present": true,
+          "sha256": "fe916dce1b52a2bca85f22e575ba270b91c4d184072b22f49393c1acb12c3743"
+        }
+      },
+      "queue_item": "PFP-7",
+      "reuse": null,
+      "shortcuts": [],
+      "status": "EXPERIMENT",
+      "timing_obligations": {
+        "attempted_discharge": [],
+        "none_open_because": null,
+        "open": [
+          {
+            "description": "Scalar interleaving of the two CRT halves is refused by measurement: the fused loop costs 1.1132x [1.1102, 1.1151] per Montgomery multiplication (1.0183x with ADX; slower in every run) against a 1.30x issue-width ceiling that needs IPC 6.0, while the build already retires 4.62. No source was changed; the sequential path remains.",
+            "discharged": false,
+            "id": "PFP7-REFUSED"
+          },
+          {
+            "description": "The IFMA radix-2^52 pairing requires avx512ifma; this venue's CPU reports no avx512f and no avx512ifma, so the vector arm cannot be built or measured here. Recorded as not applicable to this hardware, not as absent by choice and not as a negative result.",
+            "discharged": false,
+            "id": "PFP7-IFMA-NOT-APPLICABLE"
+          },
+          {
+            "description": "Hand-scheduled ADX assembly (rsaz-shaped) is a different change class: it needs its own bound, per-kernel differential and branch audit. The ADX compiler build measured here shows no single-operation headroom (253.9 vs 256.4 ns) and the same fused penalty, so the scalar evidence does not support it either.",
+            "discharged": false,
+            "id": "PFP7-HAND-ASM"
+          },
+          {
+            "description": "Measured on the RSA private path: a 5.2 ms mod_inverse_consttime re-creation every 32 calls (BN_BLINDING_COUNTER), 162 us per sustained operation, which inflates the row statistic from the 1.88x exponentiation ratio to 2.49x. This is a PFP-1/blinding-substrate cost, not PFP-7's, and it is not repaired here.",
+            "discharged": false,
+            "id": "PFP7-BLINDING-REFRESH"
+          },
+          {
+            "description": "This arm is a performance refusal, not SAFE_COMPATIBLE; no safety or compatibility conclusion is asserted beyond the differential and fault-injection evidence at the named digest.",
+            "discharged": false,
+            "id": "PFP7-SAFE-COMPATIBLE"
+          }
+        ]
+      }
     }
   ],
   "author": {
@@ -1379,6 +1477,112 @@
         "path": "evidence/performance-frontier/campaigns/PFP-2/dso-differential/DOMAIN-553e1b8c.md",
         "present": true,
         "sha256": "01f77f28736e6c597ed7bd1be9f6632640691f49b89b218c4ca0aee3d1ee0432"
+      }
+,
+      {
+        "path": "evidence/performance-frontier/campaigns/PFP-7/BOUND.md",
+        "present": true,
+        "sha256": "b7e229de34d0cb9cdc7641aca3f3f6853a8200c4913b015b52482ed76d8772e5"
+      },
+      {
+        "path": "evidence/performance-frontier/campaigns/PFP-7/DIFFERENTIAL.md",
+        "present": true,
+        "sha256": "2d2e544a890cb8ffa9bf15162eb1691eb7b9ad46c4e68c9966f7fecf10524439"
+      },
+      {
+        "path": "evidence/performance-frontier/campaigns/PFP-7/FAULT-INJECTION.md",
+        "present": true,
+        "sha256": "f8ed6e8867874327a22a651b826f030d78de86224c13885765831cbe44b95819"
+      },
+      {
+        "path": "evidence/performance-frontier/campaigns/PFP-7/TAINT.md",
+        "present": true,
+        "sha256": "b0e1cc39b36b70c550190e63fda1a37e83adb8a127d20977bc5e32d4429c2e38"
+      },
+      {
+        "path": "evidence/performance-frontier/campaigns/PFP-7/AUDIT.md",
+        "present": true,
+        "sha256": "c2f564efc25f67b12bbef49a99b4dfa1c9168d84e3f73e46c6ca1455aa7c087c"
+      },
+      {
+        "path": "evidence/performance-frontier/campaigns/PFP-7/TIMING.md",
+        "present": true,
+        "sha256": "d1d0a613c320739d29f93b2b6254fa6dd5cbdce4696adb8fae53251cdaf5e4de"
+      },
+      {
+        "path": "evidence/performance-frontier/campaigns/PFP-7/RECEIPT.md",
+        "present": true,
+        "sha256": "1066e7239a57a785a9ba34cc123e668abfe13bd83bb1091593f91f72b2134969"
+      },
+      {
+        "path": "evidence/performance-frontier/campaigns/PFP-7/harness/pfp7_rsa.c",
+        "present": true,
+        "sha256": "9519f9dd8c6923c4442e3488e5cd11b0fd296923884d0f38cb4bc9dd41ca7647"
+      },
+      {
+        "path": "evidence/performance-frontier/campaigns/PFP-7/harness/pfp7_fault.c",
+        "present": true,
+        "sha256": "7ee1d41351acf88a8bed564d4402e7ae400f81658f2f1ea0cfaeb103445db595"
+      },
+      {
+        "path": "evidence/performance-frontier/campaigns/PFP-7/harness/pfp7_diff.c",
+        "present": true,
+        "sha256": "dd03cfe01b89e3212fa0a62ae15e239d8337827f7d48339d24aaf073688eb1dd"
+      },
+      {
+        "path": "evidence/performance-frontier/campaigns/PFP-7/harness/pfp7_ilp.c",
+        "present": true,
+        "sha256": "476ccf9a30e24584e49f3564c756ae933924b768a9d5d32da6dc81c33ac2eece"
+      },
+      {
+        "path": "evidence/performance-frontier/campaigns/PFP-7/harness/audit.sh",
+        "present": true,
+        "sha256": "e541f1c897aa42962e754de5118158e289ac9b749376d5d43896fbca808f2067"
+      },
+      {
+        "path": "evidence/performance-frontier/campaigns/PFP-7/harness/timing.sh",
+        "present": true,
+        "sha256": "c9f20d06903bd3387b33a7ad5a160e6c4f74e497337edcab77cce094a1681598"
+      },
+      {
+        "path": "evidence/performance-frontier/campaigns/PFP-7/raw/ilp/probe.txt",
+        "present": true,
+        "sha256": "cd6d91afab65343a13abb19457e785343815d811daa789c3853cdc9d1acec73a"
+      },
+      {
+        "path": "evidence/performance-frontier/campaigns/PFP-7/raw/identity/identity.json",
+        "present": true,
+        "sha256": "42930c697db46f3ba5976bcd15ee722d6d43c2957df454b3c980f7e420c22a0f"
+      },
+      {
+        "path": "evidence/performance-frontier/campaigns/PFP-7/raw/audit/counts.txt",
+        "present": true,
+        "sha256": "e3d506b8910db5df2f96a493bcf6aab7b8ef2812b2e76418f1027ae973c68ce0"
+      },
+      {
+        "path": "evidence/performance-frontier/campaigns/PFP-7/raw/taint/sites.txt",
+        "present": true,
+        "sha256": "9b9ceececc4f147990685a6cf8d7297e39286bcc5ce91207f82c968e6289d0d7"
+      },
+      {
+        "path": "evidence/performance-frontier/campaigns/PFP-7/raw/fault/verdicts.txt",
+        "present": true,
+        "sha256": "a20b56c860406ffa85fd4a9a979cf38b398230cd1f1a97720d89b6befe8527e9"
+      },
+      {
+        "path": "evidence/performance-frontier/campaigns/PFP-7/raw/diff/summary.txt",
+        "present": true,
+        "sha256": "05c283a514592a6bd7c0bfeb5c518235554580b9523ba334b701edf2741e9577"
+      },
+      {
+        "path": "evidence/performance-frontier/campaigns/PFP-7/raw/timing/summary.txt",
+        "present": true,
+        "sha256": "fe916dce1b52a2bca85f22e575ba270b91c4d184072b22f49393c1acb12c3743"
+      },
+      {
+        "path": "evidence/performance-frontier/campaigns/PFP-7/raw/suite/full.log",
+        "present": true,
+        "sha256": "b10dd6d2da8a2c6c6002f9b08f677857b062cf341147d21265c0cb2ee2956bad"
       }
     ],
     "limits": [

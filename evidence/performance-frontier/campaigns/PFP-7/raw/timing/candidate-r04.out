@@ -1,0 +1,12 @@
+LIB /work/court/tmp/pfp7/build/distribution/libcrypto.so.3
+RESULT priv-nopad n=205 min_ns=639497.0 median_ns=645212.0 mean_ns=802623.6
+OUTLIER i=0 ns=5318007
+OUTLIER i=32 ns=5216972
+OUTLIER i=64 ns=5191029
+OUTLIER i=96 ns=5193774
+OUTLIER i=128 ns=5211931
+OUTLIER i=160 ns=5169090
+OUTLIER i=192 ns=5203911
+OUTLIER count=7 of 205
+BLOCKMED ns=872463.4 blocks=644454.9,654246.8,872463.4,872668.2,873545.4
+DONE priv-nopad

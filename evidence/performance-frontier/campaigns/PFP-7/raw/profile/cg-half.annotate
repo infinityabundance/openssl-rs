@@ -1,0 +1,153 @@
+--------------------------------------------------------------------------------
+Profile data file '/work/court/tmp/pfp7/stage/cg-half.out' (creator: callgrind-3.19.0)
+--------------------------------------------------------------------------------
+I1 cache: 
+D1 cache: 
+LL cache: 
+Timerange: Basic block 0 - 3977304
+Trigger: Program termination
+Profiled target:  /work/court/tmp/pfp7/stage/pfp7_rsa --lib /work/court/tmp/pfp7/build/distribution/libcrypto.so.3 --rsa-der /work/courts/phase18/timing/fixtures/rsa2048.der --mode half --iters 1 (PID 234662, part 1)
+Events recorded:  Ir
+Events shown:     Ir
+Event sort order: Ir
+Thresholds:       99
+Include dirs:     
+User annotated:   
+Auto-annotation:  on
+
+--------------------------------------------------------------------------------
+Ir                  
+--------------------------------------------------------------------------------
+33,911,109 (100.0%)  PROGRAM TOTALS
+
+--------------------------------------------------------------------------------
+Ir                   file:function
+--------------------------------------------------------------------------------
+14,519,154 (42.82%)  ???:openssl_rs::bn::arith::mont_mul_ladder_into [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+ 4,411,467 (13.01%)  ???:openssl_rs::runtime::obj::name_find [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+ 4,310,002 (12.71%)  ???:openssl_rs::bn::limbs::pow2_mod_consttime [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+   687,103 ( 2.03%)  ./elf/./elf/dl-lookup.c:do_lookup_x [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+   682,255 ( 2.01%)  ./malloc/./malloc/malloc.c:_int_free [/usr/lib/x86_64-linux-gnu/libc.so.6]
+   597,795 ( 1.76%)  ./malloc/./malloc/malloc.c:_int_malloc [/usr/lib/x86_64-linux-gnu/libc.so.6]
+   595,417 ( 1.76%)  ???:openssl_rs::bn::limbs::divide_fallible [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+   588,466 ( 1.74%)  ???:AES_encrypt [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+   433,844 ( 1.28%)  ./elf/../sysdeps/x86_64/dl-machine.h:_dl_relocate_object
+   398,388 ( 1.17%)  ???:openssl_rs::bn::arith::run_mont_ladder [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+   370,746 ( 1.09%)  ./malloc/./malloc/malloc.c:malloc [/usr/lib/x86_64-linux-gnu/libc.so.6]
+   356,402 ( 1.05%)  ???:openssl_rs::context::namemap::namemap_add_name [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+   342,640 ( 1.01%)  ???:OBJ_obj2txt [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+   294,179 ( 0.87%)  ./elf/./elf/do-rel.h:_dl_relocate_object
+   290,832 ( 0.86%)  ???:<std::hash::random::DefaultHasher as core::hash::Hasher>::write [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+   238,193 ( 0.70%)  ???:openssl_rs::bn::limbs::mul_fallible [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+   234,906 ( 0.69%)  ???:<std::hash::random::RandomState as core::hash::BuildHasher>::hash_one::<&alloc::vec::Vec<u8>> [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+   227,884 ( 0.67%)  ./elf/./elf/dl-lookup.c:_dl_lookup_symbol_x [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+   217,302 ( 0.64%)  ./elf/../sysdeps/generic/dl-new-hash.h:_dl_lookup_symbol_x
+   215,788 ( 0.64%)  ./elf/./elf/dl-addr.c:_dl_addr [/usr/lib/x86_64-linux-gnu/libc.so.6]
+   184,956 ( 0.55%)  ./malloc/./malloc/malloc.c:free [/usr/lib/x86_64-linux-gnu/libc.so.6]
+   175,614 ( 0.52%)  ???:OSSL_PARAM_locate [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+   156,095 ( 0.46%)  ./malloc/./malloc/malloc.c:calloc [/usr/lib/x86_64-linux-gnu/libc.so.6]
+   151,231 ( 0.45%)  ???:openssl_rs::context::namemap::ossl_namemap_add_names [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+   141,702 ( 0.42%)  ???:CRYPTO_THREAD_unlock [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+   141,570 ( 0.42%)  ./malloc/./malloc/malloc.c:realloc [/usr/lib/x86_64-linux-gnu/libc.so.6]
+   124,217 ( 0.37%)  /rustc/48a229ceaefd4985c50990b14116b6d856af0985/library/alloc/src/raw_vec/mod.rs:<alloc::raw_vec::RawVecInner>::finish_grow [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+   123,171 ( 0.36%)  ./elf/./elf/dl-reloc.c:_dl_relocate_object [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+   121,275 ( 0.36%)  ./malloc/./malloc/malloc.c:_int_realloc [/usr/lib/x86_64-linux-gnu/libc.so.6]
+   111,168 ( 0.33%)  ./elf/./elf/dl-lookup.c:check_match [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+   100,890 ( 0.30%)  /rustc/48a229ceaefd4985c50990b14116b6d856af0985/library/alloc/src/raw_vec/mod.rs:<alloc::raw_vec::RawVec<u8>>::grow_one [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+    91,747 ( 0.27%)  ./string/../sysdeps/x86_64/multiarch/memset-vec-unaligned-erms.S:__memset_avx2_unaligned_erms [/usr/lib/x86_64-linux-gnu/libc.so.6]
+    85,970 ( 0.25%)  ???:CRYPTO_strdup [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+    85,160 ( 0.25%)  ???:<alloc::raw_vec::RawVecInner>::finish_grow [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+    84,396 ( 0.25%)  ./string/../sysdeps/x86_64/multiarch/memmove-vec-unaligned-erms.S:__memcpy_avx_unaligned_erms [/usr/lib/x86_64-linux-gnu/libc.so.6]
+    81,223 ( 0.24%)  ./string/../sysdeps/x86_64/multiarch/../multiarch/strcmp-sse2.S:strcmp [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+    78,403 ( 0.23%)  ???:CRYPTO_THREAD_read_lock [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+    69,954 ( 0.21%)  ???:CRYPTO_THREAD_write_lock [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+    66,976 ( 0.20%)  ???:openssl_rs::bn::arith::mont_mul_fallible [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+    63,938 ( 0.19%)  ???:<openssl_rs::digest::sha1::ShaCtx as openssl_rs::digest::md32::Md32>::block [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+    62,648 ( 0.18%)  ???:openssl_rs::property::defn_cache::property_defn_hash [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+    61,184 ( 0.18%)  /rustc/48a229ceaefd4985c50990b14116b6d856af0985/library/std/src/sys/alloc/unix.rs:__rustc::__rdl_alloc
+    55,380 ( 0.16%)  ???:openssl_rs::provider::cipher::ossl_cipher_generic_get_params [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+    50,627 ( 0.15%)  ???:openssl_rs::evp::cipher::evp_cipher_from_algorithm [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+    46,124 ( 0.14%)  ???:openssl_rs::context::namemap::name2num_inner [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+    39,398 ( 0.12%)  ???:OBJ_NAME_add [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+    38,955 ( 0.11%)  ???:OPENSSL_sk_insert [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+    38,499 ( 0.11%)  ???:<hashbrown::map::HashMap<alloc::vec::Vec<u8>, i32, std::hash::random::RandomState>>::insert [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+    35,990 ( 0.11%)  ???:OBJ_NAME_get [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+    35,343 ( 0.10%)  ???:<alloc::vec::Vec<(u64, usize)>>::remove [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+    33,539 ( 0.10%)  ???:openssl_rs::runtime::stack::sk_reserve [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+    33,240 ( 0.10%)  ???:<alloc::raw_vec::RawVec<i32>>::grow_one [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+    32,265 ( 0.10%)  ???:OBJ_nid2obj [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+    31,616 ( 0.09%)  /rustc/48a229ceaefd4985c50990b14116b6d856af0985/library/std/src/sys/alloc/unix.rs:__rustc::__rdl_alloc_zeroed
+    31,326 ( 0.09%)  ???:openssl_rs::bn::bignum::from_bytes [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+    30,192 ( 0.09%)  ???:openssl_rs::runtime::sparse_array::ossl_sa_set [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+    30,030 ( 0.09%)  /rustc/48a229ceaefd4985c50990b14116b6d856af0985/library/std/src/sys/alloc/unix.rs:__rustc::__rdl_realloc
+    28,288 ( 0.08%)  ???:openssl_rs::property::store::ossl_method_store_add [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+    27,897 ( 0.08%)  ???:openssl_rs::context::namemap::get_legacy_evp_names [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+    27,686 ( 0.08%)  /rustc/48a229ceaefd4985c50990b14116b6d856af0985/library/alloc/src/alloc.rs:<alloc::raw_vec::RawVecInner>::finish_grow
+    26,688 ( 0.08%)  ???:OSSL_PARAM_set_int32 [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+    26,421 ( 0.08%)  ./malloc/./malloc/arena.c:free
+    24,304 ( 0.07%)  ???:CRYPTO_zalloc [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+    23,815 ( 0.07%)  ./misc/../sysdeps/unix/sysv/linux/x86_64/syscall.S:syscall [/usr/lib/x86_64-linux-gnu/libc.so.6]
+    21,249 ( 0.06%)  ???:<hashbrown::raw::RawTable<(alloc::vec::Vec<u8>, i32)>>::reserve_rehash::<hashbrown::map::make_hasher<alloc::vec::Vec<u8>, i32, std::hash::random::RandomState>::{closure#0}> [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+    20,414 ( 0.06%)  ???:OBJ_NAME_cleanup [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+    19,765 ( 0.06%)  ./string/../sysdeps/x86_64/multiarch/strlen-avx2.S:__strlen_avx2 [/usr/lib/x86_64-linux-gnu/libc.so.6]
+    19,732 ( 0.06%)  ./string/../sysdeps/x86_64/multiarch/memcmp-avx2-movbe.S:__memcmp_avx2_movbe [/usr/lib/x86_64-linux-gnu/libc.so.6]
+    19,396 ( 0.06%)  ???:openssl_rs::evp::cipher::evp_cipher_cache_constants [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+    17,768 ( 0.05%)  ???:CRYPTO_strndup [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+    17,160 ( 0.05%)  /rustc/48a229ceaefd4985c50990b14116b6d856af0985/library/std/src/alloc.rs:__rustc::__rdl_realloc [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+    15,930 ( 0.05%)  /rustc/48a229ceaefd4985c50990b14116b6d856af0985/library/core/src/alloc/layout.rs:<alloc::raw_vec::RawVecInner>::finish_grow
+    15,930 ( 0.05%)  /rustc/48a229ceaefd4985c50990b14116b6d856af0985/library/core/src/cmp.rs:<alloc::raw_vec::RawVec<u8>>::grow_one
+    15,930 ( 0.05%)  /rustc/48a229ceaefd4985c50990b14116b6d856af0985/library/core/src/result.rs:<alloc::raw_vec::RawVec<u8>>::grow_one
+    15,439 ( 0.05%)  ???:openssl_rs::context::namemap::ossl_namemap_stored [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+    15,411 ( 0.05%)  ???:OSSL_LIB_CTX_get_data [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+    15,015 ( 0.04%)  ./malloc/./malloc/arena.c:realloc
+    14,774 ( 0.04%)  ???:OPENSSL_LH_new [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+    14,592 ( 0.04%)  /rustc/48a229ceaefd4985c50990b14116b6d856af0985/library/std/src/alloc.rs:__rustc::__rdl_alloc_zeroed [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+    14,152 ( 0.04%)  ???:OPENSSL_LH_retrieve [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+    14,130 ( 0.04%)  ???:openssl_rs::context::namemap::ossl_namemap_doall_names [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+    13,590 ( 0.04%)  ???:OSSL_PARAM_set_uint64 [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+    12,468 ( 0.04%)  ./malloc/./malloc/malloc.c:alloc_perturb [/usr/lib/x86_64-linux-gnu/libc.so.6]
+    12,312 ( 0.04%)  ???:openssl_rs::evp::fetch::put_evp_method_in_store [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+    11,680 ( 0.03%)  ???:core::ptr::drop_glue::<openssl_rs::runtime::secret::SecretBuf<u64>> [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+    10,750 ( 0.03%)  /rustc/48a229ceaefd4985c50990b14116b6d856af0985/library/std/src/sys/pal/unix/futex.rs:<std::sync::poison::condvar::Condvar>::notify_all
+    10,675 ( 0.03%)  ???:openssl_rs::aes::aes_expand [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+    10,498 ( 0.03%)  ./elf/./elf/dl-version.c:_dl_check_map_versions [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+    10,380 ( 0.03%)  ???:openssl_rs::context::lib_ctx_get_data [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+    10,080 ( 0.03%)  ???:__rustc::__rust_no_alloc_shim_is_unstable_v2 [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+     9,995 ( 0.03%)  ./elf/../sysdeps/generic/ldsodefs.h:do_lookup_x
+     9,436 ( 0.03%)  ???:openssl_rs::evp::digest::evp_md_from_algorithm [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+     9,115 ( 0.03%)  ./elf/./elf/dl-tunables.c:__GI___tunables_init [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+     8,910 ( 0.03%)  ???:OPENSSL_sk_dup [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+     8,592 ( 0.03%)  ./nptl/./nptl/pthread_self.c:pthread_self [/usr/lib/x86_64-linux-gnu/libc.so.6]
+     8,552 ( 0.03%)  /rustc/48a229ceaefd4985c50990b14116b6d856af0985/library/std/src/sys/alloc/unix.rs:__rustc::__rdl_dealloc [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+     8,552 ( 0.03%)  ???:__rustc::__rust_dealloc [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+
+--------------------------------------------------------------------------------
+The following files chosen for auto-annotation could not be found:
+--------------------------------------------------------------------------------
+  ./elf/../sysdeps/generic/dl-new-hash.h
+  ./elf/../sysdeps/generic/ldsodefs.h
+  ./elf/../sysdeps/x86_64/dl-machine.h
+  ./elf/./elf/dl-addr.c
+  ./elf/./elf/dl-lookup.c
+  ./elf/./elf/dl-reloc.c
+  ./elf/./elf/dl-tunables.c
+  ./elf/./elf/dl-version.c
+  ./elf/./elf/do-rel.h
+  ./malloc/./malloc/arena.c
+  ./malloc/./malloc/malloc.c
+  ./misc/../sysdeps/unix/sysv/linux/x86_64/syscall.S
+  ./nptl/./nptl/pthread_self.c
+  ./string/../sysdeps/x86_64/multiarch/../multiarch/strcmp-sse2.S
+  ./string/../sysdeps/x86_64/multiarch/memcmp-avx2-movbe.S
+  ./string/../sysdeps/x86_64/multiarch/memmove-vec-unaligned-erms.S
+  ./string/../sysdeps/x86_64/multiarch/memset-vec-unaligned-erms.S
+  ./string/../sysdeps/x86_64/multiarch/strlen-avx2.S
+  /rustc/48a229ceaefd4985c50990b14116b6d856af0985/library/alloc/src/alloc.rs
+  /rustc/48a229ceaefd4985c50990b14116b6d856af0985/library/alloc/src/raw_vec/mod.rs
+  /rustc/48a229ceaefd4985c50990b14116b6d856af0985/library/core/src/alloc/layout.rs
+  /rustc/48a229ceaefd4985c50990b14116b6d856af0985/library/core/src/cmp.rs
+  /rustc/48a229ceaefd4985c50990b14116b6d856af0985/library/core/src/result.rs
+  /rustc/48a229ceaefd4985c50990b14116b6d856af0985/library/std/src/alloc.rs
+  /rustc/48a229ceaefd4985c50990b14116b6d856af0985/library/std/src/sys/alloc/unix.rs
+  /rustc/48a229ceaefd4985c50990b14116b6d856af0985/library/std/src/sys/pal/unix/futex.rs
+

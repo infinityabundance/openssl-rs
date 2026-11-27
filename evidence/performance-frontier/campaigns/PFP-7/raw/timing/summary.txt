@@ -1,0 +1,28 @@
+rep 1/15
+rep 2/15
+rep 3/15
+rep 4/15
+rep 5/15
+rep 6/15
+rep 7/15
+rep 8/15
+rep 9/15
+rep 10/15
+rep 11/15
+rep 12/15
+rep 13/15
+rep 14/15
+rep 15/15
+latency_ns: candidate median=641681.0 authority median=340410.0 ratio=1.8850 ci95=[1.8841,1.8852]
+  candidate 95% ci of median: (641400.2666666667, 641793.8666666667)  authority: (340374.73333333334, 340498.6666666667)
+blockmed_ns: candidate median=878795.9 authority median=351033.7 ratio=2.5035 ci95=[2.4931,2.5401]
+  candidate 95% ci of median: (877334.3733333333, 892573.6000000001)  authority: (350905.86, 352518.95333333337)
+sustained_mean_ns: candidate median=828886.2 authority median=353289.8 ratio=2.3462 ci95=[2.2754,2.3854]
+  candidate 95% ci of median: (824053.7800000001, 841839.4933333336)  authority: (350963.4, 366748.13333333336)
+candidate rep: {'arm': 'candidate', 'lat': 641224.0, 'med': 645385.0, 'mean': 863826.8, 'blockmed': 894469.8, 'outl': 7, 'n': 205}
+candidate rep: {'arm': 'candidate', 'lat': 642054.0, 'med': 648270.0, 'mean': 867148.2, 'blockmed': 935818.5, 'outl': 18, 'n': 205}
+candidate rep: {'arm': 'candidate', 'lat': 641592.0, 'med': 646854.0, 'mean': 828886.2, 'blockmed': 877558.8, 'outl': 7, 'n': 205}
+candidate outlier calls (of n): [(7, 205), (9, 205), (10, 205), (12, 205), (14, 205), (18, 205)]
+authority outlier calls (of n): [(0, 205), (1, 205), (20, 205)]
+throughput_ops_per_s candidate=1206.4 authority=2830.5 ratio=2.3462
+TIMING_OK

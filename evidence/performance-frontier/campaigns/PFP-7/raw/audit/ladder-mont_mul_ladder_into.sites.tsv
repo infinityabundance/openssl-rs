@@ -1,0 +1,32 @@
+mont_mul_ladder_into	58ce93	jne	58d089 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith20mont_mul_ladder_into+0x229>	xor 0x90(%rsp),%rax	or %r9,%rax	jcc
+mont_mul_ladder_into	58cea9	sete	%al	lea 0x1(,%rsi,2),%rax	cmp %rax,0x80(%rsp)	setcc
+mont_mul_ladder_into	58ceac	setne	%cl	cmp %rax,0x80(%rsp)	sete %al	setcc
+mont_mul_ladder_into	58ceb2	sete	%dl	setne %cl	test %rsi,%rsi	setcc
+mont_mul_ladder_into	58ceb7	jne	58d1bd <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith20mont_mul_ladder_into+0x35d>	sete %dl	or %cl,%dl	jcc
+mont_mul_ladder_into	58cef7	jb	58d090 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith20mont_mul_ladder_into+0x230>	mov (%r12),%r15	cmp $0x2,%r13	jcc
+mont_mul_ladder_into	58cf3d	setb	%sil	xor %esi,%esi	add (%rbx,%r9,8),%rcx	setcc
+mont_mul_ladder_into	58cf6e	je	58d0e7 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith20mont_mul_ladder_into+0x287>	mov %rdx,(%rbx,%rdi,8)	cmp 0x20(%rsp),%r14	jcc
+mont_mul_ladder_into	58cf83	je	58cfd9 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith20mont_mul_ladder_into+0x179>	xor %r9d,%r9d	test %rax,%rax	jcc
+mont_mul_ladder_into	58cf9e	setb	%r10b	xor %r10d,%r10d	add (%rbx,%r9,8),%rsi	setcc
+mont_mul_ladder_into	58cfbb	setb	%sil	xor %esi,%esi	add 0x8(%rbx,%r9,8),%r10	setcc
+mont_mul_ladder_into	58cfd1	jne	58cf90 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith20mont_mul_ladder_into+0x130>	adc %rdx,%rsi	cmp %r9,%r13	jcc
+mont_mul_ladder_into	58cfd7	je	58cff6 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith20mont_mul_ladder_into+0x196>	jne 58cf90 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith20mont_mul_ladder_into+0x130>	test $0x1,%dil	jcc
+mont_mul_ladder_into	58cfe6	setb	%cl	xor %ecx,%ecx	add (%rbx,%r9,8),%rsi	setcc
+mont_mul_ladder_into	58cffc	setb	%al	xor %eax,%eax	add %rsi,(%rbx,%rdi,8)	setcc
+mont_mul_ladder_into	58d02a	je	58cf30 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith20mont_mul_ladder_into+0xd0>	mov $0x1,%r9d	cmp $0x2,%rdi	jcc
+mont_mul_ladder_into	58d03e	setb	%r10b	xor %r10d,%r10d	add (%rbx,%r9,8),%rcx	setcc
+mont_mul_ladder_into	58d05c	setb	%cl	xor %ecx,%ecx	add 0x8(%rbx,%r9,8),%r10	setcc
+mont_mul_ladder_into	58d076	jne	58d030 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith20mont_mul_ladder_into+0x1d0>	adc %rdx,%rcx	cmp $0x1,%rax	jcc
+mont_mul_ladder_into	58d07e	jne	58cf30 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith20mont_mul_ladder_into+0xd0>	lea -0x1(%rdi),%rax	test $0x1,%al	jcc
+mont_mul_ladder_into	58d0a5	setb	%sil	add %rax,(%rbx)	adc (%rbx,%rdi,8),%rcx	setcc
+mont_mul_ladder_into	58d0a9	setb	%al	adc (%rbx,%rdi,8),%rcx	setb %sil	setcc
+mont_mul_ladder_into	58d0cb	setb	%al	add %r8,%rax	adc %rcx,%rdx	setcc
+mont_mul_ladder_into	58d0f3	jne	58d0fb <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith20mont_mul_ladder_into+0x29b>	mov 0x88(%rsp),%rax	cmp $0x1,%rdi	jcc
+mont_mul_ladder_into	58d118	setb	%r11b	mov (%rbx,%rsi,8),%r10	sub (%r12,%rsi,8),%r10	setcc
+mont_mul_ladder_into	58d11f	setb	%cl	setb %r11b	sub %rcx,%r10	setcc
+mont_mul_ladder_into	58d13f	setb	%cl	mov %r10,0x8(%rax,%rsi,8)	lea 0x2(%rsi),%rsi	setcc
+mont_mul_ladder_into	58d148	jne	58d110 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith20mont_mul_ladder_into+0x2b0>	movzbl %cl,%ecx	cmp %rsi,%r9	jcc
+mont_mul_ladder_into	58d14e	je	58d16c <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith20mont_mul_ladder_into+0x30c>	jne 58d110 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith20mont_mul_ladder_into+0x2b0>	test $0x1,%dil	jcc
+mont_mul_ladder_into	58d158	setb	%r10b	mov (%rbx,%rsi,8),%r9	sub (%r12,%rsi,8),%r9	setcc
+mont_mul_ladder_into	58d15f	setb	%cl	setb %r10b	sub %rcx,%r9	setcc
+mont_mul_ladder_into	58d1b9	jne	58d190 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith20mont_mul_ladder_into+0x330>	inc %r9	cmp %r9,%rdi	jcc

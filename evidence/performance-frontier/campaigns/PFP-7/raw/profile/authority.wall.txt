@@ -1,0 +1,48 @@
+LIB /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3
+RESULT authority priv-nopad n=1 min_ns=524093.0 median_ns=524093.0 mean_ns=524093.0
+DONE priv-nopad
+LIB /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3
+RESULT authority priv-nopad n=200 min_ns=340414.0 median_ns=343208.0 mean_ns=349113.4
+DONE priv-nopad
+LIB /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3
+RESULT authority priv-pkcs1 n=1 min_ns=1434312.0 median_ns=1434312.0 mean_ns=1434312.0
+DONE priv-pkcs1
+LIB /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3
+RESULT authority priv-pkcs1 n=200 min_ns=340382.0 median_ns=343358.0 mean_ns=350014.5
+DONE priv-pkcs1
+LIB /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3
+RESULT authority dec-pkcs1 n=1 min_ns=518332.0 median_ns=518332.0 mean_ns=518332.0
+DONE dec-pkcs1
+LIB /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3
+RESULT authority dec-pkcs1 n=200 min_ns=344060.0 median_ns=347431.0 mean_ns=354712.1
+DONE dec-pkcs1
+LIB /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3
+RESULT authority dec-oaep n=1 min_ns=522566.0 median_ns=522566.0 mean_ns=522566.0
+DONE dec-oaep
+LIB /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3
+RESULT authority dec-oaep n=200 min_ns=343649.0 median_ns=346759.0 mean_ns=352529.4
+DONE dec-oaep
+LIB /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3
+RESULT authority priv-nopad n=1 min_ns=358907.0 median_ns=358907.0 mean_ns=358907.0
+DONE noblind
+LIB /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3
+RESULT authority priv-nopad n=200 min_ns=337837.0 median_ns=340377.0 mean_ns=340556.4
+DONE noblind
+LIB /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3
+RESULT authority half n=1 min_ns=166380.0 median_ns=166380.0 mean_ns=166380.0
+DONE half
+LIB /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3
+RESULT authority half n=200 min_ns=165580.0 median_ns=166207.0 mean_ns=167265.2
+DONE half
+LIB /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3
+RESULT authority vrfy n=1 min_ns=13266.0 median_ns=13266.0 mean_ns=13266.0
+DONE vrfy
+LIB /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3
+RESULT authority vrfy n=200 min_ns=12544.0 median_ns=12657.0 mean_ns=12772.9
+DONE vrfy
+LIB /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3
+RESULT authority inverse n=1 min_ns=128595.0 median_ns=128595.0 mean_ns=128595.0
+DONE inverse
+LIB /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3
+RESULT authority inverse n=200 min_ns=128913.0 median_ns=131621.0 mean_ns=133631.8
+DONE inverse

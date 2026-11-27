@@ -1,0 +1,572 @@
+--------------------------------------------------------------------------------
+Profile data file '/work/court/tmp/pfp7/stage/cg-priv.out' (creator: callgrind-3.19.0)
+--------------------------------------------------------------------------------
+I1 cache: 
+D1 cache: 
+LL cache: 
+Timerange: Basic block 0 - 104690933
+Trigger: Program termination
+Profiled target:  /work/court/tmp/pfp7/stage/pfp7_rsa --lib /work/court/tmp/pfp7/build/distribution/libcrypto.so.3 --rsa-der /work/courts/phase18/timing/fixtures/rsa2048.der --mode priv-nopad --iters 60 (PID 234656, part 1)
+Events recorded:  Ir
+Events shown:     Ir
+Event sort order: Ir
+Thresholds:       99.99
+Include dirs:     
+User annotated:   
+Auto-annotation:  on
+
+--------------------------------------------------------------------------------
+Ir                     
+--------------------------------------------------------------------------------
+1,222,455,148 (100.0%)  PROGRAM TOTALS
+
+--------------------------------------------------------------------------------
+Ir                      file:function
+--------------------------------------------------------------------------------
+1,222,455,148 (100.0%)  ???:0x000000000001ab70 [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+1,222,343,594 (99.99%)  ???:(below main) [/work/court/tmp/pfp7/stage/pfp7_rsa]
+1,222,343,583 (99.99%)  ./csu/../csu/libc-start.c:__libc_start_main@@GLIBC_2.34 [/usr/lib/x86_64-linux-gnu/libc.so.6]
+1,222,342,608 (99.99%)  ./csu/../sysdeps/nptl/libc_start_call_main.h:(below main) [/usr/lib/x86_64-linux-gnu/libc.so.6]
+1,222,279,342 (99.99%)  /work/evidence/performance-frontier/campaigns/PFP-7/harness/pfp7_rsa.c:main
+1,222,278,569 (99.99%)  evidence/performance-frontier/campaigns/PFP-7/harness/pfp7_rsa.c:main [/work/court/tmp/pfp7/stage/pfp7_rsa]
+1,205,091,770 (98.58%)  evidence/performance-frontier/campaigns/PFP-7/harness/pfp7_rsa.c:loop_priv [/work/court/tmp/pfp7/stage/pfp7_rsa]
+1,205,062,157 (98.58%)  ???:RSA_private_encrypt [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+1,205,061,857 (98.58%)  ???:openssl_rs::rsa::ossl::rsa_ossl_private_encrypt [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+1,009,486,471 (82.58%)  ???:openssl_rs::bn::arith::mod_exp_core_consttime_from_parts_prepared [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+1,009,389,249 (82.57%)  ???:openssl_rs::bn::arith::run_mont_ladder [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+  981,826,032 (80.32%)  ???:openssl_rs::bn::arith::mont_mul_ladder_into [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+  958,437,311 (78.40%)  ???:openssl_rs::rsa::ossl::rsa_ossl_mod_exp [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+  901,791,503 (73.77%)  ???:BN_mod_exp_mont_consttime [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+  237,957,770 (19.47%)  ???:openssl_rs::bn::blinding::create_param_impl [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+  159,982,454 (13.09%)  ???:BN_mod_exp_mont [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+  129,263,827 (10.57%)  ???:openssl_rs::bn::limbs::mod_inverse_consttime [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+  124,666,649 (10.20%)  ???:BN_BLINDING_convert_ex [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+  122,667,196 (10.03%)  ???:BN_BLINDING_update [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+  119,246,926 ( 9.75%)  ???:openssl_rs::rsa::ossl::rsa_get_blinding [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+  119,221,068 ( 9.75%)  ???:RSA_setup_blinding [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+  119,220,248 ( 9.75%)  ???:BN_BLINDING_create_param [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+   52,086,917 ( 4.26%)  ???:openssl_rs::bn::arith::mod_exp_core [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+   37,134,739 ( 3.04%)  ???:openssl_rs::bn::limbs::rem_fallible [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+   37,104,264 ( 3.04%)  ???:openssl_rs::bn::limbs::divide_fallible [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+   14,911,917 ( 1.22%)  ???:openssl_rs::bn::limbs::mul_fallible [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+   14,723,718 ( 1.20%)  ???:RSA_public_encrypt [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+   14,723,713 ( 1.20%)  ???:openssl_rs::rsa::ossl::rsa_ossl_public_encrypt [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+   11,248,593 ( 0.92%)  ???:openssl_rs::bn::arith::mont_mul_fallible [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+   11,004,483 ( 0.90%)  ???:openssl_rs::rsa::ossl_rsa_padding_add_PKCS1_OAEP_mgf1_ex [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+   10,265,248 ( 0.84%)  ???:openssl_rs::evp::fetch::inner_evp_generic_fetch [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+    8,520,435 ( 0.70%)  ???:BN_mod_mul_montgomery [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+    6,764,046 ( 0.55%)  ???:openssl_rs::evp::digest::evp_md_init_internal [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+    6,758,135 ( 0.55%)  ???:openssl_rs::evp::fetch::evp_generic_fetch [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+    6,741,198 ( 0.55%)  ???:EVP_Digest [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+    6,231,437 ( 0.51%)  ???:openssl_rs::context::namemap::ossl_namemap_stored [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+    4,650,877 ( 0.38%)  ./string/../sysdeps/x86_64/multiarch/memset-vec-unaligned-erms.S:__memset_avx2_unaligned_erms [/usr/lib/x86_64-linux-gnu/libc.so.6]
+    4,411,467 ( 0.36%)  ???:openssl_rs::runtime::obj::name_find [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+    4,365,786 ( 0.36%)  ???:BN_MONT_CTX_set [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+    4,311,590 ( 0.35%)  ???:openssl_rs::bn::limbs::pow2_mod_consttime [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+    4,273,176 ( 0.35%)  ./elf/./elf/dl-error-skeleton.c:_dl_catch_exception'2 [/usr/lib/x86_64-linux-gnu/libc.so.6]
+    4,198,029 ( 0.34%)  ???:OBJ_NAME_do_all [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+    4,185,558 ( 0.34%)  ???:openssl_rs::context::namemap::get_legacy_md_names [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+    4,161,496 ( 0.34%)  ???:RAND_bytes_ex [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+    4,131,751 ( 0.34%)  ???:openssl_rs::rand::rand_lib::rand_new_drbg [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+    4,113,371 ( 0.34%)  ???:openssl_rs::provider::rand::drbg_ctr_instantiate_wrapper [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+    4,112,048 ( 0.34%)  ???:openssl_rs::evp::algorithm::ossl_algorithm_do_all [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+    4,111,933 ( 0.34%)  ???:openssl_rs::provider::activate::ossl_provider_doall_activated [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+    4,098,981 ( 0.34%)  ???:openssl_rs::evp::algorithm::algorithm_do_this [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+    4,093,337 ( 0.33%)  ???:openssl_rs::evp::method_store::ossl_method_construct_this [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+    3,924,756 ( 0.32%)  ???:openssl_rs::rand::rand_lib::ossl_rand_get0_public [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+    3,646,784 ( 0.30%)  ???:openssl_rs::rand::rand_lib::ossl_rand_get0_primary [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+    3,452,343 ( 0.28%)  ???:openssl_rs::provider::rand::drbg_ctr_set_ctx_params_locked [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+    3,367,222 ( 0.28%)  ???:openssl_rs::evp::fetch::construct_evp_method [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+    3,272,959 ( 0.27%)  ???:openssl_rs::context::namemap::get_legacy_evp_names [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+    2,855,911 ( 0.23%)  ???:OBJ_NAME_get [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+    2,852,894 ( 0.23%)  ???:BN_MONT_CTX_set_locked [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+    2,172,166 ( 0.18%)  ./elf/./elf/dl-reloc.c:_dl_relocate_object [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+    2,155,688 ( 0.18%)  ./elf/./elf/dl-error-skeleton.c:_dl_catch_exception [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+    2,150,249 ( 0.18%)  ./elf/./elf/dl-error-skeleton.c:_dl_catch_error [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+    2,148,781 ( 0.18%)  ./dlfcn/./dlfcn/dlerror.c:_dlerror_run [/usr/lib/x86_64-linux-gnu/libc.so.6]
+    2,147,884 ( 0.18%)  ./elf/./elf/dl-error-skeleton.c:_rtld_catch_error [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+    2,133,453 ( 0.17%)  ./dlfcn/./dlfcn/dlopen.c:dlopen@@GLIBC_2.34 [/usr/lib/x86_64-linux-gnu/libc.so.6]
+    2,133,292 ( 0.17%)  ./dlfcn/./dlfcn/dlopen.c:dlopen_doit [/usr/lib/x86_64-linux-gnu/libc.so.6]
+    2,133,266 ( 0.17%)  ./elf/./elf/dl-open.c:_dl_open [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+    2,133,037 ( 0.17%)  ./elf/./elf/dl-open.c:dl_open_worker [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+    2,131,875 ( 0.17%)  ./elf/./elf/dl-open.c:dl_open_worker_begin [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+    2,035,725 ( 0.17%)  ???:openssl_rs::evp::cipher::evp_cipher_from_algorithm [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+    2,002,112 ( 0.16%)  ???:BN_BLINDING_invert_ex [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+    1,946,236 ( 0.16%)  ???:BN_to_montgomery [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+    1,865,403 ( 0.15%)  ???:OBJ_obj2txt [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+    1,848,633 ( 0.15%)  ???:openssl_rs::context::namemap::ossl_namemap_doall_names [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+    1,802,510 ( 0.15%)  ./malloc/./malloc/malloc.c:free [/usr/lib/x86_64-linux-gnu/libc.so.6]
+    1,802,364 ( 0.15%)  ???:__rustc::__rust_dealloc [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+    1,783,952 ( 0.15%)  /rustc/48a229ceaefd4985c50990b14116b6d856af0985/library/std/src/sys/alloc/unix.rs:__rustc::__rdl_dealloc [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+    1,724,348 ( 0.14%)  ???:openssl_rs::context::namemap::namemap_add_name [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+    1,680,475 ( 0.14%)  ???:OPENSSL_init_crypto [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+    1,648,635 ( 0.13%)  ???:openssl_rs::runtime::init::add_all_legacy_methods [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+    1,632,514 ( 0.13%)  ???:OBJ_NAME_add [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+    1,491,707 ( 0.12%)  ???:openssl_rs::evp::cipher::set_legacy_nid [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+    1,429,536 ( 0.12%)  ???:openssl_rs::evp::c_allc::openssl_add_all_ciphers_int [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+    1,376,546 ( 0.11%)  ./malloc/./malloc/malloc.c:_int_free [/usr/lib/x86_64-linux-gnu/libc.so.6]
+    1,336,107 ( 0.11%)  ./elf/./elf/dl-lookup.c:_dl_lookup_symbol_x [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+    1,281,801 ( 0.10%)  ./malloc/./malloc/malloc.c:malloc [/usr/lib/x86_64-linux-gnu/libc.so.6]
+    1,273,761 ( 0.10%)  ???:__rustc::__rust_alloc [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+    1,269,829 ( 0.10%)  ???:<alloc::raw_vec::RawVecInner>::finish_grow [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+    1,256,253 ( 0.10%)  /rustc/48a229ceaefd4985c50990b14116b6d856af0985/library/std/src/alloc.rs:__rustc::__rdl_alloc [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+    1,238,745 ( 0.10%)  /rustc/48a229ceaefd4985c50990b14116b6d856af0985/library/std/src/sys/alloc/unix.rs:__rustc::__rdl_alloc
+    1,237,636 ( 0.10%)  ???:EVP_EncryptUpdate [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+    1,217,072 ( 0.10%)  ???:openssl_rs::provider::cipher::aes_block_encrypt [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+    1,216,828 ( 0.10%)  ???:AES_encrypt [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+    1,048,727 ( 0.09%)  ???:openssl_rs::provider::rand::ctr_update [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+      997,638 ( 0.08%)  ???:openssl_rs::provider::cipher::ossl_cipher_generic_block_update [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+      992,262 ( 0.08%)  ???:openssl_rs::provider::cipher::ossl_cipher_hw_generic_ecb [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+      984,324 ( 0.08%)  ???:openssl_rs::context::namemap::ossl_namemap_add_names [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+      920,637 ( 0.08%)  /rustc/48a229ceaefd4985c50990b14116b6d856af0985/library/alloc/src/raw_vec/mod.rs:<alloc::raw_vec::RawVec<u8>>::grow_one [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+      890,921 ( 0.07%)  ./elf/./elf/dl-lookup.c:do_lookup_x [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+      878,477 ( 0.07%)  ???:openssl_rs::provider::rand::ossl_prov_drbg_generate [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+      834,600 ( 0.07%)  ???:BN_from_montgomery [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+      799,080 ( 0.07%)  ???:openssl_rs::bn::mont::mont_reduce [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+      796,904 ( 0.07%)  ./malloc/./malloc/malloc.c:_int_malloc [/usr/lib/x86_64-linux-gnu/libc.so.6]
+      787,762 ( 0.06%)  /rustc/48a229ceaefd4985c50990b14116b6d856af0985/library/alloc/src/raw_vec/mod.rs:<alloc::raw_vec::RawVecInner>::finish_grow [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+      767,989 ( 0.06%)  ???:core::ptr::drop_glue::<openssl_rs::runtime::secret::SecretBuf<u64>> [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+      716,891 ( 0.06%)  ???:openssl_rs::evp::fetch::put_evp_method_in_store [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+      709,554 ( 0.06%)  ???:BN_priv_rand_range_ex [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+      709,528 ( 0.06%)  ???:openssl_rs::bn::rand::bnrand_range [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+      708,115 ( 0.06%)  ???:openssl_rs::bn::rand::bnrand [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+      696,187 ( 0.06%)  ???:RAND_priv_bytes_ex [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+      678,956 ( 0.06%)  ???:openssl_rs::provider::rand::drbg_ctr_generate [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+      657,611 ( 0.05%)  ???:openssl_rs::provider::rand::ossl_prov_drbg_instantiate [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+      654,629 ( 0.05%)  ???:openssl_rs::evp::rand::evp_rand_generate_locked [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+      651,932 ( 0.05%)  ???:openssl_rs::provider::rand::drbg_ctr_generate_wrapper [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+      647,483 ( 0.05%)  /rustc/48a229ceaefd4985c50990b14116b6d856af0985/library/alloc/src/alloc.rs:<alloc::raw_vec::RawVecInner>::finish_grow
+      526,392 ( 0.04%)  ???:<std::hash::random::RandomState as core::hash::BuildHasher>::hash_one::<&alloc::vec::Vec<u8>> [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+      459,841 ( 0.04%)  ???:__rustc::__rust_alloc_zeroed [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+      457,409 ( 0.04%)  /rustc/48a229ceaefd4985c50990b14116b6d856af0985/library/std/src/alloc.rs:__rustc::__rdl_alloc_zeroed [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+      452,847 ( 0.04%)  ???:openssl_rs::property::store::ossl_method_store_add [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+      449,003 ( 0.04%)  ???:openssl_rs::provider::rand::get_entropy [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+      443,585 ( 0.04%)  ???:openssl_rs::provider::rand::ossl_drbg_get_seed [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+      442,817 ( 0.04%)  /rustc/48a229ceaefd4985c50990b14116b6d856af0985/library/std/src/sys/alloc/unix.rs:__rustc::__rdl_alloc_zeroed
+      435,014 ( 0.04%)  ./elf/../sysdeps/x86_64/dl-machine.h:_dl_relocate_object
+      426,051 ( 0.03%)  ???:openssl_rs::provider::rand::drbg_ctr_instantiate [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+      412,856 ( 0.03%)  ./malloc/./malloc/malloc.c:calloc [/usr/lib/x86_64-linux-gnu/libc.so.6]
+      410,394 ( 0.03%)  ???:openssl_rs::provider::rand::ossl_prov_drbg_reseed_unlocked [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+      407,057 ( 0.03%)  ???:__rustc::__rust_realloc [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+      404,910 ( 0.03%)  /rustc/48a229ceaefd4985c50990b14116b6d856af0985/library/std/src/alloc.rs:__rustc::__rdl_realloc [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+      387,734 ( 0.03%)  /rustc/48a229ceaefd4985c50990b14116b6d856af0985/library/std/src/sys/alloc/unix.rs:__rustc::__rdl_realloc
+      358,052 ( 0.03%)  ???:BN_bin2bn [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+      357,676 ( 0.03%)  ./malloc/./malloc/malloc.c:realloc [/usr/lib/x86_64-linux-gnu/libc.so.6]
+      356,419 ( 0.03%)  ???:openssl_rs::bn::bignum::from_bytes [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+      350,575 ( 0.03%)  ???:openssl_rs::provider::rand::ctr_BCC_update [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+      342,210 ( 0.03%)  /rustc/48a229ceaefd4985c50990b14116b6d856af0985/library/compiler-builtins/compiler-builtins/src/macros.rs:__udivti3 [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+      294,682 ( 0.02%)  ???:openssl_rs::evp::digest::evp_md_from_algorithm [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+      294,179 ( 0.02%)  ./elf/./elf/do-rel.h:_dl_relocate_object
+      292,776 ( 0.02%)  ???:openssl_rs::evp::cipher::evp_cipher_cache_constants [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+      291,192 ( 0.02%)  ???:<std::hash::random::DefaultHasher as core::hash::Hasher>::write [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+      276,289 ( 0.02%)  ???:openssl_rs::rand::rand_lib::ossl_rand_get0_private [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+      275,202 ( 0.02%)  ???:EVP_CipherUpdate [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+      272,524 ( 0.02%)  ./string/../sysdeps/x86_64/multiarch/memmove-vec-unaligned-erms.S:__memcpy_avx_unaligned_erms [/usr/lib/x86_64-linux-gnu/libc.so.6]
+      263,770 ( 0.02%)  ???:openssl_rs::provider::cipher::ossl_cipher_generic_get_params [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+      252,509 ( 0.02%)  ???:<hashbrown::map::HashMap<alloc::vec::Vec<u8>, i32, std::hash::random::RandomState>>::insert [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+      243,882 ( 0.02%)  ???:CRYPTO_THREAD_unlock [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+      235,630 ( 0.02%)  ???:openssl_rs::provider::cipher::ossl_cipher_generic_stream_update [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+      235,441 ( 0.02%)  ???:openssl_rs::provider::cipher::ossl_cipher_hw_generic_ctr [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+      235,266 ( 0.02%)  ???:CRYPTO_ctr128_encrypt [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+      232,500 ( 0.02%)  ???:BN_mul [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+      228,810 ( 0.02%)  ???:openssl_rs::runtime::alloc::try_zeroed::<u64> [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+      225,568 ( 0.02%)  ???:openssl_rs::evp::digest::set_legacy_nid [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+      220,318 ( 0.02%)  ???:openssl_rs::context::namemap::name2num_inner [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+      219,082 ( 0.02%)  ???:openssl_rs::evp::c_alld::openssl_add_all_digests_int [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+      217,302 ( 0.02%)  ./elf/../sysdeps/generic/dl-new-hash.h:_dl_lookup_symbol_x
+      216,766 ( 0.02%)  ./dlfcn/./dlfcn/dladdr.c:dladdr@@GLIBC_2.34 [/usr/lib/x86_64-linux-gnu/libc.so.6]
+      216,759 ( 0.02%)  ./elf/./elf/dl-addr.c:_dl_addr [/usr/lib/x86_64-linux-gnu/libc.so.6]
+      215,842 ( 0.02%)  ???:openssl_rs::provider::rand::ossl_prov_drbg_generate'2 [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+      214,964 ( 0.02%)  ???:BN_bn2binpad [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+      210,057 ( 0.02%)  ???:EVP_add_digest [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+      200,945 ( 0.02%)  ./malloc/./malloc/malloc.c:_int_realloc [/usr/lib/x86_64-linux-gnu/libc.so.6]
+      189,294 ( 0.02%)  ???:openssl_rs::provider::rand::drbg_ctr_reseed [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+      185,827 ( 0.02%)  ./elf/./elf/dl-lookup.c:check_match [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+      182,330 ( 0.01%)  ???:OSSL_PARAM_locate [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+      179,831 ( 0.01%)  ???:openssl_rs::runtime::mem::default_malloc [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+      162,472 ( 0.01%)  ???:<alloc::raw_vec::RawVec<i32>>::grow_one [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+      161,228 ( 0.01%)  ???:CRYPTO_zalloc [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+      136,884 ( 0.01%)  /rustc/48a229ceaefd4985c50990b14116b6d856af0985/library/compiler-builtins/compiler-builtins/src/int/specialized_div_rem/asymmetric.rs:__udivti3
+      136,884 ( 0.01%)  /rustc/48a229ceaefd4985c50990b14116b6d856af0985/library/compiler-builtins/compiler-builtins/src/int/specialized_div_rem/mod.rs:__udivti3
+      132,035 ( 0.01%)  ???:CRYPTO_strdup [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+      128,614 ( 0.01%)  ???:openssl_rs::runtime::sparse_array::ossl_sa_set [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+      124,565 ( 0.01%)  ???:OPENSSL_sk_insert [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+      123,113 ( 0.01%)  ???:<hashbrown::raw::RawTable<(alloc::vec::Vec<u8>, i32)>>::reserve_rehash::<hashbrown::map::make_hasher<alloc::vec::Vec<u8>, i32, std::hash::random::RandomState>::{closure#0}> [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+      123,054 ( 0.01%)  ???:openssl_rs::property::defn_cache::ossl_prop_defn_get [/work/court/tmp/pfp7/build/distribution/libcrypto.so.3]
+      111,154 ( 0.01%)  ./elf/./elf/rtld.c:_dl_start [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+
+--------------------------------------------------------------------------------
+-- Auto-annotated source: evidence/performance-frontier/campaigns/PFP-7/harness/pfp7_rsa.c
+--------------------------------------------------------------------------------
+Ir             
+
+-- line 59 ----------------------------------------
+    .               int (*BN_mod_exp_mont)(BIGNUM *, const BIGNUM *, const BIGNUM *,
+    .                                      const BIGNUM *, BN_CTX *, BN_MONT_CTX *);
+    .               BIGNUM *(*BN_mod_inverse)(BIGNUM *, const BIGNUM *, const BIGNUM *, BN_CTX *);
+    .           } api_t;
+    .           
+    .           static api_t api;
+    .           
+    .           static void *need_sym(const char *name)
+   42 ( 0.00%)  {
+   88 ( 0.00%)      void *p = dlsym(api.h, name);
+16,636 ( 0.00%)  => ./dlfcn/./dlfcn/dlsym.c:dlsym@@GLIBC_2.34 (21x)
+  664 ( 0.00%)  => ./elf/../sysdeps/x86_64/dl-trampoline.h:_dl_runtime_resolve_xsave (1x)
+   42 ( 0.00%)      if (p == NULL) {
+    .                   fprintf(stderr, "pfp7: missing symbol %s: %s\n", name, dlerror());
+    .                   exit(2);
+    .               }
+    .               return p;
+   42 ( 0.00%)  }
+    .           
+    .           #define LOAD(field, name) do { *(void **)(&api.field) = need_sym(name); } while (0)
+    .           
+    .           static void load_api(void)
+    .           {
+    3 ( 0.00%)      LOAD(d2i_RSAPrivateKey, "d2i_RSAPrivateKey");
+  848 ( 0.00%)  => evidence/performance-frontier/campaigns/PFP-7/harness/pfp7_rsa.c:need_sym (1x)
+    3 ( 0.00%)      LOAD(RSA_free, "RSA_free");
+  741 ( 0.00%)  => evidence/performance-frontier/campaigns/PFP-7/harness/pfp7_rsa.c:need_sym (1x)
+    3 ( 0.00%)      LOAD(RSA_size, "RSA_size");
+  733 ( 0.00%)  => evidence/performance-frontier/campaigns/PFP-7/harness/pfp7_rsa.c:need_sym (1x)
+    3 ( 0.00%)      LOAD(RSA_private_encrypt, "RSA_private_encrypt");
+  865 ( 0.00%)  => evidence/performance-frontier/campaigns/PFP-7/harness/pfp7_rsa.c:need_sym (1x)
+    3 ( 0.00%)      LOAD(RSA_private_decrypt, "RSA_private_decrypt");
+  839 ( 0.00%)  => evidence/performance-frontier/campaigns/PFP-7/harness/pfp7_rsa.c:need_sym (1x)
+    3 ( 0.00%)      LOAD(RSA_public_encrypt, "RSA_public_encrypt");
+  831 ( 0.00%)  => evidence/performance-frontier/campaigns/PFP-7/harness/pfp7_rsa.c:need_sym (1x)
+    3 ( 0.00%)      LOAD(RSA_blinding_off, "RSA_blinding_off");
+  843 ( 0.00%)  => evidence/performance-frontier/campaigns/PFP-7/harness/pfp7_rsa.c:need_sym (1x)
+    3 ( 0.00%)      LOAD(RSA_get0_n, "RSA_get0_n");
+  786 ( 0.00%)  => evidence/performance-frontier/campaigns/PFP-7/harness/pfp7_rsa.c:need_sym (1x)
+    3 ( 0.00%)      LOAD(RSA_get0_e, "RSA_get0_e");
+  769 ( 0.00%)  => evidence/performance-frontier/campaigns/PFP-7/harness/pfp7_rsa.c:need_sym (1x)
+    3 ( 0.00%)      LOAD(RSA_get0_factors, "RSA_get0_factors");
+  822 ( 0.00%)  => evidence/performance-frontier/campaigns/PFP-7/harness/pfp7_rsa.c:need_sym (1x)
+    3 ( 0.00%)      LOAD(RSA_get0_crt_params, "RSA_get0_crt_params");
+  871 ( 0.00%)  => evidence/performance-frontier/campaigns/PFP-7/harness/pfp7_rsa.c:need_sym (1x)
+    3 ( 0.00%)      LOAD(BN_new, "BN_new");
+  778 ( 0.00%)  => evidence/performance-frontier/campaigns/PFP-7/harness/pfp7_rsa.c:need_sym (1x)
+    3 ( 0.00%)      LOAD(BN_free, "BN_free");
+  783 ( 0.00%)  => evidence/performance-frontier/campaigns/PFP-7/harness/pfp7_rsa.c:need_sym (1x)
+    3 ( 0.00%)      LOAD(BN_dup, "BN_dup");
+  762 ( 0.00%)  => evidence/performance-frontier/campaigns/PFP-7/harness/pfp7_rsa.c:need_sym (1x)
+    3 ( 0.00%)      LOAD(BN_bin2bn, "BN_bin2bn");
+  752 ( 0.00%)  => evidence/performance-frontier/campaigns/PFP-7/harness/pfp7_rsa.c:need_sym (1x)
+    3 ( 0.00%)      LOAD(BN_CTX_new, "BN_CTX_new");
+  796 ( 0.00%)  => evidence/performance-frontier/campaigns/PFP-7/harness/pfp7_rsa.c:need_sym (1x)
+    3 ( 0.00%)      LOAD(BN_CTX_free, "BN_CTX_free");
+  769 ( 0.00%)  => evidence/performance-frontier/campaigns/PFP-7/harness/pfp7_rsa.c:need_sym (1x)
+    3 ( 0.00%)      LOAD(BN_mod_exp_mont_consttime, "BN_mod_exp_mont_consttime");
+  896 ( 0.00%)  => evidence/performance-frontier/campaigns/PFP-7/harness/pfp7_rsa.c:need_sym (1x)
+    3 ( 0.00%)      LOAD(BN_mod_exp_mont, "BN_mod_exp_mont");
+  799 ( 0.00%)  => evidence/performance-frontier/campaigns/PFP-7/harness/pfp7_rsa.c:need_sym (1x)
+    3 ( 0.00%)      LOAD(BN_mod_inverse, "BN_mod_inverse");
+  785 ( 0.00%)  => evidence/performance-frontier/campaigns/PFP-7/harness/pfp7_rsa.c:need_sym (1x)
+    .           }
+    .           
+    .           static double now_ns(void)
+    .           {
+    .               struct timespec ts;
+  484 ( 0.00%)      clock_gettime(CLOCK_MONOTONIC, &ts);
+1,200 ( 0.00%)  => ./time/../sysdeps/unix/sysv/linux/clock_gettime.c:clock_gettime@@GLIBC_2.17 (120x)
+  715 ( 0.00%)  => ./elf/../sysdeps/x86_64/dl-trampoline.h:_dl_runtime_resolve_xsave (1x)
+  780 ( 0.00%)      return (double)ts.tv_sec * 1e9 + (double)ts.tv_nsec;
+    .           }
+    .           
+    .           static unsigned char *read_file(const char *path, long *len)
+    .           {
+    9 ( 0.00%)      FILE *f = fopen(path, "rb");
+  645 ( 0.00%)  => ./elf/../sysdeps/x86_64/dl-trampoline.h:_dl_runtime_resolve_xsave (1x)
+  599 ( 0.00%)  => ./libio/./libio/iofopen.c:fopen@@GLIBC_2.2.5 (1x)
+    .               unsigned char *buf;
+    .               long n;
+    2 ( 0.00%)      if (f == NULL) {
+    .                   return NULL;
+    .               }
+    9 ( 0.00%)      fseek(f, 0, SEEK_END);
+  645 ( 0.00%)  => ./elf/../sysdeps/x86_64/dl-trampoline.h:_dl_runtime_resolve_xsave (1x)
+  541 ( 0.00%)  => ./libio/./libio/fseek.c:fseek (1x)
+    8 ( 0.00%)      n = ftell(f);
+  679 ( 0.00%)  => ./elf/../sysdeps/x86_64/dl-trampoline.h:_dl_runtime_resolve_xsave (1x)
+  110 ( 0.00%)  => ./libio/./libio/ioftell.c:ftell (1x)
+    5 ( 0.00%)      fseek(f, 0, SEEK_SET);
+  186 ( 0.00%)  => ./libio/./libio/fseek.c:fseek (1x)
+    8 ( 0.00%)      buf = malloc((size_t)n);
+  649 ( 0.00%)  => ./elf/../sysdeps/x86_64/dl-trampoline.h:_dl_runtime_resolve_xsave (1x)
+  157 ( 0.00%)  => ./malloc/./malloc/malloc.c:malloc (1x)
+   14 ( 0.00%)      if (buf == NULL || fread(buf, 1, (size_t)n, f) != (size_t)n) {
+  653 ( 0.00%)  => ./elf/../sysdeps/x86_64/dl-trampoline.h:_dl_runtime_resolve_xsave (1x)
+  257 ( 0.00%)  => ./libio/./libio/iofread.c:fread (1x)
+    .                   free(buf);
+    .                   fclose(f);
+    .                   return NULL;
+    .               }
+    7 ( 0.00%)      fclose(f);
+  671 ( 0.00%)  => ./elf/../sysdeps/x86_64/dl-trampoline.h:_dl_runtime_resolve_xsave (1x)
+  531 ( 0.00%)  => ./libio/./libio/iofclose.c:fclose@@GLIBC_2.2.5 (1x)
+    .               *len = n;
+    .               return buf;
+    .           }
+    .           
+    .           static int cmp_double(const void *a, const void *b)
+    .           {
+  556 ( 0.00%)      double x = *(const double *)a, y = *(const double *)b;
+1,946 ( 0.00%)      return (x > y) - (x < y);
+  278 ( 0.00%)  }
+    .           
+    .           static void report(const char *mode, double *s, int n)
+   11 ( 0.00%)  {
+    5 ( 0.00%)      double *t = malloc(sizeof(double) * (size_t)n);
+  668 ( 0.00%)  => ./malloc/./malloc/malloc.c:malloc (1x)
+    .               int i;
+    2 ( 0.00%)      double sum = 0.0;
+    9 ( 0.00%)      memcpy(t, s, sizeof(double) * (size_t)n);
+  806 ( 0.00%)  => ./elf/../sysdeps/x86_64/dl-trampoline.h:_dl_runtime_resolve_xsave (1x)
+   76 ( 0.00%)  => ./string/../sysdeps/x86_64/multiarch/memmove-vec-unaligned-erms.S:__memcpy_avx_unaligned_erms (1x)
+   10 ( 0.00%)      qsort(t, (size_t)n, sizeof(double), cmp_double);
+12,313 ( 0.00%)  => ./stdlib/./stdlib/msort.c:qsort (1x)
+  621 ( 0.00%)  => ./elf/../sysdeps/x86_64/dl-trampoline.h:_dl_runtime_resolve_xsave (1x)
+  184 ( 0.00%)      for (i = 0; i < n; i++) {
+   60 ( 0.00%)          sum += s[i];
+    .               }
+    9 ( 0.00%)      printf("RESULT %s n=%d min_ns=%.1f median_ns=%.1f mean_ns=%.1f\n",
+8,950 ( 0.00%)  => ./stdio-common/./stdio-common/printf.c:printf (1x)
+    7 ( 0.00%)             mode, n, t[0], t[n / 2], sum / (double)n);
+    7 ( 0.00%)      fflush(stdout);
+  644 ( 0.00%)  => ./elf/../sysdeps/x86_64/dl-trampoline.h:_dl_runtime_resolve_xsave (1x)
+  183 ( 0.00%)  => ./libio/./libio/iofflush.c:fflush (1x)
+    7 ( 0.00%)      free(t);
+  623 ( 0.00%)  => ./elf/../sysdeps/x86_64/dl-trampoline.h:_dl_runtime_resolve_xsave (1x)
+   88 ( 0.00%)  => ./malloc/./malloc/malloc.c:free (1x)
+    7 ( 0.00%)  }
+    .           
+    .           /* Independent-ish private operations: successive calls share only the cached
+    .            * blinding; the operand is fixed, so this is a saturated single-thread
+    .            * throughput loop, not a latency chain. */
+    .           static int loop_priv(RSA *rsa, int iters, int padding, unsigned char *in,
+    .                                unsigned char *out, int len)
+   15 ( 0.00%)  {
+    7 ( 0.00%)      double *s = malloc(sizeof(double) * (size_t)(iters > 0 ? iters : 1));
+  164 ( 0.00%)  => ./malloc/./malloc/malloc.c:malloc (1x)
+    .               int i, rc = 0;
+    6 ( 0.00%)      int flen = (padding == RSA_NO_PADDING) ? len : 32;
+    2 ( 0.00%)      if (s == NULL) {
+    .                   return 0;
+    .               }
+  182 ( 0.00%)      for (i = 0; i < iters; i++) {
+    .                   double t0 = now_ns();
+  420 ( 0.00%)          int r = api.RSA_private_encrypt(flen, in, out, rsa, padding);
+1,205,062,157 (98.58%)  => ???:RSA_private_encrypt (60x)
+    .                   double t1 = now_ns();
+  120 ( 0.00%)          if (r != len) {
+    .                       fprintf(stderr, "pfp7: private_encrypt rc=%d\n", r);
+    .                       free(s);
+    .                       return 0;
+    .                   }
+  120 ( 0.00%)          s[i] = t1 - t0;
+    .               }
+    7 ( 0.00%)      report(padding == RSA_NO_PADDING ? "priv-nopad" : "priv-pkcs1", s, iters);
+25,290 ( 0.00%)  => evidence/performance-frontier/campaigns/PFP-7/harness/pfp7_rsa.c:report (1x)
+    .               rc = 1;
+    3 ( 0.00%)      free(s);
+   88 ( 0.00%)  => ./malloc/./malloc/malloc.c:free (1x)
+    2 ( 0.00%)      return rc;
+    8 ( 0.00%)  }
+    .           
+    .           static int loop_dec(RSA *rsa, int iters, int padding, unsigned char *ct,
+    .                               unsigned char *pt, int len, const char *tag)
+    .           {
+    .               double *s = malloc(sizeof(double) * (size_t)(iters > 0 ? iters : 1));
+    .               int i;
+    .               if (s == NULL) {
+    .                   return 0;
+-- line 188 ----------------------------------------
+-- line 334 ----------------------------------------
+    .               api.BN_free(val);
+    .               if (ctx != NULL) {
+    .                   api.BN_CTX_free(ctx);
+    .               }
+    .               return ok;
+    .           }
+    .           
+    .           int main(int argc, char **argv)
+    7 ( 0.00%)  {
+    7 ( 0.00%)      const char *lib = NULL, *der_path = NULL, *mode = NULL;
+    2 ( 0.00%)      int iters = 1, i, ok = 0;
+    .               long der_len = 0;
+    .               unsigned char *der = NULL, *in = NULL, *out = NULL, *ct = NULL, *pt = NULL;
+    .               const unsigned char *q;
+    .               RSA *rsa = NULL;
+    .               int len;
+    .           
+   20 ( 0.00%)      for (i = 1; i < argc; i++) {
+   34 ( 0.00%)          if (strcmp(argv[i], "--lib") == 0 && i + 1 < argc) {
+  654 ( 0.00%)  => ./elf/../sysdeps/x86_64/dl-trampoline.h:_dl_runtime_resolve_xsave (1x)
+   80 ( 0.00%)  => ./string/../sysdeps/x86_64/multiarch/strcmp-avx2.S:__strcmp_avx2 (4x)
+    3 ( 0.00%)              lib = argv[++i];
+   20 ( 0.00%)          } else if (strcmp(argv[i], "--rsa-der") == 0 && i + 1 < argc) {
+   60 ( 0.00%)  => ./string/../sysdeps/x86_64/multiarch/strcmp-avx2.S:__strcmp_avx2 (3x)
+    3 ( 0.00%)              der_path = argv[++i];
+   16 ( 0.00%)          } else if (strcmp(argv[i], "--mode") == 0 && i + 1 < argc) {
+   40 ( 0.00%)  => ./string/../sysdeps/x86_64/multiarch/strcmp-avx2.S:__strcmp_avx2 (2x)
+    4 ( 0.00%)              mode = argv[++i];
+    8 ( 0.00%)          } else if (strcmp(argv[i], "--iters") == 0 && i + 1 < argc) {
+   20 ( 0.00%)  => ./string/../sysdeps/x86_64/multiarch/strcmp-avx2.S:__strcmp_avx2 (1x)
+    2 ( 0.00%)              iters = atoi(argv[++i]);
+    .                   } else {
+    .                       fprintf(stderr, "usage: %s --lib <dso> --rsa-der <der> --mode <m> "
+    .                               "[--iters N]\n", argv[0]);
+    .                       return 2;
+    .                   }
+    .               }
+    9 ( 0.00%)      if (lib == NULL || der_path == NULL || mode == NULL) {
+    .                   fprintf(stderr, "pfp7: --lib, --rsa-der and --mode are required\n");
+    .                   return 2;
+    .               }
+    .           
+    9 ( 0.00%)      api.h = dlopen(lib, RTLD_NOW | RTLD_LOCAL);
+2,133,453 ( 0.17%)  => ./dlfcn/./dlfcn/dlopen.c:dlopen@@GLIBC_2.34 (1x)
+  868 ( 0.00%)  => ./elf/../sysdeps/x86_64/dl-trampoline.h:_dl_runtime_resolve_xsave (1x)
+    2 ( 0.00%)      if (api.h == NULL) {
+    .                   fprintf(stderr, "pfp7: dlopen: %s\n", dlerror());
+    .                   return 2;
+    .               }
+    .               {
+    .                   Dl_info info;
+   15 ( 0.00%)          if (dladdr(need_sym("BN_new"), &info) != 0) {
+216,766 ( 0.02%)  => ./dlfcn/./dlfcn/dladdr.c:dladdr@@GLIBC_2.34 (1x)
+1,446 ( 0.00%)  => evidence/performance-frontier/campaigns/PFP-7/harness/pfp7_rsa.c:need_sym (1x)
+  660 ( 0.00%)  => ./elf/../sysdeps/x86_64/dl-trampoline.h:_dl_runtime_resolve_xsave (1x)
+   10 ( 0.00%)              printf("LIB %s\n", info.dli_fname);
+  617 ( 0.00%)  => ./elf/../sysdeps/x86_64/dl-trampoline.h:_dl_runtime_resolve_xsave (1x)
+  941 ( 0.00%)  => ./stdio-common/./stdio-common/printf.c:printf (1x)
+    .                   }
+    .               }
+    .               load_api();
+    .           
+    .               der = read_file(der_path, &der_len);
+    .               if (der == NULL) {
+    .                   fprintf(stderr, "pfp7: cannot read %s\n", der_path);
+    .                   goto out;
+    .               }
+    1 ( 0.00%)      q = der;
+    5 ( 0.00%)      rsa = api.d2i_RSAPrivateKey(NULL, &q, der_len);
+65,351 ( 0.01%)  => ???:d2i_RSAPrivateKey (1x)
+    2 ( 0.00%)      if (rsa == NULL) {
+    .                   fprintf(stderr, "pfp7: d2i_RSAPrivateKey failed\n");
+    .                   goto out;
+    .               }
+    4 ( 0.00%)      len = api.RSA_size(rsa);
+   46 ( 0.00%)  => ???:RSA_size (1x)
+    9 ( 0.00%)      in = calloc(1, (size_t)len);
+  639 ( 0.00%)  => ./elf/../sysdeps/x86_64/dl-trampoline.h:_dl_runtime_resolve_xsave (1x)
+  227 ( 0.00%)  => ./malloc/./malloc/malloc.c:calloc (1x)
+    4 ( 0.00%)      out = malloc((size_t)len);
+  171 ( 0.00%)  => ./malloc/./malloc/malloc.c:malloc (1x)
+    4 ( 0.00%)      ct = malloc((size_t)len);
+  171 ( 0.00%)  => ./malloc/./malloc/malloc.c:malloc (1x)
+    4 ( 0.00%)      pt = malloc((size_t)len);
+  171 ( 0.00%)  => ./malloc/./malloc/malloc.c:malloc (1x)
+    8 ( 0.00%)      if (in == NULL || out == NULL || ct == NULL || pt == NULL) {
+    .                   goto out;
+    .               }
+    .               /* Valid, deterministic inputs: 0x00 || 0x02 || non-zero pad || 0x00 || msg */
+    2 ( 0.00%)      in[0] = 0x00;
+    .               in[1] = 0x02;
+  957 ( 0.00%)      for (i = 2; i < len - 16; i++) {
+1,193 ( 0.00%)          in[i] = (unsigned char)(1 + (i * 7) % 255);
+    .               }
+    3 ( 0.00%)      in[len - 17] = 0x00;
+    3 ( 0.00%)      for (i = len - 16; i < len; i++) {
+   38 ( 0.00%)          in[i] = (unsigned char)(0xa0 + (i % 32));
+    .               }
+   19 ( 0.00%)      if (api.RSA_public_encrypt(16, in + len - 16, ct, rsa,
+14,723,718 ( 1.20%)  => ???:RSA_public_encrypt (1x)
+    .                                          RSA_PKCS1_OAEP_PADDING) <= 0) {
+    .                   fprintf(stderr, "pfp7: public_encrypt failed\n");
+    .                   goto out;
+    .               }
+    .           
+    6 ( 0.00%)      if (strcmp(mode, "priv-nopad") == 0) {
+   20 ( 0.00%)  => ./string/../sysdeps/x86_64/multiarch/strcmp-avx2.S:__strcmp_avx2 (1x)
+    .                   ok = loop_priv(rsa, iters, RSA_NO_PADDING, in, out, len);
+    .               } else if (strcmp(mode, "priv-pkcs1") == 0) {
+    .                   ok = loop_priv(rsa, iters, RSA_PKCS1_PADDING, in, out, len);
+    .               } else if (strcmp(mode, "dec-pkcs1") == 0) {
+    .                   ok = loop_dec(rsa, iters, RSA_PKCS1_PADDING, ct, pt, len, "dec-pkcs1");
+    .               } else if (strcmp(mode, "dec-oaep") == 0) {
+    .                   ok = loop_dec(rsa, iters, RSA_PKCS1_OAEP_PADDING, ct, pt, len, "dec-oaep");
+    .               } else if (strcmp(mode, "noblind") == 0) {
+    .                   api.RSA_blinding_off(rsa);
+    8 ( 0.00%)          ok = loop_priv(rsa, iters, RSA_NO_PADDING, in, out, len);
+1,205,091,770 (98.58%)  => evidence/performance-frontier/campaigns/PFP-7/harness/pfp7_rsa.c:loop_priv (1x)
+    .               } else if (strcmp(mode, "half") == 0) {
+    .                   ok = loop_half(rsa, iters);
+    .               } else if (strcmp(mode, "vrfy") == 0) {
+    .                   ok = loop_vrfy(rsa, iters);
+    .               } else if (strcmp(mode, "inverse") == 0) {
+    .                   ok = loop_inverse(rsa, iters);
+    .               } else {
+    .                   fprintf(stderr, "pfp7: unknown mode %s\n", mode);
+    .               }
+    .           
+    .           out:
+    3 ( 0.00%)      free(der);
+  131 ( 0.00%)  => ./malloc/./malloc/malloc.c:free (1x)
+    3 ( 0.00%)      free(in);
+  136 ( 0.00%)  => ./malloc/./malloc/malloc.c:free (1x)
+    3 ( 0.00%)      free(out);
+  165 ( 0.00%)  => ./malloc/./malloc/malloc.c:free (1x)
+    3 ( 0.00%)      free(ct);
+  165 ( 0.00%)  => ./malloc/./malloc/malloc.c:free (1x)
+    3 ( 0.00%)      free(pt);
+  192 ( 0.00%)  => ./malloc/./malloc/malloc.c:free (1x)
+    .               if (rsa != NULL) {
+    2 ( 0.00%)          api.RSA_free(rsa);
+14,138 ( 0.00%)  => ???:RSA_free (1x)
+    .               }
+    8 ( 0.00%)      printf("%s %s\n", ok ? "DONE" : "FAILED", mode != NULL ? mode : "-");
+  762 ( 0.00%)  => ./stdio-common/./stdio-common/printf.c:printf (1x)
+    4 ( 0.00%)      return ok ? 0 : 1;
+    8 ( 0.00%)  }
+
+--------------------------------------------------------------------------------
+-- Auto-annotated source: /work/evidence/performance-frontier/campaigns/PFP-7/harness/pfp7_rsa.c
+--------------------------------------------------------------------------------
+  No information has been collected for /work/evidence/performance-frontier/campaigns/PFP-7/harness/pfp7_rsa.c
+
+--------------------------------------------------------------------------------
+The following files chosen for auto-annotation could not be found:
+--------------------------------------------------------------------------------
+  ./csu/../csu/libc-start.c
+  ./csu/../sysdeps/nptl/libc_start_call_main.h
+  ./dlfcn/./dlfcn/dladdr.c
+  ./dlfcn/./dlfcn/dlerror.c
+  ./dlfcn/./dlfcn/dlopen.c
+  ./elf/../sysdeps/generic/dl-new-hash.h
+  ./elf/../sysdeps/x86_64/dl-machine.h
+  ./elf/./elf/dl-addr.c
+  ./elf/./elf/dl-error-skeleton.c
+  ./elf/./elf/dl-lookup.c
+  ./elf/./elf/dl-open.c
+  ./elf/./elf/dl-reloc.c
+  ./elf/./elf/do-rel.h
+  ./elf/./elf/rtld.c
+  ./malloc/./malloc/malloc.c
+  ./string/../sysdeps/x86_64/multiarch/memmove-vec-unaligned-erms.S
+  ./string/../sysdeps/x86_64/multiarch/memset-vec-unaligned-erms.S
+  /rustc/48a229ceaefd4985c50990b14116b6d856af0985/library/alloc/src/alloc.rs
+  /rustc/48a229ceaefd4985c50990b14116b6d856af0985/library/alloc/src/raw_vec/mod.rs
+  /rustc/48a229ceaefd4985c50990b14116b6d856af0985/library/compiler-builtins/compiler-builtins/src/int/specialized_div_rem/asymmetric.rs
+  /rustc/48a229ceaefd4985c50990b14116b6d856af0985/library/compiler-builtins/compiler-builtins/src/int/specialized_div_rem/mod.rs
+  /rustc/48a229ceaefd4985c50990b14116b6d856af0985/library/compiler-builtins/compiler-builtins/src/macros.rs
+  /rustc/48a229ceaefd4985c50990b14116b6d856af0985/library/std/src/alloc.rs
+  /rustc/48a229ceaefd4985c50990b14116b6d856af0985/library/std/src/sys/alloc/unix.rs
+
+--------------------------------------------------------------------------------
+Ir             
+--------------------------------------------------------------------------------
+8,068 ( 0.00%)  events annotated
+

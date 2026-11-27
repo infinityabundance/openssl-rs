@@ -1,0 +1,110 @@
+{
+ "artefacts": {
+  "authority_dso": {
+   "build_id": "5b4871ce9d78edeafc96f143d7d6697d943ad804",
+   "path": "forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+   "sha256": "611e511db4273c4b6b522031fd171efce71b80661bb8310c2a21dfd18ec0efd2",
+   "size_bytes": 7295816
+  },
+  "crate_archive": {
+   "build_id": null,
+   "path": "court/tmp/pfp7/build/target/release/libopenssl_rs.a",
+   "sha256": "c01b2b1f4070ce4fbca329f2ca1057c51ca352f18e5c93879839d9f05027f489",
+   "size_bytes": 45028870
+  },
+  "distribution_dso": {
+   "build_id": "05a6b994db8bbfd7ffedec46bfcd5d2953b96868",
+   "path": "court/tmp/pfp7/build/distribution/libcrypto.so.3",
+   "sha256": "6d002db20c815e252d1672a72b654f40844c2a1b24400cfbdfce5d1eaf828f39",
+   "size_bytes": 17118904
+  },
+  "measurement_dso": {
+   "build_id": "ddf3bac0a6cd633ecdefdf01ac7d361c8c44ecc1",
+   "path": "court/tmp/pfp7/build/measurement/libcrypto.so.3",
+   "sha256": "ba80a652e3e37190e175d25680d6ffe2365ce008ce3f68c1df04402b3da21ca9",
+   "size_bytes": 17499352
+  }
+ },
+ "build_recipe": [
+  "cargo build --release --lib --offline (CARGO_BUILD_JOBS=4, fresh CARGO_TARGET_DIR)",
+  "cc -shared -Wl,--whole-archive <archive> -Wl,--no-whole-archive -Wl,-soname,libcrypto.so.3 -o <measurement>/libcrypto.so.3",
+  "python3 forensics/tools/implemented_surface.py --archive <archive> --out <fresh-surface>",
+  "python3 courts/performance-frontier/baseline/emit_shell.py --surface <fresh-surface> --out <shell>",
+  "rustc --edition 2021 --emit=obj --crate-type lib -O --crate-name libcrypto_shell -o <shell>/libcrypto.shell.o <shell>/libcrypto.shell.rs",
+  "cc -shared -o <distribution>/libcrypto.so.3 -Wl,--whole-archive <archive> -Wl,--no-whole-archive <shell>/libcrypto.shell.o -Wl,--version-script=artifacts/phase2/libcrypto.ld -Wl,-soname,libcrypto.so.3 -Wl,--as-needed -lpthread -ldl -lm -lrt -lutil"
+ ],
+ "campaign": "PFP-0",
+ "harness": [
+  {
+   "build_id": null,
+   "path": "evidence/performance-frontier/campaigns/PFP-7/harness/pfp7_rsa.c",
+   "sha256": "9519f9dd8c6923c4442e3488e5cd11b0fd296923884d0f38cb4bc9dd41ca7647",
+   "size_bytes": 15996
+  },
+  {
+   "build_id": null,
+   "path": "evidence/performance-frontier/campaigns/PFP-7/harness/pfp7_fault.c",
+   "sha256": "7ee1d41351acf88a8bed564d4402e7ae400f81658f2f1ea0cfaeb103445db595",
+   "size_bytes": 10400
+  },
+  {
+   "build_id": null,
+   "path": "evidence/performance-frontier/campaigns/PFP-7/harness/pfp7_diff.c",
+   "sha256": "dd03cfe01b89e3212fa0a62ae15e239d8337827f7d48339d24aaf073688eb1dd",
+   "size_bytes": 11457
+  },
+  {
+   "build_id": null,
+   "path": "evidence/performance-frontier/campaigns/PFP-7/harness/pfp7_ilp.c",
+   "sha256": "bfbeb2c5cd7deaebfb44aa6e5dcefe50c52c0021dd76e850ca135c26915a25b7",
+   "size_bytes": 10773
+  }
+ ],
+ "recorded_at_utc": "2026-11-27T13:04:38.961730+00:00",
+ "schema": "openssl-rs/performance/build-identity/v1",
+ "shell_generation": {
+  "fresh_surface": "/work/court/tmp/pfp7/build/implemented-surface.json",
+  "fresh_surface_body_hash": "051a36a136dcf46bda52989d321d62237390cc6447b70a4fb3092e7c10f07cf0",
+  "libraries": {
+   "libcrypto": {
+    "fresh_count": 5896,
+    "sets_match": true,
+    "tracked_count": 5896
+   },
+   "libssl": {
+    "fresh_count": 603,
+    "sets_match": true,
+    "tracked_count": 603
+   }
+  },
+  "schema": "openssl-rs/performance/shell-generation/v1",
+  "shell_used": "fresh",
+  "tracked_surface": "forensics/atlas/implemented-surface.json",
+  "tracked_surface_body_hash": "9142d43a2c462ae820b76e2fb9f9c0eef7d52404c0b0964e440b7b86f21ca2e3",
+  "tracked_surface_matches_fresh": true
+ },
+ "source": {
+  "branch": "staging",
+  "build_relevant_clean": true,
+  "build_relevant_paths": [
+   "src",
+   "Cargo.toml",
+   "Cargo.lock",
+   "build.rs",
+   "rust-toolchain.toml"
+  ],
+  "build_relevant_status": "",
+  "head": "05ee177a3d0d6e7ef7a80e466a1cba5b6ea765c2"
+ },
+ "tools": {
+  "cargo": "cargo 1.98.1 (797e8a9bc 2026-08-05)",
+  "cc": "cc (Debian 12.2.0-14+deb12u1) 12.2.0",
+  "readelf": "GNU readelf (GNU Binutils for Debian) 2.40",
+  "rustc": "rustc 1.98.1 (48a229cea 2026-09-01)"
+ },
+ "venue": {
+  "court_image": "unknown",
+  "kernel": "7.3.5-2-cachyos",
+  "machine": "x86_64"
+ }
+}

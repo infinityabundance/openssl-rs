@@ -1,0 +1,40 @@
+/work/evidence/performance-frontier/campaigns/PFP-7/harness/pfp7_fault.c: In function ‘main’:
+/work/evidence/performance-frontier/campaigns/PFP-7/harness/pfp7_fault.c:215:12: warning: variable ‘len’ set but not used [-Wunused-but-set-variable]
+  215 |     int i, len = 0, ok = 1;
+      |            ^~~
+CASE clean rc=256 out=b753f1b76cbe54a4
+CASE halfA-blind rc=256 out=b753f1b76cbe54a4
+CASE halfB-blind rc=256 out=b753f1b76cbe54a4
+CASE combine-blind rc=256 out=b753f1b76cbe54a4
+CASE halfA+badD-blind rc=256 out=b45823f52eb9906a
+CASE halfB+badD-blind rc=256 out=26d8f2a7f0694444
+CASE combine+badD-blind rc=256 out=b3285370949a715e
+CASE badD-blind rc=256 out=b753f1b76cbe54a4
+CASE noncrt-blind rc=256 out=b753f1b76cbe54a4
+CASE clean-noblind rc=256 out=b753f1b76cbe54a4
+CASE halfA-noblind rc=256 out=b753f1b76cbe54a4
+CASE halfB-noblind rc=256 out=b753f1b76cbe54a4
+CASE combine-noblind rc=256 out=b753f1b76cbe54a4
+CASE halfA+badD-noblind rc=256 out=faf85e8f3172c566
+CASE halfB+badD-noblind rc=256 out=faf85e8f3172c566
+CASE combine+badD-noblind rc=256 out=faf85e8f3172c566
+CASE badD-noblind rc=256 out=b753f1b76cbe54a4
+CASE noncrt-noblind rc=256 out=b753f1b76cbe54a4
+DONE
+fault,blinding,verdict
+halfA,blind,DETECTED
+halfB,blind,DETECTED
+combine,blind,DETECTED
+halfA+badD,blind,EXPECTED_WRONG
+halfB+badD,blind,EXPECTED_WRONG
+combine+badD,blind,EXPECTED_WRONG
+badD,blind,NO_FAULT_UNCHANGED
+halfA,noblind,DETECTED
+halfB,noblind,DETECTED
+combine,noblind,DETECTED
+halfA+badD,noblind,EXPECTED_WRONG
+halfB+badD,noblind,EXPECTED_WRONG
+combine+badD,noblind,EXPECTED_WRONG
+badD,noblind,NO_FAULT_UNCHANGED
+lines 18 cross_impl_mismatches 0
+VERDICT PASS

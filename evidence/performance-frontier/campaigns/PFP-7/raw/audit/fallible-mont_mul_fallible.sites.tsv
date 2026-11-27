@@ -1,0 +1,41 @@
+mont_mul_fallible	1671d2	jne	16721a <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith17mont_mul_fallible+0x8a>	mov $0x8,%r15d	test %rbx,%rbx	jcc
+mont_mul_fallible	1671fe	je	167256 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith17mont_mul_fallible+0xc6>	call 162320 <_RNvMs5_NtCs6i54tJFfzR_5alloc7raw_vecNtB5_11RawVecInner11finish_growCsfBoMNNx3tZr_10openssl_rs.llvm.9718911050929164158>	cmpb $0x0,0x30(%rsp)	jcc
+mont_mul_fallible	16720f	jne	167340 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith17mont_mul_fallible+0x1b0>	movq $0xffffffffffffffff,(%rax)	test %rbx,%rbx	jcc
+mont_mul_fallible	16723f	je	167372 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith17mont_mul_fallible+0x1e2>	call 162320 <_RNvMs5_NtCs6i54tJFfzR_5alloc7raw_vecNtB5_11RawVecInner11finish_growCsfBoMNNx3tZr_10openssl_rs.llvm.9718911050929164158>	cmpb $0x0,0x30(%rsp)	jcc
+mont_mul_fallible	16725e	jne	1673a7 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith17mont_mul_fallible+0x217>	mov 0x38(%rsp),%rdi	test %rbx,%rbx	jcc
+mont_mul_fallible	167274	jne	1672e3 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith17mont_mul_fallible+0x153>	xor %rbx,%r14	or %rbp,%r14	jcc
+mont_mul_fallible	1672ce	jne	1672a0 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith17mont_mul_fallible+0x110>	add $0x8,%rax	cmp %rax,%r14	jcc
+mont_mul_fallible	16732e	jne	167300 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith17mont_mul_fallible+0x170>	add $0x8,%rax	cmp %rax,%rsi	jcc
+mont_mul_fallible	16733e	je	167363 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith17mont_mul_fallible+0x1d3>	call *0x76a50d(%rip)	test %rbx,%rbx	jcc
+mont_mul_fallible	16737e	je	16739b <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith17mont_mul_fallible+0x20b>	mov %r15,%rax	cmp $0x1,%rbx	jcc
+mont_mul_fallible	1673f7	je	16740a <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith17mont_mul_fallible+0x27a>	call 162320 <_RNvMs5_NtCs6i54tJFfzR_5alloc7raw_vecNtB5_11RawVecInner11finish_growCsfBoMNNx3tZr_10openssl_rs.llvm.9718911050929164158>	cmpb $0x0,0x30(%rsp)	jcc
+mont_mul_fallible	167418	je	16743c <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith17mont_mul_fallible+0x2ac>	mov %rax,0x18(%rsp)	cmp $0x1,%rbx	jcc
+mont_mul_fallible	16744c	jne	167542 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith17mont_mul_fallible+0x3b2>	xor %rbx,%r14	or %rbp,%r14	jcc
+mont_mul_fallible	1674aa	setb	%r9b	xor %r9d,%r9d	add (%rcx,%r8,8),%rdi	setcc
+mont_mul_fallible	1674cd	je	1675a2 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith17mont_mul_fallible+0x412>	add $0x8,%rsi	cmp %rbx,%r15	jcc
+mont_mul_fallible	1674e3	je	167497 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith17mont_mul_fallible+0x307>	xor %edi,%edi	test %rax,%rax	jcc
+mont_mul_fallible	167500	setb	%r9b	xor %r9d,%r9d	add -0x8(%rsi,%r8,8),%rdi	setcc
+mont_mul_fallible	16751d	setb	%dil	xor %edi,%edi	add (%rsi,%r8,8),%r9	setcc
+mont_mul_fallible	167532	jne	1674f0 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith17mont_mul_fallible+0x360>	adc %rdx,%rdi	cmp %r8,%rbp	jcc
+mont_mul_fallible	167537	jne	167497 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith17mont_mul_fallible+0x307>	jne 1674f0 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith17mont_mul_fallible+0x360>	test $0x1,%bl	jcc
+mont_mul_fallible	16758b	jne	16755d <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith17mont_mul_fallible+0x3cd>	add $0x8,%rax	cmp %rax,%rsi	jcc
+mont_mul_fallible	16760a	je	1676aa <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith17mont_mul_fallible+0x51a>	cmp %rbx,%rax	lea 0x1(%rbx,%rbx,1),%rax	jcc
+mont_mul_fallible	167618	je	167843 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith17mont_mul_fallible+0x6b3>	mov %rcx,0x28(%rsp)	cmp %rax,%r11	jcc
+mont_mul_fallible	167643	je	16781d <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith17mont_mul_fallible+0x68d>	nopl 0x0(%rax,%rax,1)	cmp %rdi,%r15	jcc
+mont_mul_fallible	167656	setb	%cl	xor %ecx,%ecx	add (%r10,%rdi,8),%r8	setcc
+mont_mul_fallible	16766d	jne	167640 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith17mont_mul_fallible+0x4b0>	adc %rdx,%r8	cmp %rdi,%rbx	jcc
+mont_mul_fallible	16767b	je	1675e3 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith17mont_mul_fallible+0x453>	shl $0x3,%r11	cmp 0x60(%rsp),%r11	jcc
+mont_mul_fallible	167696	setb	%dl	xor %edx,%edx	add %r8,(%r9,%rax,1)	setcc
+mont_mul_fallible	1676a3	jne	167690 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith17mont_mul_fallible+0x500>	mov %rdx,%r8	cmp %rax,%r13	jcc
+mont_mul_fallible	1676bf	je	167718 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith17mont_mul_fallible+0x588>	lea -0x1(%rbx),%rax	test %rax,%rax	jcc
+mont_mul_fallible	1676e0	setb	%r8b	mov -0x8(%rsi,%rdx,8),%rdi	sub (%r12,%rdx,8),%rdi	setcc
+mont_mul_fallible	1676e7	setb	%al	setb %r8b	sub %rax,%rdi	setcc
+mont_mul_fallible	167706	setb	%al	mov %rdi,0x8(%r13,%rdx,8)	lea 0x2(%rdx),%rdx	setcc
+mont_mul_fallible	16770f	jne	1676d7 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith17mont_mul_fallible+0x547>	movzbl %al,%eax	cmp %rdx,%rbp	jcc
+mont_mul_fallible	167714	jne	167726 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith17mont_mul_fallible+0x596>	jne 1676d7 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith17mont_mul_fallible+0x547>	test $0x1,%bl	jcc
+mont_mul_fallible	167733	setb	%dil	mov (%rsi,%rdx,8),%rsi	sub (%r12,%rdx,8),%rsi	setcc
+mont_mul_fallible	16773a	setb	%al	setb %dil	sub %rax,%rsi	setcc
+mont_mul_fallible	16777e	ja	167850 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith17mont_mul_fallible+0x6c0>	lea (%rbx,%r8,1),%rdi	cmp %r12,%rdi	jcc
+mont_mul_fallible	167787	je	167859 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith17mont_mul_fallible+0x6c9>	ja 167850 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith17mont_mul_fallible+0x6c0>	cmp %r8,%rbx	jcc
+mont_mul_fallible	1677b8	jne	167777 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith17mont_mul_fallible+0x5e7>	inc %r8	add $0xfffffffffffffff8,%r10	jcc
+mont_mul_fallible	167803	jne	1677cc <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith17mont_mul_fallible+0x63c>	add $0x8,%rax	cmp %rax,%rsi	jcc
