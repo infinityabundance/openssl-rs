@@ -249,3 +249,19 @@ not authorities: no third-party implementation is admitted by citation.
 **Four non-negotiable objectives for this queue.** ZERO_UNSAFE,
 SAFE_COMPATIBLE, EARNED_TRUST, FRONTIER_BREACH — each a standing constraint on
 every row above, and FRONTIER_BREACH never obtained by relaxing the other three.
+
+## Review-driven queue (2026-11-27, second assessment)
+
+The second 27 November assessment named four residuals and one schema
+distinction. Two of its items already exist and are not restated: source
+identity is `W2`, independent reproduction is `W16` and `PFP-17`, and the
+review's suggested reordering is recorded here without being adopted, because
+the queue is executed in `PFP` sequence — skipping to the recommended item is
+how rows get stranded, which is exactly what happened earlier in this campaign.
+
+| id | work package | acceptance | status |
+|---|---|---|---|
+| PFP-35 | **Evidence schema must distinguish artefact-bound from source-bound conjuncts.** The CIOS carrier is audited at the measured digest while the exponent-taint experiment is source-bound, so describing the conjunction as artefact-bound is wrong even with a note. Acceptance: the claim schema carries a per-conjunct binding class (`ARTEFACT` with a DSO digest, or `SOURCE` with a source identity), the admission rule requires the constant-time conjunct to be `ARTEFACT`-bound before any constant-time claim, and the validator refuses a record whose prose asserts artefact binding while a conjunct is source-bound. | TODO |
+| PFP-36 | **Window driver classification at the admitted digest.** The window driver's 100 conditional jumps and 2 conditional moves are enumerated but were not freshly classified after CIOS was admitted. Acceptance: every `jcc`, `setcc` and `cmov` in the window driver and the ladder carrier is classified at the admitted digest, secret-derived entries are enumerated or shown absent, and a canary confirms the audit still fires. | TODO |
+| PFP-37 | **DSO-bound secret-exponent taint.** The release-artefact exponent evidence is currently source-bound to a test binary, and debug-build cleanliness must not be inherited by an optimised build. Acceptance: the exponent taint is measured against the distribution DSO itself, with a sensitivity control on a canary artefact, and the record states which conjunct moved from `SOURCE` to `ARTEFACT`. | TODO |
+| PFP-38 | **Compile-time width specialisation of the Montgomery kernel.** The current CIOS uses dynamically sized slices and generic loops. Acceptance: specialised widths for the 4, 16, 32, 48, 64 and 128-limb cases with the generic implementation retained as the differential reference; each width differentially checked and audited in the artefact; a width that does not win is recorded as a negative result. FIOS and almost-Montgomery stay open — CIOS is the measured winner, not a demonstrated global optimum. | TODO |
