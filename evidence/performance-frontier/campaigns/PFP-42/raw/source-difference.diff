@@ -1,0 +1,213 @@
+diff --git a/src/bn/arith.rs b/src/bn/arith.rs
+index a4fa52e2..0bd09468 100644
+--- a/src/bn/arith.rs
++++ b/src/bn/arith.rs
+@@ -1689,12 +1689,77 @@ const LADDER_DEDICATED_SQUARING: bool = false;
+ /// masked scan — never an index. The exponent's value therefore changes only
+ /// which table row is masked in, never the control flow or the addresses.
+ ///
+-/// `Some(5)` is the admitted default (measured crossover in
+-/// `evidence/performance-frontier/campaigns/PFP-5/`). `None` keeps the
+-/// bit-at-a-time reference, which the differential court runs against the
+-/// windowed path on every case.
++/// `Some(5)` is the admitted PFP-5 default and the fallback for a degenerate
++/// geometry; the production paths derive `w` from public geometry with
++/// [`select_window_bits`] (PFP-42). `None` keeps the bit-at-a-time reference,
++/// which the differential court runs against the windowed path on every case.
+ const LADDER_WINDOW_BITS: Option<u32> = Some(5);
+ 
++/// Select the fixed-window width from **public geometry only**.
++///
++/// `width` is the ladder's resolved limb width — the staged exponent buffer's
++/// length, so `bits = 64 * width` — and `modulus_limbs` is `md.len()`. Both are
++/// public: the width is the caller's declared bound (or the PFP-43 covering
++/// width, itself a declassified *length*), and the modulus limb count is
++/// public. No exponent value and no exponent-normalised length enters this
++/// choice; the selected `w` is therefore fixed for a given group configuration
++/// and the mask-scan schedule it drives stays constant-pattern.
++///
++/// Evaluates the PFP-42 integer cost model
++/// (`evidence/performance-frontier/campaigns/PFP-42/BOUNDS.md`):
++///
++/// ```text
++/// cost(w) = [ceil(bits/w)·(w+1) + 2^w]·C(M) + windows·2^w·M·3
++/// ```
++///
++/// The first term is main-loop squarings, main-loop multiplies, the table build
++/// and the conversions; the second is the campaign's conservative upper bound
++/// of three instructions per limb-select for the full masked scan (the measured
++/// scan is cheaper, so the model never understates the table). `C(M)` is the
++/// measured per-Montgomery-multiply cost, modelled as `21163·M²/1024`:
++/// anchored on the measured `n = 32` CIOS figure (21,163 instructions) and
++/// matching the measured `n = 4` figure (333) to 0.6 %. The scaling is exact in
++/// `M²` for the CIOS schedule, so only the `n = 32` anchor is load-bearing.
++///
++/// The arithmetic is `u128` and saturating; an overflowing score loses to a
++/// finite one, and a degenerate geometry keeps [`LADDER_WINDOW_BITS`]. The
++/// returned width is in `1..=8`.
++fn select_window_bits(width: usize, modulus_limbs: usize) -> u32 {
++    const MAX_W: u32 = 8;
++    let default = LADDER_WINDOW_BITS.unwrap_or(5);
++    let bits = width.saturating_mul(64);
++    if bits == 0 || modulus_limbs == 0 {
++        return default;
++    }
++    let m = modulus_limbs as u128;
++    let score = |w: u32| -> u128 {
++        let wu = w as usize;
++        let windows = bits.div_ceil(wu);
++        let mont_ops = windows
++            .saturating_mul(wu.saturating_add(1))
++            .saturating_add(1usize << wu);
++        let mult = (mont_ops as u128)
++            .saturating_mul(21_163)
++            .saturating_mul(m)
++            .saturating_mul(m);
++        let scan = (windows as u128)
++            .saturating_mul(1u128 << wu)
++            .saturating_mul(m)
++            .saturating_mul(3 * 1024);
++        mult.saturating_add(scan)
++    };
++    let mut best_w = default;
++    let mut best = score(best_w);
++    for w in 1..=MAX_W {
++        let s = score(w);
++        if s < best {
++            best = s;
++            best_w = w;
++        }
++    }
++    best_w
++}
++
+ /// `a * b + c + d` for 64-bit terms, as a 128-bit value.
+ ///
+ /// The maximum is `(2^64-1)^2 + 2*(2^64-1) = 2^128 - 1`, so the arithmetic
+@@ -2312,7 +2377,8 @@ pub(crate) fn mod_exp_core_consttime_width(
+         LadderGeometry::VariableTime => mod_exp_core(ad, pd, md),
+         LadderGeometry::Fixed(width) => {
+             let exponent = fixed_width_exponent(pd, width)?;
+-            mod_exp_core_consttime_staged(ad, &exponent, md, width, LADDER_WINDOW_BITS)
++            let window = Some(select_window_bits(width, md.len()));
++            mod_exp_core_consttime_staged(ad, &exponent, md, width, window)
+         }
+     }
+ }
+@@ -2397,9 +2463,10 @@ pub(crate) fn mod_exp_core_consttime_from_parts_prepared(
+             // The protected buffer: its allocation is the declared public width,
+             // so its capacity cannot encode the exponent's normalised length.
+             let exponent = fixed_width_exponent(pd, width)?;
++            let window = Some(select_window_bits(width, md.len()));
+             match prepared {
+                 Some(params) => mod_exp_core_consttime_prepared(ad, &exponent, md, width, params),
+-                None => mod_exp_core_consttime_staged(ad, &exponent, md, width, LADDER_WINDOW_BITS),
++                None => mod_exp_core_consttime_staged(ad, &exponent, md, width, window),
+             }
+         }
+     }
+@@ -2523,7 +2590,8 @@ pub(crate) fn mod_exp_core_consttime_policy(
+     match prepared {
+         Some(params) => mod_exp_core_consttime_prepared(ad, &exponent, md, resolved_width, params),
+         None => {
+-            mod_exp_core_consttime_staged(ad, &exponent, md, resolved_width, LADDER_WINDOW_BITS)
++            let window = Some(select_window_bits(resolved_width, md.len()));
++            mod_exp_core_consttime_staged(ad, &exponent, md, resolved_width, window)
+         }
+     }
+ }
+@@ -2542,16 +2610,8 @@ fn mod_exp_core_consttime_prepared(
+     params: &PreparedMontParams<'_>,
+ ) -> Option<Vec<Limb>> {
+     let acc = pad_secret(params.one, md.len())?;
+-    run_mont_ladder(
+-        ad,
+-        exponent,
+-        md,
+-        width,
+-        params.n0,
+-        params.rr,
+-        acc,
+-        LADDER_WINDOW_BITS,
+-    )
++    let window = Some(select_window_bits(width, md.len()));
++    run_mont_ladder(ad, exponent, md, width, params.n0, params.rr, acc, window)
+ }
+ 
+ /// The fixed-pattern Montgomery ladder, given its precomputed parameters.
+@@ -2685,7 +2745,8 @@ fn run_mont_ladder(
+ /// ## Why the schedule is constant-time
+ ///
+ /// * `entries = 2^w` and `windows = ceil(bits / w)` depend only on public geometry
+-///   (`w` is a compile-time constant; `bits = 64 * width`).
++///   (`w` is selected from public geometry by [`select_window_bits`] and fixed
++///   for the call; `bits = 64 * width`).
+ /// * Every window performs exactly `w` squarings and one multiplication, including
+ ///   the last window and including leading-zero windows.
+ /// * The digit is built from the staged exponent with shifts and masks — value
+@@ -4034,7 +4095,7 @@ mod tests {
+                         reference, oracle,
+                         "reference disagrees with oracle: a={a:?} e={e:?} m={m:?}"
+                     );
+-                    for w in [Some(4u32), Some(5), Some(6)] {
++                    for w in [Some(4u32), Some(5), Some(6), Some(7), Some(8)] {
+                         let got = pfp5_answer(&a, &e, &m, w);
+                         assert_eq!(
+                             got, reference,
+@@ -4079,6 +4140,15 @@ mod tests {
+                         got, reference,
+                         "window disagrees at {bits} bits: a={a:?} e={e:?}"
+                     );
++                    // PFP-42: the geometry-selected width must also match. At the
++                    // modulus-width entry point `width = m.len()`, so the selector
++                    // sees `(m.len(), m.len())`; 3072 bits selects w=6 here.
++                    let selected = select_window_bits(m.len(), m.len());
++                    let got_selected = pfp5_answer(a, e, &m, Some(selected));
++                    assert_eq!(
++                        got_selected, reference,
++                        "selected w={selected} disagrees at {bits} bits: a={a:?} e={e:?}"
++                    );
+                     cases += 1;
+                 }
+             }
+@@ -4094,6 +4164,40 @@ mod tests {
+         eprintln!("pfp5 large-moduli window-vs-reference comparisons: {cases}");
+     }
+ 
++    /// PFP-42: the window selector is a function of **public geometry only**, and
++    /// its chosen widths reproduce the campaign's cost-model minima.
++    ///
++    /// The two DH-policy rows are the composition this item re-evaluates: the
++    /// ladder runs at the group's RFC 7919 key width (256 bits = 4 limbs for
++    /// ffdhe2048, 320 bits = 5 limbs for ffdhe3072) against a 32/48-limb modulus,
++    /// which is why a 16-entry table is no longer negligible there. The three
++    /// modexp rows run the ladder at the modulus width. The out-of-policy rows are
++    /// the PFP-43 covering widths: a *length* declassification, never a value.
++    #[test]
++    fn pfp42_window_selection_follows_public_geometry() {
++        for (width, modulus, expected) in [
++            (4usize, 32usize, 4u32), // ffdhe2048 policy: 256-bit ladder, 2048-bit modulus
++            (5, 48, 4),              // ffdhe3072 policy: 320-bit ladder, 3072-bit modulus
++            (16, 16, 5),             // modexp-1024
++            (32, 32, 5),             // modexp-2048
++            (128, 128, 7),           // modexp-8192
++        ] {
++            assert_eq!(
++                select_window_bits(width, modulus),
++                expected,
++                "geometry width_limbs={width} modulus_limbs={modulus}"
++            );
++        }
++        // PFP-43 out-of-policy covering widths (2400-bit and 4096-bit exponents
++        // against a 2048-bit modulus) are public *lengths* and select w=6.
++        assert_eq!(select_window_bits(38, 32), 6);
++        assert_eq!(select_window_bits(64, 32), 6);
++        // A degenerate geometry keeps the admitted default rather than indexing a
++        // zero-width schedule.
++        assert_eq!(select_window_bits(0, 32), LADDER_WINDOW_BITS.unwrap_or(5));
++        assert_eq!(select_window_bits(4, 0), LADDER_WINDOW_BITS.unwrap_or(5));
++    }
++
+     /// ctgrind taint case for the secret-base reduction.
+     ///
+     /// This is the arithmetic of `ec_field_inverse_mod_ord`, which

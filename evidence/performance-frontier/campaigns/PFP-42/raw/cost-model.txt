@@ -1,0 +1,95 @@
+== coefficients ==
+  C(  4) =        333 Ir/multiply   measured
+  C( 16) =       4679 Ir/multiply   measured
+  C( 32) =      21163 Ir/multiply   measured
+  C( 48) =      47617 Ir/multiply   inferred (k*M^2, k from n=32)
+  C(128) =     338608 Ir/multiply   inferred (k*M^2, k from n=32)
+  k = 20.6670 Ir/limb^2
+
+== predicted-best-w table (scan = 3 Ir/limb-select, the model used in code) ==
+  geometry                         best     vs w=5   total(w=5) table share at best
+  ffdhe2048-policy (256 iters)        4     -3.10%      7439816   4.17%
+  ffdhe3072-policy (320 iters)        4     -0.55%     20103480   3.37%
+  modexp-1024                         5     +0.00%      6219778   2.38%
+  modexp-2048                         5     +0.00%     53997716   1.20%
+  modexp-8192                         7     -2.61%   3360846560   1.33%
+
+== full w sweeps (scan = 3) ==
+-- ffdhe2048-policy (256 iters) (W=256, M=32)
+   w  windows  mont_ops   total_Ir      vs_w5
+   1      256       514      10926934   +46.87%
+   2      128       388       8260396   +11.03%
+   3       86       352       7515424    +1.02%
+   4       64       336       7209072    -3.10%
+   5       52       344       7439816    +0.00%
+   6       43       365       7988687    +7.38%
+   7       37       424       9427768   +26.72%
+   8       32       544      12299104   +65.31%
+-- ffdhe3072-policy (320 iters) (W=320, M=48)
+   w  windows  mont_ops   total_Ir      vs_w5
+   1      320       642      30662114   +52.52%
+   2      160       484      23138667   +15.10%
+   3      107       436      20884167    +3.88%
+   4       80       416      19992888    -0.55%
+   5       64       416      20103480    +0.00%
+   6       54       442      21544268    +7.17%
+   7       46       496      24465780   +21.70%
+   8       40       616      30806478   +53.24%
+-- modexp-1024 (W=1024, M=16)
+   w  windows  mont_ops   total_Ir      vs_w5
+   1     1024      2050       9690254   +55.80%
+   2      512      1540       7303964   +17.43%
+   3      342      1376       6569632    +5.62%
+   4      256      1296       6260592    +0.66%
+   5      205      1262       6219778    +0.00%
+   6      171      1261       6425531    +3.31%
+   7      147      1304       7004584   +12.62%
+   8      128      1408       8160896   +31.21%
+-- modexp-2048 (W=2048, M=32)
+   w  windows  mont_ops   total_Ir      vs_w5
+   1     2048      4098      87119190   +61.34%
+   2     1024      3076      65490604   +21.28%
+   3      683      2740      58511164    +8.36%
+   4      512      2576      55302320    +2.42%
+   5      410      2492      53997716    +0.00%
+   6      342      2458      54119902    +0.23%
+   7      293      2472      55915320    +3.55%
+   8      256      2560      60468736   +11.98%
+-- modexp-8192 (W=8192, M=128)
+   w  windows  mont_ops   total_Ir      vs_w5
+   1     8192     16386    5554722144   +65.28%
+   2     4096     12292    4168460992   +24.03%
+   3     2731     10932    3710052288   +10.39%
+   4     2048     10256    3485346560    +3.70%
+   5     1639      9866    3360846560    +0.00%
+   6     1366      9626    3293011424    -2.02%
+   7     1171      9496    3272978560    -2.61%
+   8     1024      9472    3307958272    -1.57%
+
+== sensitivity of the best width to the scan coefficient ==
+  geometry                       best w at scan=1 / 2 / 3
+  ffdhe2048-policy (256 iters)   4 / 4 / 4
+  ffdhe3072-policy (320 iters)   4 / 4 / 4
+  modexp-1024                    5 / 5 / 5
+  modexp-2048                    6 / 6 / 5
+  modexp-8192                    7 / 7 / 7
+
+== selector (production formula) for every geometry it sees ==
+  ffdhe2048 policy                         (  4,  32) -> w=4
+  ffdhe3072 policy                         (  5,  48) -> w=4
+  modexp-1024                              ( 16,  16) -> w=5
+  modexp-2048                              ( 32,  32) -> w=5
+  modexp-8192                              (128, 128) -> w=7
+  P-256 4-limb modulus (ctgrind shape)     (  4,   4) -> w=4
+  PFP-43 2400-bit covering @2048           ( 38,  32) -> w=6
+  PFP-43 4096-bit covering @2048           ( 64,  32) -> w=6
+
+== old refusal vs new arithmetic (the visible change of conclusion) ==
+  PFP-8 (modulus-width ladder, W=2048, M=32):
+    w=5 mont_ops=2492, table build=30 -> share=1.20% (PFP-8 measured 1.19%)
+    best prepared window w=6 was 2.21% faster -> BELOW the 10% refusal threshold
+  PFP-42 (policy-width ladder, W=256, M=32):
+    w=5 mont_ops=344, table build=30 -> share=8.72% (7.2x the old share)
+    w=4 mont_ops=336, table build=14 -> best, 3.10% faster than w=5
+  campaign measurement noise (PFP-6/PFP-8 control band) = 1.2-1.5%
+  3.10% > 1.5% -> the new bound crosses the bar the old one did not
