@@ -778,7 +778,15 @@ pub(crate) unsafe extern "C" fn ossl_ec_wNAF_mul(
                  * ECDH keygen/first half), where the scalar is always secret. This
                  * is why we ignore if BN_FLG_CONSTTIME is actually set and we
                  * always call the ladder version.
+                 *
+                 * PFP-3: when — and only when — the group is the standard P-256
+                 * group and its generator is the tracked one, the precomputed
+                 * fixed-base comb runs instead. Every other generator, curve and
+                 * method is refused by `admits` and keeps the ladder below.
                  */
+                if let Some(ret) = p256::fixed_base::try_fixed_base_mul(group, r, scalar) {
+                    return ret;
+                }
                 return ossl_ec_scalar_mul_ladder(group, r, scalar, ptr::null(), ctx);
             }
             if scalar.is_null() && num == 1 && *scalars != (*group).order {

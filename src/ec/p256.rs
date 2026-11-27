@@ -1633,6 +1633,8 @@ fn limbs_to_be(limbs: &[Limb; LIMBS]) -> [u8; 32] {
 // Tests
 // ---------------------------------------------------------------------------
 
+pub(crate) mod fixed_base;
+
 #[cfg(test)]
 #[allow(clippy::expect_used)] // test-only failure assertions
 #[allow(clippy::unwrap_used)] // test-only reference arithmetic
