@@ -304,3 +304,19 @@ the 1024-bit Montgomery operations under RSA-2048 CRT are the two regimes to
 test, because they differ substantially. **Any arm that is slower is recorded
 as a negative result with its numbers**, and no arm may be admitted on an
 operation count alone — the dedicated-squaring refutation is the precedent.
+
+## Review-driven queue (2026-11-27, third assessment)
+
+Order adopted from this assessment: the drop-in break first, then the two cheap
+levers it identified, then the arithmetic research arms. Items already tracked
+and not restated: DSO-bound exponent taint (`PFP-37`), clean committed-source
+rebuild (`W2`), independent reproduction (`W16`/`PFP-17`), P-256 point and field
+work (`W5`).
+
+| id | work package | acceptance | status |
+|---|---|---|---|
+| PFP-39 | **DH imported-key width binding.** The fallback selects the modulus-width ladder when `pd.len()` exceeds the declared policy width, so imported private keys either side of that boundary have materially different execution times — a length classification on a secret-associated input. Acceptance: execution width is bound to validated key metadata at ingestion (a checked field on the key object), not re-decided from storage length on each operation; an imported key outside policy is rejected or classified at load with an explicit threat-model decision; timing on both sides of the boundary measured; no path derives width from secret length. | TODO |
+| PFP-40 | **RSA blinding re-creation arithmetic.** Measured at 5.2 ms every 32 calls, about 162 µs per sustained operation, roughly a quarter of an RSA operation; the authority refreshes on the same schedule far more cheaply. Acceptance: profile the re-creation path separately from modexp — inverse, RNG, allocation — identify the dominant cost, and reduce it without changing the refresh schedule or removing the protection. Reducing the frequency is a refusal, not an optimisation. | TODO |
+| PFP-41 | **Instruction-count audit against a minimal mulx sequence.** 6,457 instructions per 2048-bit Montgomery multiplication is 3.15 per limb product. Acceptance: from the disassembly the campaign already collects, report the instruction mix per limb product, what LLVM emits for the carry chain, and the delta from a minimal `mulx`/`adcx`/`adox`-shaped lower bound reasoned from first principles; name the specific inefficiency, or state that none was found. | TODO |
+| PFP-42 | **Re-evaluate the PFP-8 table refusal under the new composition.** The exponent is now 225 or 256 bits rather than 2,048, so the per-call table build is a larger fraction of a much shorter operation, and the refusal was computed against the old mix. Acceptance: recompute the bound at the current composition; implement if preparation now pays; otherwise record the new arithmetic as the refusal. | TODO |
+| V1 | **Qualified venue for the IFMA arms.** This machine has no `avx512f` and no `avx512ifma`, so the IFMA form of M-A9 cannot be evaluated at all. Acceptance: a venue with those features present (Sapphire Rapids or Zen 4 class), recorded with its identity in the venue register; until then the arm is `NOT_APPLICABLE_HARDWARE` and no claim is made either way. | TODO |
