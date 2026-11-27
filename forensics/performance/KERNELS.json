@@ -235,12 +235,36 @@
           "audit": {
             "kind": "BINARY_BRANCH_AUDIT",
             "result": "mont_mul_ladder_into 14 jcc (14 public, 0 secret-derived), 18 setcc (3 public geometry, 15 secret carry/borrow consumed arithmetically), 0 cmovcc",
+            "verdict": "PASS",
             "digest": "6d002db20c815e252d1672a72b654f40844c2a1b24400cfbdfce5d1eaf828f39",
             "binding": "ARTEFACT"
           },
           "ctgrind": {
             "result": "secret-exponent taint 0 errors / 0 contexts, negative control 4 errors / 1 context; DSO-bound base-taint probe 0 contexts on CIOS",
             "binding": "MIXED"
+          }
+        }
+      ],
+      "assurance": [
+        {
+          "class": "SOURCE_TAINT_TESTED",
+          "scope": "PFP-6 dedb67a5f + one-constant src/bn/arith.rs: secret-exponent ctgrind 0 errors / 0 contexts with a firing control; the DSO base-taint probe is silent. The branch audit at 6d002db2 is recorded, but the DSO is not tracked so no ARTEFACT_AUDITED claim is made.",
+          "evidence": 0,
+          "subject": {
+            "source": "staging dedb67a5fe7d567a046def6402388d043b50d571 + uncommitted one-constant src/bn/arith.rs (arith sha256 3e8127cb1eb816b9db066eb52ce1535620aa9c812bec0b441c627fdb9100aea1); the base arith work is committed at 20972901dc5e1d984d1b391ecc9b69d4bd943701, blob 1ea1965 sha256 06005795079c9957ba2b35c6816c423b507f427705842284aa9c23d0e0759a1c, and the one-constant selection remains a worktree change",
+            "artefact": null
+          },
+          "assumptions": [
+            "the exponent limb values are the secret",
+            "the DSO base-taint probe exercises the CIOS path"
+          ],
+          "result": "PASS",
+          "instrument": "valgrind memcheck ctgrind (source-bound exponent taint; DSO base probe)",
+          "evidence_path": "evidence/performance-frontier/campaigns/PFP-6/ADMISSION.md",
+          "negative_control": {
+            "fired": true,
+            "detail": "CTGRIND_CONTROL=1 reports 4 errors / 1 context",
+            "evidence_path": "evidence/performance-frontier/campaigns/PFP-6/ADMISSION.md"
           }
         }
       ],
@@ -272,12 +296,36 @@
           "audit": {
             "kind": "BINARY_BRANCH_AUDIT",
             "result": "all eight kernels inlined into mont_mul_ladder_into: 40 jcc (40 public, 0 secret-derived), 64 setcc (0 public geometry, 64 secret carry/borrow consumed arithmetically), 0 cmovcc",
+            "verdict": "PASS",
             "digest": "88c0c7e04d52a1bf84d665fdd691bddf2bbe700e35505d95bf145bfdc3774d87",
             "binding": "ARTEFACT"
           },
           "ctgrind": {
             "result": "secret-exponent taint 0 errors / 0 contexts, control 4/1; DSO-bound base-taint probe 0 contexts; both exercise width 4 only",
             "binding": "MIXED"
+          }
+        }
+      ],
+      "assurance": [
+        {
+          "class": "SOURCE_TAINT_TESTED",
+          "scope": "M-A1 ff87f848 + uncommitted src/bn/arith.rs: exponent ctgrind 0 errors / 0 contexts with control 4/1. The taint covers width 4 only; widths 6/9/16/32/48/64/128 rest on the structural audit and are not generalised.",
+          "evidence": 0,
+          "subject": {
+            "source": "staging ff87f8488e206896ffdd82259af2fcf4ba269209 + uncommitted src/bn/arith.rs (arith sha256 b548ee1533f527366099d95b907bd20237bbcc2e8208966eb9a15cf11f09809f)",
+            "artefact": null
+          },
+          "assumptions": [
+            "the same CIOS schedule is shared by all eight widths",
+            "the taint run covers width 4 only"
+          ],
+          "result": "PASS",
+          "instrument": "valgrind memcheck ctgrind (width-4 source build) plus a DSO base probe",
+          "evidence_path": "evidence/performance-frontier/campaigns/M-A1/RESULTS.md",
+          "negative_control": {
+            "fired": true,
+            "detail": "CTGRIND_CONTROL=1 reports 4 errors / 1 context",
+            "evidence_path": "evidence/performance-frontier/campaigns/M-A1/RESULTS.md"
           }
         }
       ],
@@ -328,6 +376,7 @@
           "audit": {
             "kind": "BINARY_BRANCH_AUDIT",
             "result": "mont_mul_sos_into 19 jcc / 0 div / 0 cmov / 10 setcc / 0 cpuid; all conditional transfers public-bound; 0 secret-derived",
+            "verdict": "PASS",
             "digest": "842efa27197ea8c408d77a8316c1dbb35a06146e0033b7df7d7f9cced88a2f47",
             "binding": "ARTEFACT"
           },
@@ -335,6 +384,38 @@
             "result": "secret-exponent taint 0 errors / 0 contexts; RSA secret exponents 96,821 errors / 112 contexts with 0 window contexts",
             "binding": "SOURCE"
           }
+        }
+      ],
+      "assurance": [
+        {
+          "class": "SOURCE_REVIEWED",
+          "scope": "PFP-6 dedb67a5f: the SOS source review records 19 jcc / 10 setcc, all public-bound. The 6d002db2 base-taint probe is not a branch audit and no firing control is recorded, so only a source review is asserted.",
+          "evidence": 0,
+          "subject": {
+            "source": "staging dedb67a5fe7d567a046def6402388d043b50d571 + uncommitted one-constant src/bn/arith.rs (arith sha256 3e8127cb1eb816b9db066eb52ce1535620aa9c812bec0b441c627fdb9100aea1); the base arith work is committed at 20972901dc5e1d984d1b391ecc9b69d4bd943701, blob 1ea1965 sha256 06005795079c9957ba2b35c6816c423b507f427705842284aa9c23d0e0759a1c, and the one-constant selection remains a worktree change",
+            "artefact": null
+          },
+          "assumptions": [
+            "the SOS REDC mask-select and carry logic are unchanged by PFP-5"
+          ],
+          "result": "PASS",
+          "instrument": "source review of the emitted SOS carrier",
+          "evidence_path": "evidence/performance-frontier/campaigns/PFP-6/RECORD.md"
+        },
+        {
+          "class": "SOURCE_REVIEWED",
+          "scope": "PFP-5 a005a33c4: TAINT.md records the window/scan taint at 0 errors / 0 contexts and an audit at 842efa27. No firing negative control is recorded at this evidence, so only a source review is asserted.",
+          "evidence": 1,
+          "subject": {
+            "source": "staging a005a33c482f47850a72661a363e7186bde42c5c + uncommitted src/bn/arith.rs (plus test-only src/rsa/ossl.rs)",
+            "artefact": null
+          },
+          "assumptions": [
+            "the digit and accumulator are consumed by masks, shifts and bitwise AND/OR"
+          ],
+          "result": "PASS",
+          "instrument": "source review plus a source-bound taint reading",
+          "evidence_path": "evidence/performance-frontier/campaigns/PFP-5/TAINT.md"
         }
       ],
       "no_evidence_targets": [
@@ -370,6 +451,14 @@
           }
         }
       ],
+      "assurance": [
+        {
+          "class": "UNASSESSED",
+          "scope": "PFP-6-reeval 76652a46d: the dedicated-squaring carrier was not separately audited or tainted; the window-path 0/0 reading is not evidence about this carrier.",
+          "assumptions": [],
+          "result": "NOT_RUN"
+        }
+      ],
       "no_evidence_targets": [
         {"target": "aarch64-unknown-linux-gnu", "status": "NOT_APPLICABLE_HARDWARE", "missing_feature": "aarch64 (no AArch64 target or toolchain on this machine)"},
         {"target": "x86_64-avx512ifma", "status": "NOT_APPLICABLE_HARDWARE", "missing_feature": "avx512f, avx512ifma (CPU reports neither)"},
@@ -399,6 +488,7 @@
           "audit": {
             "kind": "BINARY_BRANCH_AUDIT",
             "result": "run_mont_ladder (window and scan inlined) 100 jcc / 0 div / 2 cmov / 18 setcc / 0 cpuid; mont_mul_sos_into 19 / 0 / 0 / 10 / 0; 0 secret-derived",
+            "verdict": "PASS",
             "digest": "842efa27197ea8c408d77a8316c1dbb35a06146e0033b7df7d7f9cced88a2f47",
             "binding": "ARTEFACT"
           },
@@ -422,6 +512,7 @@
           "audit": {
             "kind": "BINARY_BRANCH_AUDIT",
             "result": "run_mont_ladder 100 jcc / 0 div / 2 cmov / 18 setcc / 0 cpuid; mont_mul_sos_into 19 / 0 / 0 / 10 / 0; 0 secret-derived; counts and addresses identical to PFP-5, but the audit is bound to this digest",
+            "verdict": "PASS",
             "digest": "661384603e0b661af384997676d8e88843f2b307b6abf73f56d472b03d888630",
             "binding": "ARTEFACT"
           },
@@ -429,6 +520,38 @@
             "result": "secret-exponent taint 0 errors / 0 contexts; source-bound test binary, not a DSO",
             "binding": "SOURCE"
           }
+        }
+      ],
+      "assurance": [
+        {
+          "class": "SOURCE_REVIEWED",
+          "scope": "PFP-5 a005a33c4: the window/scan taint is 0 errors / 0 contexts and source-bound; TAINT.md records no firing negative control, so only a source review is asserted.",
+          "evidence": 0,
+          "subject": {
+            "source": "staging a005a33c482f47850a72661a363e7186bde42c5c + uncommitted src/bn/arith.rs (plus test-only src/rsa/ossl.rs)",
+            "artefact": null
+          },
+          "assumptions": [
+            "the window digit and masked scan index are public"
+          ],
+          "result": "PASS",
+          "instrument": "source review plus a source-bound taint reading",
+          "evidence_path": "evidence/performance-frontier/campaigns/PFP-5/TAINT.md"
+        },
+        {
+          "class": "SOURCE_REVIEWED",
+          "scope": "PFP-6-reeval 76652a46d: the taint is source-bound 0/0 with no firing control recorded; the branch audit at 66138460 is a review aid, not a taint result.",
+          "evidence": 1,
+          "subject": {
+            "source": "staging 76652a46dcfb388656d964010268685ca032dff1 + uncommitted documentation correction to src/bn/arith.rs (arith sha256 66bd6c4c7f616f7d8101debf34cc2d4915eff225aba0dec4e119eccb5d682e83; no code change)",
+            "artefact": null
+          },
+          "assumptions": [
+            "the PFP-5 schedule is unchanged by the re-evaluation"
+          ],
+          "result": "PASS",
+          "instrument": "source review plus a source-bound taint reading",
+          "evidence_path": "evidence/performance-frontier/campaigns/PFP-6/REEVALUATION.md"
         }
       ],
       "no_evidence_targets": [
@@ -460,6 +583,7 @@
           "audit": {
             "kind": "CTGRIND_PLUS_BRANCH_AUDIT",
             "result": "DSO-level ctgrind 0 engine-on-path and 0 engine-origin contexts in 18 tainted runs per DSO; branch audit exit 0 with 9/9 targets resolved; mutation control 2.33x instructions / 2.36x wall",
+            "verdict": "PASS",
             "digest": "553e1b8ce1eb7e03a0d92a5614b566b88e49e55d2c2a3f7ba28fc6d78eecc4e4",
             "binding": "ARTEFACT"
           },
@@ -467,6 +591,24 @@
             "result": "0 engine-on-path contexts; the residue is the pre-existing BIGNUM/EC ladder path, kernel-independent",
             "binding": "ARTEFACT"
           }
+        }
+      ],
+      "assurance": [
+        {
+          "class": "SOURCE_REVIEWED",
+          "scope": "PFP-2 c1d25e10d: the source audit records DSO-level ctgrind 0 engine-on-path / 0 engine-origin with a firing sensitivity control (4 per repetition) and a 9/9 branch audit. The DSO is not tracked, so the register cannot hash the subject and does not claim ARTEFACT_AUDITED or ARTEFACT_TAINT_TESTED.",
+          "evidence": 0,
+          "subject": {
+            "source": "staging c1d25e10d16bc197e03446619a5330842b411c5c (committed); two independent clean rebuilds reproduce the digest",
+            "artefact": null
+          },
+          "assumptions": [
+            "the residue is the pre-existing BIGNUM/EC ladder path, kernel-independent",
+            "the sensitivity control exercises the P-256 engine path"
+          ],
+          "result": "PASS",
+          "instrument": "source review plus the recorded DSO ctgrind/branch-audit result",
+          "evidence_path": "evidence/performance-frontier/campaigns/PFP-2/RESULTS-553e1b8c.md"
         }
       ],
       "no_evidence_targets": [
@@ -498,6 +640,14 @@
           "ctgrind": null
         }
       ],
+      "assurance": [
+        {
+          "class": "UNASSESSED",
+          "scope": "PFP-2-kernels: source-bound test binary only; no audit, no taint, and no tracked artefact.",
+          "assumptions": [],
+          "result": "NOT_RUN"
+        }
+      ],
       "no_evidence_targets": [
         {"target": "aarch64-unknown-linux-gnu", "status": "NOT_APPLICABLE_HARDWARE", "missing_feature": "aarch64 (no AArch64 target or toolchain on this machine)"},
         {"target": "x86_64-avx512ifma", "status": "NOT_APPLICABLE_HARDWARE", "missing_feature": "avx512f, avx512ifma (CPU reports neither)"},
@@ -527,6 +677,7 @@
           "audit": {
             "kind": "CTGRIND_PLUS_BRANCH_AUDIT",
             "result": "mul-g-fixed 0 errors / 0 contexts in three repetitions; shared inventory 31/31 exit 0; six carriers resolved; no admission-mask jcc; mutation control admission-off e4b2cb6e is correct on 4,096 points but costs 2.05x instructions / 1.96x wall",
+            "verdict": "PASS",
             "digest": "ecbefb7d4ecd05cb08f5ade57e64ce2cd81de24bcd68b0c236a8640a18559053",
             "binding": "ARTEFACT"
           },
@@ -534,6 +685,23 @@
             "result": "0 errors / 0 contexts on mul-g-fixed; sensitivity control still fires",
             "binding": "ARTEFACT"
           }
+        }
+      ],
+      "assurance": [
+        {
+          "class": "SOURCE_REVIEWED",
+          "scope": "PFP-3 f8d5c4b33: ctgrind is 0/0/0 with a firing sensitivity control (4 per repetition) and the branch audit resolves 31/31. The DSO is not tracked, so the register cannot hash the subject and does not claim ARTEFACT_TAINT_TESTED.",
+          "evidence": 0,
+          "subject": {
+            "source": "staging f8d5c4b33cf751a0dd805fa7cf0d730915e1d073 + uncommitted src/ec/p256/fixed_base.rs branch-free admission",
+            "artefact": null
+          },
+          "assumptions": [
+            "the in-range mask is folded into the scalar the comb consumes"
+          ],
+          "result": "PASS",
+          "instrument": "source review plus the recorded DSO ctgrind/branch-audit result",
+          "evidence_path": "evidence/performance-frontier/campaigns/PFP-3/POST-FIX.md"
         }
       ],
       "no_evidence_targets": [
@@ -564,6 +732,7 @@
           "audit": {
             "kind": "CTGRIND_PLUS_BRANCH_AUDIT",
             "result": "0 engine-on-path and 0 engine-origin contexts with the private scalar and nonce source tainted; branch audit classifies every jcc/setcc/cmov in the carrier as public-bound; invert has exactly two jcc (fixed loop counter, public exponent-bit test); BINSEC -checkct NOT_RUN; dedicated inverse mutation control NOT_RUN",
+            "verdict": "PASS",
             "digest": "4e6ec312313b3f1ef68ec9c0c4fc698a76f334ee9da38a6fcdfa7d8945c53e77",
             "binding": "ARTEFACT"
           },
@@ -571,6 +740,23 @@
             "result": "0 engine-on-path / 0 engine-origin contexts; sensitivity control reports 4 engine-on-path contexts per repetition",
             "binding": "ARTEFACT"
           }
+        }
+      ],
+      "assurance": [
+        {
+          "class": "SOURCE_REVIEWED",
+          "scope": "PFP-4 5ac6fddc5: DSO-level ctgrind is 0 engine-on-path / 0 engine-origin with the sensitivity control firing (4 per repetition); BINSEC -checkct and the dedicated inverse mutation control are NOT_RUN. The DSO is not tracked, so no ARTEFACT_AUDITED claim is made.",
+          "evidence": 0,
+          "subject": {
+            "source": "staging 5ac6fddc53f5ca2a63912f51c07188b9b63f71dd + uncommitted src/ec/lib.rs, src/ec/p256.rs, src/ec/p256/fixed_base.rs, src/ec/p256/tests.rs",
+            "artefact": null
+          },
+          "assumptions": [
+            "invert has exactly two conditional jumps: the loop counter and the public exponent-bit test"
+          ],
+          "result": "PASS",
+          "instrument": "source review plus the recorded DSO ctgrind/branch-audit result",
+          "evidence_path": "evidence/performance-frontier/campaigns/PFP-4/CTGRIND.md"
         }
       ],
       "no_evidence_targets": [
@@ -602,6 +788,7 @@
           "audit": {
             "kind": "CTGRIND_PLUS_BRANCH_AUDIT",
             "result": "mont_mul_ladder_into 40 jcc / 64 setcc / 0 cmov; run_mont_ladder 100 jcc / 18 setcc / 2 cmov; bn_mod_exp_mont_impl 61 / 4 / 3; dh_bn_mod_exp 3; 0 secret-derived; ctgrind source-bound 0 errors / 0 contexts, control 4/1",
+            "verdict": "PASS",
             "digest": "6302e05a14e47b74bd546f03e7509e234a2884511ddec5c3f9a7f4382bd9a25b",
             "binding": "ARTEFACT"
           },
@@ -627,6 +814,44 @@
             "result": "not re-run at this digest; the arithmetic source is byte-identical to the width-policy source, so the 6302e05a readings are cited as source-bound context only, not as an artefact audit of e3ef3d84",
             "binding": "SOURCE"
           }
+        }
+      ],
+      "assurance": [
+        {
+          "class": "SOURCE_TAINT_TESTED",
+          "scope": "PFP-8 20b655ba9: the shortened schedule is 0 errors / 0 contexts with the policy control firing (4/1). The PFP8-KEYGEN-PRESET-PRIV STOP is a compatibility divergence recorded in the differential, not a taint finding.",
+          "evidence": 0,
+          "subject": {
+            "source": "staging 20b655ba902e61d7680e30dfcb30feb4225397cc + working-tree src/bn/arith.rs, src/bn/mont.rs, src/dh/key.rs",
+            "artefact": null
+          },
+          "assumptions": [
+            "the ladder width is bound to public object configuration, never to the exponent",
+            "the policy taint test exercises the shortened schedule"
+          ],
+          "result": "PASS",
+          "instrument": "valgrind memcheck ctgrind (policy-width source build)",
+          "evidence_path": "evidence/performance-frontier/campaigns/PFP-8/WIDTH-POLICY.md",
+          "negative_control": {
+            "fired": true,
+            "detail": "CTGRIND_POLICY_CONTROL=1 reports 4 errors / 1 context",
+            "evidence_path": "evidence/performance-frontier/campaigns/PFP-8/WIDTH-POLICY.md"
+          }
+        },
+        {
+          "class": "SOURCE_REVIEWED",
+          "scope": "PFP-8-preset-priv 983437d2: ctgrind was not re-run at e3ef3d84; the arithmetic source is byte-identical and the 6302e05a readings are source-bound context only. The branch audit is at 6302e05a and is not regenerated here.",
+          "evidence": 1,
+          "subject": {
+            "source": "staging 983437d2a415d493c7f7206c6332723bce591073 + uncommitted src/dh/key.rs, committed as dd05d3f4",
+            "artefact": null
+          },
+          "assumptions": [
+            "the repair changes whether a preset key reaches an unchanged secret path"
+          ],
+          "result": "PASS",
+          "instrument": "source review of the repair and the unchanged arithmetic path",
+          "evidence_path": "evidence/performance-frontier/campaigns/PFP-8/PRESET-PRIV.md"
         }
       ],
       "no_evidence_targets": [
@@ -658,6 +883,7 @@
           "audit": {
             "kind": "CTGRIND_PLUS_BRANCH_AUDIT",
             "result": "ctgrind 96,668 errors / 112 contexts (exponents and primes) and 97,546 / 106 (moduli), inside the recorded band, 0 ladder-carrier sites; CIOS carrier 14 jcc / 18 setcc / 0 cmov, driver 100 / 18 / 2, 0 secret-derived",
+            "verdict": "PASS",
             "digest": "6d002db20c815e252d1672a72b654f40844c2a1b24400cfbdfce5d1eaf828f39",
             "binding": "ARTEFACT"
           },
@@ -665,6 +891,14 @@
             "result": "96,668/112 and 97,546/106; control fires",
             "binding": "ARTEFACT"
           }
+        }
+      ],
+      "assurance": [
+        {
+          "class": "UNASSESSED",
+          "scope": "PFP-7 05ee177a3: ctgrind reports 96,668 errors / 112 contexts and 97,546 / 106 with findings outside the ladder carriers; the firing control shows the instrument is live, but the CRT path itself is not established clean, so no taint-tested class is claimed.",
+          "assumptions": [],
+          "result": "NOT_RUN"
         }
       ],
       "no_evidence_targets": [
@@ -679,7 +913,7 @@
   "claims": [
     {
       "id": "PFP-6-CIOS-6d002db2",
-      "constant_time": true,
+      "assurance": ["SOURCE_TAINT_TESTED"],
       "target": "x86_64 i9-13900K, taskset -c 1, court openssl-rs-court-tools:1, rustc 1.98.1 release",
       "profile": "release, x86_64-unknown-linux-gnu, rustc 1.98.1 (48a229cea)",
       "artefact_sha256": "6d002db20c815e252d1672a72b654f40844c2a1b24400cfbdfce5d1eaf828f39",
@@ -687,7 +921,7 @@
     },
     {
       "id": "M-A1-FIXED-88c0c7e0",
-      "constant_time": true,
+      "assurance": ["SOURCE_TAINT_TESTED"],
       "target": "x86_64 i9-13900K, taskset -c 1, court openssl-rs-court-tools:1, rustc 1.98.1 release",
       "profile": "release, x86_64-unknown-linux-gnu, rustc 1.98.1 (48a229cea)",
       "artefact_sha256": "88c0c7e04d52a1bf84d665fdd691bddf2bbe700e35505d95bf145bfdc3774d87",
@@ -695,7 +929,7 @@
     },
     {
       "id": "PFP-5-WINDOW-842efa27",
-      "constant_time": true,
+      "assurance": ["SOURCE_REVIEWED"],
       "target": "x86_64-unknown-linux-gnu release",
       "profile": "release, x86_64-unknown-linux-gnu, rustc 1.98.1",
       "artefact_sha256": "842efa27197ea8c408d77a8316c1dbb35a06146e0033b7df7d7f9cced88a2f47",
@@ -703,7 +937,7 @@
     },
     {
       "id": "PFP-5-SOS-842efa27",
-      "constant_time": true,
+      "assurance": ["SOURCE_REVIEWED"],
       "target": "x86_64-unknown-linux-gnu release",
       "profile": "release, x86_64-unknown-linux-gnu, rustc 1.98.1",
       "artefact_sha256": "842efa27197ea8c408d77a8316c1dbb35a06146e0033b7df7d7f9cced88a2f47",
@@ -711,7 +945,7 @@
     },
     {
       "id": "PFP-2-FIELD-553e1b8c",
-      "constant_time": true,
+      "assurance": ["SOURCE_REVIEWED"],
       "target": "x86_64-unknown-linux-gnu release",
       "profile": "release, x86_64-unknown-linux-gnu, rustc 1.98.1",
       "artefact_sha256": "553e1b8ce1eb7e03a0d92a5614b566b88e49e55d2c2a3f7ba28fc6d78eecc4e4",
@@ -719,7 +953,7 @@
     },
     {
       "id": "PFP-3-COMB-ecbefb7d",
-      "constant_time": true,
+      "assurance": ["SOURCE_REVIEWED"],
       "target": "x86_64-unknown-linux-gnu release",
       "profile": "release, x86_64-unknown-linux-gnu, rustc 1.98.1",
       "artefact_sha256": "ecbefb7d4ecd05cb08f5ade57e64ce2cd81de24bcd68b0c236a8640a18559053",
@@ -727,7 +961,7 @@
     },
     {
       "id": "PFP-4-INVERSE-4e6ec312",
-      "constant_time": true,
+      "assurance": ["SOURCE_REVIEWED"],
       "target": "x86_64-unknown-linux-gnu release",
       "profile": "release, x86_64-unknown-linux-gnu, rustc 1.98.1",
       "artefact_sha256": "4e6ec312313b3f1ef68ec9c0c4fc698a76f334ee9da38a6fcdfa7d8945c53e77",
@@ -735,7 +969,7 @@
     },
     {
       "id": "PFP-8-WIDTH-6302e05a",
-      "constant_time": true,
+      "assurance": ["SOURCE_TAINT_TESTED"],
       "target": "x86_64 i9-13900K, taskset -c 1, court openssl-rs-court-tools:1, rustc 1.98.1 release",
       "profile": "release, x86_64-unknown-linux-gnu, rustc 1.98.1 (48a229cea); two fresh CARGO_TARGET_DIR builds agree",
       "artefact_sha256": "6302e05a14e47b74bd546f03e7509e234a2884511ddec5c3f9a7f4382bd9a25b",
@@ -743,7 +977,7 @@
     },
     {
       "id": "PFP-8-PRESET-e3ef3d84-DIFFERENTIAL-ONLY",
-      "constant_time": false,
+      "assurance": [],
       "target": "x86_64 i9-13900K, taskset -c 1, court openssl-rs-court-tools:1, rustc 1.98.1 release",
       "profile": "release, x86_64-unknown-linux-gnu, rustc 1.98.1 (48a229cea); two fresh CARGO_TARGET_DIR builds agree",
       "artefact_sha256": "e3ef3d84166a65408e5c89eaa4cc444a2c9208fea5e2acb1c272b6a0b612b187",
@@ -751,7 +985,7 @@
     },
     {
       "id": "PFP-7-RSA-6d002db2",
-      "constant_time": true,
+      "assurance": [],
       "target": "x86_64 i9-13900K, taskset -c 1, court openssl-rs-court-tools:1, rustc 1.98.1 release",
       "profile": "release, x86_64-unknown-linux-gnu, rustc 1.98.1 (48a229cea); build-relevant tree clean at 05ee177a3",
       "artefact_sha256": "6d002db20c815e252d1672a72b654f40844c2a1b24400cfbdfce5d1eaf828f39",

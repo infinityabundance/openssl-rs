@@ -15,15 +15,25 @@ table (`forensics/performance/KERNELS.json`), the same table
 * a kernel target or profile that differs from its campaign artefact's;
 * an audit whose digest differs from the evidence record's artefact (an audit
   inherited from another digest is not an audit of this artefact);
-* a kernel entry with no explicit proof status;
+* a kernel entry with no explicit proof status, or a proof field that is neither
+  `NO_PROOF` nor a bound `MACHINE_CHECKED` entry;
 * a kernel entry that does not enumerate the targets for which no evidence
   exists, including the hardware-absent AArch64 and AVX-512/IFMA arms;
-* a constant-time claim citing a kernel with no differential court or no audit,
-  or citing source-bound evidence;
-* a claim citing a kernel across a different target, profile or artefact.
+* an assurance class that is absent, misbound, missing its required evidence, or
+  carried only as a prose assertion: `SOURCE_TAINT_TESTED` needs taint evidence
+  with a firing negative control; `ARTEFACT_AUDITED` needs a structured `PASS`
+  audit and a subject the checker hashes itself; `MACHINE_CHECKED` needs an
+  existing harness and digest; and `PASS_WITH_STOP` / `PASS_WITH_RESIDUAL` are
+  refused above `SOURCE_REVIEWED`;
+* a claim that cites a kernel across a different target, profile or artefact.
 
-A kernel with no court or no audit is accepted as `NO_PROOF` when the claim is
-**not** a constant-time claim. That is a recorded absence, not a pass.
+A kernel with no court or no audit is accepted as `NO_PROOF` when the claim
+asserts no assurance dimension. That is a recorded absence, not a pass.
+
+Assurance is a set of complementary dimensions, not a ladder. Each kernel
+carries an `assurance` list; each entry names a class, a scope, a subject
+(source identity and/or artefact digest), its assumptions, result, instrument,
+negative control and evidence path. Claims name the classes they rely on.
 
 What this tool does not decide
 ------------------------------
@@ -51,6 +61,7 @@ SPDX-License-Identifier: Apache-2.0
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import math
 import re
@@ -66,6 +77,36 @@ SCHEMA = "openssl-rs/performance/kernel-register/v1"
 SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 BINDINGS = ("ARTEFACT", "MIXED", "SOURCE")
 COURT_RESULTS = ("PASS", "PASS_WITH_STOP", "PASS_WITH_RESIDUAL", "FAIL", "NOT_RUN")
+
+# Assurance is a set of complementary dimensions, not a ladder.  A kernel may
+# hold several entries at once; a claim names the dimensions it relies on.
+ASSURANCE_CLASSES = (
+    "UNASSESSED",
+    "SOURCE_REVIEWED",
+    "SOURCE_TAINT_TESTED",
+    "ARTEFACT_AUDITED",
+    "ARTEFACT_TAINT_TESTED",
+    "STATISTICALLY_TESTED",
+    "MACHINE_CHECKED",
+    "INDEPENDENTLY_REPRODUCED",
+)
+ASSURANCE_RESULTS = ("PASS", "PASS_WITH_STOP", "PASS_WITH_RESIDUAL", "FAIL", "NOT_RUN")
+# Classes that assert something about a built artefact and therefore require an
+# artefact-bound evidence record and a subject the checker can hash itself.
+ARTEFACT_CLASSES = frozenset(
+    {
+        "ARTEFACT_AUDITED",
+        "ARTEFACT_TAINT_TESTED",
+        "STATISTICALLY_TESTED",
+        "MACHINE_CHECKED",
+        "INDEPENDENTLY_REPRODUCED",
+    }
+)
+TAINT_CLASSES = frozenset({"SOURCE_TAINT_TESTED", "ARTEFACT_TAINT_TESTED"})
+# `PASS_WITH_STOP` and `PASS_WITH_RESIDUAL` are admissible only at
+# SOURCE_REVIEWED or below; every stronger dimension must be a clean PASS.
+INADMISSIBLE_RESULTS = frozenset({"PASS_WITH_STOP", "PASS_WITH_RESIDUAL"})
+PROOF_STATES = ("NO_PROOF", "MACHINE_CHECKED")
 NO_EVIDENCE_STATUSES = (
     "NOT_APPLICABLE_HARDWARE",
     "NOT_RUN",
@@ -94,6 +135,15 @@ KV_CT_CLAIM_WITHOUT_AUDIT = "KV_CT_CLAIM_WITHOUT_AUDIT"
 KV_SOURCE_BOUND_CT_CLAIM = "KV_SOURCE_BOUND_CT_CLAIM"
 KV_DOC_KERNEL_MISSING = "KV_DOC_KERNEL_MISSING"
 KV_DOC_NO_INHERITANCE_MISSING = "KV_DOC_NO_INHERITANCE_MISSING"
+KV_ASSURANCE_CLASS_ABSENT = "KV_ASSURANCE_CLASS_ABSENT"
+KV_ASSURANCE_BINDING_MISMATCH = "KV_ASSURANCE_BINDING_MISMATCH"
+KV_AUDIT_VERDICT_NOT_PASS = "KV_AUDIT_VERDICT_NOT_PASS"
+KV_ASSURANCE_TAINT_ABSENT = "KV_ASSURANCE_TAINT_ABSENT"
+KV_ASSURANCE_NO_FIRING_CONTROL = "KV_ASSURANCE_NO_FIRING_CONTROL"
+KV_PROOF_UNBOUND = "KV_PROOF_UNBOUND"
+KV_ASSURANCE_OUTCOME_INADMISSIBLE = "KV_ASSURANCE_OUTCOME_INADMISSIBLE"
+KV_ARTEFACT_SUBJECT_MISMATCH = "KV_ARTEFACT_SUBJECT_MISMATCH"
+KV_ASSURANCE_INCOMPLETE = "KV_ASSURANCE_INCOMPLETE"
 
 CODES = (
     KV_JSON_MALFORMED,
@@ -117,6 +167,15 @@ CODES = (
     KV_SOURCE_BOUND_CT_CLAIM,
     KV_DOC_KERNEL_MISSING,
     KV_DOC_NO_INHERITANCE_MISSING,
+    KV_ASSURANCE_CLASS_ABSENT,
+    KV_ASSURANCE_BINDING_MISMATCH,
+    KV_AUDIT_VERDICT_NOT_PASS,
+    KV_ASSURANCE_TAINT_ABSENT,
+    KV_ASSURANCE_NO_FIRING_CONTROL,
+    KV_PROOF_UNBOUND,
+    KV_ASSURANCE_OUTCOME_INADMISSIBLE,
+    KV_ARTEFACT_SUBJECT_MISMATCH,
+    KV_ASSURANCE_INCOMPLETE,
 )
 
 RULES: dict[str, str] = {
@@ -158,6 +217,34 @@ RULES: dict[str, str] = {
     ),
     KV_DOC_KERNEL_MISSING: "the document does not name a kernel in the register",
     KV_DOC_NO_INHERITANCE_MISSING: "the document does not state the no-inheritance rule",
+    KV_ASSURANCE_CLASS_ABSENT: (
+        "a claim names an assurance class its kernel does not hold at the cited evidence"
+    ),
+    KV_ASSURANCE_BINDING_MISMATCH: (
+        "an artefact-level assurance class cites evidence that is not purely artefact-bound"
+    ),
+    KV_AUDIT_VERDICT_NOT_PASS: (
+        "an audit record does not carry a structured PASS verdict"
+    ),
+    KV_ASSURANCE_TAINT_ABSENT: (
+        "a taint-tested class has no taint evidence bound to its subject"
+    ),
+    KV_ASSURANCE_NO_FIRING_CONTROL: (
+        "taint evidence is claimed without a firing negative control"
+    ),
+    KV_PROOF_UNBOUND: (
+        "the proof field is neither NO_PROOF nor a MACHINE_CHECKED entry with a "
+        "checkable harness"
+    ),
+    KV_ASSURANCE_OUTCOME_INADMISSIBLE: (
+        "a class above SOURCE_REVIEWED carries PASS_WITH_STOP or PASS_WITH_RESIDUAL"
+    ),
+    KV_ARTEFACT_SUBJECT_MISMATCH: (
+        "an artefact subject is absent or does not hash to its declared digest"
+    ),
+    KV_ASSURANCE_INCOMPLETE: (
+        "an assurance entry is missing a required field or its evidence path is absent"
+    ),
 }
 
 NO_INHERITANCE_RULE = (
@@ -226,6 +313,20 @@ def _text(value: Any) -> bool:
 
 def _sha(value: Any) -> bool:
     return isinstance(value, str) and SHA256_RE.match(value) is not None
+
+
+def _hash_file(path: Path) -> str | None:
+    try:
+        return hashlib.sha256(path.read_bytes()).hexdigest()
+    except OSError:
+        return None
+
+
+def _subject_path(root: Path, value: Any) -> Path | None:
+    if not _text(value):
+        return None
+    path = Path(value)
+    return path if path.is_absolute() else root / path
 
 
 def _add(problems: list[Problem], code: str, pointer: str, detail: str) -> None:
@@ -402,6 +503,15 @@ def _check_evidence(
             for key in ("kind", "result"):
                 if not _text(audit.get(key)):
                     _add(problems, KV_SCHEMA, f"{pointer}/audit/{key}", "missing")
+            verdict = audit.get("verdict")
+            if verdict not in ASSURANCE_RESULTS:
+                _add(
+                    problems,
+                    KV_AUDIT_VERDICT_NOT_PASS,
+                    f"{pointer}/audit/verdict",
+                    f"{verdict!r} is not a structured verdict (need one of "
+                    f"{', '.join(ASSURANCE_RESULTS)})",
+                )
             audit_digest = audit.get("digest")
             if not _sha(audit_digest):
                 _add(
@@ -475,8 +585,416 @@ def _check_no_evidence_targets(
             )
 
 
+def _campaign_source(campaigns: dict[str, dict], evidence: dict) -> str | None:
+    name = evidence.get("campaign")
+    campaign = campaigns.get(name) if isinstance(name, str) else None
+    if not isinstance(campaign, dict):
+        return None
+    artefact = campaign.get("artefact")
+    return artefact.get("source") if isinstance(artefact, dict) else None
+
+
+def _check_proof(kernel: dict, pointer: str, problems: list[Problem]) -> None:
+    proof = kernel.get("proof")
+    if not _text(proof):
+        _add(
+            problems,
+            KV_PROOF_ABSENT,
+            f"{pointer}/proof",
+            "use NO_PROOF or a proof reference; never leave the field blank",
+        )
+        return
+    if proof == "NO_PROOF":
+        return
+    if proof != "MACHINE_CHECKED":
+        _add(
+            problems,
+            KV_PROOF_UNBOUND,
+            f"{pointer}/proof",
+            f"{proof!r} is not NO_PROOF or MACHINE_CHECKED; an arbitrary prose "
+            "string is not a bound proof",
+        )
+        return
+    entries = kernel.get("assurance")
+    if not isinstance(entries, list) or not any(
+        isinstance(entry, dict) and entry.get("class") == "MACHINE_CHECKED"
+        for entry in entries
+    ):
+        _add(
+            problems,
+            KV_PROOF_UNBOUND,
+            f"{pointer}/proof",
+            "MACHINE_CHECKED needs a MACHINE_CHECKED assurance entry with a harness",
+        )
+
+
+def _check_assurance(
+    kernel: dict,
+    pointer: str,
+    campaigns: dict[str, dict],
+    root: Path,
+    problems: list[Problem],
+) -> None:
+    entries = kernel.get("assurance")
+    if not isinstance(entries, list) or not entries:
+        _add(
+            problems,
+            KV_ASSURANCE_INCOMPLETE,
+            f"{pointer}/assurance",
+            "must be a non-empty array; an unassessed kernel says UNASSESSED explicitly",
+        )
+        return
+    evidence_list = kernel.get("evidence") if isinstance(kernel.get("evidence"), list) else []
+    for index, entry in enumerate(entries):
+        where = f"{pointer}/assurance/{index}"
+        if not isinstance(entry, dict):
+            _add(problems, KV_ASSURANCE_INCOMPLETE, where, "must be an object")
+            continue
+        assurance_class = entry.get("class")
+        if assurance_class not in ASSURANCE_CLASSES:
+            _add(
+                problems,
+                KV_SCHEMA,
+                f"{where}/class",
+                f"{assurance_class!r} is not an assurance class",
+            )
+            continue
+        if not _text(entry.get("scope")):
+            _add(
+                problems,
+                KV_ASSURANCE_INCOMPLETE,
+                f"{where}/scope",
+                "the scope and invariant argument are missing",
+            )
+        result = entry.get("result")
+        if result not in ASSURANCE_RESULTS:
+            _add(
+                problems,
+                KV_ASSURANCE_INCOMPLETE,
+                f"{where}/result",
+                f"{result!r} is not an assurance result",
+            )
+            result = "NOT_RUN"
+        if assurance_class == "UNASSESSED":
+            if result not in ("NOT_RUN", "FAIL"):
+                _add(
+                    problems,
+                    KV_ASSURANCE_OUTCOME_INADMISSIBLE,
+                    f"{where}/result",
+                    "UNASSESSED cannot carry a passing result",
+                )
+            continue
+        assumptions = entry.get("assumptions")
+        if (
+            not isinstance(assumptions, list)
+            or not assumptions
+            or not all(_text(item) for item in assumptions)
+        ):
+            _add(
+                problems,
+                KV_ASSURANCE_INCOMPLETE,
+                f"{where}/assumptions",
+                "a non-empty written invariant argument is required",
+            )
+        if assurance_class != "SOURCE_REVIEWED" and result in INADMISSIBLE_RESULTS:
+            _add(
+                problems,
+                KV_ASSURANCE_OUTCOME_INADMISSIBLE,
+                f"{where}/result",
+                f"{result} is admissible only at SOURCE_REVIEWED or below",
+            )
+        evidence_index = entry.get("evidence")
+        if (
+            not isinstance(evidence_index, int)
+            or isinstance(evidence_index, bool)
+            or not (0 <= evidence_index < len(evidence_list))
+        ):
+            _add(
+                problems,
+                KV_ASSURANCE_INCOMPLETE,
+                f"{where}/evidence",
+                f"{evidence_index!r} is not an evidence index",
+            )
+            continue
+        evidence = evidence_list[evidence_index]
+        if not isinstance(evidence, dict):
+            continue
+        source = _campaign_source(campaigns, evidence)
+        subject = entry.get("subject")
+        if not isinstance(subject, dict):
+            _add(problems, KV_ASSURANCE_INCOMPLETE, f"{where}/subject", "must be an object")
+            continue
+        evidence_path = entry.get("evidence_path")
+        declared_path = _subject_path(root, evidence_path)
+        if declared_path is None or not declared_path.is_file():
+            _add(
+                problems,
+                KV_ASSURANCE_INCOMPLETE,
+                f"{where}/evidence_path",
+                f"{evidence_path!r} does not name an existing file",
+            )
+        instrument = entry.get("instrument")
+        if not _text(instrument):
+            _add(
+                problems,
+                KV_ASSURANCE_INCOMPLETE,
+                f"{where}/instrument",
+                "the instrument identity is missing",
+            )
+        if assurance_class in ("SOURCE_REVIEWED", "SOURCE_TAINT_TESTED"):
+            subject_source = subject.get("source")
+            if not _text(subject_source):
+                _add(
+                    problems,
+                    KV_ASSURANCE_INCOMPLETE,
+                    f"{where}/subject/source",
+                    "the source identity is missing",
+                )
+            else:
+                if source is not None and subject_source != source:
+                    _add(
+                        problems,
+                        KV_ASSURANCE_CLASS_ABSENT,
+                        f"{where}/subject/source",
+                        "the subject source is not the cited evidence campaign's source",
+                    )
+                commit = re.search(r"\b[0-9a-f]{7,40}\b", subject_source)
+                if commit and commit.group(0)[:8] not in str(entry.get("scope", "")):
+                    _add(
+                        problems,
+                        KV_ASSURANCE_INCOMPLETE,
+                        f"{where}/scope",
+                        "the written invariant argument does not name the reviewed source",
+                    )
+        artefact_subject = subject.get("artefact")
+        if assurance_class in ARTEFACT_CLASSES:
+            if not isinstance(artefact_subject, dict):
+                _add(
+                    problems,
+                    KV_ASSURANCE_INCOMPLETE,
+                    f"{where}/subject/artefact",
+                    "an artefact subject is required",
+                )
+                continue
+            declared = artefact_subject.get("sha256")
+            subject_path = _subject_path(root, artefact_subject.get("path"))
+            if not _sha(declared):
+                _add(
+                    problems,
+                    KV_ASSURANCE_INCOMPLETE,
+                    f"{where}/subject/artefact/sha256",
+                    "not a full SHA-256",
+                )
+                continue
+            if subject_path is None:
+                _add(
+                    problems,
+                    KV_ASSURANCE_INCOMPLETE,
+                    f"{where}/subject/artefact/path",
+                    "the subject path is missing",
+                )
+                continue
+            if evidence.get("binding") != "ARTEFACT":
+                _add(
+                    problems,
+                    KV_ASSURANCE_BINDING_MISMATCH,
+                    f"{where}/evidence",
+                    f"{assurance_class} requires an ARTEFACT-bound evidence record, "
+                    f"not {evidence.get('binding')!r}",
+                )
+            if declared != evidence.get("artefact_sha256"):
+                _add(
+                    problems,
+                    KV_ASSURANCE_CLASS_ABSENT,
+                    f"{where}/subject/artefact/sha256",
+                    "the subject digest is not the cited evidence digest",
+                )
+            actual = _hash_file(subject_path)
+            if actual is None or actual != declared:
+                _add(
+                    problems,
+                    KV_ARTEFACT_SUBJECT_MISMATCH,
+                    f"{where}/subject/artefact/path",
+                    f"{artefact_subject.get('path')!r} hashes to {actual!r}, not the "
+                    f"declared {declared!r}",
+                )
+        if assurance_class == "ARTEFACT_AUDITED":
+            audit = evidence.get("audit")
+            if not isinstance(audit, dict):
+                _add(
+                    problems,
+                    KV_AUDIT_VERDICT_NOT_PASS,
+                    f"{where}/evidence/audit",
+                    "no audit record at the cited evidence",
+                )
+            else:
+                if audit.get("verdict") != "PASS":
+                    _add(
+                        problems,
+                        KV_AUDIT_VERDICT_NOT_PASS,
+                        f"{where}/evidence/audit/verdict",
+                        f"audit verdict is {audit.get('verdict')!r}, not PASS",
+                    )
+                if (
+                    isinstance(artefact_subject, dict)
+                    and artefact_subject.get("sha256") not in (None, audit.get("digest"))
+                ):
+                    _add(
+                        problems,
+                        KV_AUDIT_DIGEST_MISMATCH,
+                        f"{where}/subject/artefact/sha256",
+                        "the audit is not of the subject digest",
+                    )
+        if assurance_class in TAINT_CLASSES:
+            taint = evidence.get("ctgrind")
+            if not isinstance(taint, dict) or not _text(taint.get("result")):
+                _add(
+                    problems,
+                    KV_ASSURANCE_TAINT_ABSENT,
+                    f"{where}/evidence/ctgrind",
+                    "no taint record at the cited evidence",
+                )
+            else:
+                taint_binding = taint.get("binding")
+                if assurance_class == "SOURCE_TAINT_TESTED" and taint_binding not in (
+                    "SOURCE",
+                    "MIXED",
+                ):
+                    _add(
+                        problems,
+                        KV_ASSURANCE_TAINT_ABSENT,
+                        f"{where}/evidence/ctgrind/binding",
+                        f"source taint evidence is {taint_binding!r}, not SOURCE or MIXED",
+                    )
+                if assurance_class == "ARTEFACT_TAINT_TESTED" and taint_binding != "ARTEFACT":
+                    _add(
+                        problems,
+                        KV_ASSURANCE_TAINT_ABSENT,
+                        f"{where}/evidence/ctgrind/binding",
+                        f"artefact taint evidence is {taint_binding!r}, not ARTEFACT",
+                    )
+            if not _text(instrument) or not any(
+                word in instrument.lower() for word in ("ctgrind", "taint", "valgrind")
+            ):
+                _add(
+                    problems,
+                    KV_ASSURANCE_INCOMPLETE,
+                    f"{where}/instrument",
+                    "a taint-tested class must name a taint instrument",
+                )
+            control = entry.get("negative_control")
+            control_path = (
+                _subject_path(root, control.get("evidence_path"))
+                if isinstance(control, dict)
+                else None
+            )
+            if (
+                not isinstance(control, dict)
+                or control.get("fired") is not True
+                or not _text(control.get("detail"))
+                or control_path is None
+                or not control_path.is_file()
+            ):
+                _add(
+                    problems,
+                    KV_ASSURANCE_NO_FIRING_CONTROL,
+                    f"{where}/negative_control",
+                    "taint evidence needs a firing negative control with an existing "
+                    "evidence path",
+                )
+        if assurance_class == "STATISTICALLY_TESTED":
+            experiment = entry.get("experiment")
+            if not isinstance(experiment, dict):
+                _add(
+                    problems,
+                    KV_ASSURANCE_INCOMPLETE,
+                    f"{where}/experiment",
+                    "a declared experiment is required",
+                )
+            else:
+                samples = experiment.get("samples")
+                if (
+                    not isinstance(samples, int)
+                    or isinstance(samples, bool)
+                    or samples <= 0
+                ):
+                    _add(
+                        problems,
+                        KV_ASSURANCE_INCOMPLETE,
+                        f"{where}/experiment/samples",
+                        "a positive sample count is required",
+                    )
+                for key in ("statistic", "threshold", "environment"):
+                    if not _text(experiment.get(key)):
+                        _add(
+                            problems,
+                            KV_ASSURANCE_INCOMPLETE,
+                            f"{where}/experiment/{key}",
+                            "missing",
+                        )
+        if assurance_class == "MACHINE_CHECKED":
+            harness = entry.get("harness")
+            if not isinstance(harness, dict):
+                _add(
+                    problems,
+                    KV_ASSURANCE_INCOMPLETE,
+                    f"{where}/harness",
+                    "a checkable harness is required",
+                )
+            else:
+                harness_path = _subject_path(root, harness.get("path"))
+                harness_digest = harness.get("sha256")
+                if harness_path is None or not harness_path.is_file():
+                    _add(
+                        problems,
+                        KV_ASSURANCE_INCOMPLETE,
+                        f"{where}/harness/path",
+                        "the harness path is absent",
+                    )
+                elif not _sha(harness_digest):
+                    _add(
+                        problems,
+                        KV_ASSURANCE_INCOMPLETE,
+                        f"{where}/harness/sha256",
+                        "not a full SHA-256",
+                    )
+                elif _hash_file(harness_path) != harness_digest:
+                    _add(
+                        problems,
+                        KV_ASSURANCE_INCOMPLETE,
+                        f"{where}/harness/sha256",
+                        "the harness does not hash to its declared digest",
+                    )
+        if assurance_class == "INDEPENDENTLY_REPRODUCED":
+            reproduction = entry.get("reproduction")
+            if not isinstance(reproduction, dict):
+                _add(
+                    problems,
+                    KV_ASSURANCE_INCOMPLETE,
+                    f"{where}/reproduction",
+                    "a reproduction record is required",
+                )
+            else:
+                party = reproduction.get("party")
+                producer = reproduction.get("producer")
+                if not _text(party) or not _text(producer):
+                    _add(
+                        problems,
+                        KV_ASSURANCE_INCOMPLETE,
+                        f"{where}/reproduction",
+                        "party and producer must both be named",
+                    )
+                elif party.strip().casefold() == producer.strip().casefold():
+                    _add(
+                        problems,
+                        KV_ASSURANCE_INCOMPLETE,
+                        f"{where}/reproduction/party",
+                        "the reproducing party must differ from the producer",
+                    )
+
+
 def _check_kernels(
-    document: dict, campaigns: dict[str, dict], problems: list[Problem]
+    document: dict, campaigns: dict[str, dict], problems: list[Problem], root: Path
 ) -> dict[str, dict]:
     kernels = document.get("kernels")
     if not isinstance(kernels, list) or not kernels:
@@ -499,20 +1017,14 @@ def _check_kernels(
         for key in ("label", "ships"):
             if not _text(kernel.get(key)):
                 _add(problems, KV_SCHEMA, f"{pointer}/{key}", "missing or empty")
-        proof = kernel.get("proof")
-        if not _text(proof):
-            _add(
-                problems,
-                KV_PROOF_ABSENT,
-                f"{pointer}/proof",
-                "use NO_PROOF or a proof reference; never leave the field blank",
-            )
+        _check_proof(kernel, pointer, problems)
         evidence = kernel.get("evidence")
         if not isinstance(evidence, list) or not evidence:
             _add(problems, KV_SCHEMA, f"{pointer}/evidence", "must be a non-empty array")
         else:
             for ev_index, record in enumerate(evidence):
                 _check_evidence(record, f"{pointer}/evidence/{ev_index}", campaigns, problems)
+        _check_assurance(kernel, pointer, campaigns, root, problems)
         _check_no_evidence_targets(kernel, pointer, hardware, problems)
     return by_id
 
@@ -537,10 +1049,23 @@ def _check_claims(
             _add(problems, KV_DUPLICATE_ID, f"{pointer}/id", f"duplicate {claim_id!r}")
         else:
             seen.add(claim_id)
-        constant_time = claim.get("constant_time")
-        if not isinstance(constant_time, bool):
-            _add(problems, KV_SCHEMA, f"{pointer}/constant_time", "must be a boolean")
-            constant_time = False
+        assurance = claim.get("assurance")
+        if not isinstance(assurance, list):
+            _add(
+                problems,
+                KV_SCHEMA,
+                f"{pointer}/assurance",
+                "must be an array of assurance classes (empty for no assurance claim)",
+            )
+            assurance = []
+        for class_index, assurance_class in enumerate(assurance):
+            if assurance_class not in ASSURANCE_CLASSES or assurance_class == "UNASSESSED":
+                _add(
+                    problems,
+                    KV_SCHEMA,
+                    f"{pointer}/assurance/{class_index}",
+                    f"{assurance_class!r} is not a claimable assurance class",
+                )
         target = claim.get("target")
         profile = claim.get("profile")
         digest = claim.get("artefact_sha256")
@@ -548,12 +1073,16 @@ def _check_claims(
             _add(problems, KV_SCHEMA, f"{pointer}/target", "missing")
         if not _text(profile):
             _add(problems, KV_SCHEMA, f"{pointer}/profile", "missing")
-        if constant_time and not _sha(digest):
+        if any(
+            assurance_class in ARTEFACT_CLASSES
+            for assurance_class in assurance
+            if isinstance(assurance_class, str)
+        ) and not _sha(digest):
             _add(
                 problems,
                 KV_SOURCE_BOUND_CT_CLAIM,
                 f"{pointer}/artefact_sha256",
-                "a constant-time claim needs a full artefact digest",
+                "an artefact-level assurance claim needs a full artefact digest",
             )
         cited = claim.get("kernels")
         if not isinstance(cited, list) or not cited:
@@ -599,38 +1128,89 @@ def _check_claims(
                     where,
                     "claim identity differs from the cited evidence record",
                 )
-            if not constant_time:
-                continue
-            court = evidence.get("differential")
-            if not isinstance(court, dict) or court.get("result") not in (
-                "PASS",
-                "PASS_WITH_STOP",
-                "PASS_WITH_RESIDUAL",
-            ):
-                _add(
-                    problems,
-                    KV_CT_CLAIM_WITHOUT_COURT,
-                    f"{where}/evidence",
-                    "no passing differential court at this evidence record",
-                )
-            if not isinstance(evidence.get("audit"), dict):
-                _add(
-                    problems,
-                    KV_CT_CLAIM_WITHOUT_AUDIT,
-                    f"{where}/evidence",
-                    "no binary audit at this evidence record",
-                )
-            if evidence.get("binding") == "SOURCE" or evidence.get("artefact_sha256") is None:
-                _add(
-                    problems,
-                    KV_SOURCE_BOUND_CT_CLAIM,
-                    f"{where}/evidence",
-                    "constant-time evidence must be artefact-bound",
-                )
+            for assurance_class in assurance:
+                if assurance_class not in ASSURANCE_CLASSES or assurance_class == "UNASSESSED":
+                    continue
+                if assurance_class in ARTEFACT_CLASSES:
+                    binding = evidence.get("binding")
+                    if binding == "SOURCE" or evidence.get("artefact_sha256") is None:
+                        _add(
+                            problems,
+                            KV_SOURCE_BOUND_CT_CLAIM,
+                            f"{where}/evidence",
+                            "artefact-level assurance must be artefact-bound",
+                        )
+                    elif binding != "ARTEFACT":
+                        _add(
+                            problems,
+                            KV_ASSURANCE_BINDING_MISMATCH,
+                            f"{where}/evidence",
+                            f"{assurance_class} requires ARTEFACT-bound evidence, not "
+                            f"{binding!r}",
+                        )
+                    court = evidence.get("differential")
+                    if not isinstance(court, dict) or court.get("result") not in (
+                        "PASS",
+                        "PASS_WITH_STOP",
+                        "PASS_WITH_RESIDUAL",
+                    ):
+                        _add(
+                            problems,
+                            KV_CT_CLAIM_WITHOUT_COURT,
+                            f"{where}/evidence",
+                            "no passing differential court at this evidence record",
+                        )
+                    audit = evidence.get("audit")
+                    if not isinstance(audit, dict):
+                        _add(
+                            problems,
+                            KV_CT_CLAIM_WITHOUT_AUDIT,
+                            f"{where}/evidence",
+                            "no binary audit at this evidence record",
+                        )
+                    elif audit.get("verdict") != "PASS":
+                        _add(
+                            problems,
+                            KV_AUDIT_VERDICT_NOT_PASS,
+                            f"{where}/evidence/audit/verdict",
+                            f"audit verdict is {audit.get('verdict')!r}, not PASS",
+                        )
+                held = None
+                entries = kernel.get("assurance")
+                if isinstance(entries, list):
+                    for entry in entries:
+                        if (
+                            isinstance(entry, dict)
+                            and entry.get("class") == assurance_class
+                            and entry.get("evidence") == ev_index
+                        ):
+                            held = entry
+                            break
+                if held is None:
+                    _add(
+                        problems,
+                        KV_ASSURANCE_CLASS_ABSENT,
+                        where,
+                        f"{assurance_class} is not held at evidence {ev_index}",
+                    )
+                elif (
+                    assurance_class != "SOURCE_REVIEWED"
+                    and held.get("result") in INADMISSIBLE_RESULTS
+                ):
+                    _add(
+                        problems,
+                        KV_ASSURANCE_OUTCOME_INADMISSIBLE,
+                        where,
+                        f"{held.get('result')} is admissible only at SOURCE_REVIEWED or "
+                        "below",
+                    )
 
 
 def check_document(
-    document: Any, hardware: dict | None = None, doc_text: str | None = None
+    document: Any,
+    hardware: dict | None = None,
+    doc_text: str | None = None,
+    root: Path = REPO_ROOT,
 ) -> list[Problem]:
     problems: list[Problem] = []
     if not isinstance(document, dict):
@@ -646,7 +1226,7 @@ def check_document(
     _check_hardware(document, problems)
     _check_provenance(document, problems)
     campaigns = _check_campaigns(document, problems)
-    kernels = _check_kernels(document, campaigns, problems)
+    kernels = _check_kernels(document, campaigns, problems, root)
     _check_claims(document, kernels, problems)
     if doc_text is not None:
         for kernel in document.get("kernels", []) if isinstance(document.get("kernels"), list) else []:
@@ -668,12 +1248,31 @@ def check_document(
     return sorted(set(problems))
 
 
+def check_root(root: Path = REPO_ROOT) -> list[Problem]:
+    """The gate hook: validate the register a repository root actually carries.
+
+    `docs_consistency.py` (release-gate item 6) calls this, so the register cannot
+    be edited into an acceptance the standalone command would refuse while the
+    gate still passes.  A parse refusal is returned as a `Problem`, not raised.
+    """
+    register = root / "forensics" / "performance" / "KERNELS.json"
+    doc = root / "docs" / "KERNEL-VERIFICATION.md"
+    try:
+        document = load_document(register)
+    except Refusal as exc:
+        return [Problem(exc.pointer, exc.code, exc.detail)]
+    doc_text = doc.read_text(encoding="utf-8") if doc.is_file() else None
+    return check_document(document, doc_text=doc_text, root=root)
+
+
 # ---------------------------------------------------------------------------
 # Self-test controls
 # ---------------------------------------------------------------------------
 
-_A = "a" * 64
+_FIXTURE_ARTEFACT = Path(__file__).resolve()
+_A = hashlib.sha256(_FIXTURE_ARTEFACT.read_bytes()).hexdigest()
 _B = "b" * 64
+_AUDIT_EVIDENCE = "docs/KERNEL-VERIFICATION.md"
 _TS = "x86_64-unknown-linux-gnu release"
 _TP = "release, x86_64-unknown-linux-gnu, rustc 1.98.1"
 _NO_EVIDENCE = [
@@ -747,19 +1346,66 @@ def _valid_document() -> dict:
                         "artefact_sha256": _A,
                         "target": _TS,
                         "profile": _TP,
-                        "binding": "MIXED",
+                        "binding": "ARTEFACT",
                         "differential": {
                             "court": "test court",
                             "result": "PASS",
-                            "binding": "MIXED",
+                            "binding": "ARTEFACT",
                         },
                         "audit": {
                             "kind": "BINARY_BRANCH_AUDIT",
                             "result": "0 secret-derived",
+                            "verdict": "PASS",
                             "digest": _A,
                             "binding": "ARTEFACT",
                         },
+                        "ctgrind": {
+                            "result": "0 errors / 0 contexts; the negative control fires",
+                            "binding": "MIXED",
+                        },
                     }
+                ],
+                "assurance": [
+                    {
+                        "class": "ARTEFACT_AUDITED",
+                        "scope": "source A: mont_mul_ladder_into has no secret-derived transfer",
+                        "evidence": 0,
+                        "subject": {
+                            "source": "source A",
+                            "artefact": {
+                                "path": str(_FIXTURE_ARTEFACT),
+                                "sha256": _A,
+                            },
+                        },
+                        "assumptions": [
+                            "carry and borrow flags are consumed arithmetically"
+                        ],
+                        "result": "PASS",
+                        "instrument": "objdump plus dataflow review",
+                        "negative_control": {
+                            "fired": True,
+                            "detail": "a branchy canary produces a secret-derived jcc",
+                            "evidence_path": _AUDIT_EVIDENCE,
+                        },
+                        "evidence_path": _AUDIT_EVIDENCE,
+                    },
+                    {
+                        "class": "SOURCE_TAINT_TESTED",
+                        "scope": "source A: secret-exponent taint is 0/0 on the source build",
+                        "evidence": 0,
+                        "subject": {"source": "source A", "artefact": None},
+                        "assumptions": [
+                            "the harness marks the exponent limb values undefined"
+                        ],
+                        "result": "PASS",
+                        "instrument": "valgrind memcheck ctgrind",
+                        "negative_control": {
+                            "fired": True,
+                            "detail": "CTGRIND_CONTROL=1 fires on a tainted limb",
+                            "evidence_path": _AUDIT_EVIDENCE,
+                        },
+                        "evidence_path": _AUDIT_EVIDENCE,
+                    },
                 ],
                 "no_evidence_targets": [dict(item) for item in _NO_EVIDENCE],
             },
@@ -783,13 +1429,21 @@ def _valid_document() -> dict:
                         "audit": None,
                     }
                 ],
+                "assurance": [
+                    {
+                        "class": "UNASSESSED",
+                        "scope": "source S: no audit or firing taint control is recorded",
+                        "assumptions": [],
+                        "result": "NOT_RUN",
+                    }
+                ],
                 "no_evidence_targets": [dict(item) for item in _NO_EVIDENCE],
             },
         ],
         "claims": [
             {
                 "id": "c-ct",
-                "constant_time": True,
+                "assurance": ["ARTEFACT_AUDITED", "SOURCE_TAINT_TESTED"],
                 "target": _TS,
                 "profile": _TP,
                 "artefact_sha256": _A,
@@ -797,7 +1451,7 @@ def _valid_document() -> dict:
             },
             {
                 "id": "c-no-proof",
-                "constant_time": False,
+                "assurance": [],
                 "target": "test-binary target",
                 "profile": "test binary",
                 "artefact_sha256": None,
@@ -948,6 +1602,69 @@ def _controls() -> list[tuple[str, dict, str | None]]:
             KV_SCHEMA,
             _mutate(lambda d: d.update(schema="wrong")),
             KV_SCHEMA,
+        ),
+        (
+            KV_ASSURANCE_CLASS_ABSENT,
+            _mutate(set_claim("assurance", ["MACHINE_CHECKED"])),
+            KV_ASSURANCE_CLASS_ABSENT,
+        ),
+        (
+            KV_ASSURANCE_BINDING_MISMATCH,
+            _mutate(set_evidence("binding", "MIXED")),
+            KV_ASSURANCE_BINDING_MISMATCH,
+        ),
+        (
+            KV_AUDIT_VERDICT_NOT_PASS,
+            _mutate(
+                lambda d: d["kernels"][0]["evidence"][0]["audit"].update(
+                    verdict="NOT_RUN"
+                )
+            ),
+            KV_AUDIT_VERDICT_NOT_PASS,
+        ),
+        (
+            KV_ASSURANCE_TAINT_ABSENT,
+            _mutate(set_evidence("ctgrind", None)),
+            KV_ASSURANCE_TAINT_ABSENT,
+        ),
+        (
+            KV_ASSURANCE_NO_FIRING_CONTROL,
+            _mutate(
+                lambda d: d["kernels"][0]["assurance"][1]["negative_control"].update(
+                    fired=False
+                )
+            ),
+            KV_ASSURANCE_NO_FIRING_CONTROL,
+        ),
+        (
+            KV_PROOF_UNBOUND,
+            _mutate(set_kernel("proof", "checked by inspection")),
+            KV_PROOF_UNBOUND,
+        ),
+        (
+            KV_ASSURANCE_OUTCOME_INADMISSIBLE,
+            _mutate(
+                lambda d: d["kernels"][0]["assurance"][0].update(result="PASS_WITH_STOP")
+            ),
+            KV_ASSURANCE_OUTCOME_INADMISSIBLE,
+        ),
+        (
+            KV_ARTEFACT_SUBJECT_MISMATCH,
+            _mutate(
+                lambda d: d["kernels"][0]["assurance"][0]["subject"]["artefact"].update(
+                    path="docs/KERNEL-VERIFICATION.md"
+                )
+            ),
+            KV_ARTEFACT_SUBJECT_MISMATCH,
+        ),
+        (
+            KV_ASSURANCE_INCOMPLETE,
+            _mutate(
+                lambda d: d["kernels"][0]["assurance"][0].update(
+                    evidence_path="evidence/does-not-exist.md"
+                )
+            ),
+            KV_ASSURANCE_INCOMPLETE,
         ),
     ]
     return controls

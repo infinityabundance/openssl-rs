@@ -16,9 +16,13 @@ Run:
 from __future__ import annotations
 
 import copy
+import contextlib
+import importlib.util
+import io
 import json
 import subprocess
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -84,17 +88,58 @@ class CommittedRegister(unittest.TestCase):
                     self.assertIsNone(record["artefact_sha256"])
                     self.assertEqual(record["binding"], "SOURCE")
 
-    def test_the_source_bound_entry_is_accepted_only_without_a_constant_time_claim(self) -> None:
+    def test_the_source_bound_entry_is_accepted_only_without_an_assurance_claim(self) -> None:
         document = load()
         claims = {claim["id"]: claim for claim in document["claims"]}
         preset = claims["PFP-8-PRESET-e3ef3d84-DIFFERENTIAL-ONLY"]
-        self.assertFalse(preset["constant_time"])
+        self.assertEqual(preset["assurance"], [])
         self.assertEqual(kv.check_document(document), [])
         mutated = copy.deepcopy(document)
         for claim in mutated["claims"]:
             if claim["id"] == "PFP-8-PRESET-e3ef3d84-DIFFERENTIAL-ONLY":
-                claim["constant_time"] = True
+                claim["assurance"] = ["ARTEFACT_AUDITED"]
         self.assertIn(kv.KV_CT_CLAIM_WITHOUT_AUDIT, codes(mutated))
+
+    def test_no_constant_time_boolean_remains(self) -> None:
+        document = load()
+        for claim in document["claims"]:
+            self.assertNotIn("constant_time", claim, claim["id"])
+        for kernel in document["kernels"]:
+            self.assertNotIn("constant_time", kernel, kernel["id"])
+
+    def test_every_kernel_records_an_assurance_dimension(self) -> None:
+        for kernel in load()["kernels"]:
+            entries = kernel.get("assurance")
+            self.assertIsInstance(entries, list, kernel["id"])
+            self.assertTrue(entries, kernel["id"])
+            for entry in entries:
+                self.assertIn(entry["class"], kv.ASSURANCE_CLASSES, kernel["id"])
+
+    def test_the_migration_claims_no_artefact_class_without_a_hashable_subject(self) -> None:
+        # No distribution DSO is tracked, so an ARTEFACT_* class could only be
+        # asserted by trusting a declared digest.  The honest migration does not.
+        for kernel in load()["kernels"]:
+            for entry in kernel["assurance"]:
+                self.assertNotIn(entry["class"], kv.ARTEFACT_CLASSES, kernel["id"])
+
+    def test_the_rsa_crt_family_is_not_flattered(self) -> None:
+        document = load()
+        rsa = next(kernel for kernel in document["kernels"] if kernel["id"] == "rsa-crt")
+        self.assertEqual([entry["class"] for entry in rsa["assurance"]], ["UNASSESSED"])
+        claim = next(c for c in document["claims"] if c["id"] == "PFP-7-RSA-6d002db2")
+        self.assertEqual(claim["assurance"], [])
+
+    def test_every_proof_is_no_proof_or_a_bound_machine_check(self) -> None:
+        for kernel in load()["kernels"]:
+            self.assertIn(kernel["proof"], kv.PROOF_STATES, kernel["id"])
+            if kernel["proof"] == "MACHINE_CHECKED":
+                self.assertTrue(
+                    any(
+                        entry["class"] == "MACHINE_CHECKED"
+                        for entry in kernel["assurance"]
+                    ),
+                    kernel["id"],
+                )
 
     def test_sos_is_not_inherited_across_digests(self) -> None:
         document = load()
@@ -111,15 +156,16 @@ class CommittedRegister(unittest.TestCase):
                 claim["target"] = sos["evidence"][0]["target"]
                 claim["profile"] = sos["evidence"][0]["profile"]
                 claim["artefact_sha256"] = sos["evidence"][0]["artefact_sha256"]
+                claim["assurance"] = ["ARTEFACT_AUDITED"]
                 claim["kernels"] = [{"id": "bn-mont-sos", "evidence": 0}]
         self.assertIn(kv.KV_CT_CLAIM_WITHOUT_AUDIT, codes(mutated))
 
-    def test_the_arch_kernel_cannot_support_a_constant_time_claim(self) -> None:
+    def test_the_arch_kernel_cannot_support_an_artefact_claim(self) -> None:
         document = load()
         arch = next(kernel for kernel in document["kernels"] if kernel["id"] == "p256-field-arch")
         claim = {
             "id": "arch-ct",
-            "constant_time": True,
+            "assurance": ["ARTEFACT_AUDITED"],
             "target": arch["evidence"][0]["target"],
             "profile": arch["evidence"][0]["profile"],
             "artefact_sha256": arch["evidence"][0]["artefact_sha256"],
@@ -183,14 +229,22 @@ class Refusals(unittest.TestCase):
         document["claims"][0]["target"] = "another-target"
         self.assertIn(kv.KV_CLAIM_IDENTITY_MISMATCH, codes(document))
 
-    def test_a_missing_audit_is_refused_for_a_constant_time_claim(self) -> None:
+    def test_a_missing_audit_is_refused_for_an_artefact_assurance_claim(self) -> None:
         document = load()
+        document["kernels"][0]["evidence"][0]["binding"] = "ARTEFACT"
         document["kernels"][0]["evidence"][0]["audit"] = None
+        for claim in document["claims"]:
+            if claim["id"] == "PFP-6-CIOS-6d002db2":
+                claim["assurance"] = ["ARTEFACT_AUDITED"]
         self.assertIn(kv.KV_CT_CLAIM_WITHOUT_AUDIT, codes(document))
 
-    def test_a_missing_court_is_refused_for_a_constant_time_claim(self) -> None:
+    def test_a_missing_court_is_refused_for_an_artefact_assurance_claim(self) -> None:
         document = load()
+        document["kernels"][0]["evidence"][0]["binding"] = "ARTEFACT"
         document["kernels"][0]["evidence"][0]["differential"] = None
+        for claim in document["claims"]:
+            if claim["id"] == "PFP-6-CIOS-6d002db2":
+                claim["assurance"] = ["ARTEFACT_AUDITED"]
         self.assertIn(kv.KV_CT_CLAIM_WITHOUT_COURT, codes(document))
 
     def test_a_blank_proof_is_refused(self) -> None:
@@ -208,6 +262,189 @@ class Refusals(unittest.TestCase):
         with self.assertRaises(kv.Refusal) as non_finite:
             kv.loads_document('{"a": NaN}')
         self.assertEqual(non_finite.exception.code, kv.KV_JSON_NON_FINITE)
+
+
+class AssuranceDefects(unittest.TestCase):
+    """One mutation test per acceptance defect the PFP-49 review found."""
+
+    def fixture(self) -> dict:
+        return copy.deepcopy(kv._valid_document())
+
+    def test_a_complete_assurance_claim_is_accepted(self) -> None:
+        self.assertEqual(kv.check_document(self.fixture()), [])
+
+    def test_mixed_binding_refuses_an_artefact_class(self) -> None:
+        document = self.fixture()
+        document["kernels"][0]["evidence"][0]["binding"] = "MIXED"
+        self.assertIn(kv.KV_ASSURANCE_BINDING_MISMATCH, codes(document))
+
+    def test_an_audit_without_a_structured_pass_is_refused(self) -> None:
+        document = self.fixture()
+        document["kernels"][0]["evidence"][0]["audit"]["verdict"] = "NOT_RUN"
+        self.assertIn(kv.KV_AUDIT_VERDICT_NOT_PASS, codes(document))
+
+    def test_a_taint_class_without_taint_evidence_is_refused(self) -> None:
+        document = self.fixture()
+        document["kernels"][0]["evidence"][0]["ctgrind"] = None
+        self.assertIn(kv.KV_ASSURANCE_TAINT_ABSENT, codes(document))
+
+    def test_a_taint_class_without_a_firing_control_is_refused(self) -> None:
+        document = self.fixture()
+        document["kernels"][0]["assurance"][1]["negative_control"]["fired"] = False
+        self.assertIn(kv.KV_ASSURANCE_NO_FIRING_CONTROL, codes(document))
+
+    def test_a_prose_proof_is_refused(self) -> None:
+        document = self.fixture()
+        document["kernels"][0]["proof"] = "checked by inspection"
+        self.assertIn(kv.KV_PROOF_UNBOUND, codes(document))
+
+    def test_pass_with_stop_or_residual_above_source_reviewed_is_refused(self) -> None:
+        for result in ("PASS_WITH_STOP", "PASS_WITH_RESIDUAL"):
+            document = self.fixture()
+            document["kernels"][0]["assurance"][0]["result"] = result
+            self.assertIn(kv.KV_ASSURANCE_OUTCOME_INADMISSIBLE, codes(document))
+
+    def test_the_subject_is_hashed_not_just_declared(self) -> None:
+        document = self.fixture()
+        artefact = document["kernels"][0]["assurance"][0]["subject"]["artefact"]
+        # The declared digest still matches the evidence record, the claim and the
+        # audit; only the file at the named path has different bytes.
+        artefact["path"] = "docs/KERNEL-VERIFICATION.md"
+        self.assertIn(kv.KV_ARTEFACT_SUBJECT_MISMATCH, codes(document))
+
+    def test_source_review_argument_must_name_the_reviewed_source(self) -> None:
+        document = load()
+        document["kernels"][0]["assurance"][0]["scope"] = "the kernel looks constant-time"
+        self.assertIn(kv.KV_ASSURANCE_INCOMPLETE, codes(document))
+
+    def test_machine_checked_with_a_bound_harness_is_accepted(self) -> None:
+        document = self.fixture()
+        entry = document["kernels"][0]["assurance"][0]
+        entry["class"] = "MACHINE_CHECKED"
+        entry["instrument"] = "kani"
+        entry["harness"] = {"path": str(kv._FIXTURE_ARTEFACT), "sha256": kv._A}
+        document["kernels"][0]["proof"] = "MACHINE_CHECKED"
+        document["claims"][0]["assurance"] = ["MACHINE_CHECKED", "SOURCE_TAINT_TESTED"]
+        self.assertEqual(kv.check_document(document), [])
+
+    def test_statistically_tested_with_a_declared_experiment_is_accepted(self) -> None:
+        document = self.fixture()
+        entry = document["kernels"][0]["assurance"][0]
+        entry["class"] = "STATISTICALLY_TESTED"
+        entry["experiment"] = {
+            "samples": 15,
+            "statistic": "median paired ratio",
+            "threshold": "1.0",
+            "environment": "taskset -c 1, court feature set",
+        }
+        document["claims"][0]["assurance"] = ["STATISTICALLY_TESTED", "SOURCE_TAINT_TESTED"]
+        self.assertEqual(kv.check_document(document), [])
+
+    def test_independent_reproduction_with_a_distinct_party_is_accepted(self) -> None:
+        document = self.fixture()
+        entry = document["kernels"][0]["assurance"][0]
+        entry["class"] = "INDEPENDENTLY_REPRODUCED"
+        entry["reproduction"] = {
+            "party": "independent reviewer",
+            "producer": "campaign author",
+        }
+        document["claims"][0]["assurance"] = [
+            "INDEPENDENTLY_REPRODUCED",
+            "SOURCE_TAINT_TESTED",
+        ]
+        self.assertEqual(kv.check_document(document), [])
+
+    def test_a_class_the_kernel_does_not_hold_is_refused(self) -> None:
+        document = self.fixture()
+        document["claims"][0]["assurance"] = ["MACHINE_CHECKED"]
+        self.assertIn(kv.KV_ASSURANCE_CLASS_ABSENT, codes(document))
+
+    def test_source_review_needs_a_written_invariant_argument(self) -> None:
+        document = self.fixture()
+        entry = document["kernels"][0]["assurance"][0]
+        entry["class"] = "SOURCE_REVIEWED"
+        entry["assumptions"] = []
+        self.assertIn(kv.KV_ASSURANCE_INCOMPLETE, codes(document))
+
+    def test_machine_checked_needs_an_existing_harness_and_digest(self) -> None:
+        document = self.fixture()
+        entry = document["kernels"][0]["assurance"][0]
+        entry["class"] = "MACHINE_CHECKED"
+        entry["instrument"] = "kani"
+        entry["harness"] = {"path": "evidence/absent-harness.py", "sha256": "b" * 64}
+        self.assertIn(kv.KV_ASSURANCE_INCOMPLETE, codes(document))
+
+    def test_statistically_tested_needs_a_declared_experiment(self) -> None:
+        document = self.fixture()
+        entry = document["kernels"][0]["assurance"][0]
+        entry["class"] = "STATISTICALLY_TESTED"
+        entry.pop("experiment", None)
+        self.assertIn(kv.KV_ASSURANCE_INCOMPLETE, codes(document))
+
+    def test_independent_reproduction_needs_a_distinct_party(self) -> None:
+        document = self.fixture()
+        entry = document["kernels"][0]["assurance"][0]
+        entry["class"] = "INDEPENDENTLY_REPRODUCED"
+        entry["reproduction"] = {"party": "same", "producer": "Same"}
+        self.assertIn(kv.KV_ASSURANCE_INCOMPLETE, codes(document))
+
+
+class GateWiring(unittest.TestCase):
+    """PFP-49 defect 7: the checker must run where the gate runs."""
+
+    def test_check_root_refuses_a_defective_register(self) -> None:
+        document = copy.deepcopy(kv._valid_document())
+        document["kernels"][0]["proof"] = "checked by inspection"
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            (root / "forensics" / "performance").mkdir(parents=True)
+            (root / "docs").mkdir()
+            (root / "forensics/performance/KERNELS.json").write_text(
+                json.dumps(document), encoding="utf-8"
+            )
+            (root / "docs/KERNEL-VERIFICATION.md").write_text(
+                "k-artefact k-source no-inheritance rule", encoding="utf-8"
+            )
+            found = {problem.code for problem in kv.check_root(root)}
+        self.assertIn(kv.KV_PROOF_UNBOUND, found)
+
+    def test_docs_consistency_runs_the_kernel_checker(self) -> None:
+        spec = importlib.util.spec_from_file_location(
+            "docs_consistency_under_test", TOOLS / "docs_consistency.py"
+        )
+        module = importlib.util.module_from_spec(spec)
+        assert spec.loader is not None
+        sys.modules[spec.name] = module
+        spec.loader.exec_module(module)
+        self.assertIs(module.kernel_verification, kv)
+        buffer = io.StringIO()
+        with contextlib.redirect_stdout(buffer):
+            code = module.main(["--list"])
+        self.assertEqual(code, 0)
+        self.assertIn("kernel_register_assurance", buffer.getvalue())
+
+    def test_docs_consistency_propagates_a_kernel_refusal(self) -> None:
+        spec = importlib.util.spec_from_file_location(
+            "docs_consistency_refusal_under_test", TOOLS / "docs_consistency.py"
+        )
+        module = importlib.util.module_from_spec(spec)
+        assert spec.loader is not None
+        sys.modules[spec.name] = module
+        spec.loader.exec_module(module)
+        original = module.kernel_verification.check_root
+
+        def refuse(_root: Path) -> list:
+            return [kv.Problem("/kernels/0/proof", kv.KV_PROOF_UNBOUND, "defect")]
+
+        module.kernel_verification.check_root = refuse
+        try:
+            buffer = io.StringIO()
+            with contextlib.redirect_stdout(buffer):
+                code = module.main([])
+        finally:
+            module.kernel_verification.check_root = original
+        self.assertEqual(code, 1)
+        self.assertIn(kv.KV_PROOF_UNBOUND, buffer.getvalue())
 
 
 class Determinism(unittest.TestCase):

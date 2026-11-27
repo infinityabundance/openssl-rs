@@ -68,6 +68,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from atlas_common import REPO_ROOT  # noqa: E402
 import earned_trust  # noqa: E402
 import gen_frf_courts  # noqa: E402
+import kernel_verification  # noqa: E402
 
 
 def load_json(relpath: str) -> dict:
@@ -515,6 +516,8 @@ def main(argv: list[str]) -> int:
             print(f"{check.path}: {check.id}\n    expect from {check.source}{exempt}")
         print("docs/EARNED-TRUST.md: earned_trust_constitution\n"
               "    expect from evidence/etp-t14/ARTICLES.json and the tools it credits")
+        print("forensics/performance/KERNELS.json: kernel_register_assurance\n"
+              "    expect from forensics/tools/kernel_verification.py")
         return 0
 
     problems: list[str] = []
@@ -556,6 +559,16 @@ def main(argv: list[str]) -> int:
 
     constitution = earned_trust.check_root(REPO_ROOT)
 
+    kernel_problems = [
+        f"forensics/performance/KERNELS.json: {problem.code} {problem.pointer}: "
+        f"{problem.detail}"
+        for problem in kernel_verification.check_root(REPO_ROOT)
+    ]
+    if kernel_problems:
+        print(f"[docs-consistency] FAIL: {len(kernel_problems)} kernel-register problem(s)")
+        for line in kernel_problems:
+            print(f"  STALE: {line}")
+
     if problems:
         print(f"[docs-consistency] FAIL: {len(problems)} stale hand-written claim(s)")
         for p in problems:
@@ -574,11 +587,12 @@ def main(argv: list[str]) -> int:
               "docs/RELEASE_GATES.md; an article with no enforcement must say so rather "
               "than imply an enforcement that does not exist.")
 
-    if problems or constitution:
+    if problems or constitution or kernel_problems:
         return 1
 
     print(f"[docs-consistency] ok: {len(CHECKS)} hand-written claim(s) agree with "
-          f"their generated sources; the earned-trust constitution is wired")
+          f"their generated sources; the earned-trust constitution and the kernel "
+          f"register are wired")
     return 0
 
 

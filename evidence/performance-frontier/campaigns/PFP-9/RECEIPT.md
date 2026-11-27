@@ -16,8 +16,8 @@ agent:        no commit, no push
 |---|---|
 | `docs/KERNEL-VERIFICATION.md` | the PFP-9 output: provenance decision, per-kernel table, no-inheritance rule, limits, proof status |
 | `forensics/performance/KERNELS.json` | machine-readable per-kernel table (`openssl-rs/performance/kernel-register/v1`) |
-| `forensics/tools/kernel_verification.py` | validator, 21 refusal codes, self-test, `check`/`rules`/`self-test` commands |
-| `forensics/tools/tests/test_kernel_verification.py` | 22 tests, 0 failures |
+| `forensics/tools/kernel_verification.py` | validator, 30 refusal codes, self-test, `check`/`rules`/`self-test` commands |
+| `forensics/tools/tests/test_kernel_verification.py` | 47 tests, 0 failures |
 | `docs/PERFORMANCE-FRONTIER-TODO.md` | PFP-9 row moved to `PARTIAL` with exactly what is and is not established |
 | `docs/PERFORMANCE-FRONTIER.md` | §14 layout names the checker |
 | `evidence/performance-frontier/campaigns/PFP-9/RECEIPT.md` | this receipt |
@@ -162,12 +162,43 @@ The checker is a separate command; it is **not** wired into
 
 | check | result |
 |---|---|
-| `python3 forensics/tools/kernel_verification.py self-test` | ok: 19 controls, 21 codes, 2 document controls, 3 positive controls |
+| `python3 forensics/tools/kernel_verification.py self-test` | ok: 28 controls, 30 refusal codes, 2 document controls, 3 positive controls |
 | `python3 forensics/tools/kernel_verification.py check` | 1 register accepted, 0 refused |
-| `python3 -m unittest forensics.tools.tests.test_kernel_verification` | 22 tests, 0 failures |
-| `python3 -m unittest forensics.tools.tests.test_performance_admission forensics.tools.tests.test_performance_classification` | see the run log; no change to either register |
+| `python3 -m unittest forensics.tools.tests.test_kernel_verification` | 47 tests, 0 failures |
+| `python3 forensics/tools/docs_consistency.py` | ok: 20 hand-written claims agree; the kernel register is wired |
+| `python3 -m unittest forensics.tools.tests.test_earned_trust` | 28 tests, 0 failures |
 | Rust suite / clippy | **NOT_RUN** — `src/` is unchanged; the recorded PFP-8 preset-priv baseline is 2,499 passed / 0 failed / 54 ignored, not re-run here |
 
 This receipt does not establish that any cited court or audit ran, that any
 measurement is true, or that any kernel is constant time. It records a bound,
 enforced register of what exists and what does not.
+
+## 7. Assurance migration (PFP-49)
+
+The Boolean is gone. Each kernel now carries an `assurance` list; a claim names
+the dimensions it relies on. The migration is from the evidence actually on
+disk, and it is deliberately lower than the old `constant_time: true` where the
+stronger class would have required trusting a declared digest.
+
+| kernel | old claim | new class | why |
+|---|---|---|---|
+| `bn-cias-mont` | `PFP-6-CIOS` `true` | `SOURCE_TAINT_TESTED` | exponent ctgrind 0/0 with a firing control (4/1); the DSO is not tracked, so no `ARTEFACT_AUDITED` claim |
+| `bn-cias-fixed` | `M-A1-FIXED` `true` | `SOURCE_TAINT_TESTED` | width-4 taint 0/0, control 4/1; widths 6–128 are structural only |
+| `bn-mont-sos` | `PFP-5-SOS` `true` | `SOURCE_REVIEWED` | the PFP-5 taint has no firing control, and the audit at `842efa27` is not the `6d002db2` evidence |
+| `bn-mont-sqr` | no claim (`NOT_SHIPPED`) | `UNASSESSED` | the dedicated-squaring carrier was never audited or tainted |
+| `bn-window-ladder` | `PFP-5-WINDOW` `true` | `SOURCE_REVIEWED` | taint 0/0 but no firing control in either the PFP-5 or the re-evaluation record |
+| `p256-field-mont` | `PFP-2-FIELD` `true` | `SOURCE_REVIEWED` | DSO ctgrind 0/0 with a firing sensitivity control, but the DSO is not tracked; no independent subject hash, so no `ARTEFACT_*` claim |
+| `p256-field-arch` | no claim | `UNASSESSED` | source-bound test binary only; no audit and no taint |
+| `p256-fixed-comb` | `PFP-3-COMB` `true` | `SOURCE_REVIEWED` | DSO ctgrind 0/0/0 with a firing control, but the DSO is not tracked; no subject hash |
+| `p256-order-inverse` | `PFP-4-INVERSE` `true` | `SOURCE_REVIEWED` | DSO ctgrind 0/0 with a firing control; BINSEC and the dedicated mutation control are `NOT_RUN`; DSO untracked |
+| `dh-width-policy` | `PFP-8-WIDTH` `true`; `PFP-8-PRESET` `false` | `SOURCE_TAINT_TESTED` (evidence 0), `SOURCE_REVIEWED` (evidence 1), preset claim `[]` | policy taint 0/0, control 4/1; the STOP is a compatibility divergence, not a taint finding. The repair's ctgrind was not re-run at `e3ef3d84` |
+| `rsa-crt` | `PFP-7-RSA` `true` | `UNASSESSED` | ctgrind reports 96,668/112 and 97,546/106 with findings outside the ladder carriers; the CRT path is not established clean, so no taint-tested class is claimed |
+
+Three kernels hold `SOURCE_TAINT_TESTED` for their clean, controlled,
+source-bound taint dimension; six artefact-taint records are downgraded to
+`SOURCE_REVIEWED` because their DSO is not tracked and the checker cannot hash
+the subject; three are `UNASSESSED`. No claim asserts an `ARTEFACT_*`,
+`STATISTICALLY_TESTED`, `MACHINE_CHECKED` or `INDEPENDENTLY_REPRODUCED`
+dimension. The register is therefore not an unverified source of authority: it
+records what the checkable evidence supports, and the missing dimensions are
+visible as absent, not implied.

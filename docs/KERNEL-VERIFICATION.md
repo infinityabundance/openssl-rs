@@ -162,6 +162,42 @@ a separate limit (§1, §5.2): no timing row here is a PMU measurement.
 | `dh-width-policy` | `N/A_HW` — `aarch64` | `N/A_HW` — `avx512f`, `avx512ifma` | `NOT_RUN` — no backend | `NOT_RUN` — no backend |
 | `rsa-crt` | `N/A_HW` — `aarch64` | `N/A_HW` — `avx512f`, `avx512ifma` (IFMA pairing) | `NOT_RUN` — no backend | `NOT_RUN` — no hand-written backend; the ADX build measured only the fused transcription |
 
+### 3.2 Assurance dimensions, not a Boolean (PFP-49)
+
+The register no longer carries `constant_time: true`. Each kernel records an
+`assurance` list; each entry names one dimension it can support, binds that
+dimension to an evidence record (`evidence` index) and a subject, and states
+what was assumed. The classes are complementary, not a ladder, so a kernel may
+hold several at once:
+
+| class | additional conjunct the checker requires |
+|---|---|
+| `UNASSESSED` | nothing is asserted; the scope records why |
+| `SOURCE_REVIEWED` | a source identity plus a non-empty written invariant argument (`scope` and `assumptions`), an instrument and an existing `evidence_path` |
+| `SOURCE_TAINT_TESTED` | the above plus taint evidence bound to that source identity and a **firing negative control** with an existing evidence path |
+| `ARTEFACT_AUDITED` | an artefact subject the checker **hashes itself**, an `ARTEFACT`-bound record, and an audit whose structured `verdict` is `PASS` and whose digest is that subject |
+| `ARTEFACT_TAINT_TESTED` | the hashable subject plus `ARTEFACT`-bound taint evidence and a firing negative control |
+| `STATISTICALLY_TESTED` | the hashable subject plus a declared experiment (sample count, statistic, threshold, environment) and a result |
+| `MACHINE_CHECKED` | a named mechanised tool plus a harness path that exists and a digest the checker re-hashes; a prose proof string is refused |
+| `INDEPENDENTLY_REPRODUCED` | a reproduction record naming a party distinct from the producer |
+
+`PASS_WITH_STOP` and `PASS_WITH_RESIDUAL` are admissible only at
+`SOURCE_REVIEWED` or below; every stronger dimension must be a clean `PASS`.
+A claim names the classes it relies on (`assurance: [...]`); an empty list is a
+claim with no assurance dimension, which is a recorded absence, not a pass.
+
+The PFP-49 migration is deliberately conservative. No distribution DSO is
+tracked in the repository, so `ARTEFACT_*`, `STATISTICALLY_TESTED`,
+`MACHINE_CHECKED` and `INDEPENDENTLY_REPRODUCED` cannot be claimed without
+trusting a declared digest. Three kernels hold `SOURCE_TAINT_TESTED`
+(`bn-cias-mont`, `bn-cias-fixed`, and the width-policy record of
+`dh-width-policy`); the artefact-bound taint records that cannot be re-hashed
+are recorded as `SOURCE_REVIEWED` with that limitation in their scope; and
+`bn-mont-sqr`, `p256-field-arch` and `rsa-crt` are `UNASSESSED`. The RSA CRT
+taint findings outside the ladder carriers are not presented as a clean result.
+The per-entry reasoning is in
+`evidence/performance-frontier/campaigns/PFP-9/RECEIPT.md` §7.
+
 ---
 
 ## 4. The no-inheritance rule
@@ -189,9 +225,9 @@ Three consequences that are recorded rather than argued away:
 
 | claim | identity cited | why it is refused |
 |---|---|---|
-| SOS constant-time claim at `6d002db2` | `mont_mul_sos_into` audit at `842efa27` | the audit is at another artefact; the `6d002db2` base-taint probe is not an audit (`KV_CT_CLAIM_WITHOUT_AUDIT`) |
-| DH preset-repair constant-time claim at `e3ef3d84` | branch audit at `6302e05a` | the differential is artefact-bound at `e3ef3d84`, but the audit was not regenerated there (`KV_CT_CLAIM_WITHOUT_AUDIT`) |
-| P-256 `Arch` constant-time claim | source-bound kernel measurement | no artefact digest and no audit (`KV_SOURCE_BOUND_CT_CLAIM`) |
+| SOS artefact-level claim at `6d002db2` | `mont_mul_sos_into` audit at `842efa27` | the audit is at another artefact; the `6d002db2` base-taint probe is not an audit (`KV_CT_CLAIM_WITHOUT_AUDIT`) |
+| DH preset-repair artefact-level claim at `e3ef3d84` | branch audit at `6302e05a` | the differential is artefact-bound at `e3ef3d84`, but the audit was not regenerated there (`KV_CT_CLAIM_WITHOUT_AUDIT`) |
+| P-256 `Arch` artefact-level claim | source-bound kernel measurement | no artefact digest and no audit (`KV_SOURCE_BOUND_CT_CLAIM`) |
 | P-256 comb claim at the pre-fix `04611380` | post-fix differential at `ecbefb7d` | the pre-fix artefact had a secret-derived `je`; the post-fix evidence does not transfer backwards |
 | a claim naming a different target or profile from its kernel | kernel evidence record | `KV_TARGET_MISMATCH`, `KV_PROFILE_MISMATCH`, `KV_CLAIM_IDENTITY_MISMATCH` |
 | an audit whose digest differs from its evidence record | any kernel | `KV_AUDIT_DIGEST_MISMATCH` |
@@ -376,6 +412,11 @@ of the kernel, a machine-checked constant-time argument for the emitted code
 (or an object-code proof in the `s2n-bignum` style), and a binding from the
 proof to the exact source and artefact identity.
 
+The `proof` field is now `NO_PROOF` or `MACHINE_CHECKED`. `MACHINE_CHECKED` is
+accepted only when the kernel also carries a `MACHINE_CHECKED` assurance entry
+whose harness path exists and hashes to its declared digest; any other string
+is refused as an unbound prose claim.
+
 ---
 
 ## 6. Enforcement
@@ -409,15 +450,27 @@ The refusal codes are:
 | `KV_CT_CLAIM_WITHOUT_COURT` | constant-time claim with no differential court |
 | `KV_CT_CLAIM_WITHOUT_AUDIT` | constant-time claim with no binary audit |
 | `KV_SOURCE_BOUND_CT_CLAIM` | constant-time claim on source-bound evidence |
+| `KV_ASSURANCE_CLASS_ABSENT` | a claim names an assurance class its kernel does not hold at the cited evidence |
+| `KV_ASSURANCE_BINDING_MISMATCH` | an artefact-level class cites evidence that is not purely artefact-bound |
+| `KV_AUDIT_VERDICT_NOT_PASS` | an audit record has no structured `PASS` verdict |
+| `KV_ASSURANCE_TAINT_ABSENT` | a taint-tested class has no taint evidence bound to its subject |
+| `KV_ASSURANCE_NO_FIRING_CONTROL` | taint evidence is claimed without a firing negative control |
+| `KV_PROOF_UNBOUND` | the proof field is neither `NO_PROOF` nor a bound `MACHINE_CHECKED` entry |
+| `KV_ASSURANCE_OUTCOME_INADMISSIBLE` | `PASS_WITH_STOP` / `PASS_WITH_RESIDUAL` above `SOURCE_REVIEWED` |
+| `KV_ARTEFACT_SUBJECT_MISMATCH` | an artefact subject is absent or does not hash to its declared digest |
+| `KV_ASSURANCE_INCOMPLETE` | an assurance entry is missing a required field or its evidence path |
 | `KV_DOC_KERNEL_MISSING` / `KV_DOC_NO_INHERITANCE_MISSING` | this document does not name a kernel or the rule |
 
-A kernel with no court or no audit is **accepted as `NO_PROOF`** when the claim
-is not a constant-time claim; that is a recorded absence, not a pass.
+A claim with an empty `assurance` list asserts no dimension; that is a recorded
+absence, not a pass. A kernel whose assurance is only `UNASSESSED` is likewise
+a recorded absence.
 
-The checker is a **separate command**. It is not wired into
-`forensics/tools/docs_consistency.py` because the existing performance checkers
-(`performance_classification.py`, `performance_admission.py`) are separate
-commands with their own test modules; this follows that convention.
+The checker is wired into the gate. `forensics/tools/docs_consistency.py` calls
+`kernel_verification.check_root(REPO_ROOT)`, and release-gate item 6 runs
+`docs_consistency.py`, so a register the standalone `check` refuses also refuses
+the release gate. The `check` CLI remains available for a local run. (The
+earlier text that described the checker as a separate command is superseded by
+PFP-49, which found that separation to be a gate gap.)
 
 ---
 
