@@ -1,0 +1,1 @@
+RESULT dh-keygen-named op=keygen median_us=447.401 min_us=446.783 max_us=525.998 spread=0.1771 iters=20 runs=5

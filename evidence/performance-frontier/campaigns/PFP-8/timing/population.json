@@ -1,0 +1,24 @@
+{
+  "declared_by": "courts/performance-frontier/pfp8/run_timing.sh (the workloads, arms, fixtures and repetition count are fixed by the script before execution; this record is reconstructed from the pre-execution script, raw/operands.env and timing/raw/run-meta.env)",
+  "repetitions": 15,
+  "cpu": 1,
+  "taskset": "taskset -c 1",
+  "workloads": [
+    "keygen (ffdhe2048, named, real RNG, fresh object per call)",
+    "compute (ffdhe2048, named, 2048-bit private exponent)",
+    "compute225 (ffdhe2048, named, 225-bit RFC 7919 key length)"
+  ],
+  "arms": {
+    "cand": "88c0c7e04d52a1bf84d665fdd691bddf2bbe700e35505d95bf145bfdc3774d87",
+    "prev": "6d002db20c815e252d1672a72b654f40844c2a1b24400cfbdfce5d1eaf828f39",
+    "auth": "611e511db4273c4b6b522031fd171efce71b80661bb8310c2a21dfd18ec0efd2"
+  },
+  "harness": "courts/performance-frontier/pfp8/bench_pfp8.c",
+  "statistic": "median of 15 paired per-repetition ratios; 95% percentile bootstrap, 20000 resamples, seed 0x50465038",
+  "fixtures": {
+    "shared-secret operand construction": "xorshift64, private seed 0x50524900+bits, peer seed 0x50454500+bits, top bit clear, odd (raw/operands.env)",
+    "ffdhe2048": "evidence/performance-frontier/campaigns/PFP-1/performance/fixtures/ffdhe2048.hex",
+    "ffdhe3072": "evidence/performance-frontier/campaigns/PFP-1/performance/fixtures/ffdhe3072.hex",
+    "modp2048": "evidence/performance-frontier/campaigns/PFP-1/performance/fixtures/modp2048.hex"
+  }
+}

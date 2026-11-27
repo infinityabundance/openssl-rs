@@ -1,0 +1,28 @@
+--------------------------------------------------------------------------------
+Profile data file '/work/court/tmp/pfp8/cg/compute-named-225.out' (creator: callgrind-3.19.0)
+--------------------------------------------------------------------------------
+I1 cache: 
+D1 cache: 
+LL cache: 
+Timerange: Basic block 0 - 8881151
+Trigger: Program termination
+Profiled target:  /work/court/tmp/pfp8/bench_pfp8 --lib /work/court/tmp/ma1/cand/distribution/libcrypto.so.3 --op compute --iters 1 --runs 1 --nid 1126 --priv 002605d5555b1446323a0d7efe724f93e54c7b3dc85ea4b0360ed5fe07 --peer 00165f066e1ae8a917d4741d87b1d7a96f3543ef72de7bbc728d51e05b (PID 268762, part 1)
+Events recorded:  Ir
+Events shown:     Ir
+Event sort order: Ir
+Thresholds:       95
+Include dirs:     
+User annotated:   
+Auto-annotation:  on
+
+--------------------------------------------------------------------------------
+Ir                   
+--------------------------------------------------------------------------------
+112,219,716 (100.0%)  PROGRAM TOTALS
+
+--------------------------------------------------------------------------------
+Ir                    file:function
+--------------------------------------------------------------------------------
+105,548,652 (94.06%)  ???:openssl_rs::bn::arith::mont_mul_ladder_into [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+  2,818,502 ( 2.51%)  ???:openssl_rs::bn::limbs::pow2_mod_consttime [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+

@@ -1,0 +1,115 @@
+symbol	addr	kind	insn	operand	class	sub	flag_source	consumed
+run_mont_ladder	2f895b	jcc	jne	2f8c17	a	a-geom:slice-length high-bit check (shr 58)	shr $0x3a,%rax	-
+run_mont_ladder	2f89a7	jcc	jbe	2f8a98	a	a-loop	cmp %rbx,%rdx	-
+run_mont_ladder	2f89cb	jcc	je	2f8c17	a	a-loop	cmp $0xffffffffffffffff,%r15	-
+run_mont_ladder	2f89eb	jcc	jne	2f8d84	a	a-loop	test %rbx,%rbx	-
+run_mont_ladder	2f8a15	setcc	seta	%al	a	a-geom	cmp %rax,%r15	-
+run_mont_ladder	2f8a23	setcc	sete	%cl	a	a-geom	test %rsi,%rsi	-
+run_mont_ladder	2f8a2d	jcc	jne	2f8a79	a	a-geom:allocation-length overflow mask (or of two setcc)	or %al,%cl	-
+run_mont_ladder	2f8a77	jcc	jne	2f8a40	a	a-loop	cmp %rax,%rsi	-
+run_mont_ladder	2f8a7c	jcc	je	2f8a8c	a	a-loop	test %r15,%r15	-
+run_mont_ladder	2f8aa9	jcc	jne	2f8bdf	a	a-loop	test %rbx,%rbx	-
+run_mont_ladder	2f8aec	jcc	jne	2f8b5e	a	a-loop	cmp $0xffffffffffffffff,%r12	-
+run_mont_ladder	2f8af9	jcc	je	2f8c1f	a	a-loop	test %rbx,%rbx	-
+run_mont_ladder	2f8b46	jcc	jne	2f8b10	a	a-loop	cmp %rax,%rbx	-
+run_mont_ladder	2f8b73	jcc	jne	2f8cbf	a	a-loop	test %rbx,%rbx	-
+run_mont_ladder	2f8ba8	jcc	je	2f9bbe	a	a-loop	cmpb $0x0,0x40(%rsp)	-
+run_mont_ladder	2f8bb9	jcc	je	2f8d07	a	a-loop	test %rbx,%rbx	-
+run_mont_ladder	2f8c11	jcc	je	2f8e3e	a	a-loop	cmpb $0x0,0x40(%rsp)	-
+run_mont_ladder	2f8c30	setcc	seta	%cl	a	a-geom	cmp %rax,%rsi	-
+run_mont_ladder	2f8c3e	setcc	sete	%dl	a	a-geom	test %rax,%rax	-
+run_mont_ladder	2f8c43	jcc	jne	2f8c84	a	a-geom:allocation-length overflow mask (or of two setcc)	or %cl,%dl	-
+run_mont_ladder	2f8c7e	jcc	jne	2f8c50	a	a-loop	cmp %rdx,%rax	-
+run_mont_ladder	2f8c87	jcc	je	2f8cad	a	a-loop	test %rsi,%rsi	-
+run_mont_ladder	2f8cf9	jcc	je	2f8ec0	a	a-loop	cmpb $0x0,0x40(%rsp)	-
+run_mont_ladder	2f8d14	setcc	seta	%al	a	a-geom	cmp %rax,%r12	-
+run_mont_ladder	2f8d22	setcc	sete	%cl	a	a-geom	test %rsi,%rsi	-
+run_mont_ladder	2f8d27	jcc	jne	2f8d68	a	a-geom:allocation-length overflow mask (or of two setcc)	or %al,%cl	-
+run_mont_ladder	2f8d66	jcc	jne	2f8d30	a	a-loop	cmp %rax,%rsi	-
+run_mont_ladder	2f8d6b	jcc	je	2f8af6	a	a-loop	test %r12,%r12	-
+run_mont_ladder	2f8dae	jcc	je	2f8e80	a	a-loop	cmpb $0x0,0x40(%rsp)	-
+run_mont_ladder	2f8dcd	setcc	seta	%al	a	a-geom	cmp %rax,%r15	-
+run_mont_ladder	2f8ddb	setcc	sete	%cl	a	a-geom	test %rsi,%rsi	-
+run_mont_ladder	2f8de5	jcc	jne	2f8e22	a	a-geom:allocation-length overflow mask (or of two setcc)	or %al,%cl	-
+run_mont_ladder	2f8e20	jcc	jne	2f8de9	a	a-loop	cmp %rax,%rsi	-
+run_mont_ladder	2f8e25	jcc	je	2f8c1f	a	a-loop	test %r15,%r15	-
+run_mont_ladder	2f8e4a	jcc	je	2f8e67	a	a-loop	cmp $0x1,%rbx	-
+run_mont_ladder	2f8e8c	jcc	je	2f8ea9	a	a-loop	cmp $0x1,%rbx	-
+run_mont_ladder	2f8eb3	cmovcc	cmovb	%rbx,%rbp	a	a-loop	cmp %rbp,%rbx	-
+run_mont_ladder	2f8ed1	jcc	je	2f8ef1	a	a-loop	cmp $0x1,%rbx	-
+run_mont_ladder	2f8f25	jcc	je	2f8f38	a	a-loop	cmpb $0x0,0x40(%rsp)	-
+run_mont_ladder	2f8f4b	jcc	je	2f8f70	a	a-loop	cmp $0x1,%rbx	-
+run_mont_ladder	2f8fa1	jcc	je	2f9003	a	a-loop	cmpb $0x0,0x40(%rsp)	-
+run_mont_ladder	2f8fec	jcc	jne	2f8fbe	a	a-loop	cmp %rax,%rsi	-
+run_mont_ladder	2f9053	jcc	je	2f9159	a	a-loop	cmpb $0x0,0x40(%rsp)	-
+run_mont_ladder	2f90ba	jcc	jne	2f9083	a	a-loop	cmp %rax,%rcx	-
+run_mont_ladder	2f90e3	setcc	seta	%al	a	a-geom	cmp %rax,%rcx	-
+run_mont_ladder	2f90f1	setcc	sete	%cl	a	a-geom	test %rsi,%rsi	-
+run_mont_ladder	2f90f6	jcc	jne	2f912f	a	a-geom:allocation-length overflow mask (or of two setcc)	or %al,%cl	-
+run_mont_ladder	2f912d	jcc	jne	2f90ff	a	a-loop	cmp %rax,%rsi	-
+run_mont_ladder	2f9134	jcc	je	2f9146	a	a-loop	cmpq $0x0,(%rsp)	-
+run_mont_ladder	2f914e	jcc	jne	2f8bb6	a	a-loop	test %bpl,%bpl	-
+run_mont_ladder	2f9167	jcc	je	2f918c	a	a-loop	cmp $0x1,%rbx	-
+run_mont_ladder	2f91b8	jcc	je	2f91e2	a	a-loop	cmpb $0x0,0x40(%rsp)	-
+run_mont_ladder	2f91f3	jcc	jne	2f9206	a	a-loop	cmp $0x1,%rbx	-
+run_mont_ladder	2f9239	jcc	jne	2f94bb	a	a-geom:pointer/tag high-bit check (shr 59)	shr $0x3b,%rax	-
+run_mont_ladder	2f9263	jcc	je	2f94bb	a	a-loop	cmp $0xffffffffffffffff,%rax	-
+run_mont_ladder	2f929d	jcc	je	2f94c4	a	a-loop	cmp $0xffffffffffffffff,%rax	-
+run_mont_ladder	2f92b2	jcc	ja	2f9c86	a	a-loop	cmp 0x68(%rsp),%rbx	-
+run_mont_ladder	2f92c9	jcc	ja	2f9c9e	a	a-loop	cmp %rax,%rbx	-
+run_mont_ladder	2f931a	jcc	jb	2f9cbb	a	a-geom:allocation-size difference (sub)	sub %rax,%rbp	-
+run_mont_ladder	2f9328	jcc	jne	2f9ccf	a	a-loop	cmp 0x80(%rsp),%rbx	-
+run_mont_ladder	2f9397	jcc	jb	2f960f	a	a-geom:allocation counter underflow (subq)	subq $0x1,0xd8(%rsp)	-
+run_mont_ladder	2f93a7	jcc	ja	2f9c19	a	a-loop	cmp 0x68(%rsp),%rax	-
+run_mont_ladder	2f93bb	jcc	jo	2f9d37	a	a-geom:allocation-size overflow (mul, jo)	mul %rbx	-
+run_mont_ladder	2f93c6	jcc	jb	2f9c3b	a	a-loop	cmp %rax,0x10(%rsp)	-
+run_mont_ladder	2f93cf	jcc	ja	2f9c47	a	a-loop	cmp %rbp,%rbx	-
+run_mont_ladder	2f9433	jcc	jne	2f938e	a	a-loop	test %al,%al	-
+run_mont_ladder	2f9452	setcc	seta	%al	a	a-geom	cmp %rax,%rcx	-
+run_mont_ladder	2f9460	setcc	sete	%cl	a	a-geom	test %rsi,%rsi	-
+run_mont_ladder	2f9465	jcc	jne	2f949e	a	a-geom:allocation-length overflow mask (or of two setcc)	or %al,%cl	-
+run_mont_ladder	2f949c	jcc	jne	2f946e	a	a-loop	cmp %rax,%rsi	-
+run_mont_ladder	2f94a7	jcc	je	2f94c8	a	a-loop	cmpq $0x0,0xc0(%rsp)	-
+run_mont_ladder	2f94dd	setcc	seta	%al	a	a-geom	cmp %rax,%rcx	-
+run_mont_ladder	2f94eb	setcc	sete	%cl	a	a-geom	test %rsi,%rsi	-
+run_mont_ladder	2f94f0	jcc	jne	2f9529	a	a-geom:allocation-length overflow mask (or of two setcc)	or %al,%cl	-
+run_mont_ladder	2f9527	jcc	jne	2f94f9	a	a-loop	cmp %rax,%rsi	-
+run_mont_ladder	2f9532	jcc	je	2f9544	a	a-loop	cmpq $0x0,0xc8(%rsp)	-
+run_mont_ladder	2f9591	jcc	jae	2f9597	a	a-loop	cmp $0x7,%rcx	-
+run_mont_ladder	2f95d8	jcc	jne	2f95aa	a	a-loop	cmp %rcx,%rdx	-
+run_mont_ladder	2f95dd	jcc	je	2f95f2	a	a-loop	test %rax,%rax	-
+run_mont_ladder	2f95f0	jcc	jne	2f95e6	a	a-loop	cmp %rdx,%rax	-
+run_mont_ladder	2f9614	jcc	jne	2f9cdd	a	a-loop	cmp %rbx,0x70(%rsp)	-
+run_mont_ladder	2f963b	jcc	je	2f9b2e	a	a-loop	cmpq $0x0,0x88(%rsp)	-
+run_mont_ladder	2f9671	cmovcc	cmovb	%rbx,%rcx	a	a-loop	cmp %rax,%rbx	-
+run_mont_ladder	2f96e7	jcc	jae	2f971a	a	a-loop	cmp 0x88(%rsp),%rax	-
+run_mont_ladder	2f96f8	jcc	jae	2f9d4a	a	a-loop	cmp 0xa0(%rsp),%rdi	-
+run_mont_ladder	2f9710	setcc	setb	%dl	b	b-secret-bit	bt %rax,%rcx	mov:mov %rdx,0x10(%rsp)
+run_mont_ladder	2f972f	jcc	jae	2f9766	a	a-loop	cmp 0x88(%rsp),%rcx	-
+run_mont_ladder	2f9740	jcc	jae	2f9d4a	a	a-loop	cmp 0xa0(%rsp),%rdi	-
+run_mont_ladder	2f9772	jcc	jae	2f97a9	a	a-loop	cmp 0x88(%rsp),%rcx	-
+run_mont_ladder	2f9783	jcc	jae	2f9d4a	a	a-loop	cmp 0xa0(%rsp),%rdi	-
+run_mont_ladder	2f97b5	jcc	jae	2f97ec	a	a-loop	cmp 0x88(%rsp),%rcx	-
+run_mont_ladder	2f97c6	jcc	jae	2f9d4a	a	a-loop	cmp 0xa0(%rsp),%rdi	-
+run_mont_ladder	2f97f8	jcc	jae	2f982b	a	a-loop	cmp 0x88(%rsp),%rax	-
+run_mont_ladder	2f9809	jcc	jae	2f9d4a	a	a-loop	cmp 0xa0(%rsp),%rdi	-
+run_mont_ladder	2f9866	jcc	je	2f9439	a	a-loop	test %al,%al	-
+run_mont_ladder	2f98b7	jcc	je	2f9be6	a	a-loop	test %al,%al	-
+run_mont_ladder	2f990c	jcc	je	2f9439	a	a-loop	test %al,%al	-
+run_mont_ladder	2f995d	jcc	je	2f9be6	a	a-loop	test %al,%al	-
+run_mont_ladder	2f99b2	jcc	je	2f9439	a	a-loop	test %al,%al	-
+run_mont_ladder	2f99d6	jcc	je	2f99ed	a	a-loop	cmpq $0x0,0xd0(%rsp)	-
+run_mont_ladder	2f9a13	jcc	je	2f9abe	a	a-loop	cmp $0x20,%rcx	-
+run_mont_ladder	2f9a1f	jcc	jo	2f9d05	a	a-geom:allocation-size overflow (mul, jo)	mul %rbx	-
+run_mont_ladder	2f9a2b	jcc	jb	2f9d1e	a	a-geom:allocation-size overflow (add)	add %rbx,%rsi	-
+run_mont_ladder	2f9a36	jcc	ja	2f9bf5	a	a-loop	cmp 0x68(%rsp),%rsi	-
+run_mont_ladder	2f9a3f	jcc	je	2f99fe	a	a-loop	test %rbp,%rbp	-
+run_mont_ladder	2f9a50	jcc	jne	2f99fe	a	a-geom:length-difference sign mask (shr 63)	shr $0x3f,%rax	-
+run_mont_ladder	2f9a58	jcc	jb	2f9aa4	a	a-loop	cmp $0x4,%rbp	-
+run_mont_ladder	2f9a8e	jcc	jne	2f9a5a	a	a-loop	cmp %rax,0x80(%rsp)	-
+run_mont_ladder	2f9a9e	jcc	je	2f99fe	a	a-loop	cmp %rdx,%rbp	-
+run_mont_ladder	2f9ab7	jcc	jne	2f9aa4	a	a-loop	cmp %rax,%rbp	-
+run_mont_ladder	2f9b03	jcc	je	2f9be6	a	a-loop	test %al,%al	-
+run_mont_ladder	2f9b28	jcc	jne	2f96ce	a	a-loop	cmpq $0x0,0x70(%rsp)	-
+run_mont_ladder	2f9b71	jcc	je	2f9439	a	a-loop	test %al,%al	-
+run_mont_ladder	2f9dbf	jcc	jne	2f9dee	a	a-loop	test %rbx,%rbx	-

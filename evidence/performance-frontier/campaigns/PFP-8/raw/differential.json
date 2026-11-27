@@ -1,0 +1,250 @@
+{
+  "authority": "/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+  "candidate": "/work/court/tmp/ma1/cand/distribution/libcrypto.so.3",
+  "comparisons": 45,
+  "mismatches": 0,
+  "rows": [
+    {
+      "case": "ffdhe2048/compute/2048",
+      "detail": "rc_c=0 rc_a=0 len_c=512 len_a=512",
+      "equal": true
+    },
+    {
+      "case": "ffdhe2048/compute/2048/named-vs-explicit",
+      "detail": "rc_e=0 len_c=512 len_e=512",
+      "equal": true
+    },
+    {
+      "case": "ffdhe2048/compute/225",
+      "detail": "rc_c=0 rc_a=0 len_c=512 len_a=512",
+      "equal": true
+    },
+    {
+      "case": "ffdhe2048/compute/225/named-vs-explicit",
+      "detail": "rc_e=0 len_c=512 len_e=512",
+      "equal": true
+    },
+    {
+      "case": "ffdhe3072/compute/2048",
+      "detail": "rc_c=0 rc_a=0 len_c=768 len_a=768",
+      "equal": true
+    },
+    {
+      "case": "ffdhe3072/compute/2048/named-vs-explicit",
+      "detail": "rc_e=0 len_c=768 len_e=768",
+      "equal": true
+    },
+    {
+      "case": "ffdhe3072/compute/225",
+      "detail": "rc_c=0 rc_a=0 len_c=768 len_a=768",
+      "equal": true
+    },
+    {
+      "case": "ffdhe3072/compute/225/named-vs-explicit",
+      "detail": "rc_e=0 len_c=768 len_e=768",
+      "equal": true
+    },
+    {
+      "case": "modp2048/compute/2048",
+      "detail": "rc_c=0 rc_a=0 len_c=512 len_a=512",
+      "equal": true
+    },
+    {
+      "case": "modp2048/compute/2048/named-vs-explicit",
+      "detail": "rc_e=0 len_c=512 len_e=512",
+      "equal": true
+    },
+    {
+      "case": "modp2048/compute/225",
+      "detail": "rc_c=0 rc_a=0 len_c=512 len_a=512",
+      "equal": true
+    },
+    {
+      "case": "modp2048/compute/225/named-vs-explicit",
+      "detail": "rc_e=0 len_c=512 len_e=512",
+      "equal": true
+    },
+    {
+      "case": "ffdhe2048/keygen/candidate-shaped",
+      "detail": "rc_c=0 rc_a=0",
+      "equal": true
+    },
+    {
+      "case": "ffdhe2048/keygen/candidate-pub-verified-by-authority",
+      "detail": "rc_v=0 len_v=512 len_pub=512 v=b99e7a0988e370d338800d37459d44ce pub=b99e7a0988e370d338800d37459d44ce",
+      "equal": true
+    },
+    {
+      "case": "ffdhe2048/keygen/authority-pub-verified-by-candidate",
+      "detail": "rc_v=0 len_v=512 len_pub=512 v=f936c2a8428ac12cb2bb4fc558ef7f97 pub=f936c2a8428ac12cb2bb4fc558ef7f97",
+      "equal": true
+    },
+    {
+      "case": "ffdhe2048/keygen/preset-private",
+      "classification": "PFP8-KEYGEN-PRESET-PRIV",
+      "detail": "rc_c=1 rc_a=0 cand_pub=0 auth_pub=512; candidate refuses a caller-supplied private key where the authority computes the public key (PFP8-KEYGEN-PRESET-PRIV)",
+      "equal": false
+    },
+    {
+      "case": "ffdhe3072/keygen/candidate-shaped",
+      "detail": "rc_c=0 rc_a=0",
+      "equal": true
+    },
+    {
+      "case": "ffdhe3072/keygen/candidate-pub-verified-by-authority",
+      "detail": "rc_v=0 len_v=768 len_pub=768 v=a32c8193877b307aae56503b9c19ab07 pub=a32c8193877b307aae56503b9c19ab07",
+      "equal": true
+    },
+    {
+      "case": "ffdhe3072/keygen/authority-pub-verified-by-candidate",
+      "detail": "rc_v=0 len_v=768 len_pub=768 v=e21dde872fb2b4b36cc44a1d7a0e34ed pub=e21dde872fb2b4b36cc44a1d7a0e34ed",
+      "equal": true
+    },
+    {
+      "case": "ffdhe3072/keygen/preset-private",
+      "classification": "PFP8-KEYGEN-PRESET-PRIV",
+      "detail": "rc_c=1 rc_a=0 cand_pub=0 auth_pub=768; candidate refuses a caller-supplied private key where the authority computes the public key (PFP8-KEYGEN-PRESET-PRIV)",
+      "equal": false
+    },
+    {
+      "case": "modp2048/keygen/candidate-shaped",
+      "detail": "rc_c=0 rc_a=0",
+      "equal": true
+    },
+    {
+      "case": "modp2048/keygen/candidate-pub-verified-by-authority",
+      "detail": "rc_v=0 len_v=512 len_pub=512 v=cd53b8b7c009e4ed8a6e2d68c57fecc2 pub=cd53b8b7c009e4ed8a6e2d68c57fecc2",
+      "equal": true
+    },
+    {
+      "case": "modp2048/keygen/authority-pub-verified-by-candidate",
+      "detail": "rc_v=0 len_v=512 len_pub=512 v=fc78bfca122a649856c54466f9ef6f6e pub=fc78bfca122a649856c54466f9ef6f6e",
+      "equal": true
+    },
+    {
+      "case": "modp2048/keygen/preset-private",
+      "classification": "PFP8-KEYGEN-PRESET-PRIV",
+      "detail": "rc_c=1 rc_a=0 cand_pub=0 auth_pub=512; candidate refuses a caller-supplied private key where the authority computes the public key (PFP8-KEYGEN-PRESET-PRIV)",
+      "equal": false
+    },
+    {
+      "case": "ffdhe2048/refusal/zero",
+      "detail": "cand_rc=-1 auth_rc=-1 exit_c=0 exit_a=0",
+      "equal": true
+    },
+    {
+      "case": "ffdhe2048/refusal/one",
+      "detail": "cand_rc=-1 auth_rc=-1 exit_c=0 exit_a=0",
+      "equal": true
+    },
+    {
+      "case": "ffdhe2048/refusal/p-2",
+      "detail": "cand_rc=256 auth_rc=256 exit_c=0 exit_a=0",
+      "equal": true
+    },
+    {
+      "case": "ffdhe2048/refusal/p-1",
+      "detail": "cand_rc=-1 auth_rc=-1 exit_c=0 exit_a=0",
+      "equal": true
+    },
+    {
+      "case": "ffdhe2048/refusal/p",
+      "detail": "cand_rc=-1 auth_rc=-1 exit_c=0 exit_a=0",
+      "equal": true
+    },
+    {
+      "case": "ffdhe2048/refusal/p+1",
+      "detail": "cand_rc=-1 auth_rc=-1 exit_c=0 exit_a=0",
+      "equal": true
+    },
+    {
+      "case": "ffdhe2048/refusal/two",
+      "detail": "cand_rc=256 auth_rc=256 exit_c=0 exit_a=0",
+      "equal": true
+    },
+    {
+      "case": "ffdhe3072/refusal/zero",
+      "detail": "cand_rc=-1 auth_rc=-1 exit_c=0 exit_a=0",
+      "equal": true
+    },
+    {
+      "case": "ffdhe3072/refusal/one",
+      "detail": "cand_rc=-1 auth_rc=-1 exit_c=0 exit_a=0",
+      "equal": true
+    },
+    {
+      "case": "ffdhe3072/refusal/p-2",
+      "detail": "cand_rc=384 auth_rc=384 exit_c=0 exit_a=0",
+      "equal": true
+    },
+    {
+      "case": "ffdhe3072/refusal/p-1",
+      "detail": "cand_rc=-1 auth_rc=-1 exit_c=0 exit_a=0",
+      "equal": true
+    },
+    {
+      "case": "ffdhe3072/refusal/p",
+      "detail": "cand_rc=-1 auth_rc=-1 exit_c=0 exit_a=0",
+      "equal": true
+    },
+    {
+      "case": "ffdhe3072/refusal/p+1",
+      "detail": "cand_rc=-1 auth_rc=-1 exit_c=0 exit_a=0",
+      "equal": true
+    },
+    {
+      "case": "ffdhe3072/refusal/two",
+      "detail": "cand_rc=384 auth_rc=384 exit_c=0 exit_a=0",
+      "equal": true
+    },
+    {
+      "case": "modp2048/refusal/zero",
+      "detail": "cand_rc=-1 auth_rc=-1 exit_c=0 exit_a=0",
+      "equal": true
+    },
+    {
+      "case": "modp2048/refusal/one",
+      "detail": "cand_rc=-1 auth_rc=-1 exit_c=0 exit_a=0",
+      "equal": true
+    },
+    {
+      "case": "modp2048/refusal/p-2",
+      "detail": "cand_rc=256 auth_rc=256 exit_c=0 exit_a=0",
+      "equal": true
+    },
+    {
+      "case": "modp2048/refusal/p-1",
+      "detail": "cand_rc=-1 auth_rc=-1 exit_c=0 exit_a=0",
+      "equal": true
+    },
+    {
+      "case": "modp2048/refusal/p",
+      "detail": "cand_rc=-1 auth_rc=-1 exit_c=0 exit_a=0",
+      "equal": true
+    },
+    {
+      "case": "modp2048/refusal/p+1",
+      "detail": "cand_rc=-1 auth_rc=-1 exit_c=0 exit_a=0",
+      "equal": true
+    },
+    {
+      "case": "modp2048/refusal/two",
+      "detail": "cand_rc=256 auth_rc=256 exit_c=0 exit_a=0",
+      "equal": true
+    }
+  ],
+  "stops": [
+    {
+      "case": "ffdhe2048/keygen/preset-private",
+      "detail": "rc_c=1 rc_a=0 cand_pub=0 auth_pub=512; candidate refuses a caller-supplied private key where the authority computes the public key (PFP8-KEYGEN-PRESET-PRIV)"
+    },
+    {
+      "case": "ffdhe3072/keygen/preset-private",
+      "detail": "rc_c=1 rc_a=0 cand_pub=0 auth_pub=768; candidate refuses a caller-supplied private key where the authority computes the public key (PFP8-KEYGEN-PRESET-PRIV)"
+    },
+    {
+      "case": "modp2048/keygen/preset-private",
+      "detail": "rc_c=1 rc_a=0 cand_pub=0 auth_pub=512; candidate refuses a caller-supplied private key where the authority computes the public key (PFP8-KEYGEN-PRESET-PRIV)"
+    }
+  ]
+}

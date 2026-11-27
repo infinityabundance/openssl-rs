@@ -1,0 +1,42 @@
+--------------------------------------------------------------------------------
+Profile data file '/work/court/tmp/pfp8/cg/keygen-named.out' (creator: callgrind-3.19.0)
+--------------------------------------------------------------------------------
+I1 cache: 
+D1 cache: 
+LL cache: 
+Timerange: Basic block 0 - 10923905
+Trigger: Program termination
+Profiled target:  /work/court/tmp/pfp8/bench_pfp8 --lib /work/court/tmp/ma1/cand/distribution/libcrypto.so.3 --op keygen --iters 1 --runs 1 --nid 1126 (PID 268752, part 1)
+Events recorded:  Ir
+Events shown:     Ir
+Event sort order: Ir
+Thresholds:       95
+Include dirs:     
+User annotated:   
+Auto-annotation:  on
+
+--------------------------------------------------------------------------------
+Ir                   
+--------------------------------------------------------------------------------
+125,262,230 (100.0%)  PROGRAM TOTALS
+
+--------------------------------------------------------------------------------
+Ir                    file:function
+--------------------------------------------------------------------------------
+105,548,652 (84.26%)  ???:openssl_rs::bn::arith::mont_mul_ladder_into [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+  5,637,004 ( 4.50%)  ???:openssl_rs::bn::limbs::pow2_mod_consttime [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+  4,190,840 ( 3.35%)  ???:openssl_rs::runtime::obj::name_find [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+    830,540 ( 0.66%)  ???:openssl_rs::bn::arith::run_mont_ladder [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+    685,030 ( 0.55%)  ./elf/./elf/dl-lookup.c:do_lookup_x [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+    656,269 ( 0.52%)  ./malloc/./malloc/malloc.c:_int_free [/usr/lib/x86_64-linux-gnu/libc.so.6]
+    613,401 ( 0.49%)  ???:AES_encrypt [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+    558,209 ( 0.45%)  ./malloc/./malloc/malloc.c:_int_malloc [/usr/lib/x86_64-linux-gnu/libc.so.6]
+    433,525 ( 0.35%)  ./elf/../sysdeps/x86_64/dl-machine.h:_dl_relocate_object
+
+--------------------------------------------------------------------------------
+The following files chosen for auto-annotation could not be found:
+--------------------------------------------------------------------------------
+  ./elf/../sysdeps/x86_64/dl-machine.h
+  ./elf/./elf/dl-lookup.c
+  ./malloc/./malloc/malloc.c
+

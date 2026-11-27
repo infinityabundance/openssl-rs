@@ -1,0 +1,105 @@
+symbol	addr	kind	insn	operand	class	sub	flag_source	consumed
+mont_mul_ladder_into	2fa80b	jcc	jne	2fad39	a	a-geom	or %r9,%rax	-
+mont_mul_ladder_into	2fa821	jcc	jne	2fad39	a	a-loop	cmp %rax,0x1f0(%rsp)	-
+mont_mul_ladder_into	2fa854	jcc	ja	2fad4d	a	a-loop	cmp $0x3c,%rax	-
+mont_mul_ladder_into	2fa903	setcc	setb	%sil	b	b-flag	adc %r11,%rdi	2fa960:add $0xff,%sil
+mont_mul_ladder_into	2fa969	setcc	setb	0x58(%rsp)	b	b-flag	adc 0x58(%rsp),%r8	2faa53:addb $0xff,0x58(%rsp)
+mont_mul_ladder_into	2faa5b	setcc	setb	0x58(%rsp)	b	b-flag	adc %rcx,%r8	2fab3b:addb $0xff,0x58(%rsp)
+mont_mul_ladder_into	2fab4c	setcc	setb	0x20(%rsp)	b	b-flag	adc %rcx,%rsi	2fac2d:movzbl 0x20(%rsp),%r9d
+mont_mul_ladder_into	2fac3c	setcc	setb	%dl	b	b-flag	adc %r8,%rcx	2fac4f:movzbl %dl,%r9d
+mont_mul_ladder_into	2fac47	setcc	setb	%r8b	b	b-flag	adc $0x0,%r8	2fac4b:movzbl %r8b,%r8d
+mont_mul_ladder_into	2fac70	setcc	setae	%r11b	b	b-flag	sub %r10,%rdx	2faca6:and %r11b,%bl
+mont_mul_ladder_into	2fac9f	setcc	setae	%bl	b	b-flag	sbb $0x0,%rdx	2faca6:and %r11b,%bl
+mont_mul_ladder_into	2fad54	jcc	jne	2fae9e	a	a-loop	cmp $0x80,%rsi	-
+mont_mul_ladder_into	2fadbb	jcc	je	2fca74	a	a-loop	cmp $0x400,%r15	-
+mont_mul_ladder_into	2fade0	setcc	setb	%r10b	b	b-flag	add -0x8(%rbx,%rsi,8),%r9	2fade7:adc %rdx,%r10
+mont_mul_ladder_into	2fadfd	setcc	setb	%r9b	b	b-flag	add (%rbx,%rsi,8),%r10	2fae04:adc %rdx,%r9
+mont_mul_ladder_into	2fae16	jcc	jne	2fadd0	a	a-loop	cmp $0x81,%rsi	-
+mont_mul_ladder_into	2fae21	setcc	setb	%al	b	b-flag	add %r9,0x400(%rbx)	2fae24:mov %rax,0x408(%rbx)
+mont_mul_ladder_into	2fae60	setcc	setb	%r10b	b	b-flag	add -0x8(%rbx,%r9,8),%rsi	2fae67:adc %rdx,%r10
+mont_mul_ladder_into	2fae76	jcc	je	2fad90	a	a-loop	cmp $0x80,%r9	-
+mont_mul_ladder_into	2fae89	setcc	setb	%sil	b	b-flag	add (%rbx,%r9,8),%r10	2fae90:adc %rdx,%rsi
+mont_mul_ladder_into	2faea3	jcc	je	2fad3b	a	a-loop	test %rsi,%rsi	-
+mont_mul_ladder_into	2faf0d	setcc	setb	%sil	b	b-flag	add (%rbx,%r15,8),%rcx	2faf14:adc %rdx,%rsi
+mont_mul_ladder_into	2faf44	jcc	je	2fcb17	a	a-loop	cmp 0x18(%rsp),%r13	-
+mont_mul_ladder_into	2faf5c	jcc	je	2fafa9	a	a-loop	test %rax,%rax	-
+mont_mul_ladder_into	2faf6e	setcc	setb	%r15b	b	b-flag	add (%rbx,%rsi,8),%rbp	2faf75:adc %rdx,%r15
+mont_mul_ladder_into	2faf8b	setcc	setb	%bpl	b	b-flag	add 0x8(%rbx,%rsi,8),%r15	2faf9b:adc %rdx,%rbp
+mont_mul_ladder_into	2fafa1	jcc	jne	2faf60	a	a-loop	cmp %rsi,%r14	-
+mont_mul_ladder_into	2fafa7	jcc	je	2fafc6	a	a-loop	test $0x1,%dil	-
+mont_mul_ladder_into	2fafb6	setcc	setb	%cl	b	b-flag	add (%rbx,%rsi,8),%rbp	2fafbc:adc %rdx,%rcx
+mont_mul_ladder_into	2fafcd	setcc	setb	%r15b	b	b-flag	add (%rbx,%rdi,8),%rbp	2fafd5:mov %r15,0x8(%rbx,%rdi,8)
+mont_mul_ladder_into	2fafff	jcc	je	2faf28	a	a-loop	cmp $0x1,%rdi	-
+mont_mul_ladder_into	2fb00f	jcc	je	2faf00	a	a-loop	cmp $0x2,%rdi	-
+mont_mul_ladder_into	2fb02d	setcc	setb	%bpl	b	b-flag	add (%rbx,%r15,8),%rcx	2fb034:adc %rdx,%rbp
+mont_mul_ladder_into	2fb04b	setcc	setb	%cl	b	b-flag	add 0x8(%rbx,%r15,8),%rbp	2fb05e:adc %rdx,%rcx
+mont_mul_ladder_into	2fb065	jcc	jne	2fb020	a	a-loop	cmp $0x1,%rax	-
+mont_mul_ladder_into	2fb06d	jcc	jne	2faf00	a	a-loop	test $0x1,%al	-
+mont_mul_ladder_into	2fb0db	jcc	je	2fb1bb	a	a-loop	cmp $0x200,%r15	-
+mont_mul_ladder_into	2fb100	setcc	setb	%r10b	b	b-flag	add -0x8(%rbx,%rsi,8),%r9	2fb107:adc %rdx,%r10
+mont_mul_ladder_into	2fb11d	setcc	setb	%r9b	b	b-flag	add (%rbx,%rsi,8),%r10	2fb124:adc %rdx,%r9
+mont_mul_ladder_into	2fb133	jcc	jne	2fb0f0	a	a-loop	cmp $0x41,%rsi	-
+mont_mul_ladder_into	2fb13e	setcc	setb	%al	b	b-flag	add %r9,0x200(%rbx)	2fb141:mov %rax,0x208(%rbx)
+mont_mul_ladder_into	2fb180	setcc	setb	%r10b	b	b-flag	add -0x8(%rbx,%r9,8),%rsi	2fb187:adc %rdx,%r10
+mont_mul_ladder_into	2fb193	jcc	je	2fb0b0	a	a-loop	cmp $0x40,%r9	-
+mont_mul_ladder_into	2fb1a6	setcc	setb	%sil	b	b-flag	add (%rbx,%r9,8),%r10	2fb1ad:adc %rdx,%rsi
+mont_mul_ladder_into	2fb1c8	setcc	setb	%dil	b	b-flag	sub (%r12,%rdx,8),%rsi	2fb1d2:or %dil,%cl
+mont_mul_ladder_into	2fb1cf	setcc	setb	%cl	b	b-flag	sub %rcx,%rsi	2fb1d2:or %dil,%cl
+mont_mul_ladder_into	2fb1f0	setcc	setb	%cl	b	b-flag	sbb 0x8(%r12,%rdx,8),%rdi	2fb1f3:movzbl %cl,%ecx
+mont_mul_ladder_into	2fb1fa	jcc	jne	2fb1c0	a	a-loop	cmp $0x40,%rdx	-
+mont_mul_ladder_into	2fb24d	jcc	jne	2fb220	a	a-loop	cmp $0x40,%rdi	-
+mont_mul_ladder_into	2fb5a6	setcc	setb	%dl	b	b-flag	add %rax,%rcx	2fb5b2:adc $0x0,%rdx
+mont_mul_ladder_into	2fb5ae	setcc	setb	%r12b	b	b-flag	add %r12,%r15	2fb62b:mov %r12b,%al
+mont_mul_ladder_into	2fb5c8	jcc	jne	2fb350	a	a-loop	cmp $0x48,%rdx	-
+mont_mul_ladder_into	2fb5de	setcc	setae	0x90(%rsp)	b	b-flag	sub 0x90(%rsp),%rdx	2fb6d8:and 0x90(%rsp),%al
+mont_mul_ladder_into	2fb6d5	setcc	setae	%al	b	b-flag	sbb $0x0,%r12	2fb6d8:and 0x90(%rsp),%al
+mont_mul_ladder_into	2fbeb1	setcc	setb	%dl	b	b-flag	add %rax,%rcx	2fbebd:adc $0x0,%rdx
+mont_mul_ladder_into	2fbeb9	setcc	setb	%r12b	b	b-flag	add %r10,%r12	2fc019:mov %r12b,%al
+mont_mul_ladder_into	2fbed6	jcc	jne	2fba50	a	a-loop	cmp $0x80,%rdx	-
+mont_mul_ladder_into	2fbf41	setcc	setae	0xb0(%rsp)	b	b-flag	sub 0xb0(%rsp),%rcx	2fc0d4:and 0xb0(%rsp),%al
+mont_mul_ladder_into	2fc0d1	setcc	setae	%al	b	b-flag	sbb $0x0,%rcx	2fc0d4:and 0xb0(%rsp),%al
+mont_mul_ladder_into	2fc546	setcc	setb	%r14b	b	b-flag	add %rax,%rcx	2fc552:adc $0x0,%r14
+mont_mul_ladder_into	2fc54f	setcc	setb	%dl	b	b-flag	add %rdx,%r11	2fc564:mov %dl,%al
+mont_mul_ladder_into	2fc55e	jcc	jne	2fc3d0	a	a-loop	cmp $0x30,%r15	-
+mont_mul_ladder_into	2fc58d	setcc	setae	%r11b	b	b-flag	sub 0x38(%rsp),%rdx	2fc5e6:and %r11b,%r14b
+mont_mul_ladder_into	2fc5de	setcc	setae	%r14b	b	b-flag	sbb $0x0,%rdx	2fc5e6:and %r11b,%r14b
+mont_mul_ladder_into	2fc71b	jcc	je	2fc7fb	a	a-loop	cmp $0x100,%r15	-
+mont_mul_ladder_into	2fc740	setcc	setb	%r10b	b	b-flag	add -0x8(%rbx,%rsi,8),%r9	2fc747:adc %rdx,%r10
+mont_mul_ladder_into	2fc75d	setcc	setb	%r9b	b	b-flag	add (%rbx,%rsi,8),%r10	2fc764:adc %rdx,%r9
+mont_mul_ladder_into	2fc773	jcc	jne	2fc730	a	a-loop	cmp $0x21,%rsi	-
+mont_mul_ladder_into	2fc77e	setcc	setb	%al	b	b-flag	add %r9,0x100(%rbx)	2fc781:mov %rax,0x108(%rbx)
+mont_mul_ladder_into	2fc7c0	setcc	setb	%r10b	b	b-flag	add -0x8(%rbx,%r9,8),%rsi	2fc7c7:adc %rdx,%r10
+mont_mul_ladder_into	2fc7d3	jcc	je	2fc6f0	a	a-loop	cmp $0x20,%r9	-
+mont_mul_ladder_into	2fc7e6	setcc	setb	%sil	b	b-flag	add (%rbx,%r9,8),%r10	2fc7ed:adc %rdx,%rsi
+mont_mul_ladder_into	2fc808	setcc	setb	%dil	b	b-flag	sub (%r12,%rdx,8),%rsi	2fc812:or %dil,%cl
+mont_mul_ladder_into	2fc80f	setcc	setb	%cl	b	b-flag	sub %rcx,%rsi	2fc812:or %dil,%cl
+mont_mul_ladder_into	2fc830	setcc	setb	%cl	b	b-flag	sbb 0x8(%r12,%rdx,8),%rdi	2fc833:movzbl %cl,%ecx
+mont_mul_ladder_into	2fc83a	jcc	jne	2fc800	a	a-loop	cmp $0x20,%rdx	-
+mont_mul_ladder_into	2fc88d	jcc	jne	2fc860	a	a-loop	cmp $0x20,%rdi	-
+mont_mul_ladder_into	2fc8eb	jcc	je	2fc9cb	a	a-loop	cmp $0x180,%r15	-
+mont_mul_ladder_into	2fc910	setcc	setb	%r10b	b	b-flag	add -0x8(%rbx,%rsi,8),%r9	2fc917:adc %rdx,%r10
+mont_mul_ladder_into	2fc92d	setcc	setb	%r9b	b	b-flag	add (%rbx,%rsi,8),%r10	2fc934:adc %rdx,%r9
+mont_mul_ladder_into	2fc943	jcc	jne	2fc900	a	a-loop	cmp $0x31,%rsi	-
+mont_mul_ladder_into	2fc94e	setcc	setb	%al	b	b-flag	add %r9,0x180(%rbx)	2fc951:mov %rax,0x188(%rbx)
+mont_mul_ladder_into	2fc990	setcc	setb	%r10b	b	b-flag	add -0x8(%rbx,%r9,8),%rsi	2fc997:adc %rdx,%r10
+mont_mul_ladder_into	2fc9a3	jcc	je	2fc8c0	a	a-loop	cmp $0x30,%r9	-
+mont_mul_ladder_into	2fc9b6	setcc	setb	%sil	b	b-flag	add (%rbx,%r9,8),%r10	2fc9bd:adc %rdx,%rsi
+mont_mul_ladder_into	2fc9ea	setcc	setb	%dil	b	b-flag	sub -0x8(%r12,%rdx,8),%rsi	2fc9f9:or %dil,%cl
+mont_mul_ladder_into	2fc9f1	setcc	setb	%cl	b	b-flag	sub %rcx,%rsi	2fc9f9:or %dil,%cl
+mont_mul_ladder_into	2fca0c	setcc	setb	%cl	b	b-flag	sbb (%r12,%rdx,8),%rsi	2fca0f:movzbl %cl,%ecx
+mont_mul_ladder_into	2fca1a	jcc	jne	2fc9e0	a	a-loop	cmp $0x31,%rdx	-
+mont_mul_ladder_into	2fca6d	jcc	jne	2fca40	a	a-loop	cmp $0x30,%rdi	-
+mont_mul_ladder_into	2fca88	setcc	setb	%dil	b	b-flag	sub (%r12,%rdx,8),%rsi	2fca92:or %dil,%cl
+mont_mul_ladder_into	2fca8f	setcc	setb	%cl	b	b-flag	sub %rcx,%rsi	2fca92:or %dil,%cl
+mont_mul_ladder_into	2fcab0	setcc	setb	%cl	b	b-flag	sbb 0x8(%r12,%rdx,8),%rdi	2fcab3:movzbl %cl,%ecx
+mont_mul_ladder_into	2fcabd	jcc	jne	2fca80	a	a-loop	cmp $0x80,%rdx	-
+mont_mul_ladder_into	2fcb10	jcc	jne	2fcae0	a	a-loop	cmp $0x80,%rdi	-
+mont_mul_ladder_into	2fcb25	jcc	je	2fcb83	a	a-loop	test %rax,%rax	-
+mont_mul_ladder_into	2fcb48	setcc	setb	%r9b	b	b-flag	sub (%r12,%rsi,8),%r8	2fcb57:or %r9b,%dl
+mont_mul_ladder_into	2fcb4f	setcc	setb	%dl	b	b-flag	sub %rdx,%r8	2fcb57:or %r9b,%dl
+mont_mul_ladder_into	2fcb70	setcc	setb	%dl	b	b-flag	sbb 0x8(%r12,%rsi,8),%r8	2fcb73:movzbl %dl,%edx
+mont_mul_ladder_into	2fcb79	jcc	jne	2fcb40	a	a-loop	cmp %rsi,%r14	-
+mont_mul_ladder_into	2fcb7f	jcc	jne	2fcb8f	a	a-loop	test $0x1,%dil	-
+mont_mul_ladder_into	2fcb97	setcc	setb	%r9b	b	b-flag	sub (%r12,%rsi,8),%r8	2fcba6:or %r9b,%dl
+mont_mul_ladder_into	2fcb9e	setcc	setb	%dl	b	b-flag	sub %rdx,%r8	2fcba6:or %r9b,%dl
+mont_mul_ladder_into	2fcbfa	jcc	jne	2fcbd0	a	a-loop	cmp %r9,%rdi	-

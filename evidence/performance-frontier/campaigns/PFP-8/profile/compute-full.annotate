@@ -1,0 +1,1322 @@
+--------------------------------------------------------------------------------
+Profile data file '/work/court/tmp/pfp8/cg/compute-named.out' (creator: callgrind-3.19.0)
+--------------------------------------------------------------------------------
+I1 cache: 
+D1 cache: 
+LL cache: 
+Timerange: Basic block 0 - 8885918
+Trigger: Program termination
+Profiled target:  /work/court/tmp/pfp8/bench_pfp8 --lib /work/court/tmp/ma1/cand/distribution/libcrypto.so.3 --op compute --iters 1 --runs 1 --nid 1126 --priv 0045a1e2307c597e14c9791bd244ce0e9208344faee9777bd4cd8259feec8d30d5946812052f5e07aef349d8b1126347398aab14bda0ef2744fb5a60d1fedf9eca8108cf6e0264613026257fca1a51f038fc695a5b7ec0797f07c244fc3d876810f61821f86301dec8217d0eefff2d9c097fc7487c5fb458b66d2f4bbf32b09394544d7c08e21ca726f49fb476729afdee33c1eb03cbd06d054523ceecb08cefb652027d6b52c267bfb4a753e1dd6288bc0bb98cdfd8e6ebb379dcbf1f97bbba792354a81505c0452437cb6bb17b1a68419e9c28c9fc0943acb64d3fb631c85e7fe3509b0e2a924be832d0498ab21823a75c182227d8bafd62922b9b2ace7ac3 --peer 00353b35ab938f2d444091a8606e6646f664c8fe74f8f081c33b9f86a84165d0322b83516e480ed3a1e2a1b27d162c9c88f37f3d1ca7203e84229d7d11313b94e4c3d8f0830d6d1dce0343a8ace82a1462cc71b72e214c4193a9c5af903b382432e4cb43606be91863d1fd5658f54b2840fa0bf92efc48f61136890c013c963c40258b43580eef017cb07f2d5a4cec268ea2ab934ddb713e57bacfb80f6b5b4acb82b7c30ae7f86cc3fccc9ae301e773510b4b1fe79b9a8e5f7f03e704dbe6e226bb19bfa52d38b6dd123ace41165af47433b3dbdf24c27b30a2935d02e31f966f8c6ca965ffba88b58ee0f9dc9e92b900579d61bb22e9c00067d958606dcbb5 (PID 268757, part 1)
+Events recorded:  Ir
+Events shown:     Ir
+Event sort order: Ir
+Thresholds:       100
+Include dirs:     
+User annotated:   
+Auto-annotation:  on
+
+--------------------------------------------------------------------------------
+Ir                   
+--------------------------------------------------------------------------------
+112,240,121 (100.0%)  PROGRAM TOTALS
+
+--------------------------------------------------------------------------------
+Ir                    file:function
+--------------------------------------------------------------------------------
+105,548,652 (94.04%)  ???:openssl_rs::bn::arith::mont_mul_ladder_into [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+  2,818,502 ( 2.51%)  ???:openssl_rs::bn::limbs::pow2_mod_consttime [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+    830,540 ( 0.74%)  ???:openssl_rs::bn::arith::run_mont_ladder [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+    685,760 ( 0.61%)  ./elf/./elf/dl-lookup.c:do_lookup_x [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+    433,525 ( 0.39%)  ./elf/../sysdeps/x86_64/dl-machine.h:_dl_relocate_object
+    293,874 ( 0.26%)  ./elf/./elf/do-rel.h:_dl_relocate_object
+    227,276 ( 0.20%)  ./elf/./elf/dl-lookup.c:_dl_lookup_symbol_x [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+    216,842 ( 0.19%)  ./elf/../sysdeps/generic/dl-new-hash.h:_dl_lookup_symbol_x
+    198,075 ( 0.18%)  ./string/../sysdeps/x86_64/multiarch/memset-vec-unaligned-erms.S:__memset_avx2_unaligned_erms [/usr/lib/x86_64-linux-gnu/libc.so.6]
+    178,388 ( 0.16%)  ???:openssl_rs::bn::bignum::static_data_bignum [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+    122,994 ( 0.11%)  ./elf/./elf/dl-reloc.c:_dl_relocate_object [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+    110,558 ( 0.10%)  ./elf/./elf/dl-lookup.c:check_match [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+     94,272 ( 0.08%)  ???:openssl_rs::bn::arith::mont_mul_fallible [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+     80,004 ( 0.07%)  ./string/../sysdeps/x86_64/multiarch/../multiarch/strcmp-sse2.S:strcmp [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+     64,920 ( 0.06%)  ./stdio-common/./stdio-common/vfprintf-internal.c:__vfprintf_internal [/usr/lib/x86_64-linux-gnu/libc.so.6]
+     26,499 ( 0.02%)  ./malloc/./malloc/malloc.c:_int_malloc [/usr/lib/x86_64-linux-gnu/libc.so.6]
+     23,296 ( 0.02%)  ???:core::ptr::drop_glue::<openssl_rs::runtime::secret::SecretBuf<u64>> [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+     21,036 ( 0.02%)  ./stdio-common/./stdio-common/vfprintf-process-arg.c:__vfprintf_internal
+     14,883 ( 0.01%)  ./libio/./libio/fileops.c:_IO_file_xsputn@@GLIBC_2.2.5 [/usr/lib/x86_64-linux-gnu/libc.so.6]
+     12,726 ( 0.01%)  courts/performance-frontier/pfp8/bench_pfp8.c:parse_hex_alloc [/work/court/tmp/pfp8/bench_pfp8]
+     12,503 ( 0.01%)  ./elf/./elf/dl-tunables.c:__GI___tunables_init [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+     10,498 ( 0.01%)  ./elf/./elf/dl-version.c:_dl_check_map_versions [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+     10,274 ( 0.01%)  ???:openssl_rs::bn::bignum::from_bytes [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+      9,955 ( 0.01%)  ./elf/../sysdeps/generic/ldsodefs.h:do_lookup_x
+      9,414 ( 0.01%)  ./string/../sysdeps/x86_64/multiarch/strchr-avx2.S:__strchrnul_avx2 [/usr/lib/x86_64-linux-gnu/libc.so.6]
+      8,178 ( 0.01%)  ./elf/../sysdeps/generic/ldsodefs.h:_dl_relocate_object
+      7,964 ( 0.01%)  ./elf/../sysdeps/generic/dl-protected.h:do_lookup_x
+      7,727 ( 0.01%)  ./malloc/./malloc/malloc.c:malloc [/usr/lib/x86_64-linux-gnu/libc.so.6]
+      7,615 ( 0.01%)  ./stdio-common/./stdio-common/_itoa.c:_itoa_word [/usr/lib/x86_64-linux-gnu/libc.so.6]
+      7,490 ( 0.01%)  ./stdio-common/./stdio-common/printf.c:printf [/usr/lib/x86_64-linux-gnu/libc.so.6]
+      7,048 ( 0.01%)  ???:BN_bn2binpad [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+      5,855 ( 0.01%)  ./malloc/./malloc/malloc.c:_int_free [/usr/lib/x86_64-linux-gnu/libc.so.6]
+      5,478 ( 0.00%)  ./stdio-common/../libio/libioP.h:__vfprintf_internal
+      5,354 ( 0.00%)  ./string/../sysdeps/x86_64/multiarch/memmove-vec-unaligned-erms.S:__mempcpy_avx_unaligned_erms [/usr/lib/x86_64-linux-gnu/libc.so.6]
+      3,666 ( 0.00%)  ???:DH_compute_key [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+      3,372 ( 0.00%)  ???:openssl_rs::property::strings::property_hash [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+      3,359 ( 0.00%)  ./stdio-common/./stdio-common/printf_fp.c:__printf_fp_l [/usr/lib/x86_64-linux-gnu/libc.so.6]
+      3,120 ( 0.00%)  ./nptl/./nptl/libc-cleanup.c:__libc_cleanup_push_defer [/usr/lib/x86_64-linux-gnu/libc.so.6]
+      2,980 ( 0.00%)  ./elf/../sysdeps/x86/dl-cacheinfo.h:intel_check_word.constprop.0 [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+      2,980 ( 0.00%)  ???:openssl_rs::runtime::alloc::try_zeroed::<u64> [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+      2,879 ( 0.00%)  courts/performance-frontier/pfp8/bench_pfp8.c:main [/work/court/tmp/pfp8/bench_pfp8]
+      2,872 ( 0.00%)  ./elf/./elf/dl-load.c:_dl_map_object_from_fd [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+      2,860 ( 0.00%)  ./stdio-common/./stdio-common/printf-parse.h:read_int [/usr/lib/x86_64-linux-gnu/libc.so.6]
+      2,615 ( 0.00%)  ./stdio-common/./stdio-common/printf-parse.h:__vfprintf_internal
+      2,444 ( 0.00%)  ./malloc/./malloc/malloc.c:calloc [/usr/lib/x86_64-linux-gnu/libc.so.6]
+      2,268 ( 0.00%)  ./elf/../bits/stdlib-bsearch.h:intel_check_word.constprop.0
+      2,240 ( 0.00%)  ???:<alloc::raw_vec::RawVecInner>::finish_grow [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+      2,201 ( 0.00%)  ./elf/./elf/dl-deps.c:_dl_map_object_deps [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+      2,080 ( 0.00%)  ./nptl/./nptl/libc-cleanup.c:__libc_cleanup_pop_restore [/usr/lib/x86_64-linux-gnu/libc.so.6]
+      1,596 ( 0.00%)  ./malloc/./malloc/malloc.c:free [/usr/lib/x86_64-linux-gnu/libc.so.6]
+      1,524 ( 0.00%)  ./stdio-common/./stdio-common/printf_fp.c:hack_digit [/usr/lib/x86_64-linux-gnu/libc.so.6]
+      1,508 ( 0.00%)  ./elf/./elf/dl-runtime.c:_dl_fixup [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+      1,423 ( 0.00%)  ./elf/./elf/dl-load.c:_dl_map_object [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+      1,384 ( 0.00%)  ./elf/./elf/dl-tunables.h:__GI___tunables_init
+      1,380 ( 0.00%)  ???:openssl_rs::bn::arith::mod_exp_core_consttime_from_parts_prepared [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+      1,372 ( 0.00%)  ./elf/./elf/dl-misc.c:_dl_name_match_p [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+      1,333 ( 0.00%)  ???:CRYPTO_zalloc [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+      1,278 ( 0.00%)  ???:openssl_rs::bn::limbs::sub_fallible [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+      1,249 ( 0.00%)  ./elf/./elf/rtld.c:dl_main [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+      1,209 ( 0.00%)  ./elf/./elf/get-dynamic-info.h:_dl_map_object_from_fd
+      1,166 ( 0.00%)  ???:CRYPTO_THREAD_unlock [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+      1,139 ( 0.00%)  ???:core::ptr::drop_glue::<openssl_rs::bn::mont::MontCtx> [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+      1,137 ( 0.00%)  ./stdlib/./stdlib/divrem.c:__mpn_divrem [/usr/lib/x86_64-linux-gnu/libc.so.6]
+      1,088 ( 0.00%)  ???:openssl_rs::bn::limbs::normalise_consttime [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+      1,082 ( 0.00%)  ./elf/./elf/dl-cache.c:_dl_cache_libcmp [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+        976 ( 0.00%)  /rustc/48a229ceaefd4985c50990b14116b6d856af0985/library/std/src/sys/alloc/unix.rs:__rustc::__rdl_alloc
+        972 ( 0.00%)  ./string/../sysdeps/x86_64/multiarch/memmove-vec-unaligned-erms.S:__memcpy_avx_unaligned_erms [/usr/lib/x86_64-linux-gnu/libc.so.6]
+        963 ( 0.00%)  ./elf/./elf/dl-object.c:_dl_new_object [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+        936 ( 0.00%)  ./nptl/./nptl/pthread_mutex_lock.c:pthread_mutex_lock@@GLIBC_2.2.5 [/usr/lib/x86_64-linux-gnu/libc.so.6]
+        929 ( 0.00%)  ./elf/./elf/dl-sym.c:do_sym [/usr/lib/x86_64-linux-gnu/libc.so.6]
+        912 ( 0.00%)  ???:OPENSSL_LH_retrieve [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+        852 ( 0.00%)  ./stdlib/../sysdeps/x86_64/mul_1.S:__mpn_mul_1 [/usr/lib/x86_64-linux-gnu/libc.so.6]
+        848 ( 0.00%)  ???:openssl_rs::property::strings::ossl_property_string [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+        807 ( 0.00%)  ./elf/./elf/dl-load.c:open_path [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+        806 ( 0.00%)  ???:OPENSSL_LH_insert [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+        792 ( 0.00%)  ./nptl/./nptl/pthread_mutex_unlock.c:__pthread_mutex_unlock_usercnt [/usr/lib/x86_64-linux-gnu/libc.so.6]
+        790 ( 0.00%)  ./elf/./elf/dl-error-skeleton.c:_dl_catch_exception [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+        776 ( 0.00%)  ./malloc/./malloc/malloc.c:ptmalloc_init.part.0
+        756 ( 0.00%)  ./malloc/./malloc/malloc.c:alloc_perturb [/usr/lib/x86_64-linux-gnu/libc.so.6]
+        720 ( 0.00%)  ./elf/./elf/dl-hwcaps.c:_dl_important_hwcaps [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+        720 ( 0.00%)  ./string/../sysdeps/x86_64/multiarch/strcmp-avx2.S:__strcmp_avx2 [/usr/lib/x86_64-linux-gnu/libc.so.6]
+        704 ( 0.00%)  ./string/../sysdeps/x86_64/multiarch/memmove-vec-unaligned-erms.S:mempcpy [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+        696 ( 0.00%)  ./elf/./elf/dl-load.c:open_verify.constprop.0 [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+        696 ( 0.00%)  ./string/../sysdeps/x86_64/multiarch/../multiarch/strchr-sse2.S:index [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+        679 ( 0.00%)  ./string/../sysdeps/x86_64/multiarch/../multiarch/memset-vec-unaligned-erms.S:memset [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+        663 ( 0.00%)  ./dlfcn/./dlfcn/dlerror.c:_dlerror_run [/usr/lib/x86_64-linux-gnu/libc.so.6]
+        655 ( 0.00%)  ???:CRYPTO_THREAD_write_lock [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+        640 ( 0.00%)  ./elf/../sysdeps/x86_64/dl-trampoline.h:_dl_runtime_resolve_xsave [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+        628 ( 0.00%)  ./elf/./elf/dl-tunables.c:__tunable_get_val [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+        620 ( 0.00%)  ./elf/./elf/dl-minimal-malloc.c:__minimal_malloc [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+        600 ( 0.00%)  ./string/../sysdeps/x86_64/multiarch/../multiarch/strlen-sse2.S:strlen [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+        596 ( 0.00%)  ???:BN_mod_exp_mont [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+        592 ( 0.00%)  ./elf/./dl-map-segments.h:_dl_map_object_from_fd
+        592 ( 0.00%)  ???:CRYPTO_THREAD_read_lock [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+        546 ( 0.00%)  ./libio/./libio/iopadn.c:_IO_padn [/usr/lib/x86_64-linux-gnu/libc.so.6]
+        512 ( 0.00%)  ./dlfcn/./dlfcn/dlsym.c:dlsym@@GLIBC_2.34 [/usr/lib/x86_64-linux-gnu/libc.so.6]
+        507 ( 0.00%)  ./setjmp/../sysdeps/x86_64/setjmp.S:__sigsetjmp [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+        504 ( 0.00%)  ./elf/../sysdeps/x86/dl-cacheinfo.h:handle_intel.constprop.0 [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+        499 ( 0.00%)  ./elf/./elf/dl-error-skeleton.c:_dl_catch_error [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+        477 ( 0.00%)  ./elf/./elf/dl-open.c:dl_open_worker_begin [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+        464 ( 0.00%)  ???:<openssl_rs::runtime::err::ErrState>::clear [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+        448 ( 0.00%)  ???:openssl_rs::dh::key::ossl_dh_compute_key [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+        445 ( 0.00%)  ./elf/./elf/dl-sort-maps.c:dfs_traversal.part.0 [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+        428 ( 0.00%)  ???:OBJ_NAME_cleanup [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+        418 ( 0.00%)  ./elf/./elf/dl-cache.c:search_cache [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+        416 ( 0.00%)  /rustc/48a229ceaefd4985c50990b14116b6d856af0985/library/std/src/sys/alloc/unix.rs:__rustc::__rdl_alloc_zeroed
+        412 ( 0.00%)  ./elf/./elf/dl-sort-maps.c:_dl_sort_maps [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+        393 ( 0.00%)  ./elf/./elf/dl-hwcaps_split.c:_dl_hwcaps_split [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+        392 ( 0.00%)  ???:OPENSSL_sk_insert [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+        390 ( 0.00%)  ./elf/./elf/dl-init.c:call_init [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+        379 ( 0.00%)  ???:<std::sync::once::Once>::call_once_force::<<std::sync::once_lock::OnceLock<openssl_rs::ffc::dh::Table>>::initialize<<std::sync::once_lock::OnceLock<openssl_rs::ffc::dh::Table>>::get_or_init<openssl_rs::ffc::dh::named_groups::{closure#0}>::{closure#0}, !>::{closure#0}>::{closure#0} [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+        376 ( 0.00%)  ./malloc/./malloc/malloc.c:unlink_chunk.constprop.0 [/usr/lib/x86_64-linux-gnu/libc.so.6]
+        374 ( 0.00%)  ./misc/../sysdeps/unix/sysv/linux/x86_64/syscall.S:syscall [/usr/lib/x86_64-linux-gnu/libc.so.6]
+        368 ( 0.00%)  ./string/../sysdeps/x86_64/multiarch/strlen-avx2.S:__strlen_avx2 [/usr/lib/x86_64-linux-gnu/libc.so.6]
+        362 ( 0.00%)  ???:openssl_rs::runtime::rcu::ossl_synchronize_rcu [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+        360 ( 0.00%)  ???:openssl_rs::runtime::thread::mutex_acquire [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+        356 ( 0.00%)  ???:OPENSSL_LH_new [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+        353 ( 0.00%)  ./stdlib/../stdlib/strtol_l.c:____strtol_l_internal [/usr/lib/x86_64-linux-gnu/libc.so.6]
+        344 ( 0.00%)  ./elf/./dl-find_object.h:_dl_find_object_from_map [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+        338 ( 0.00%)  ???:openssl_rs::runtime::stack::sk_reserve [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+        337 ( 0.00%)  ./string/../sysdeps/x86_64/multiarch/memmove-vec-unaligned-erms.S:memcpy [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+        333 ( 0.00%)  ./elf/../elf/dl-tls.c:_dl_allocate_tls_storage [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+        332 ( 0.00%)  ./elf/./get-dynamic-info.h:dl_main
+        324 ( 0.00%)  ???:BN_num_bits [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+        319 ( 0.00%)  ./malloc/./malloc/arena.c:malloc
+        315 ( 0.00%)  ???:0x0000000000003430 [/usr/lib/x86_64-linux-gnu/libgcc_s.so.1]
+        314 ( 0.00%)  ./elf/./elf/dl-error-skeleton.c:_dl_catch_exception'2 [/usr/lib/x86_64-linux-gnu/libc.so.6]
+        305 ( 0.00%)  ./io/../sysdeps/unix/sysv/linux/open64_nocancel.c:__open_nocancel [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+        302 ( 0.00%)  ./elf/./elf/dl-load.c:_dl_init_paths [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+        290 ( 0.00%)  ./elf/./elf/dl-minimal.c:strsep [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+        276 ( 0.00%)  ./stdlib/./stdlib/mul.c:__mpn_mul [/usr/lib/x86_64-linux-gnu/libc.so.6]
+        264 ( 0.00%)  ./elf/./elf/dl-fini.c:_dl_fini [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+        264 ( 0.00%)  ???:<alloc::vec::Vec<(u64, usize)>>::remove [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+        263 ( 0.00%)  ./elf/./get-dynamic-info.h:_dl_start
+        251 ( 0.00%)  ./string/../string/strcspn.c:strcspn [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+        248 ( 0.00%)  ???:openssl_rs::property::store::ossl_method_store_new [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+        231 ( 0.00%)  ./stdlib/./stdlib/getenv.c:getenv [/usr/lib/x86_64-linux-gnu/libc.so.6]
+        229 ( 0.00%)  ./elf/../sysdeps/x86/dl-cacheinfo.h:get_common_cache_info.constprop.0 [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+        228 ( 0.00%)  ./malloc/./malloc/arena.c:free
+        224 ( 0.00%)  ./stdlib/./stdlib/cxa_finalize.c:__cxa_finalize [/usr/lib/x86_64-linux-gnu/libc.so.6]
+        219 ( 0.00%)  ./elf/../sysdeps/x86/dl-cacheinfo.h:init_cpu_features.constprop.0
+        219 ( 0.00%)  ???:BN_MONT_CTX_set [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+        210 ( 0.00%)  ./elf/./elf/dl-object.c:_dl_add_to_namespace_list [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+        208 ( 0.00%)  ./elf/./elf/dl-find_object.c:_dl_find_object_update [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+        208 ( 0.00%)  ???:CRYPTO_malloc [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+        203 ( 0.00%)  ./elf/../sysdeps/unix/sysv/linux/dl-parse_auxv.h:_dl_sysdep_parse_arguments
+        201 ( 0.00%)  ./elf/./elf/dl-hwcaps_split.c:_dl_hwcaps_split_masked [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+        200 ( 0.00%)  ./elf/./elf/dl-open.c:_dl_find_dso_for_object [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+        200 ( 0.00%)  ./setjmp/./setjmp/sigjmp.c:__sigjmp_save [/usr/lib/x86_64-linux-gnu/libc.so.6]
+        199 ( 0.00%)  ./elf/./elf/rtld.c:_dl_start [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+        197 ( 0.00%)  ./elf/./elf/dl-find_object.c:_dlfo_process_initial [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+        194 ( 0.00%)  ./elf/./elf/dl-environ.c:_dl_next_ld_env_entry [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+        192 ( 0.00%)  /rustc/48a229ceaefd4985c50990b14116b6d856af0985/library/std/src/alloc.rs:__rustc::__rdl_alloc_zeroed [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+        180 ( 0.00%)  ./nptl/./nptl/pthread_once.c:__pthread_once_slow [/usr/lib/x86_64-linux-gnu/libc.so.6]
+        176 ( 0.00%)  ./misc/../sysdeps/unix/sysv/linux/mmap64.c:mmap [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+        172 ( 0.00%)  ./elf/./elf/dl-lookup-direct.c:_dl_lookup_direct [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+        170 ( 0.00%)  ./elf/./elf/dl-load.c:_dl_dst_count [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+        168 ( 0.00%)  ./elf/../sysdeps/unix/sysv/linux/dl-sysdep.c:_dl_sysdep_parse_arguments [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+        168 ( 0.00%)  ???:BN_CTX_get [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+        166 ( 0.00%)  ./elf/../sysdeps/x86/dl-prop.h:dl_main
+        166 ( 0.00%)  ./elf/./elf/dl-call_fini.c:_dl_call_fini [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+        166 ( 0.00%)  ./elf/./elf/dl-load.c:fillin_rpath.isra.0 [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+        162 ( 0.00%)  ./elf/../sysdeps/x86/cpu-features.c:init_cpu_features.constprop.0 [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+        162 ( 0.00%)  ???:0x00000000000078e0 [/usr/lib/x86_64-linux-gnu/libgcc_s.so.1]
+        160 ( 0.00%)  ./elf/./elf/dl-tunables.c:do_tunable_update_val [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+        156 ( 0.00%)  ./elf/./elf/dl-setup_hash.c:_dl_setup_hash [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+        154 ( 0.00%)  ./malloc/./malloc/malloc.c:sysmalloc [/usr/lib/x86_64-linux-gnu/libc.so.6]
+        154 ( 0.00%)  ???:BN_free [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+        154 ( 0.00%)  ???:__rustc::__rust_no_alloc_shim_is_unstable_v2 [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+        153 ( 0.00%)  ./elf/./elf/dl-lookup-direct.c:check_match [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+        152 ( 0.00%)  ???:openssl_rs::runtime::thread::ossl_crypto_condvar_signal [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+        146 ( 0.00%)  ???:openssl_rs::context::context_init [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+        144 ( 0.00%)  ./dlfcn/./dlfcn/dlsym.c:dlsym_doit [/usr/lib/x86_64-linux-gnu/libc.so.6]
+        144 ( 0.00%)  ./elf/./elf/dl-minimal.c:lookup_malloc_symbol [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+        143 ( 0.00%)  ./elf/../sysdeps/x86/cpu-features.c:update_active.constprop.0 [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+        143 ( 0.00%)  ???:<openssl_rs::dh::Dh as openssl_rs::runtime::bio::owned::CtxDestroy>::destroy_body [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+        142 ( 0.00%)  ./libio/./libio/genops.c:_IO_cleanup [/usr/lib/x86_64-linux-gnu/libc.so.6]
+        140 ( 0.00%)  ???:BN_cmp [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+        140 ( 0.00%)  ???:BN_sub_word [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+        139 ( 0.00%)  ./elf/./elf/dl-init.c:_dl_init [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+        137 ( 0.00%)  ./io/../sysdeps/unix/sysv/linux/fstatat64.c:fstatat [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+        136 ( 0.00%)  ./elf/./elf/dl-cache.c:_dl_load_cache_lookup [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+        135 ( 0.00%)  ???:openssl_rs::runtime::rcu::ossl_rcu_lock_new [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+        132 ( 0.00%)  ./string/../sysdeps/x86_64/multiarch/strcmp-avx2.S:__strncmp_avx2 [/usr/lib/x86_64-linux-gnu/libc.so.6]
+        130 ( 0.00%)  ./elf/./dl-load.h:_dl_map_object_from_fd
+        129 ( 0.00%)  courts/performance-frontier/pfp8/bench_pfp8.c:measure [/work/court/tmp/pfp8/bench_pfp8]
+        125 ( 0.00%)  ???:__cpu_indicator_init [/usr/lib/x86_64-linux-gnu/libgcc_s.so.1]
+        122 ( 0.00%)  ./elf/./dl-sym-post.h:do_sym
+        122 ( 0.00%)  /rustc/48a229ceaefd4985c50990b14116b6d856af0985/library/std/src/alloc.rs:__rustc::__rdl_alloc [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+        122 ( 0.00%)  ???:__rustc::__rust_alloc [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+        120 ( 0.00%)  ???:<alloc::raw_vec::RawVec<(u64, usize)>>::grow_one [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+        120 ( 0.00%)  ???:OSSL_LIB_CTX_get_data [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+        119 ( 0.00%)  ./elf/./elf/dl-deps.c:openaux [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+        116 ( 0.00%)  ./elf/../sysdeps/x86/dl-prop.h:_dl_map_object_from_fd
+        115 ( 0.00%)  ./malloc/./malloc/malloc.c:tcache_init.part.0 [/usr/lib/x86_64-linux-gnu/libc.so.6]
+        115 ( 0.00%)  ./stdlib/./stdlib/exit.c:__run_exit_handlers [/usr/lib/x86_64-linux-gnu/libc.so.6]
+        114 ( 0.00%)  ./elf/./elf/dl-reloc.c:_dl_protect_relro [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+        114 ( 0.00%)  ???:BN_copy [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+        114 ( 0.00%)  ???:openssl_rs::runtime::ex_data::snapshot [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+        110 ( 0.00%)  ???:OPENSSL_sk_new_null [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+        102 ( 0.00%)  ./stdlib/../sysdeps/x86_64/rshift.S:__mpn_rshift [/usr/lib/x86_64-linux-gnu/libc.so.6]
+        102 ( 0.00%)  ???:BN_CTX_free [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+        102 ( 0.00%)  ???:CRYPTO_strdup [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+        102 ( 0.00%)  ???:OPENSSL_init_crypto [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+        101 ( 0.00%)  ./libio/./libio/genops.c:_IO_flush_all_lockp [/usr/lib/x86_64-linux-gnu/libc.so.6]
+        100 ( 0.00%)  ./elf/../elf/dl-tls.c:_dl_allocate_tls_init [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+        100 ( 0.00%)  ./libio/./libio/fileops.c:new_do_write [/usr/lib/x86_64-linux-gnu/libc.so.6]
+        100 ( 0.00%)  ./stdlib/./stdlib/cxa_thread_atexit_impl.c:__cxa_thread_atexit_impl [/usr/lib/x86_64-linux-gnu/libc.so.6]
+        100 ( 0.00%)  /rustc/48a229ceaefd4985c50990b14116b6d856af0985/library/std/src/sys/pal/unix/futex.rs:<std::sync::poison::condvar::Condvar>::notify_all
+         99 ( 0.00%)  ./stdlib/./stdlib/cmp.c:__mpn_cmp [/usr/lib/x86_64-linux-gnu/libc.so.6]
+         98 ( 0.00%)  ./elf/../sysdeps/x86_64/dl-machine.h:_dl_start
+         96 ( 0.00%)  ???:openssl_rs::context::lib_ctx_get_data [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+         91 ( 0.00%)  ./libio/./libio/libioP.h:_IO_padn
+         90 ( 0.00%)  ./nptl/./nptl/pthread_once.c:__pthread_once_slow'2 [/usr/lib/x86_64-linux-gnu/libc.so.6]
+         90 ( 0.00%)  ???:<openssl_rs::runtime::err::PendingReleaseGuard as core::ops::drop::Drop>::drop [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+         88 ( 0.00%)  ./string/../sysdeps/x86_64/multiarch/ifunc-avx2.h:strlen [/usr/lib/x86_64-linux-gnu/libc.so.6]
+         85 ( 0.00%)  ./elf/../elf/dl-tls.c:_dl_update_slotinfo [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+         85 ( 0.00%)  ./stdlib/../sysdeps/ieee754/dbl-64/dbl2mpn.c:__mpn_extract_double [/usr/lib/x86_64-linux-gnu/libc.so.6]
+         82 ( 0.00%)  ./elf/./elf/dl-misc.c:_dl_sysdep_read_whole_file [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+         81 ( 0.00%)  ./malloc/./malloc/arena.c:ptmalloc_init.part.0 [/usr/lib/x86_64-linux-gnu/libc.so.6]
+         80 ( 0.00%)  ./elf/./elf/dl-hwcaps.c:copy_hwcaps [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+         79 ( 0.00%)  ./elf/./elf/dl-find_object.c:_dlfo_sort_mappings [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+         78 ( 0.00%)  ./malloc/./malloc/arena.c:calloc
+         78 ( 0.00%)  ./nptl/./nptl/pthread_key_create.c:pthread_key_create@@GLIBC_2.34 [/usr/lib/x86_64-linux-gnu/libc.so.6]
+         77 ( 0.00%)  ./elf/../sysdeps/x86_64/tls_get_addr.S:__tls_get_addr [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+         76 ( 0.00%)  ???:BN_bin2bn [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+         76 ( 0.00%)  ???:openssl_rs::bn::bignum::store_consttime [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+         76 ( 0.00%)  ???:openssl_rs::dh::object::dh_new_intern [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+         76 ( 0.00%)  ???:openssl_rs::runtime::thread::ossl_crypto_condvar_broadcast [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+         75 ( 0.00%)  ./elf/../elf/dl-tls.c:_dl_add_to_slotinfo [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+         75 ( 0.00%)  ./elf/../elf/dl-tls.c:_dl_determine_tlsoffset [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+         75 ( 0.00%)  ./elf/./elf/dl-sort-maps.c:dfs_traversal.part.0'2 [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+         75 ( 0.00%)  ./string/./string/strdup.c:strdup [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+         74 ( 0.00%)  ./csu/../csu/libc-start.c:__libc_start_main@@GLIBC_2.34 [/usr/lib/x86_64-linux-gnu/libc.so.6]
+         74 ( 0.00%)  ./elf/./elf/do-rel.h:_dl_start
+         74 ( 0.00%)  ./elf/./elf/rtld.c:init_tls [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+         74 ( 0.00%)  ./stdlib/./stdlib/cxa_atexit.c:__internal_atexit [/usr/lib/x86_64-linux-gnu/libc.so.6]
+         73 ( 0.00%)  /rustc/48a229ceaefd4985c50990b14116b6d856af0985/library/std/src/sys/sync/once/futex.rs:<std::sys::sync::once::futex::Once>::call [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+         72 ( 0.00%)  ./elf/./elf/dl-minimal-malloc.c:__minimal_calloc [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+         72 ( 0.00%)  ./libio/./libio/fileops.c:_IO_file_write@@GLIBC_2.2.5 [/usr/lib/x86_64-linux-gnu/libc.so.6]
+         72 ( 0.00%)  ./nptl/./nptl/pthread_self.c:pthread_self [/usr/lib/x86_64-linux-gnu/libc.so.6]
+         71 ( 0.00%)  ./elf/./elf/dl-version.c:_dl_check_all_versions [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+         71 ( 0.00%)  ???:<openssl_rs::runtime::err::ErrState>::clear_all [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+         70 ( 0.00%)  ./elf/../sysdeps/posix/dl-fileid.h:_dl_map_object_from_fd
+         70 ( 0.00%)  ./elf/./elf/dl-load.c:cache_rpath [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+         70 ( 0.00%)  /rustc/48a229ceaefd4985c50990b14116b6d856af0985/library/std/src/sys/pal/unix/futex.rs:<std::sync::poison::condvar::Condvar>::notify_one
+         69 ( 0.00%)  ./nptl/./nptl/pthread_setspecific.c:pthread_setspecific@@GLIBC_2.34 [/usr/lib/x86_64-linux-gnu/libc.so.6]
+         69 ( 0.00%)  ./string/../sysdeps/x86_64/multiarch/ifunc-memset.h:memset [/usr/lib/x86_64-linux-gnu/libc.so.6]
+         68 ( 0.00%)  ./libio/./libio/genops.c:_IO_default_xsputn [/usr/lib/x86_64-linux-gnu/libc.so.6]
+         68 ( 0.00%)  ./malloc/./malloc/malloc.c:_int_realloc [/usr/lib/x86_64-linux-gnu/libc.so.6]
+         68 ( 0.00%)  ???:DH_new_by_nid [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+         66 ( 0.00%)  ./elf/./elf/dl-open.c:_dl_open [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+         66 ( 0.00%)  ./malloc/./malloc/malloc.c:realloc [/usr/lib/x86_64-linux-gnu/libc.so.6]
+         66 ( 0.00%)  ./stdlib/./stdlib/cxa_atexit.c:__new_exitfn [/usr/lib/x86_64-linux-gnu/libc.so.6]
+         66 ( 0.00%)  ./string/../sysdeps/x86_64/multiarch/ifunc-avx2.h:strnlen [/usr/lib/x86_64-linux-gnu/libc.so.6]
+         66 ( 0.00%)  ???:openssl_rs::property::parse::ossl_property_parse_init [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+         66 ( 0.00%)  ???:openssl_rs::runtime::rcu::ossl_rcu_lock_free [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+         65 ( 0.00%)  ./elf/../sysdeps/generic/dl-hash.h:__rtld_malloc_init_real
+         65 ( 0.00%)  ./libio/./libio/fileops.c:_IO_file_sync@@GLIBC_2.2.5 [/usr/lib/x86_64-linux-gnu/libc.so.6]
+         65 ( 0.00%)  ???:OPENSSL_cleanup [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+         64 ( 0.00%)  ???:openssl_rs::runtime::thread_events::init_thread_deregister [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+         63 ( 0.00%)  ./string/../sysdeps/x86_64/multiarch/ifunc-memcmp.h:bcmp [/usr/lib/x86_64-linux-gnu/libc.so.6]
+         63 ( 0.00%)  ./string/../sysdeps/x86_64/multiarch/ifunc-memmove.h:memcpy@@GLIBC_2.14 [/usr/lib/x86_64-linux-gnu/libc.so.6]
+         62 ( 0.00%)  /rustc/48a229ceaefd4985c50990b14116b6d856af0985/library/std/src/sys/alloc/unix.rs:__rustc::__rdl_dealloc [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+         62 ( 0.00%)  ???:__rustc::__rust_dealloc [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+         61 ( 0.00%)  ./elf/../elf/dl-tls.c:tls_get_addr_tail [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+         60 ( 0.00%)  ./elf/../sysdeps/x86/cpu-features.c:get_common_indices.constprop.0 [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+         60 ( 0.00%)  ./stdlib/../sysdeps/x86_64/lshift.S:__mpn_lshift [/usr/lib/x86_64-linux-gnu/libc.so.6]
+         60 ( 0.00%)  ???:<alloc::vec::into_iter::IntoIter<openssl_rs::runtime::err::SlotStr> as core::ops::drop::Drop>::drop [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+         60 ( 0.00%)  ???:CONF_modules_load_file_ex [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+         59 ( 0.00%)  ???:openssl_rs::property::strings::ossl_property_string_data_new [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+         59 ( 0.00%)  ???:openssl_rs::runtime::confmod::conf_modules_finish_int [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+         57 ( 0.00%)  ./malloc/./malloc/scratch_buffer_set_array_size.c:__libc_scratch_buffer_set_array_size [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+         57 ( 0.00%)  ???:openssl_rs::context::namemap::ossl_stored_namemap_new [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+         56 ( 0.00%)  ./libio/./libio/iofflush.c:fflush [/usr/lib/x86_64-linux-gnu/libc.so.6]
+         56 ( 0.00%)  ./posix/./posix/register-atfork.c:__unregister_atfork [/usr/lib/x86_64-linux-gnu/libc.so.6]
+         56 ( 0.00%)  ???:BN_new [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+         56 ( 0.00%)  ???:openssl_rs::provider::ossl_provider_store_new [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+         55 ( 0.00%)  ???:CONF_modules_unload [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+         54 ( 0.00%)  ./elf/../sysdeps/x86/dl-prop.h:dl_open_worker_begin
+         54 ( 0.00%)  ./elf/./elf/dl-load.c:expand_dynamic_string_token [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+         54 ( 0.00%)  ./string/../sysdeps/x86_64/multiarch/strcmp.c:strcmp [/usr/lib/x86_64-linux-gnu/libc.so.6]
+         54 ( 0.00%)  ???:0x0000000000003410 [/usr/lib/x86_64-linux-gnu/libgcc_s.so.1]
+         54 ( 0.00%)  ???:ERR_set_mark [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+         54 ( 0.00%)  ???:openssl_rs::runtime::mem::default_malloc [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+         53 ( 0.00%)  ./elf/./elf/rtld.c:handle_preload_list [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+         52 ( 0.00%)  ???:BN_value_one [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+         50 ( 0.00%)  ./io/../sysdeps/unix/sysv/linux/stat64.c:stat [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+         50 ( 0.00%)  ./libio/./libio/fileops.c:_IO_file_overflow@@GLIBC_2.2.5 [/usr/lib/x86_64-linux-gnu/libc.so.6]
+         50 ( 0.00%)  ???:openssl_rs::decoder_pkey::ossl_decoder_cache_new [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+         48 ( 0.00%)  ./elf/../sysdeps/generic/ldsodefs.h:_dl_new_object
+         48 ( 0.00%)  ./elf/./elf/dl-sym.c:_dl_sym [/usr/lib/x86_64-linux-gnu/libc.so.6]
+         48 ( 0.00%)  ./nptl/./nptl/pthread_mutex_unlock.c:pthread_mutex_unlock@@GLIBC_2.2.5 [/usr/lib/x86_64-linux-gnu/libc.so.6]
+         48 ( 0.00%)  ???:<alloc::raw_vec::RawVec<usize>>::grow_one [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+         48 ( 0.00%)  ???:BN_CTX_start [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+         47 ( 0.00%)  ./elf/./elf/dl-debug.c:_dl_debug_initialize [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+         46 ( 0.00%)  ./misc/./misc/sbrk.c:sbrk [/usr/lib/x86_64-linux-gnu/libc.so.6]
+         45 ( 0.00%)  ./elf/./elf/dl-open.c:dl_open_worker [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+         45 ( 0.00%)  ???:ERR_pop_to_mark [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+         44 ( 0.00%)  ./elf/../sysdeps/x86/get-isa-level.h:update_active.constprop.0
+         44 ( 0.00%)  ./wcsmbs/../sysdeps/x86_64/multiarch/ifunc-avx2.h:wcschr [/usr/lib/x86_64-linux-gnu/libc.so.6]
+         44 ( 0.00%)  ???:openssl_rs::context::thread_data::ossl_threads_ctx_new [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+         43 ( 0.00%)  ./libio/./libio/filedoalloc.c:_IO_file_doallocate [/usr/lib/x86_64-linux-gnu/libc.so.6]
+         42 ( 0.00%)  ./elf/../sysdeps/x86/get-isa-level.h:_dl_hwcaps_subdirs_active [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+         42 ( 0.00%)  ./elf/./elf/dl-debug.c:_dl_debug_update [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+         42 ( 0.00%)  ./elf/./elf/dl-minimal.c:__rtld_malloc_init_real [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+         42 ( 0.00%)  ./io/../sysdeps/unix/sysv/linux/fstat64.c:fstat [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+         42 ( 0.00%)  ./string/../sysdeps/x86_64/multiarch/ifunc-evex.h:memchr [/usr/lib/x86_64-linux-gnu/libc.so.6]
+         42 ( 0.00%)  ./string/../sysdeps/x86_64/multiarch/ifunc-memmove.h:memmove [/usr/lib/x86_64-linux-gnu/libc.so.6]
+         42 ( 0.00%)  ./wcsmbs/../sysdeps/x86_64/multiarch/ifunc-evex.h:wmemchr [/usr/lib/x86_64-linux-gnu/libc.so.6]
+         42 ( 0.00%)  /rustc/48a229ceaefd4985c50990b14116b6d856af0985/library/std/src/sys/thread_local/destructors/linux_like.rs:std::sys::thread_local::destructors::linux_like::register [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+         41 ( 0.00%)  ./elf/../sysdeps/nptl/dl-mutex.c:__rtld_mutex_init [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+         41 ( 0.00%)  ./libio/./libio/genops.c:_IO_default_setbuf [/usr/lib/x86_64-linux-gnu/libc.so.6]
+         41 ( 0.00%)  ./nptl/../sysdeps/unix/sysv/linux/x86/elision-conf.c:__lll_elision_init [/usr/lib/x86_64-linux-gnu/libc.so.6]
+         41 ( 0.00%)  ???:openssl_rs::rand::rand_lib::ossl_rand_ctx_new [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+         40 ( 0.00%)  ./elf/./elf/dl-audit.c:_dl_audit_activity_nsid [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+         40 ( 0.00%)  ./nptl/./nptl/alloca_cutoff.c:__libc_alloca_cutoff [/usr/lib/x86_64-linux-gnu/libc.so.6]
+         40 ( 0.00%)  ./stdlib/./stdlib/cxa_thread_atexit_impl.c:__call_tls_dtors [/usr/lib/x86_64-linux-gnu/libc.so.6]
+         40 ( 0.00%)  ./string/../sysdeps/x86_64/multiarch/strncmp.c:strncmp [/usr/lib/x86_64-linux-gnu/libc.so.6]
+         39 ( 0.00%)  ./nptl/./nptl/pthread_getspecific.c:pthread_getspecific@@GLIBC_2.34 [/usr/lib/x86_64-linux-gnu/libc.so.6]
+         39 ( 0.00%)  /rustc/48a229ceaefd4985c50990b14116b6d856af0985/library/std/src/sys/random/linux.rs:std::sys::random::linux::getrandom [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+         38 ( 0.00%)  ./elf/./elf/dl-load.c:_dl_process_pt_gnu_property [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+         38 ( 0.00%)  ./libio/./libio/libioP.h:fflush
+         38 ( 0.00%)  ???:ERR_get_state [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+         37 ( 0.00%)  ???:OPENSSL_thread_stop [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+         36 ( 0.00%)  ./elf/../elf/dl-tls.c:_dl_tls_static_surplus_init [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+         36 ( 0.00%)  ./elf/./elf/dl-find_object.c:_dl_find_object_init [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+         36 ( 0.00%)  ./nptl/./nptl/cleanup_compat.c:_pthread_cleanup_push@@GLIBC_2.34 [/usr/lib/x86_64-linux-gnu/libc.so.6]
+         36 ( 0.00%)  ./string/../sysdeps/x86_64/multiarch/strchr.c:index [/usr/lib/x86_64-linux-gnu/libc.so.6]
+         36 ( 0.00%)  ???:CRYPTO_free_ex_data [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+         35 ( 0.00%)  ./elf/./elf/dl-tunables.c:__GI___tunable_set_val [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+         35 ( 0.00%)  ./libio/./libio/putchar.c:putchar [/usr/lib/x86_64-linux-gnu/libc.so.6]
+         34 ( 0.00%)  ./elf/./elf/dl-error-skeleton.c:_rtld_catch_error [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+         34 ( 0.00%)  ./string/../sysdeps/x86_64/multiarch/ifunc-strncpy.h:strncpy [/usr/lib/x86_64-linux-gnu/libc.so.6]
+         34 ( 0.00%)  ./wcsmbs/../sysdeps/x86_64/multiarch/ifunc-wmemset.h:wmemset [/usr/lib/x86_64-linux-gnu/libc.so.6]
+         34 ( 0.00%)  ???:CRYPTO_new_ex_data [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+         33 ( 0.00%)  ./elf/../sysdeps/unix/sysv/linux/dl-sysdep.c:_dl_sysdep_start [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+         33 ( 0.00%)  ./elf/./dl-hwcaps.h:_dl_important_hwcaps
+         33 ( 0.00%)  ???:OPENSSL_init_crypto'2 [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+         33 ( 0.00%)  ???:openssl_rs::runtime::thread_events::create_global_tevent_register [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+         32 ( 0.00%)  ./elf/../sysdeps/nptl/dl-tls_init_tp.c:__tls_init_tp [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+         32 ( 0.00%)  ./nptl/../sysdeps/nptl/futex-internal.h:__pthread_once_slow
+         32 ( 0.00%)  ./stdio-common/../sysdeps/generic/get-rounding-mode.h:__printf_fp_l
+         32 ( 0.00%)  ???:__rustc::__rust_alloc_zeroed [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+         31 ( 0.00%)  ./string/../sysdeps/x86_64/multiarch/../multiarch/strcmp-sse2.S:strncmp [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+         31 ( 0.00%)  ???:openssl_rs::runtime::thread_events::init_thread_remove_handlers [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+         30 ( 0.00%)  ./io/../sysdeps/unix/sysv/linux/close_nocancel.c:__GI___close_nocancel [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+         30 ( 0.00%)  ./misc/../sysdeps/unix/syscall-template.S:mprotect [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+         30 ( 0.00%)  ./nptl/./nptl/cleanup_compat.c:_pthread_cleanup_pop@@GLIBC_2.34 [/usr/lib/x86_64-linux-gnu/libc.so.6]
+         30 ( 0.00%)  ./nptl/./nptl/pthread_key_delete.c:pthread_key_delete@@GLIBC_2.34 [/usr/lib/x86_64-linux-gnu/libc.so.6]
+         30 ( 0.00%)  ./string/../sysdeps/x86_64/multiarch/ifunc-strcpy.h:strcpy [/usr/lib/x86_64-linux-gnu/libc.so.6]
+         29 ( 0.00%)  ./elf/./elf/rtld.c:do_preload [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+         29 ( 0.00%)  ???:EVP_PBE_cleanup [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+         27 ( 0.00%)  ./elf/../include/rtld-malloc.h:_dl_new_object
+         27 ( 0.00%)  ./libio/./libio/genops.c:_IO_setb [/usr/lib/x86_64-linux-gnu/libc.so.6]
+         27 ( 0.00%)  ???:DH_set0_key [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+         26 ( 0.00%)  ./dlfcn/./dlfcn/dlopen.c:dlopen_doit [/usr/lib/x86_64-linux-gnu/libc.so.6]
+         26 ( 0.00%)  ./libio/./libio/fileops.c:_IO_do_write@@GLIBC_2.2.5 [/usr/lib/x86_64-linux-gnu/libc.so.6]
+         26 ( 0.00%)  ./nptl/./nptl/pthread_mutex_conf.c:__pthread_tunables_init [/usr/lib/x86_64-linux-gnu/libc.so.6]
+         26 ( 0.00%)  ???:DH_free [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+         26 ( 0.00%)  ???:OBJ_sigid_free [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+         25 ( 0.00%)  ./csu/../sysdeps/nptl/libc_start_call_main.h:(below main) [/usr/lib/x86_64-linux-gnu/libc.so.6]
+         25 ( 0.00%)  ./dlfcn/./dlfcn/dlopen.c:dlopen@@GLIBC_2.34 [/usr/lib/x86_64-linux-gnu/libc.so.6]
+         25 ( 0.00%)  ./elf/../sysdeps/nptl/pthread_early_init.h:__libc_early_init
+         25 ( 0.00%)  ./misc/./misc/init-misc.c:__init_misc [/usr/lib/x86_64-linux-gnu/libc.so.6]
+         25 ( 0.00%)  ./string/../sysdeps/x86/cacheinfo.h:__x86_cacheinfo [/usr/lib/x86_64-linux-gnu/libc.so.6]
+         25 ( 0.00%)  ???:OPENSSL_sk_new [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+         25 ( 0.00%)  ???:openssl_rs::provider::rand::ossl_prov_drbg_nonce_ctx_new [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+         24 ( 0.00%)  ./elf/./elf/dl-audit.c:_dl_audit_objclose [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+         24 ( 0.00%)  ./elf/./elf/dl-hwcaps_split.c:_dl_hwcaps_contains [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+         24 ( 0.00%)  ./stdio-common/./stdio-common/printf_fp.c:__printf_fp [/usr/lib/x86_64-linux-gnu/libc.so.6]
+         23 ( 0.00%)  ./elf/./elf/dl-call-libc-early-init.c:_dl_call_libc_early_init [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+         23 ( 0.00%)  ./nptl/./nptl/pthread_once.c:pthread_once@@GLIBC_2.34'2 [/usr/lib/x86_64-linux-gnu/libc.so.6]
+         23 ( 0.00%)  ???:BN_MONT_CTX_new [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+         23 ( 0.00%)  ???:openssl_rs::runtime::init::ossl_init_config [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+         23 ( 0.00%)  ???:std::sys::thread_local::native::eager::destroy::<core::cell::RefCell<alloc::vec::Vec<openssl_rs::runtime::err::SlotStr>>> [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+         22 ( 0.00%)  ./elf/../elf/dl-tls.c:_dl_tls_initial_modid_limit_setup [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+         22 ( 0.00%)  ./elf/./elf/dl-cache.c:_dl_unload_cache [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+         22 ( 0.00%)  ./string/../sysdeps/x86_64/multiarch/ifunc-avx2.h:memrchr [/usr/lib/x86_64-linux-gnu/libc.so.6]
+         22 ( 0.00%)  ./string/../sysdeps/x86_64/multiarch/ifunc-avx2.h:rindex [/usr/lib/x86_64-linux-gnu/libc.so.6]
+         22 ( 0.00%)  ./string/../sysdeps/x86_64/multiarch/ifunc-avx2.h:strchrnul [/usr/lib/x86_64-linux-gnu/libc.so.6]
+         22 ( 0.00%)  ./wcsmbs/../sysdeps/x86_64/multiarch/ifunc-avx2.h:wcscmp [/usr/lib/x86_64-linux-gnu/libc.so.6]
+         22 ( 0.00%)  /usr/include/stdlib.h:main
+         22 ( 0.00%)  ???:openssl_rs::engine::eng_table::ossl_engine_table_select [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+         21 ( 0.00%)  ./elf/../include/scratch_buffer.h:_dl_map_object_deps
+         21 ( 0.00%)  ./nptl/./nptl/pthread_once.c:pthread_once@@GLIBC_2.34 [/usr/lib/x86_64-linux-gnu/libc.so.6]
+         21 ( 0.00%)  ./stdio-common/../include/rounding-mode.h:__printf_fp_l
+         21 ( 0.00%)  ./string/../sysdeps/x86_64/multiarch/ifunc-evex.h:rawmemchr [/usr/lib/x86_64-linux-gnu/libc.so.6]
+         21 ( 0.00%)  ./string/../sysdeps/x86_64/multiarch/ifunc-memmove.h:mempcpy [/usr/lib/x86_64-linux-gnu/libc.so.6]
+         21 ( 0.00%)  ./string/../sysdeps/x86_64/multiarch/strrchr-avx2.S:__strrchr_avx2 [/usr/lib/x86_64-linux-gnu/libc.so.6]
+         21 ( 0.00%)  ./wcsmbs/../sysdeps/x86_64/multiarch/ifunc-memcmp.h:wmemcmp [/usr/lib/x86_64-linux-gnu/libc.so.6]
+         21 ( 0.00%)  /rustc/48a229ceaefd4985c50990b14116b6d856af0985/library/core/src/sync/atomic.rs:<std::sys::sync::once::futex::Once>::call
+         20 ( 0.00%)  ./elf/../sysdeps/unix/sysv/linux/rseq-internal.h:__tls_init_tp
+         20 ( 0.00%)  ./elf/./dl-sym-post.h:lookup_malloc_symbol
+         20 ( 0.00%)  ./elf/./elf/dl-tunables.h:do_tunable_update_val
+         20 ( 0.00%)  ./io/../sysdeps/unix/sysv/linux/read_nocancel.c:__read_nocancel [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+         20 ( 0.00%)  ./stdio-common/../sysdeps/pthread/allocalim.h:__printf_fp_l
+         20 ( 0.00%)  ./time/../sysdeps/unix/sysv/linux/clock_gettime.c:clock_gettime@@GLIBC_2.17 [/usr/lib/x86_64-linux-gnu/libc.so.6]
+         20 ( 0.00%)  /rustc/48a229ceaefd4985c50990b14116b6d856af0985/library/core/src/sync/atomic.rs:<std::sync::poison::condvar::Condvar>::notify_all
+         20 ( 0.00%)  /rustc/48a229ceaefd4985c50990b14116b6d856af0985/library/std/src/sync/poison/condvar.rs:<std::sync::poison::condvar::Condvar>::notify_all [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+         20 ( 0.00%)  ???:openssl_rs::runtime::confmod::ossl_config_modules_free [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+         19 ( 0.00%)  ./elf/./elf/dl-audit.c:_dl_audit_activity_map [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+         18 ( 0.00%)  ./csu/./csu/init-first.c:_init_first [/usr/lib/x86_64-linux-gnu/libc.so.6]
+         18 ( 0.00%)  ./elf/../elf/dl-tls.c:_dl_assign_tls_modid [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+         18 ( 0.00%)  ./elf/../sysdeps/generic/_itoa.h:_dl_check_map_versions
+         18 ( 0.00%)  ./elf/../sysdeps/x86/dl-procinfo.h:search_cache
+         18 ( 0.00%)  ./libio/./libio/genops.c:_IO_doallocbuf [/usr/lib/x86_64-linux-gnu/libc.so.6]
+         18 ( 0.00%)  ./string/../sysdeps/x86_64/multiarch/../multiarch/memcmp-sse2.S:bcmp [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+         18 ( 0.00%)  ./string/../sysdeps/x86_64/multiarch/ifunc-strcasecmp.h:strcasecmp [/usr/lib/x86_64-linux-gnu/libc.so.6]
+         18 ( 0.00%)  ./string/../sysdeps/x86_64/multiarch/ifunc-strcasecmp.h:strcasecmp_l [/usr/lib/x86_64-linux-gnu/libc.so.6]
+         18 ( 0.00%)  ./string/../sysdeps/x86_64/multiarch/ifunc-strcasecmp.h:strncasecmp [/usr/lib/x86_64-linux-gnu/libc.so.6]
+         18 ( 0.00%)  ./string/../sysdeps/x86_64/multiarch/ifunc-strcasecmp.h:strncasecmp_l [/usr/lib/x86_64-linux-gnu/libc.so.6]
+         18 ( 0.00%)  ???:<std::sync::once_lock::OnceLock<openssl_rs::ffc::dh::Table>>::initialize::<<std::sync::once_lock::OnceLock<openssl_rs::ffc::dh::Table>>::get_or_init<openssl_rs::ffc::dh::named_groups::{closure#0}>::{closure#0}, !> [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+         18 ( 0.00%)  ???:openssl_rs::context::default_context_do_init [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+         18 ( 0.00%)  ???:openssl_rs::runtime::init::init_base_body [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+         17 ( 0.00%)  ./elf/../elf/dl-tls.c:allocate_dtv [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+         17 ( 0.00%)  ./elf/./elf/libc_early_init.c:__libc_early_init [/usr/lib/x86_64-linux-gnu/libc.so.6]
+         17 ( 0.00%)  ./string/../sysdeps/x86_64/multiarch/ifunc-strncpy.h:stpncpy [/usr/lib/x86_64-linux-gnu/libc.so.6]
+         17 ( 0.00%)  ./wcsmbs/../sysdeps/x86_64/multiarch/ifunc-wcslen.h:wcslen [/usr/lib/x86_64-linux-gnu/libc.so.6]
+         17 ( 0.00%)  ./wcsmbs/../sysdeps/x86_64/multiarch/ifunc-wcslen.h:wcsnlen [/usr/lib/x86_64-linux-gnu/libc.so.6]
+         17 ( 0.00%)  ???:<openssl_rs::runtime::owned_buf::OwnedBuf as core::ops::drop::Drop>::drop [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+         17 ( 0.00%)  ???:OPENSSL_sk_pop_free [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+         16 ( 0.00%)  ./ctype/./ctype/ctype-info.c:__ctype_init [/usr/lib/x86_64-linux-gnu/libc.so.6]
+         16 ( 0.00%)  ./elf/../sysdeps/nptl/dl-tls_init_tp.c:__tls_pre_init_tp [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+         16 ( 0.00%)  ./elf/../sysdeps/nptl/dl-tls_init_tp.c:rtld_mutex_dummy [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+         16 ( 0.00%)  ./elf/../sysdeps/x86_64/dl-machine.h:_dl_fixup
+         16 ( 0.00%)  ./elf/../sysdeps/x86_64/dl-runtime.h:_dl_fixup
+         16 ( 0.00%)  ./elf/./elf/dl-audit.c:_dl_audit_objopen [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+         16 ( 0.00%)  ./elf/./elf/dl-error-skeleton.c:_dl_receive_error [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+         16 ( 0.00%)  ./libio/./libio/libioP.h:new_do_write
+         16 ( 0.00%)  ./malloc/./malloc/morecore.c:__glibc_morecore [/usr/lib/x86_64-linux-gnu/libc.so.6]
+         16 ( 0.00%)  ./nptl/../sysdeps/nptl/futex-internal.h:__pthread_once_slow'2
+         16 ( 0.00%)  ???:openssl_rs::dh::key::dh_bn_mod_exp [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+         15 ( 0.00%)  ./elf/../include/rtld-malloc.h:_dl_check_map_versions
+         15 ( 0.00%)  ./string/../sysdeps/x86_64/multiarch/ifunc-strcpy.h:stpcpy [/usr/lib/x86_64-linux-gnu/libc.so.6]
+         15 ( 0.00%)  ./string/../sysdeps/x86_64/multiarch/ifunc-strcpy.h:strcat [/usr/lib/x86_64-linux-gnu/libc.so.6]
+         15 ( 0.00%)  ???:0x000000000001ab70 [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+         15 ( 0.00%)  ???:ENGINE_finish [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+         14 ( 0.00%)  ./elf/../elf/dl-tls.c:update_get_addr [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+         14 ( 0.00%)  ./elf/../misc/sbrk.c:sbrk [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+         14 ( 0.00%)  ./elf/./elf/rtld.c:map_doit [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+         14 ( 0.00%)  ./io/../sysdeps/unix/sysv/linux/write.c:write [/usr/lib/x86_64-linux-gnu/libc.so.6]
+         14 ( 0.00%)  ./stdlib/../sysdeps/unix/sysv/linux/getrandom.c:getrandom [/usr/lib/x86_64-linux-gnu/libc.so.6]
+         14 ( 0.00%)  /rustc/48a229ceaefd4985c50990b14116b6d856af0985/library/core/src/sync/atomic.rs:<std::sync::poison::condvar::Condvar>::notify_one
+         14 ( 0.00%)  /rustc/48a229ceaefd4985c50990b14116b6d856af0985/library/std/src/sync/poison/condvar.rs:<std::sync::poison::condvar::Condvar>::notify_one [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+         14 ( 0.00%)  /rustc/48a229ceaefd4985c50990b14116b6d856af0985/library/std/src/sys/alloc/unix.rs:__rustc::__rdl_realloc
+         14 ( 0.00%)  ???:<std::sync::once::Once>::call_once::<openssl_rs::runtime::init::register_atexit::{closure#0}>::{closure#0} [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+         14 ( 0.00%)  ???:CRYPTO_calloc [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+         14 ( 0.00%)  ???:DH_size [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+         13 ( 0.00%)  ./libio/./libio/fileops.c:_IO_file_setbuf@@GLIBC_2.2.5 [/usr/lib/x86_64-linux-gnu/libc.so.6]
+         13 ( 0.00%)  ???:0x00000000000010c0 [/usr/libexec/valgrind/vgpreload_core-amd64-linux.so]
+         13 ( 0.00%)  ???:0x0000000000001a50 [/work/court/tmp/pfp8/bench_pfp8]
+         13 ( 0.00%)  ???:0x0000000000004660 [/usr/lib/x86_64-linux-gnu/libgcc_s.so.1]
+         13 ( 0.00%)  ???:0x000000000016e920 [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+         12 ( 0.00%)  ./elf/../sysdeps/generic/dl-cache.h:_dl_load_cache_lookup
+         12 ( 0.00%)  ./elf/./dl-hwcaps.h:copy_hwcaps
+         12 ( 0.00%)  ./io/../sysdeps/unix/sysv/linux/pread64_nocancel.c:__pread64_nocancel [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+         12 ( 0.00%)  ./libio/./libio/libioP.h:putchar
+         12 ( 0.00%)  ./misc/../sysdeps/unix/sysv/linux/brk.c:brk
+         12 ( 0.00%)  ./stdio-common/../include/../locale/localeinfo.h:__printf_fp_l
+         12 ( 0.00%)  ./stdlib/../stdlib/strtol.c:strtol [/usr/lib/x86_64-linux-gnu/libc.so.6]
+         12 ( 0.00%)  /rustc/48a229ceaefd4985c50990b14116b6d856af0985/library/std/src/sys/random/linux.rs:std::sys::random::linux::hashmap_random_keys [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+         12 ( 0.00%)  ???:0x0000000000001100 [/usr/libexec/valgrind/vgpreload_core-amd64-linux.so]
+         12 ( 0.00%)  ???:0x0000000000001a90 [/work/court/tmp/pfp8/bench_pfp8]
+         12 ( 0.00%)  ???:0x00000000000046a0 [/usr/lib/x86_64-linux-gnu/libgcc_s.so.1]
+         12 ( 0.00%)  ???:0x000000000016e960 [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+         11 ( 0.00%)  ./elf/../sysdeps/unix/sysv/linux/x86/dl-minsigstacksize.h:get_common_indices.constprop.0
+         11 ( 0.00%)  ./elf/./elf/dl-sort-maps.c:_dl_sort_maps_init [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+         11 ( 0.00%)  ./libio/./libio/vtables.c:check_stdfiles_vtables [/usr/lib/x86_64-linux-gnu/libc.so.6]
+         11 ( 0.00%)  ???:(below main) [/work/court/tmp/pfp8/bench_pfp8]
+         10 ( 0.00%)  ./elf/../include/rtld-malloc.h:_dl_map_object_deps
+         10 ( 0.00%)  ./elf/../sysdeps/generic/dl-cache.h:search_cache
+         10 ( 0.00%)  ./elf/./dl-tunable-types.h:do_tunable_update_val
+         10 ( 0.00%)  ./elf/./elf/rtld.c:version_check_doit [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+         10 ( 0.00%)  ./misc/../sysdeps/unix/syscall-template.S:munmap [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+         10 ( 0.00%)  ./string/../include/rtld-malloc.h:strdup
+         10 ( 0.00%)  ./string/../sysdeps/x86_64/multiarch/ifunc-sse4_2.h:strpbrk [/usr/lib/x86_64-linux-gnu/libc.so.6]
+         10 ( 0.00%)  ???:BN_MONT_CTX_free [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+         10 ( 0.00%)  ???:openssl_rs::dh::key::dh_init [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+         10 ( 0.00%)  ???:openssl_rs::runtime::thread_events::ossl_init_thread_once [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+         10 ( 0.00%)  courts/performance-frontier/pfp8/bench_pfp8.c:compute_step [/work/court/tmp/pfp8/bench_pfp8]
+          9 ( 0.00%)  ./elf/./elf/dl-minimal.c:__rtld_malloc_init_stubs [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+          9 ( 0.00%)  ./libio/./libio/libioP.h:_IO_default_xsputn
+          9 ( 0.00%)  ./resource/../sysdeps/unix/sysv/linux/getrlimit64.c:getrlimit [/usr/lib/x86_64-linux-gnu/libc.so.6]
+          9 ( 0.00%)  ./string/../sysdeps/x86_64/multiarch/strstr.c:strstr [/usr/lib/x86_64-linux-gnu/libc.so.6]
+          9 ( 0.00%)  ???:openssl_rs::runtime::confmod::do_init_module_list_lock [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+          8 ( 0.00%)  ./elf/../include/rtld-malloc.h:__minimal_calloc
+          8 ( 0.00%)  ./elf/../nptl/nptl-stack.h:__libc_early_init
+          8 ( 0.00%)  ./elf/../sysdeps/unix/sysv/linux/dl-vdso.h:dl_main
+          8 ( 0.00%)  ./elf/../sysdeps/x86_64/dl-tls.c:__tls_get_addr_slow [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+          8 ( 0.00%)  ./io/../sysdeps/unix/sysv/linux/access.c:access [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+          8 ( 0.00%)  ./libio/./libio/libioP.h:_IO_cleanup
+          8 ( 0.00%)  ./string/../sysdeps/x86_64/multiarch/strlen.c:strlen
+          8 ( 0.00%)  /rustc/48a229ceaefd4985c50990b14116b6d856af0985/library/std/src/alloc.rs:__rustc::__rdl_realloc [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+          8 ( 0.00%)  ???:openssl_rs::dh::key::dh_finish [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+          8 ( 0.00%)  ???:openssl_rs::runtime::init::add_all_legacy_methods [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+          7 ( 0.00%)  ./elf/../include/rtld-malloc.h:_dl_find_object_update
+          7 ( 0.00%)  ./libio/./libio/libioP.h:_IO_default_setbuf
+          7 ( 0.00%)  ./libio/./libio/libioP.h:_IO_doallocbuf
+          7 ( 0.00%)  ./libio/./libio/libioP.h:_IO_file_doallocate
+          7 ( 0.00%)  ./libio/./libio/libioP.h:_IO_file_xsputn@@GLIBC_2.2.5
+          7 ( 0.00%)  ./malloc/./malloc/arena.c:realloc
+          7 ( 0.00%)  ???:openssl_rs::runtime::mem::default_free [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+          6 ( 0.00%)  ./elf/../include/list.h:__tls_init_tp
+          6 ( 0.00%)  ./elf/../sysdeps/generic/dl-debug.h:dl_main
+          6 ( 0.00%)  ./elf/../sysdeps/generic/ldsodefs.h:_dl_start
+          6 ( 0.00%)  ./elf/../sysdeps/x86/dl-hwcap.h:_dl_important_hwcaps
+          6 ( 0.00%)  ./elf/../sysdeps/x86_64/dl-hwcaps-subdirs.c:_dl_hwcaps_subdirs_active
+          6 ( 0.00%)  ./string/../sysdeps/x86_64/multiarch/memcmp.c:bcmp
+          6 ( 0.00%)  ./string/../sysdeps/x86_64/multiarch/strnlen.c:strnlen
+          6 ( 0.00%)  ./wcsmbs/../sysdeps/x86_64/multiarch/wcscpy.c:wcscpy [/usr/lib/x86_64-linux-gnu/libc.so.6]
+          6 ( 0.00%)  ???:0x0000000000109000 [???]
+          6 ( 0.00%)  ???:0x0000000004838000 [???]
+          6 ( 0.00%)  ???:0x0000000004b85000 [???]
+          6 ( 0.00%)  ???:0x000000000530c000 [???]
+          6 ( 0.00%)  ???:std::sys::thread_local::native::eager::destroy::<openssl_rs::runtime::err::StateCell> [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+          5 ( 0.00%)  ./elf/../elf/dl-tls.c:_dl_count_modids [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+          5 ( 0.00%)  ./elf/../include/rtld-malloc.h:_dl_init_paths
+          5 ( 0.00%)  ./elf/../include/rtld-malloc.h:fillin_rpath.isra.0
+          5 ( 0.00%)  ./elf/../sysdeps/unix/sysv/linux/brk.c:brk
+          5 ( 0.00%)  ./elf/../sysdeps/unix/sysv/linux/dl-vdso-setup.h:dl_main
+          5 ( 0.00%)  ./elf/../sysdeps/x86/dl-get-cpu-features.c:__x86_cpu_features [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+          5 ( 0.00%)  ./elf/./dl-main.h:dl_main
+          5 ( 0.00%)  ./elf/./elf/dl-open.c:call_dl_init [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+          5 ( 0.00%)  ./stdlib/./stdlib/exit.c:exit [/usr/lib/x86_64-linux-gnu/libc.so.6]
+          5 ( 0.00%)  ./stdlib/./stdlib/secure-getenv.c:secure_getenv [/usr/lib/x86_64-linux-gnu/libc.so.6]
+          5 ( 0.00%)  ./string/../sysdeps/x86_64/multiarch/ifunc-sse4_2.h:strcspn [/usr/lib/x86_64-linux-gnu/libc.so.6]
+          5 ( 0.00%)  ./string/../sysdeps/x86_64/multiarch/ifunc-sse4_2.h:strspn [/usr/lib/x86_64-linux-gnu/libc.so.6]
+          5 ( 0.00%)  /rustc/48a229ceaefd4985c50990b14116b6d856af0985/library/core/src/slice/index.rs:std::sys::random::linux::getrandom
+          5 ( 0.00%)  ???:0x0000000000001050 [/usr/libexec/valgrind/vgpreload_core-amd64-linux.so]
+          5 ( 0.00%)  ???:0x00000000000019e0 [/work/court/tmp/pfp8/bench_pfp8]
+          5 ( 0.00%)  ???:0x00000000000045f0 [/usr/lib/x86_64-linux-gnu/libgcc_s.so.1]
+          5 ( 0.00%)  ???:0x000000000016e8b0 [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+          4 ( 0.00%)  ./elf/../include/atomic_wide_counter.h:_dl_find_object_update
+          4 ( 0.00%)  ./elf/../sysdeps/x86/dl-get-cpu-features.c:_dl_x86_init_cpu_features [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+          4 ( 0.00%)  ./elf/./elf/dl-audit.c:_dl_audit_preinit [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+          4 ( 0.00%)  ./elf/./elf/dl-debug.c:_dl_debug_state [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+          4 ( 0.00%)  ./elf/./elf/dl-minimal-malloc.c:__minimal_free [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+          4 ( 0.00%)  ./misc/../sysdeps/unix/sysv/linux/brk_call.h:brk [/usr/lib/x86_64-linux-gnu/libc.so.6]
+          4 ( 0.00%)  ./posix/../malloc/dynarray-skeleton.c:__unregister_atfork
+          4 ( 0.00%)  ./posix/../sysdeps/unix/sysv/linux/_exit.c:_Exit [/usr/lib/x86_64-linux-gnu/libc.so.6]
+          4 ( 0.00%)  ./stdlib/./stdlib/cxa_atexit.c:__cxa_atexit [/usr/lib/x86_64-linux-gnu/libc.so.6]
+          4 ( 0.00%)  ./time/../sysdeps/unix/sysv/linux/dl-vdso.h:gettimeofday [/usr/lib/x86_64-linux-gnu/libc.so.6]
+          4 ( 0.00%)  ./time/../sysdeps/unix/sysv/linux/dl-vdso.h:time [/usr/lib/x86_64-linux-gnu/libc.so.6]
+          4 ( 0.00%)  ./wcsmbs/../sysdeps/x86_64/multiarch/wcschr.c:wcschr
+          4 ( 0.00%)  ???:atexit [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+          3 ( 0.00%)  ./elf/../include/rtld-malloc.h:_dl_important_hwcaps
+          3 ( 0.00%)  ./elf/../sysdeps/unix/sysv/linux/dl-osinfo.h:dl_main
+          3 ( 0.00%)  /rustc/48a229ceaefd4985c50990b14116b6d856af0985/library/std/src/sys/pal/unix/weak/syscall.rs:std::sys::random::linux::getrandom
+          3 ( 0.00%)  ???:0x000000000010a3c8 [???]
+          3 ( 0.00%)  ???:0x0000000004838278 [???]
+          3 ( 0.00%)  ???:0x000000000507afd0 [???]
+          3 ( 0.00%)  ???:0x00000000053228c8 [???]
+          2 ( 0.00%)  ./elf/../include/rtld-malloc.h:_dl_find_object_init
+          2 ( 0.00%)  ./elf/../include/rtld-malloc.h:allocate_dtv
+          2 ( 0.00%)  ./elf/../include/rtld-malloc.h:init_tls
+          2 ( 0.00%)  ./elf/../include/rtld-malloc.h:tls_get_addr_tail
+          2 ( 0.00%)  ./elf/../sysdeps/unix/sysv/linux/brk_call.h:brk [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+          2 ( 0.00%)  ./elf/../sysdeps/x86_64/dl-irel.h:_dl_fixup
+          2 ( 0.00%)  ./elf/./setup-vdso.h:dl_main
+          2 ( 0.00%)  ./libio/./libio/fileops.c:_IO_file_stat [/usr/lib/x86_64-linux-gnu/libc.so.6]
+          2 ( 0.00%)  ./setjmp/../sysdeps/x86_64/bsd-_setjmp.S:_setjmp [/usr/lib/x86_64-linux-gnu/libc.so.6]
+          2 ( 0.00%)  ./string/../sysdeps/x86/cacheinfo.c:__x86_cacheinfo
+          2 ( 0.00%)  ./string/../sysdeps/x86_64/multiarch/memchr.c:memchr
+          2 ( 0.00%)  ./string/../sysdeps/x86_64/multiarch/memrchr.c:memrchr
+          2 ( 0.00%)  ./string/../sysdeps/x86_64/multiarch/strcasecmp.c:strcasecmp
+          2 ( 0.00%)  ./string/../sysdeps/x86_64/multiarch/strcasecmp_l.c:strcasecmp_l
+          2 ( 0.00%)  ./string/../sysdeps/x86_64/multiarch/strchrnul.c:strchrnul
+          2 ( 0.00%)  ./string/../sysdeps/x86_64/multiarch/strcpy.c:strcpy
+          2 ( 0.00%)  ./string/../sysdeps/x86_64/multiarch/strncase.c:strncasecmp
+          2 ( 0.00%)  ./string/../sysdeps/x86_64/multiarch/strncase_l.c:strncasecmp_l
+          2 ( 0.00%)  ./string/../sysdeps/x86_64/multiarch/strncpy.c:strncpy
+          2 ( 0.00%)  ./string/../sysdeps/x86_64/multiarch/strpbrk.c:strpbrk
+          2 ( 0.00%)  ./string/../sysdeps/x86_64/multiarch/strrchr.c:rindex
+          2 ( 0.00%)  ./time/../sysdeps/unix/sysv/linux/gettimeofday.c:gettimeofday
+          2 ( 0.00%)  ./time/../sysdeps/unix/sysv/linux/time.c:time
+          2 ( 0.00%)  ./wcsmbs/../sysdeps/x86_64/multiarch/wcscmp.c:wcscmp
+          2 ( 0.00%)  ./wcsmbs/../sysdeps/x86_64/multiarch/wmemchr.c:wmemchr
+          2 ( 0.00%)  ./wcsmbs/../sysdeps/x86_64/multiarch/wmemcmp.c:wmemcmp
+          2 ( 0.00%)  ./wcsmbs/../sysdeps/x86_64/multiarch/wmemset.c:wmemset
+          2 ( 0.00%)  /rustc/48a229ceaefd4985c50990b14116b6d856af0985/library/core/src/cell.rs:<std::sys::sync::once::futex::Once>::call
+          2 ( 0.00%)  /rustc/48a229ceaefd4985c50990b14116b6d856af0985/library/core/src/result.rs:std::sys::random::linux::hashmap_random_keys
+          2 ( 0.00%)  /rustc/48a229ceaefd4985c50990b14116b6d856af0985/library/core/src/sync/atomic.rs:std::sys::args::unix::imp::ARGV_INIT_ARRAY::init_wrapper
+          2 ( 0.00%)  /rustc/48a229ceaefd4985c50990b14116b6d856af0985/library/core/src/sync/atomic.rs:std::sys::random::linux::getrandom
+          2 ( 0.00%)  /rustc/48a229ceaefd4985c50990b14116b6d856af0985/library/std/src/sys/args/unix.rs:std::sys::args::unix::imp::ARGV_INIT_ARRAY::init_wrapper [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+          2 ( 0.00%)  ???:0x0000000004865360 [???]
+          1 ( 0.00%)  ./elf/../elf/dl-tls.c:__tls_get_addr_slow
+          1 ( 0.00%)  ./elf/../include/rtld-malloc.h:_dl_allocate_tls_storage
+          1 ( 0.00%)  ./elf/../sysdeps/unix/sysv/linux/dl-sysdep.c:_dl_sysdep_start_cleanup [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+          1 ( 0.00%)  ./elf/../sysdeps/x86_64/dl-machine.h:_dl_sysdep_start
+          1 ( 0.00%)  ./string/../sysdeps/x86_64/multiarch/rawmemchr.c:rawmemchr
+          1 ( 0.00%)  ./string/../sysdeps/x86_64/multiarch/stpcpy.c:stpcpy
+          1 ( 0.00%)  ./string/../sysdeps/x86_64/multiarch/stpncpy.c:stpncpy
+          1 ( 0.00%)  ./string/../sysdeps/x86_64/multiarch/strcat.c:strcat
+          1 ( 0.00%)  ./string/../sysdeps/x86_64/multiarch/strcspn.c:strcspn
+          1 ( 0.00%)  ./string/../sysdeps/x86_64/multiarch/strspn.c:strspn
+          1 ( 0.00%)  ./wcsmbs/../sysdeps/x86_64/multiarch/wcslen.c:wcslen
+          1 ( 0.00%)  ./wcsmbs/../sysdeps/x86_64/multiarch/wcsnlen.c:wcsnlen
+          1 ( 0.00%)  ???:0x0000000000109180 [???]
+          1 ( 0.00%)  ???:0x0000000004838030 [???]
+          1 ( 0.00%)  ???:0x0000000004865368 [???]
+          1 ( 0.00%)  ???:0x0000000004b850c8 [???]
+          1 ( 0.00%)  ???:0x000000000530c340 [???]
+          1 ( 0.00%)  ???:__rustc::__rust_realloc [/work/court/tmp/ma1/cand/distribution/libcrypto.so.3]
+
+--------------------------------------------------------------------------------
+-- Auto-annotated source: /usr/include/stdlib.h
+--------------------------------------------------------------------------------
+Ir          
+
+-- line 356 ----------------------------------------
+ .           # endif
+ .           #endif /* GNU */
+ .           
+ .           
+ .           #ifdef __USE_EXTERN_INLINES
+ .           __extern_inline int
+ .           __NTH (atoi (const char *__nptr))
+ .           {
+22 ( 0.00%)    return (int) strtol (__nptr, (char **) NULL, 10);
+663 ( 0.00%)  => ./elf/../sysdeps/x86_64/dl-trampoline.h:_dl_runtime_resolve_xsave (1x)
+365 ( 0.00%)  => ./stdlib/../stdlib/strtol.c:strtol (3x)
+ .           }
+ .           __extern_inline long int
+ .           __NTH (atol (const char *__nptr))
+ .           {
+ .             return strtol (__nptr, (char **) NULL, 10);
+ .           }
+ .           
+ .           # ifdef __USE_ISOC99
+-- line 372 ----------------------------------------
+
+--------------------------------------------------------------------------------
+-- Auto-annotated source: courts/performance-frontier/pfp8/bench_pfp8.c
+--------------------------------------------------------------------------------
+Ir             
+
+-- line 73 ----------------------------------------
+    .           static size_t g_priv_len = 0;
+    .           static unsigned char *g_peer = NULL;
+    .           static size_t g_peer_len = 0;
+    .           
+    .           static double now_us(void)
+    .           {
+    .               struct timespec ts;
+    .           
+   12 ( 0.00%)      clock_gettime(CLOCK_MONOTONIC, &ts);
+  669 ( 0.00%)  => ./elf/../sysdeps/x86_64/dl-trampoline.h:_dl_runtime_resolve_xsave (1x)
+   20 ( 0.00%)  => ./time/../sysdeps/unix/sysv/linux/clock_gettime.c:clock_gettime@@GLIBC_2.17 (2x)
+   18 ( 0.00%)      return (double)ts.tv_sec * 1e6 + (double)ts.tv_nsec / 1e3;
+    .           }
+    .           
+    .           static unsigned char *read_file(const char *path, long *out_len)
+    .           {
+    .               FILE *f = fopen(path, "rb");
+    .               unsigned char *buf;
+    .               long len;
+    .           
+-- line 90 ----------------------------------------
+-- line 104 ----------------------------------------
+    .               fclose(f);
+    .               buf[len] = '\0';
+    .               *out_len = len;
+    .               return buf;
+    .           }
+    .           
+    .           static int hex_nibble(char c)
+    .           {
+3,072 ( 0.00%)      if (c >= '0' && c <= '9')
+  958 ( 0.00%)          return c - '0';
+1,176 ( 0.00%)      if (c >= 'a' && c <= 'f')
+  784 ( 0.00%)          return c - 'a' + 10;
+    .               if (c >= 'A' && c <= 'F')
+    4 ( 0.00%)          return c - 'A' + 10;
+    .               return -1;
+    .           }
+    .           
+    .           static int parse_hex_alloc(const char *s, unsigned char **out, size_t *n)
+   16 ( 0.00%)  {
+    8 ( 0.00%)      size_t len = strlen(s), i;
+  685 ( 0.00%)  => ./elf/../sysdeps/x86_64/dl-trampoline.h:_dl_runtime_resolve_xsave (1x)
+  160 ( 0.00%)  => ./string/../sysdeps/x86_64/multiarch/strlen-avx2.S:__strlen_avx2 (2x)
+    .               unsigned char *buf;
+    .           
+   12 ( 0.00%)      if (len == 0 || (len & 1u) != 0)
+    .                   return 0;
+   14 ( 0.00%)      buf = malloc(len / 2);
+1,914 ( 0.00%)  => ./malloc/./malloc/malloc.c:malloc (2x)
+  649 ( 0.00%)  => ./elf/../sysdeps/x86_64/dl-trampoline.h:_dl_runtime_resolve_xsave (1x)
+    4 ( 0.00%)      if (buf == NULL)
+    .                   return 0;
+1,540 ( 0.00%)      for (i = 0; i < len / 2; i++) {
+1,024 ( 0.00%)          int hi = hex_nibble(s[2 * i]);
+1,024 ( 0.00%)          int lo = hex_nibble(s[2 * i + 1]);
+    .           
+1,536 ( 0.00%)          if (hi < 0 || lo < 0) {
+    .                       free(buf);
+    .                       return 0;
+    .                   }
+1,536 ( 0.00%)          buf[i] = (unsigned char)((hi << 4) | lo);
+    .               }
+    2 ( 0.00%)      *out = buf;
+    2 ( 0.00%)      *n = len / 2;
+    2 ( 0.00%)      return 1;
+   12 ( 0.00%)  }
+    .           
+    .           static int read_dh_params(const char *path, unsigned char **p, size_t *pn,
+    .                                     unsigned char **q, size_t *qn)
+    .           {
+    .               long len = 0;
+    .               unsigned char *raw = read_file(path, &len);
+    .               char *text, *line, *save = NULL;
+    .               int have_p = 0, have_q = 0;
+-- line 152 ----------------------------------------
+-- line 196 ----------------------------------------
+    .            * present, otherwise the explicit `DH_set0_pqg` path from the tracked fixture.
+    .            * Returns NULL on failure.  The caller owns the result.
+    .            */
+    .           static DH *make_dh(void)
+    .           {
+    .               DH *dh;
+    .           
+    .               if (g_nid != 0)
+    1 ( 0.00%)          return api.DH_new_by_nid(g_nid);
+225,968 ( 0.20%)  => ???:DH_new_by_nid (1x)
+    .               if (g_params == NULL)
+    .                   return NULL;
+    .           
+    .               {
+    .                   unsigned char *p = NULL, *q = NULL;
+    .                   size_t pn = 0, qn = 0;
+    .                   BIGNUM *bp = NULL, *bq = NULL, *bg = NULL;
+    .           
+-- line 212 ----------------------------------------
+-- line 238 ----------------------------------------
+    .                       return NULL;
+    .                   }
+    .               }
+    .               return dh;
+    .           }
+    .           
+    .           static BIGNUM *bn_from_hex(const unsigned char *p, size_t n)
+    .           {
+    8 ( 0.00%)      return api.BN_bin2bn(p, (int)n, NULL);
+11,216 ( 0.01%)  => ???:BN_bin2bn (2x)
+    .           }
+    .           
+    .           static void print_hex(const char *name, const BIGNUM *v, int bytes)
+    .           {
+    .               unsigned char *out = malloc((size_t)bytes);
+    .               int i;
+    .           
+    .               if (out == NULL)
+-- line 254 ----------------------------------------
+-- line 261 ----------------------------------------
+    .               for (i = 0; i < bytes; i++)
+    .                   printf("%02x", out[i]);
+    .               printf("\n");
+    .               fflush(stdout);
+    .               free(out);
+    .           }
+    .           
+    .           static int measure(const char *name, int (*step)(void))
+    9 ( 0.00%)  {
+    9 ( 0.00%)      double *s = calloc((size_t)g_runs, sizeof(*s));
+  616 ( 0.00%)  => ./elf/../sysdeps/x86_64/dl-trampoline.h:_dl_runtime_resolve_xsave (1x)
+  345 ( 0.00%)  => ./malloc/./malloc/malloc.c:calloc (1x)
+    .               int i, r;
+    .               double med, mn, mx;
+    .           
+    2 ( 0.00%)      if (s == NULL)
+    .                   return 0;
+    8 ( 0.00%)      for (r = 0; r < g_runs; r++) {
+    .                   double t0, t1;
+    .           
+    .                   t0 = now_us();
+    8 ( 0.00%)          for (i = 0; i < g_iters; i++) {
+    3 ( 0.00%)              if (!step()) {
+53,346,193 (47.53%)  => courts/performance-frontier/pfp8/bench_pfp8.c:compute_step (1x)
+    .                           fprintf(stderr, "bench_pfp8: run failed: %s\n", name);
+    .                           free(s);
+    .                           return 0;
+    .                       }
+    .                   }
+    .                   t1 = now_us();
+    5 ( 0.00%)          s[r] = (t1 - t0) / (double)g_iters;
+    .               }
+    6 ( 0.00%)      for (i = 1; i < g_runs; i++) {
+    .                   double v = s[i];
+    .                   int j = i;
+    .           
+    .                   while (j > 0 && s[j - 1] > v) {
+    .                       s[j] = s[j - 1];
+    .                       j--;
+    .                   }
+    .                   s[j] = v;
+    .               }
+    6 ( 0.00%)      med = (g_runs % 2) ? s[g_runs / 2]
+    3 ( 0.00%)                         : (s[g_runs / 2 - 1] + s[g_runs / 2]) / 2.0;
+    1 ( 0.00%)      mn = s[0];
+    1 ( 0.00%)      mx = s[g_runs - 1];
+   16 ( 0.00%)      printf("RESULT %s op=%s median_us=%.3f min_us=%.3f max_us=%.3f "
+10,385 ( 0.01%)  => ./stdio-common/./stdio-common/printf.c:printf (1x)
+    .                      "spread=%.4f iters=%d runs=%d\n",
+    2 ( 0.00%)             name, g_op, med, mn, mx, med > 0.0 ? (mx - mn) / med : 0.0,
+    .                      g_iters, g_runs);
+    3 ( 0.00%)      fflush(stdout);
+  183 ( 0.00%)  => ./libio/./libio/iofflush.c:fflush (1x)
+    7 ( 0.00%)      free(s);
+  605 ( 0.00%)  => ./elf/../sysdeps/x86_64/dl-trampoline.h:_dl_runtime_resolve_xsave (1x)
+   88 ( 0.00%)  => ./malloc/./malloc/malloc.c:free (1x)
+    2 ( 0.00%)      return 1;
+    8 ( 0.00%)  }
+    .           
+    .           /* ---- keygen: the real operation, fresh object per call ----------------- */
+    .           
+    .           static int keygen_step(void)
+    .           {
+    .               DH *dh = make_dh();
+    .               int ok;
+    .           
+-- line 319 ----------------------------------------
+-- line 362 ----------------------------------------
+    .           /* ---- shared secret ------------------------------------------------------ */
+    .           
+    .           static DH *g_dh;
+    .           static BIGNUM *g_priv_bn;
+    .           static BIGNUM *g_peer_bn;
+    .           static unsigned char *g_out;
+    .           
+    .           static int compute_step(void)
+    1 ( 0.00%)  {
+    7 ( 0.00%)      return api.DH_compute_key(g_out, g_peer_bn, g_dh) > 0;
+53,346,183 (47.53%)  => ???:DH_compute_key (1x)
+    2 ( 0.00%)  }
+    .           
+    .           static int run_compute(const char *name)
+    .           {
+    .               int bytes, ok = 0;
+    .           
+    1 ( 0.00%)      g_dh = make_dh();
+    2 ( 0.00%)      if (g_dh == NULL)
+    .                   return 0;
+    1 ( 0.00%)      g_priv_bn = bn_from_hex(g_priv, g_priv_len);
+    1 ( 0.00%)      g_peer_bn = bn_from_hex(g_peer, g_peer_len);
+    5 ( 0.00%)      if (g_priv_bn == NULL || g_peer_bn == NULL)
+    .                   goto out;
+    5 ( 0.00%)      if (api.DH_set0_key(g_dh, NULL, g_priv_bn) != 1)
+   27 ( 0.00%)  => ???:DH_set0_key (1x)
+    .                   goto out;
+    2 ( 0.00%)      g_priv_bn = NULL;
+    3 ( 0.00%)      bytes = api.DH_size(g_dh);
+   50 ( 0.00%)  => ???:DH_size (1x)
+    2 ( 0.00%)      if (bytes <= 0)
+    .                   goto out;
+    5 ( 0.00%)      g_out = malloc((size_t)bytes);
+  171 ( 0.00%)  => ./malloc/./malloc/malloc.c:malloc (1x)
+    2 ( 0.00%)      if (g_out == NULL)
+    .                   goto out;
+    5 ( 0.00%)      if (api.DH_compute_key(g_out, g_peer_bn, g_dh) <= 0)
+56,199,866 (50.07%)  => ???:DH_compute_key (1x)
+    .                   goto out;
+    .               {
+    .                   int i;
+    .           
+   10 ( 0.00%)          printf("CHECK %s hex=", name);
+1,147 ( 0.00%)  => ./stdio-common/./stdio-common/printf.c:printf (1x)
+  617 ( 0.00%)  => ./elf/../sysdeps/x86_64/dl-trampoline.h:_dl_runtime_resolve_xsave (1x)
+  769 ( 0.00%)          for (i = 0; i < bytes; i++)
+1,536 ( 0.00%)              printf("%02x", g_out[i]);
+144,341 ( 0.13%)  => ./stdio-common/./stdio-common/printf.c:printf (256x)
+    7 ( 0.00%)          printf("\n");
+  633 ( 0.00%)  => ./elf/../sysdeps/x86_64/dl-trampoline.h:_dl_runtime_resolve_xsave (1x)
+   47 ( 0.00%)  => ./libio/./libio/putchar.c:putchar (1x)
+    7 ( 0.00%)          fflush(stdout);
+  667 ( 0.00%)  => ./elf/../sysdeps/x86_64/dl-trampoline.h:_dl_runtime_resolve_xsave (1x)
+  183 ( 0.00%)  => ./libio/./libio/iofflush.c:fflush (1x)
+    .               }
+    5 ( 0.00%)      ok = measure(name, compute_step);
+53,359,233 (47.54%)  => courts/performance-frontier/pfp8/bench_pfp8.c:measure (1x)
+    .           out:
+    2 ( 0.00%)      if (g_priv_bn != NULL)
+    .                   api.BN_free(g_priv_bn);
+    3 ( 0.00%)      if (g_peer_bn != NULL)
+    1 ( 0.00%)          api.BN_free(g_peer_bn);
+  250 ( 0.00%)  => ???:BN_free (1x)
+    3 ( 0.00%)      if (g_out != NULL)
+    2 ( 0.00%)          free(g_out);
+  165 ( 0.00%)  => ./malloc/./malloc/malloc.c:free (1x)
+    3 ( 0.00%)      if (g_dh != NULL)
+    1 ( 0.00%)          api.DH_free(g_dh);
+2,431 ( 0.00%)  => ???:DH_free (1x)
+    .               g_dh = NULL;
+    .               g_priv_bn = NULL;
+    .               g_peer_bn = NULL;
+    5 ( 0.00%)      g_out = NULL;
+    1 ( 0.00%)      return ok;
+    .           }
+    .           
+    .           static int load_api(const char *path)
+    .           {
+    9 ( 0.00%)      void *h = dlopen(path, RTLD_NOW | RTLD_LOCAL);
+2,133,550 ( 1.90%)  => ./dlfcn/./dlfcn/dlopen.c:dlopen@@GLIBC_2.34 (1x)
+  867 ( 0.00%)  => ./elf/../sysdeps/x86_64/dl-trampoline.h:_dl_runtime_resolve_xsave (1x)
+    .           
+    2 ( 0.00%)      if (h == NULL) {
+    .                   fprintf(stderr, "bench_pfp8: dlopen(%s): %s\n", path, dlerror());
+    .                   return 0;
+    .               }
+    .           #define LOAD(field, symbol)                                                    \
+    .               do {                                                                       \
+    .                   void *s = dlsym(h, symbol);                                            \
+    .                   if (s == NULL) {                                                       \
+    .                       fprintf(stderr, "bench_pfp8: missing %s\n", symbol);               \
+    .                       return 0;                                                          \
+    .                   }                                                                      \
+    .                   memcpy(&api.field, &s, sizeof(s));                                     \
+    .               } while (0)
+    .           
+   12 ( 0.00%)      LOAD(BN_new, "BN_new");
+  727 ( 0.00%)  => ./dlfcn/./dlfcn/dlsym.c:dlsym@@GLIBC_2.34 (1x)
+  713 ( 0.00%)  => ./elf/../sysdeps/x86_64/dl-trampoline.h:_dl_runtime_resolve_xsave (1x)
+    8 ( 0.00%)      LOAD(BN_free, "BN_free");
+  770 ( 0.00%)  => ./dlfcn/./dlfcn/dlsym.c:dlsym@@GLIBC_2.34 (1x)
+    8 ( 0.00%)      LOAD(BN_bin2bn, "BN_bin2bn");
+  777 ( 0.00%)  => ./dlfcn/./dlfcn/dlsym.c:dlsym@@GLIBC_2.34 (1x)
+    8 ( 0.00%)      LOAD(BN_set_word, "BN_set_word");
+  792 ( 0.00%)  => ./dlfcn/./dlfcn/dlsym.c:dlsym@@GLIBC_2.34 (1x)
+    8 ( 0.00%)      LOAD(BN_bn2binpad, "BN_bn2binpad");
+  747 ( 0.00%)  => ./dlfcn/./dlfcn/dlsym.c:dlsym@@GLIBC_2.34 (1x)
+    8 ( 0.00%)      LOAD(BN_num_bits, "BN_num_bits");
+  743 ( 0.00%)  => ./dlfcn/./dlfcn/dlsym.c:dlsym@@GLIBC_2.34 (1x)
+    .           
+    8 ( 0.00%)      LOAD(DH_new, "DH_new");
+  736 ( 0.00%)  => ./dlfcn/./dlfcn/dlsym.c:dlsym@@GLIBC_2.34 (1x)
+    9 ( 0.00%)      LOAD(DH_new_by_nid, "DH_new_by_nid");
+  755 ( 0.00%)  => ./dlfcn/./dlfcn/dlsym.c:dlsym@@GLIBC_2.34 (1x)
+    8 ( 0.00%)      LOAD(DH_free, "DH_free");
+  765 ( 0.00%)  => ./dlfcn/./dlfcn/dlsym.c:dlsym@@GLIBC_2.34 (1x)
+    8 ( 0.00%)      LOAD(DH_set0_pqg, "DH_set0_pqg");
+  751 ( 0.00%)  => ./dlfcn/./dlfcn/dlsym.c:dlsym@@GLIBC_2.34 (1x)
+    8 ( 0.00%)      LOAD(DH_set0_key, "DH_set0_key");
+  743 ( 0.00%)  => ./dlfcn/./dlfcn/dlsym.c:dlsym@@GLIBC_2.34 (1x)
+    8 ( 0.00%)      LOAD(DH_generate_key, "DH_generate_key");
+  767 ( 0.00%)  => ./dlfcn/./dlfcn/dlsym.c:dlsym@@GLIBC_2.34 (1x)
+    8 ( 0.00%)      LOAD(DH_compute_key, "DH_compute_key");
+  783 ( 0.00%)  => ./dlfcn/./dlfcn/dlsym.c:dlsym@@GLIBC_2.34 (1x)
+    8 ( 0.00%)      LOAD(DH_size, "DH_size");
+  742 ( 0.00%)  => ./dlfcn/./dlfcn/dlsym.c:dlsym@@GLIBC_2.34 (1x)
+    8 ( 0.00%)      LOAD(DH_get0_key, "DH_get0_key");
+  765 ( 0.00%)  => ./dlfcn/./dlfcn/dlsym.c:dlsym@@GLIBC_2.34 (1x)
+    .               return 1;
+    .           }
+    .           
+    .           static int parse_args(int argc, char **argv, const char **lib)
+    .           {
+    .               int i;
+    .           
+   34 ( 0.00%)      for (i = 1; i < argc; i++) {
+   55 ( 0.00%)          if (strcmp(argv[i], "--lib") == 0 && i + 1 < argc)
+  677 ( 0.00%)  => ./elf/../sysdeps/x86_64/dl-trampoline.h:_dl_runtime_resolve_xsave (1x)
+  140 ( 0.00%)  => ./string/../sysdeps/x86_64/multiarch/strcmp-avx2.S:__strcmp_avx2 (7x)
+    3 ( 0.00%)              *lib = argv[++i];
+   38 ( 0.00%)          else if (strcmp(argv[i], "--nid") == 0 && i + 1 < argc)
+  120 ( 0.00%)  => ./string/../sysdeps/x86_64/multiarch/strcmp-avx2.S:__strcmp_avx2 (6x)
+    2 ( 0.00%)              g_nid = atoi(argv[++i]);
+   30 ( 0.00%)          else if (strcmp(argv[i], "--params") == 0 && i + 1 < argc)
+  100 ( 0.00%)  => ./string/../sysdeps/x86_64/multiarch/strcmp-avx2.S:__strcmp_avx2 (5x)
+    .                       g_params = argv[++i];
+   32 ( 0.00%)          else if (strcmp(argv[i], "--op") == 0 && i + 1 < argc)
+  100 ( 0.00%)  => ./string/../sysdeps/x86_64/multiarch/strcmp-avx2.S:__strcmp_avx2 (5x)
+    4 ( 0.00%)              g_op = argv[++i];
+   26 ( 0.00%)          else if (strcmp(argv[i], "--priv") == 0 && i + 1 < argc)
+   80 ( 0.00%)  => ./string/../sysdeps/x86_64/multiarch/strcmp-avx2.S:__strcmp_avx2 (4x)
+    6 ( 0.00%)              parse_hex_alloc(argv[++i], &g_priv, &g_priv_len);
+9,534 ( 0.01%)  => courts/performance-frontier/pfp8/bench_pfp8.c:parse_hex_alloc (1x)
+   20 ( 0.00%)          else if (strcmp(argv[i], "--peer") == 0 && i + 1 < argc)
+   60 ( 0.00%)  => ./string/../sysdeps/x86_64/multiarch/strcmp-avx2.S:__strcmp_avx2 (3x)
+    6 ( 0.00%)              parse_hex_alloc(argv[++i], &g_peer, &g_peer_len);
+6,600 ( 0.01%)  => courts/performance-frontier/pfp8/bench_pfp8.c:parse_hex_alloc (1x)
+   14 ( 0.00%)          else if (strcmp(argv[i], "--iters") == 0 && i + 1 < argc)
+   40 ( 0.00%)  => ./string/../sysdeps/x86_64/multiarch/strcmp-avx2.S:__strcmp_avx2 (2x)
+    2 ( 0.00%)              g_iters = atoi(argv[++i]);
+    8 ( 0.00%)          else if (strcmp(argv[i], "--runs") == 0 && i + 1 < argc)
+   20 ( 0.00%)  => ./string/../sysdeps/x86_64/multiarch/strcmp-avx2.S:__strcmp_avx2 (1x)
+    2 ( 0.00%)              g_runs = atoi(argv[++i]);
+    .                   else {
+    .                       fprintf(stderr, "bench_pfp8: unknown argument %s\n", argv[i]);
+    .                       return 0;
+    .                   }
+    .               }
+    6 ( 0.00%)      return *lib != NULL && g_op != NULL && (g_nid != 0 || g_params != NULL);
+    .           }
+    .           
+    .           int main(int argc, char **argv)
+    8 ( 0.00%)  {
+    4 ( 0.00%)      const char *lib = NULL;
+    .               const char *name = "dh";
+    .               int ok = 0;
+    .           
+    .               if (!parse_args(argc, argv, &lib)) {
+    .                   fprintf(stderr, "usage: %s --lib DSO (--nid N | --params FILE) --op "
+    .                                   "keygen|keygen-fixed|compute [--priv HEX] [--peer HEX] "
+    .                                   "[--iters N] [--runs N]\n", argv[0]);
+    .                   return 2;
+    .               }
+    .               if (!load_api(lib))
+    .                   return 2;
+    .           
+    7 ( 0.00%)      if (strcmp(g_op, "keygen") == 0) {
+   20 ( 0.00%)  => ./string/../sysdeps/x86_64/multiarch/strcmp-avx2.S:__strcmp_avx2 (1x)
+    .                   name = g_nid ? "dh-keygen-named" : "dh-keygen-explicit";
+    .                   /* One untimed operation proves the operation succeeds. */
+    .                   if (!keygen_step())
+    .                       return 1;
+    .                   ok = measure(name, keygen_step);
+    6 ( 0.00%)      } else if (strcmp(g_op, "keygen-fixed") == 0) {
+   20 ( 0.00%)  => ./string/../sysdeps/x86_64/multiarch/strcmp-avx2.S:__strcmp_avx2 (1x)
+    .                   if (g_priv == NULL)
+    .                       return 2;
+    .                   name = g_nid ? "dh-keygen-fixed-named" : "dh-keygen-fixed-explicit";
+    .                   if (!keygen_fixed_once(1))
+    .                       return 1;
+    .                   ok = measure(name, keygen_fixed_step);
+    7 ( 0.00%)      } else if (strcmp(g_op, "compute") == 0) {
+   20 ( 0.00%)  => ./string/../sysdeps/x86_64/multiarch/strcmp-avx2.S:__strcmp_avx2 (1x)
+    4 ( 0.00%)          if (g_priv == NULL || g_peer == NULL)
+    .                       return 2;
+    4 ( 0.00%)          name = g_nid ? "dh-compute-named" : "dh-compute-explicit";
+    .                   ok = run_compute(name);
+    .               } else {
+    .                   fprintf(stderr, "bench_pfp8: unknown op %s\n", g_op);
+    .                   return 2;
+    .               }
+    .           
+    3 ( 0.00%)      free(g_priv);
+  136 ( 0.00%)  => ./malloc/./malloc/malloc.c:free (1x)
+    3 ( 0.00%)      free(g_peer);
+  165 ( 0.00%)  => ./malloc/./malloc/malloc.c:free (1x)
+    3 ( 0.00%)      return ok ? 0 : 1;
+    8 ( 0.00%)  }
+
+--------------------------------------------------------------------------------
+The following files chosen for auto-annotation could not be found:
+--------------------------------------------------------------------------------
+  ./csu/../csu/libc-start.c
+  ./csu/../sysdeps/nptl/libc_start_call_main.h
+  ./csu/./csu/init-first.c
+  ./ctype/./ctype/ctype-info.c
+  ./dlfcn/./dlfcn/dlerror.c
+  ./dlfcn/./dlfcn/dlopen.c
+  ./dlfcn/./dlfcn/dlsym.c
+  ./elf/../bits/stdlib-bsearch.h
+  ./elf/../elf/dl-tls.c
+  ./elf/../include/atomic_wide_counter.h
+  ./elf/../include/list.h
+  ./elf/../include/rtld-malloc.h
+  ./elf/../include/scratch_buffer.h
+  ./elf/../misc/sbrk.c
+  ./elf/../nptl/nptl-stack.h
+  ./elf/../sysdeps/generic/_itoa.h
+  ./elf/../sysdeps/generic/dl-cache.h
+  ./elf/../sysdeps/generic/dl-debug.h
+  ./elf/../sysdeps/generic/dl-hash.h
+  ./elf/../sysdeps/generic/dl-new-hash.h
+  ./elf/../sysdeps/generic/dl-protected.h
+  ./elf/../sysdeps/generic/ldsodefs.h
+  ./elf/../sysdeps/nptl/dl-mutex.c
+  ./elf/../sysdeps/nptl/dl-tls_init_tp.c
+  ./elf/../sysdeps/nptl/pthread_early_init.h
+  ./elf/../sysdeps/posix/dl-fileid.h
+  ./elf/../sysdeps/unix/sysv/linux/brk.c
+  ./elf/../sysdeps/unix/sysv/linux/brk_call.h
+  ./elf/../sysdeps/unix/sysv/linux/dl-osinfo.h
+  ./elf/../sysdeps/unix/sysv/linux/dl-parse_auxv.h
+  ./elf/../sysdeps/unix/sysv/linux/dl-sysdep.c
+  ./elf/../sysdeps/unix/sysv/linux/dl-vdso-setup.h
+  ./elf/../sysdeps/unix/sysv/linux/dl-vdso.h
+  ./elf/../sysdeps/unix/sysv/linux/rseq-internal.h
+  ./elf/../sysdeps/unix/sysv/linux/x86/dl-minsigstacksize.h
+  ./elf/../sysdeps/x86/cpu-features.c
+  ./elf/../sysdeps/x86/dl-cacheinfo.h
+  ./elf/../sysdeps/x86/dl-get-cpu-features.c
+  ./elf/../sysdeps/x86/dl-hwcap.h
+  ./elf/../sysdeps/x86/dl-procinfo.h
+  ./elf/../sysdeps/x86/dl-prop.h
+  ./elf/../sysdeps/x86/get-isa-level.h
+  ./elf/../sysdeps/x86_64/dl-hwcaps-subdirs.c
+  ./elf/../sysdeps/x86_64/dl-irel.h
+  ./elf/../sysdeps/x86_64/dl-machine.h
+  ./elf/../sysdeps/x86_64/dl-runtime.h
+  ./elf/../sysdeps/x86_64/dl-tls.c
+  ./elf/../sysdeps/x86_64/dl-trampoline.h
+  ./elf/../sysdeps/x86_64/tls_get_addr.S
+  ./elf/./dl-find_object.h
+  ./elf/./dl-hwcaps.h
+  ./elf/./dl-load.h
+  ./elf/./dl-main.h
+  ./elf/./dl-map-segments.h
+  ./elf/./dl-sym-post.h
+  ./elf/./dl-tunable-types.h
+  ./elf/./elf/dl-audit.c
+  ./elf/./elf/dl-cache.c
+  ./elf/./elf/dl-call-libc-early-init.c
+  ./elf/./elf/dl-call_fini.c
+  ./elf/./elf/dl-debug.c
+  ./elf/./elf/dl-deps.c
+  ./elf/./elf/dl-environ.c
+  ./elf/./elf/dl-error-skeleton.c
+  ./elf/./elf/dl-find_object.c
+  ./elf/./elf/dl-fini.c
+  ./elf/./elf/dl-hwcaps.c
+  ./elf/./elf/dl-hwcaps_split.c
+  ./elf/./elf/dl-init.c
+  ./elf/./elf/dl-load.c
+  ./elf/./elf/dl-lookup-direct.c
+  ./elf/./elf/dl-lookup.c
+  ./elf/./elf/dl-minimal-malloc.c
+  ./elf/./elf/dl-minimal.c
+  ./elf/./elf/dl-misc.c
+  ./elf/./elf/dl-object.c
+  ./elf/./elf/dl-open.c
+  ./elf/./elf/dl-reloc.c
+  ./elf/./elf/dl-runtime.c
+  ./elf/./elf/dl-setup_hash.c
+  ./elf/./elf/dl-sort-maps.c
+  ./elf/./elf/dl-sym.c
+  ./elf/./elf/dl-tunables.c
+  ./elf/./elf/dl-tunables.h
+  ./elf/./elf/dl-version.c
+  ./elf/./elf/do-rel.h
+  ./elf/./elf/get-dynamic-info.h
+  ./elf/./elf/libc_early_init.c
+  ./elf/./elf/rtld.c
+  ./elf/./get-dynamic-info.h
+  ./elf/./setup-vdso.h
+  ./io/../sysdeps/unix/sysv/linux/access.c
+  ./io/../sysdeps/unix/sysv/linux/close_nocancel.c
+  ./io/../sysdeps/unix/sysv/linux/fstat64.c
+  ./io/../sysdeps/unix/sysv/linux/fstatat64.c
+  ./io/../sysdeps/unix/sysv/linux/open64_nocancel.c
+  ./io/../sysdeps/unix/sysv/linux/pread64_nocancel.c
+  ./io/../sysdeps/unix/sysv/linux/read_nocancel.c
+  ./io/../sysdeps/unix/sysv/linux/stat64.c
+  ./io/../sysdeps/unix/sysv/linux/write.c
+  ./libio/./libio/filedoalloc.c
+  ./libio/./libio/fileops.c
+  ./libio/./libio/genops.c
+  ./libio/./libio/iofflush.c
+  ./libio/./libio/iopadn.c
+  ./libio/./libio/libioP.h
+  ./libio/./libio/putchar.c
+  ./libio/./libio/vtables.c
+  ./malloc/./malloc/arena.c
+  ./malloc/./malloc/malloc.c
+  ./malloc/./malloc/morecore.c
+  ./malloc/./malloc/scratch_buffer_set_array_size.c
+  ./misc/../sysdeps/unix/syscall-template.S
+  ./misc/../sysdeps/unix/sysv/linux/brk.c
+  ./misc/../sysdeps/unix/sysv/linux/brk_call.h
+  ./misc/../sysdeps/unix/sysv/linux/mmap64.c
+  ./misc/../sysdeps/unix/sysv/linux/x86_64/syscall.S
+  ./misc/./misc/init-misc.c
+  ./misc/./misc/sbrk.c
+  ./nptl/../sysdeps/nptl/futex-internal.h
+  ./nptl/../sysdeps/unix/sysv/linux/x86/elision-conf.c
+  ./nptl/./nptl/alloca_cutoff.c
+  ./nptl/./nptl/cleanup_compat.c
+  ./nptl/./nptl/libc-cleanup.c
+  ./nptl/./nptl/pthread_getspecific.c
+  ./nptl/./nptl/pthread_key_create.c
+  ./nptl/./nptl/pthread_key_delete.c
+  ./nptl/./nptl/pthread_mutex_conf.c
+  ./nptl/./nptl/pthread_mutex_lock.c
+  ./nptl/./nptl/pthread_mutex_unlock.c
+  ./nptl/./nptl/pthread_once.c
+  ./nptl/./nptl/pthread_self.c
+  ./nptl/./nptl/pthread_setspecific.c
+  ./posix/../malloc/dynarray-skeleton.c
+  ./posix/../sysdeps/unix/sysv/linux/_exit.c
+  ./posix/./posix/register-atfork.c
+  ./resource/../sysdeps/unix/sysv/linux/getrlimit64.c
+  ./setjmp/../sysdeps/x86_64/bsd-_setjmp.S
+  ./setjmp/../sysdeps/x86_64/setjmp.S
+  ./setjmp/./setjmp/sigjmp.c
+  ./stdio-common/../include/../locale/localeinfo.h
+  ./stdio-common/../include/rounding-mode.h
+  ./stdio-common/../libio/libioP.h
+  ./stdio-common/../sysdeps/generic/get-rounding-mode.h
+  ./stdio-common/../sysdeps/pthread/allocalim.h
+  ./stdio-common/./stdio-common/_itoa.c
+  ./stdio-common/./stdio-common/printf-parse.h
+  ./stdio-common/./stdio-common/printf.c
+  ./stdio-common/./stdio-common/printf_fp.c
+  ./stdio-common/./stdio-common/vfprintf-internal.c
+  ./stdio-common/./stdio-common/vfprintf-process-arg.c
+  ./stdlib/../stdlib/strtol.c
+  ./stdlib/../stdlib/strtol_l.c
+  ./stdlib/../sysdeps/ieee754/dbl-64/dbl2mpn.c
+  ./stdlib/../sysdeps/unix/sysv/linux/getrandom.c
+  ./stdlib/../sysdeps/x86_64/lshift.S
+  ./stdlib/../sysdeps/x86_64/mul_1.S
+  ./stdlib/../sysdeps/x86_64/rshift.S
+  ./stdlib/./stdlib/cmp.c
+  ./stdlib/./stdlib/cxa_atexit.c
+  ./stdlib/./stdlib/cxa_finalize.c
+  ./stdlib/./stdlib/cxa_thread_atexit_impl.c
+  ./stdlib/./stdlib/divrem.c
+  ./stdlib/./stdlib/exit.c
+  ./stdlib/./stdlib/getenv.c
+  ./stdlib/./stdlib/mul.c
+  ./stdlib/./stdlib/secure-getenv.c
+  ./string/../include/rtld-malloc.h
+  ./string/../string/strcspn.c
+  ./string/../sysdeps/x86/cacheinfo.c
+  ./string/../sysdeps/x86/cacheinfo.h
+  ./string/../sysdeps/x86_64/multiarch/../multiarch/memcmp-sse2.S
+  ./string/../sysdeps/x86_64/multiarch/../multiarch/memset-vec-unaligned-erms.S
+  ./string/../sysdeps/x86_64/multiarch/../multiarch/strchr-sse2.S
+  ./string/../sysdeps/x86_64/multiarch/../multiarch/strcmp-sse2.S
+  ./string/../sysdeps/x86_64/multiarch/../multiarch/strlen-sse2.S
+  ./string/../sysdeps/x86_64/multiarch/ifunc-avx2.h
+  ./string/../sysdeps/x86_64/multiarch/ifunc-evex.h
+  ./string/../sysdeps/x86_64/multiarch/ifunc-memcmp.h
+  ./string/../sysdeps/x86_64/multiarch/ifunc-memmove.h
+  ./string/../sysdeps/x86_64/multiarch/ifunc-memset.h
+  ./string/../sysdeps/x86_64/multiarch/ifunc-sse4_2.h
+  ./string/../sysdeps/x86_64/multiarch/ifunc-strcasecmp.h
+  ./string/../sysdeps/x86_64/multiarch/ifunc-strcpy.h
+  ./string/../sysdeps/x86_64/multiarch/ifunc-strncpy.h
+  ./string/../sysdeps/x86_64/multiarch/memchr.c
+  ./string/../sysdeps/x86_64/multiarch/memcmp.c
+  ./string/../sysdeps/x86_64/multiarch/memmove-vec-unaligned-erms.S
+  ./string/../sysdeps/x86_64/multiarch/memrchr.c
+  ./string/../sysdeps/x86_64/multiarch/memset-vec-unaligned-erms.S
+  ./string/../sysdeps/x86_64/multiarch/rawmemchr.c
+  ./string/../sysdeps/x86_64/multiarch/stpcpy.c
+  ./string/../sysdeps/x86_64/multiarch/stpncpy.c
+  ./string/../sysdeps/x86_64/multiarch/strcasecmp.c
+  ./string/../sysdeps/x86_64/multiarch/strcasecmp_l.c
+  ./string/../sysdeps/x86_64/multiarch/strcat.c
+  ./string/../sysdeps/x86_64/multiarch/strchr-avx2.S
+  ./string/../sysdeps/x86_64/multiarch/strchr.c
+  ./string/../sysdeps/x86_64/multiarch/strchrnul.c
+  ./string/../sysdeps/x86_64/multiarch/strcmp-avx2.S
+  ./string/../sysdeps/x86_64/multiarch/strcmp.c
+  ./string/../sysdeps/x86_64/multiarch/strcpy.c
+  ./string/../sysdeps/x86_64/multiarch/strcspn.c
+  ./string/../sysdeps/x86_64/multiarch/strlen-avx2.S
+  ./string/../sysdeps/x86_64/multiarch/strlen.c
+  ./string/../sysdeps/x86_64/multiarch/strncase.c
+  ./string/../sysdeps/x86_64/multiarch/strncase_l.c
+  ./string/../sysdeps/x86_64/multiarch/strncmp.c
+  ./string/../sysdeps/x86_64/multiarch/strncpy.c
+  ./string/../sysdeps/x86_64/multiarch/strnlen.c
+  ./string/../sysdeps/x86_64/multiarch/strpbrk.c
+  ./string/../sysdeps/x86_64/multiarch/strrchr-avx2.S
+  ./string/../sysdeps/x86_64/multiarch/strrchr.c
+  ./string/../sysdeps/x86_64/multiarch/strspn.c
+  ./string/../sysdeps/x86_64/multiarch/strstr.c
+  ./string/./string/strdup.c
+  ./time/../sysdeps/unix/sysv/linux/clock_gettime.c
+  ./time/../sysdeps/unix/sysv/linux/dl-vdso.h
+  ./time/../sysdeps/unix/sysv/linux/gettimeofday.c
+  ./time/../sysdeps/unix/sysv/linux/time.c
+  ./wcsmbs/../sysdeps/x86_64/multiarch/ifunc-avx2.h
+  ./wcsmbs/../sysdeps/x86_64/multiarch/ifunc-evex.h
+  ./wcsmbs/../sysdeps/x86_64/multiarch/ifunc-memcmp.h
+  ./wcsmbs/../sysdeps/x86_64/multiarch/ifunc-wcslen.h
+  ./wcsmbs/../sysdeps/x86_64/multiarch/ifunc-wmemset.h
+  ./wcsmbs/../sysdeps/x86_64/multiarch/wcschr.c
+  ./wcsmbs/../sysdeps/x86_64/multiarch/wcscmp.c
+  ./wcsmbs/../sysdeps/x86_64/multiarch/wcscpy.c
+  ./wcsmbs/../sysdeps/x86_64/multiarch/wcslen.c
+  ./wcsmbs/../sysdeps/x86_64/multiarch/wcsnlen.c
+  ./wcsmbs/../sysdeps/x86_64/multiarch/wmemchr.c
+  ./wcsmbs/../sysdeps/x86_64/multiarch/wmemcmp.c
+  ./wcsmbs/../sysdeps/x86_64/multiarch/wmemset.c
+  /rustc/48a229ceaefd4985c50990b14116b6d856af0985/library/core/src/cell.rs
+  /rustc/48a229ceaefd4985c50990b14116b6d856af0985/library/core/src/result.rs
+  /rustc/48a229ceaefd4985c50990b14116b6d856af0985/library/core/src/slice/index.rs
+  /rustc/48a229ceaefd4985c50990b14116b6d856af0985/library/core/src/sync/atomic.rs
+  /rustc/48a229ceaefd4985c50990b14116b6d856af0985/library/std/src/alloc.rs
+  /rustc/48a229ceaefd4985c50990b14116b6d856af0985/library/std/src/sync/poison/condvar.rs
+  /rustc/48a229ceaefd4985c50990b14116b6d856af0985/library/std/src/sys/alloc/unix.rs
+  /rustc/48a229ceaefd4985c50990b14116b6d856af0985/library/std/src/sys/args/unix.rs
+  /rustc/48a229ceaefd4985c50990b14116b6d856af0985/library/std/src/sys/pal/unix/futex.rs
+  /rustc/48a229ceaefd4985c50990b14116b6d856af0985/library/std/src/sys/pal/unix/weak/syscall.rs
+  /rustc/48a229ceaefd4985c50990b14116b6d856af0985/library/std/src/sys/random/linux.rs
+  /rustc/48a229ceaefd4985c50990b14116b6d856af0985/library/std/src/sys/sync/once/futex.rs
+  /rustc/48a229ceaefd4985c50990b14116b6d856af0985/library/std/src/sys/thread_local/destructors/linux_like.rs
+
+--------------------------------------------------------------------------------
+Ir              
+--------------------------------------------------------------------------------
+15,766 ( 0.01%)  events annotated
+

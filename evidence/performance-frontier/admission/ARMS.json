@@ -485,27 +485,27 @@
         "source_commit": "dedb67a5fe7d567a046def6402388d043b50d571"
       },
       "constant_time_audit": {
-        "kind": "CTGRIND_PLUS_BRANCH_AUDIT",
-        "candidate_sha256": "6d002db20c815e252d1672a72b654f40844c2a1b24400cfbdfce5d1eaf828f39",
-        "harness_kind": "classify_cios.py over disasm_sites.py from the declared digest's objdump of mont_mul_ladder_into; every jcc/setcc/cmov enumerated, flag source and arithmetic consumer asserted per site",
-        "harness_sha256": "8928184c50885b451aee32d46cf00650fe6253b93c41e30d5b372cf71a328762",
         "branch_audit": {
           "path": "evidence/performance-frontier/campaigns/PFP-6/admission-2026-11-27/raw/disasm/classification.md",
           "present": true,
           "sha256": "0f8cc7971fe9f313b7f27dac5d4f0b3913550441653483d2faa45d3fe35dd770"
         },
+        "candidate_sha256": "6d002db20c815e252d1672a72b654f40844c2a1b24400cfbdfce5d1eaf828f39",
+        "ctgrind": {
+          "contexts": 0,
+          "errors": 0,
+          "kind": "SOURCE_BOUND_EXPONENT_TAINT_PLUS_DSO_BASE_PROBE",
+          "note": "bn::arith::tests::ctgrind_secret_exponent_window with the exponent limb bytes tainted: 0 errors / 0 contexts, origins none; negative control 4 errors / 1 context. DSO-bound pfp27 ladder probe (base tainted) on the admitted DSO: 0 contexts, 3 reps. Neither is a constant-time proof"
+        },
+        "finding": "CIOS carrier mont_mul_ladder_into at 0x58ce60/0x36c: 14 jcc (14 public-bound, 0 secret-derived), 18 setcc (3 public geometry, 15 secret carry/borrow flags consumed arithmetically, none reaching control), 0 cmovcc. Secret-derived control transfers: none. Re-derived from 6d002db2, not inherited from the earlier digest",
+        "harness_kind": "classify_cios.py over disasm_sites.py from the declared digest's objdump of mont_mul_ladder_into; every jcc/setcc/cmov enumerated, flag source and arithmetic consumer asserted per site",
+        "harness_sha256": "8928184c50885b451aee32d46cf00650fe6253b93c41e30d5b372cf71a328762",
+        "kind": "CTGRIND_PLUS_BRANCH_AUDIT",
         "reference": {
           "path": "evidence/performance-frontier/campaigns/PFP-6/admission-2026-11-27/raw/disasm/classification.md",
           "present": true,
           "sha256": "0f8cc7971fe9f313b7f27dac5d4f0b3913550441653483d2faa45d3fe35dd770"
-        },
-        "ctgrind": {
-          "kind": "SOURCE_BOUND_EXPONENT_TAINT_PLUS_DSO_BASE_PROBE",
-          "errors": 0,
-          "contexts": 0,
-          "note": "bn::arith::tests::ctgrind_secret_exponent_window with the exponent limb bytes tainted: 0 errors / 0 contexts, origins none; negative control 4 errors / 1 context. DSO-bound pfp27 ladder probe (base tainted) on the admitted DSO: 0 contexts, 3 reps. Neither is a constant-time proof"
-        },
-        "finding": "CIOS carrier mont_mul_ladder_into at 0x58ce60/0x36c: 14 jcc (14 public-bound, 0 secret-derived), 18 setcc (3 public geometry, 15 secret carry/borrow flags consumed arithmetically, none reaching control), 0 cmovcc. Secret-derived control transfers: none. Re-derived from 6d002db2, not inherited from the earlier digest"
+        }
       },
       "description": "Integrated Montgomery multiply and squaring: SOS reference, CIOS and dedicated-squaring kernels in the crate. Dedicated squaring stays off (it loses to both SOS and CIOS at the five-bit-window mix). CIOS is now the ladder default: at the admitted digest it measures 0.8267/0.8375/0.8357/0.8272 of the SOS operation (modexp2048/modexp8192/rsa2048/dh-ffdhe2048), matching the 0.827-0.838 the selection comparison predicted. The 161-line ABI transcript, the per-kernel differential, the exponent taint and a fresh branch audit all pass at the same digest.",
       "differential_courts": {
@@ -578,12 +578,6 @@
         "source_commit": "f8d5c4b33cf751a0dd805fa7cf0d730915e1d073"
       },
       "constant_time_audit": {
-        "kind": "CTGRIND_PLUS_BRANCH_AUDIT",
-        "candidate_sha256": "ecbefb7d4ecd05cb08f5ade57e64ce2cd81de24bcd68b0c236a8640a18559053",
-        "harness_kind": "pfp3_dso_ct.c: the PFP-21 DSO harness with all eight populations, the limb-value taint, LOADED/MAPS/FOREIGN identity proof, negative control and attribution classifier unchanged; only the candidate digest/path changed",
-        "harness_sha256": "c89d64d892b941e8d148b9662e2adc6781e054adb8bda637914c95820d5fb732",
-        "harness_source_sha256": "ea18ec93bb961328d6c268b4fc1307e0489c01ea62f0a1c33ba962fafa85771d",
-        "branch_audit_harness_sha256": "5d54f3a1995263032fbdd23f9ccd533b50fa53b283199b2e1f43a3002cd1dfd4",
         "branch_audit": {
           "path": "evidence/performance-frontier/campaigns/PFP-3/audit-postfix/raw/audit-pfp3.md",
           "present": true,
@@ -594,150 +588,156 @@
           "present": true,
           "sha256": "2a61f6221c12379086501574dcdd0537d0c2fdae0bb7dae4b2746d6745840fe2"
         },
+        "branch_audit_carriers_classification": {
+          "advance": {
+            "class": "public doubling loop",
+            "cmov": 0,
+            "jcc": 1,
+            "setcc": 0
+          },
+          "build_table": {
+            "class": "public table loop",
+            "cmov": 0,
+            "jcc": 1,
+            "setcc": 0
+          },
+          "ossl_ec_wNAF_mul": {
+            "class": "general wNAF (pre-existing); no secret-derived jcc; the admission-mask jcc (test $0x1,%cl) is absent (pre-fix 186 jcc)",
+            "cmov": 34,
+            "div": 4,
+            "jcc": 183,
+            "setcc": 5
+          },
+          "rcb_add": {
+            "class": "branch-free; setcc are carry/borrow masks, not transfers",
+            "cmov": 0,
+            "jcc": 0,
+            "setcc": 40
+          },
+          "table_mul": {
+            "class": "public loop counters",
+            "cmov": 0,
+            "jcc": 2,
+            "setcc": 2
+          },
+          "to_affine": {
+            "class": "loop + public exponent bit",
+            "cmov": 0,
+            "jcc": 2,
+            "setcc": 0
+          }
+        },
+        "branch_audit_harness_sha256": "5d54f3a1995263032fbdd23f9ccd533b50fa53b283199b2e1f43a3002cd1dfd4",
+        "candidate_sha256": "ecbefb7d4ecd05cb08f5ade57e64ce2cd81de24bcd68b0c236a8640a18559053",
         "ctgrind": {
           "engine_on_path": 0,
           "engine_origins": 0,
-          "secret_derived_conditional_transfers": 0,
           "finding": "none. The pre-fix je at ossl_ec_wNAF_mul+0x1938 (the ct_ge(k, n) admission early exit) is gone: the in-range mask is folded into the scalar the comb consumes. mul-g-fixed is 0/0/0 errors/contexts (was 1/1/1); the pre-PFP-20 sensitivity control still reports 4 engine-on-path per repetition.",
           "populations": {
-            "mul_g_fixed": {
-              "errors": [
-                0,
-                0,
+            "control": {
+              "contexts": [
                 0
               ],
-              "contexts": [
-                0,
-                0,
+              "errors": [
                 0
               ]
             },
             "mul_g": {
-              "errors": [
-                3645,
-                3631,
-                3606
-              ],
               "contexts": [
                 225,
                 209,
                 196
-              ]
-            },
-            "mul_p": {
-              "errors": [
-                3596,
-                3606,
-                3670
               ],
-              "contexts": [
-                186,
-                197,
-                236
+              "errors": [
+                3645,
+                3631,
+                3606
               ]
             },
             "mul_g_bytes": {
-              "errors": [
-                3661,
-                3636,
-                3607
-              ],
               "contexts": [
                 228,
                 216,
                 197
+              ],
+              "errors": [
+                3661,
+                3636,
+                3607
+              ]
+            },
+            "mul_g_fixed": {
+              "contexts": [
+                0,
+                0,
+                0
+              ],
+              "errors": [
+                0,
+                0,
+                0
+              ]
+            },
+            "mul_p": {
+              "contexts": [
+                186,
+                197,
+                236
+              ],
+              "errors": [
+                3596,
+                3606,
+                3670
               ]
             },
             "sign": {
-              "errors": [
-                122,
-                122,
-                122
-              ],
               "contexts": [
                 119,
                 119,
                 119
+              ],
+              "errors": [
+                122,
+                122,
+                122
               ]
             },
             "sign_ex": {
-              "errors": [
+              "contexts": [
                 24,
                 24,
                 24
               ],
-              "contexts": [
+              "errors": [
                 24,
                 24,
                 24
               ]
             },
             "sign_ex_k": {
-              "errors": [
-                33042,
-                33007,
-                32978
-              ],
               "contexts": [
                 460,
                 442,
                 427
-              ]
-            },
-            "control": {
-              "errors": [
-                0
               ],
-              "contexts": [
-                0
+              "errors": [
+                33042,
+                33007,
+                32978
               ]
             }
           },
+          "secret_derived_conditional_transfers": 0,
           "sensitivity_control": {
             "artefact": "83f67826e2ca53dd8e014fe5442d2e77ba96ee7af35eeb78a312112a4e0a7c4f",
             "engine_on_path_per_repetition": 4,
             "limit": "predates the comb; establishes that the harness sees engine code on the same call shape, not that it reaches the new carrier"
           }
         },
-        "branch_audit_carriers_classification": {
-          "rcb_add": {
-            "jcc": 0,
-            "cmov": 0,
-            "setcc": 40,
-            "class": "branch-free; setcc are carry/borrow masks, not transfers"
-          },
-          "table_mul": {
-            "jcc": 2,
-            "cmov": 0,
-            "setcc": 2,
-            "class": "public loop counters"
-          },
-          "to_affine": {
-            "jcc": 2,
-            "cmov": 0,
-            "setcc": 0,
-            "class": "loop + public exponent bit"
-          },
-          "build_table": {
-            "jcc": 1,
-            "cmov": 0,
-            "setcc": 0,
-            "class": "public table loop"
-          },
-          "advance": {
-            "jcc": 1,
-            "cmov": 0,
-            "setcc": 0,
-            "class": "public doubling loop"
-          },
-          "ossl_ec_wNAF_mul": {
-            "jcc": 183,
-            "cmov": 34,
-            "setcc": 5,
-            "div": 4,
-            "class": "general wNAF (pre-existing); no secret-derived jcc; the admission-mask jcc (test $0x1,%cl) is absent (pre-fix 186 jcc)"
-          }
-        },
+        "harness_kind": "pfp3_dso_ct.c: the PFP-21 DSO harness with all eight populations, the limb-value taint, LOADED/MAPS/FOREIGN identity proof, negative control and attribution classifier unchanged; only the candidate digest/path changed",
+        "harness_sha256": "c89d64d892b941e8d148b9662e2adc6781e054adb8bda637914c95820d5fb732",
+        "harness_source_sha256": "ea18ec93bb961328d6c268b4fc1307e0489c01ea62f0a1c33ba962fafa85771d",
+        "kind": "CTGRIND_PLUS_BRANCH_AUDIT",
         "mutation_control": {
           "control_b_sha256": "e4b2cb6e204443e1d696ceb8241b439100e9f0317a3de879400812db7cb3ac73",
           "difference": "admits final true -> false (fallback ladder)",
@@ -746,26 +746,26 @@
             "b": 0,
             "count": 4096
           },
+          "digest_scope": "control built from the pre-fix candidate at 04611380; not re-run at ecbefb7d. It establishes that the comb (not a ladder fallback) is load-bearing, not a post-fix timing claim.",
           "mul_g_ir_ratio": 2.049747139511887,
           "mul_g_wall_ratio": 1.95944639380138,
           "record": {
             "path": "evidence/performance-frontier/campaigns/PFP-3/mutation/raw/mutation-record.json",
             "present": true,
             "sha256": "d56c5db1630989d86c92c16ec3c88b03060dec400edfc8c0e962c8568615b6b1"
-          },
-          "digest_scope": "control built from the pre-fix candidate at 04611380; not re-run at ecbefb7d. It establishes that the comb (not a ladder fallback) is load-bearing, not a post-fix timing claim."
+          }
         },
-        "result": "PASS: zero secret-derived conditional transfers on mul-g-fixed; shared inventory 31/31 exit 0; six carriers resolved; wNAF jcc 186 -> 183 and no test $0x1,%cl admission-mask jcc; ctgrind independently reports 0 contexts and the pre-PFP-20 sensitivity control still fires",
         "reference": {
           "path": "evidence/performance-frontier/campaigns/PFP-3/audit-postfix/AUDIT.md",
           "present": true,
           "sha256": "ebf6bab7829104a77c372f3d195b81f9e8fe1fdaaa4c693801bce94ee15e383b"
-        }
+        },
+        "result": "PASS: zero secret-derived conditional transfers on mul-g-fixed; shared inventory 31/31 exit 0; six carriers resolved; wNAF jcc 186 -> 183 and no test $0x1,%cl admission-mask jcc; ctgrind independently reports 0 contexts and the pre-PFP-20 sensitivity control still fires"
       },
       "description": "fixed-base P-256 multiplication: a 16-entry comb table derived at first use from the tracked EC_CURVE_DATA generator, masked full-scan constant-time selection, and exact-group admission with refusal tests; the scalar range admission is now branch-free (the in-range mask is folded into the scalar the comb consumes, so an out-of-range value is replaced by k-n before multiplication) at DSO ecbefb7d; DSO-bound differential of 4,096 k*G and 4,096 k*P plus ECDSA cross-verification; ctgrind 0 contexts on mul-g-fixed and no admission-mask branch in the audit",
       "differential_courts": {
         "candidate_sha256": "ecbefb7d4ecd05cb08f5ade57e64ce2cd81de24bcd68b0c236a8640a18559053",
-        "note": "4,096 k*G and 4,096 k*P serialised points compared with the authority, 0 mismatches (candidate streams equal the authority a9e1068d… and bcb22a91…); 256+256 ECDSA cross-verifications accepted with one agreed public key; 8/8 identity rows ok. In-crate 4,096-case fixed-versus-variable differential also 0 mismatches, and the new out-of-range test checks k = n, n+1, n+2, 2^256-1 against the ladder.",
+        "note": "4,096 k*G and 4,096 k*P serialised points compared with the authority, 0 mismatches (candidate streams equal the authority a9e1068d\u2026 and bcb22a91\u2026); 256+256 ECDSA cross-verifications accepted with one agreed public key; 8/8 identity rows ok. In-crate 4,096-case fixed-versus-variable differential also 0 mismatches, and the new out-of-range test checks k = n, n+1, n+2, 2^256-1 against the ladder.",
         "reference": {
           "path": "evidence/performance-frontier/campaigns/PFP-3/dso-differential-postfix/differential-dso-bound.json",
           "present": true,
@@ -776,6 +776,29 @@
       "measurement": {
         "candidate_sha256": "ecbefb7d4ecd05cb08f5ade57e64ce2cd81de24bcd68b0c236a8640a18559053",
         "classification": "SCOPED_OBSERVATION",
+        "ecdh": {
+          "authority_us": 33.165,
+          "candidate_us": 224.29,
+          "ci95": [
+            6.67,
+            6.83
+          ],
+          "ratio": 6.72,
+          "record": {
+            "path": "evidence/performance-frontier/campaigns/PFP-3/timing-ecbefb7d/raw/ecdh-timing.json",
+            "present": true,
+            "sha256": "51ff773130fa359b8b57b6f74df00d60f44238bb2814a8261e362beb8157ee03"
+          }
+        },
+        "ecdsa256": {
+          "authority_us": 12.721,
+          "candidate_us": 134.485,
+          "ci95": [
+            10.55,
+            10.62
+          ],
+          "ratio": 10.58
+        },
         "identity": {
           "instrument": "cross-library single-operation latency, 15 paired processes pinned to one CPU, median of paired ratios with a 20,000-resample percentile bootstrap (ecdsa256); the ecdh row uses the PFP-29 per-path instrument with the same conventions",
           "population": "40d1537b1a86851a17c49636cd5620704c4836bf6153074fd964f1c3a4fe691e",
@@ -792,29 +815,6 @@
           "path": "evidence/performance-frontier/campaigns/PFP-3/timing-ecbefb7d/results.json",
           "present": true,
           "sha256": "9c6e9b2680b40e4e7a8e632a15efba6619aaff88b72256d654da5ebe6869d0db"
-        },
-        "ecdsa256": {
-          "candidate_us": 134.485,
-          "authority_us": 12.721,
-          "ratio": 10.58,
-          "ci95": [
-            10.55,
-            10.62
-          ]
-        },
-        "ecdh": {
-          "candidate_us": 224.29,
-          "authority_us": 33.165,
-          "ratio": 6.72,
-          "ci95": [
-            6.67,
-            6.83
-          ],
-          "record": {
-            "path": "evidence/performance-frontier/campaigns/PFP-3/timing-ecbefb7d/raw/ecdh-timing.json",
-            "present": true,
-            "sha256": "51ff773130fa359b8b57b6f74df00d60f44238bb2814a8261e362beb8157ee03"
-          }
         }
       },
       "queue_item": "PFP-3",
@@ -853,145 +853,145 @@
         "source_commit": "5ac6fddc53f5ca2a63912f51c07188b9b63f71dd"
       },
       "constant_time_audit": {
-        "kind": "CTGRIND_PLUS_BRANCH_AUDIT",
-        "candidate_sha256": "4e6ec312313b3f1ef68ec9c0c4fc698a76f334ee9da38a6fcdfa7d8945c53e77",
-        "harness_kind": "pfp4_dso_ct.c: the PFP-3 DSO harness plus one sign-nonce population that marks the installed RAND_METHOD output undefined; limb-value taint, LOADED/MAPS/FOREIGN identity, negative control and the PFP-2 attribution classifier are unchanged",
-        "harness_sha256": "81f73b05e54427a034eef34c4c94cc5066d99f4e47be261edec346d4cb8cf95e",
-        "harness_source_sha256": "c45afa69d2fba29b73948bd59fa158eadd498d83fdb23e04d86cfd6b2edf4f74",
         "branch_audit": {
           "path": "evidence/performance-frontier/campaigns/PFP-4/audit/raw/audit-pfp4.md",
           "present": true,
           "sha256": "6abfd3e529f4e6e56c59277814b1ce7785e21945fbdc90ff0013b86268881995"
         },
+        "branch_audit_carriers_classification": {
+          "P256Scalar::invert": {
+            "class": "both public: the fixed 256-iteration loop counter and the bt test of the compile-time constant n-2",
+            "cmov": 0,
+            "jcc": 2,
+            "setcc": 0
+          },
+          "P256Scalar::to_canonical": {
+            "cmov": 0,
+            "jcc": 0,
+            "setcc": 0
+          },
+          "from_canonical_reduced": {
+            "cmov": 0,
+            "jcc": 0,
+            "setcc": 0
+          },
+          "mont_reduce_into": {
+            "class": "pre-existing fixed REDC length and masks",
+            "cmov": 0,
+            "jcc": 2,
+            "setcc": 2
+          },
+          "normalise_branchless": {
+            "class": "pre-existing; Vec length/capacity, not limb values",
+            "cmov": 5,
+            "jcc": 5,
+            "setcc": 0
+          },
+          "ossl_ec_group_do_inverse_ord": {
+            "class": "method-column and mont_data nullness, allocation/return tags and the ctx stack counter; setne normalises the public success flag",
+            "cmov": 0,
+            "jcc": 11,
+            "setcc": 1
+          },
+          "store_coordinate": {
+            "class": "pre-existing; allocation capacity and normalised length",
+            "cmov": 5,
+            "jcc": 10,
+            "setcc": 0
+          },
+          "try_inverse_order": {
+            "class": "pointer nullness, admits result, neg, limb count <= 4, Vec capacity/len and the copy-loop counter; the single cmovne is in that copy loop",
+            "cmov": 1,
+            "jcc": 10,
+            "setcc": 0
+          },
+          "wide_mul_x86": {
+            "class": "pre-existing carry masks",
+            "cmov": 0,
+            "jcc": 0,
+            "setcc": 9
+          }
+        },
+        "candidate_sha256": "4e6ec312313b3f1ef68ec9c0c4fc698a76f334ee9da38a6fcdfa7d8945c53e77",
         "ctgrind": {
           "engine_on_path": 0,
           "engine_origins": 0,
-          "secret_derived_conditional_transfers": 0,
           "finding": "none. Candidate sign (d tainted) and sign-nonce (d and the RAND source tainted) each report 0 engine-on-path and 0 engine-origin contexts; the pre-existing nonce-rejection branch in bn::rand is observed (class C), so the tainted nonce reaches the inverse; the before artefact (generic inverse) reads the same 0. The pre-PFP-20 sensitivity control still reports 4 engine-on-path per repetition.",
           "populations": {
-            "control": {
+            "before_sign": {
+              "contexts": [
+                119,
+                119,
+                119
+              ],
               "errors": [
+                122,
+                122,
+                122
+              ]
+            },
+            "before_sign_nonce": {
+              "contexts": [
+                119,
+                119,
+                119
+              ],
+              "errors": [
+                122,
+                122,
+                122
+              ]
+            },
+            "control": {
+              "contexts": [
                 0
               ],
-              "contexts": [
+              "errors": [
                 0
               ]
             },
             "sign": {
-              "errors": [
-                123,
-                123,
-                123
-              ],
               "contexts": [
                 120,
                 120,
                 120
+              ],
+              "errors": [
+                123,
+                123,
+                123
               ]
             },
             "sign_nonce": {
-              "errors": [
-                123,
-                123,
-                123
-              ],
               "contexts": [
                 120,
                 120,
                 120
-              ]
-            },
-            "before_sign": {
-              "errors": [
-                122,
-                122,
-                122
               ],
-              "contexts": [
-                119,
-                119,
-                119
-              ]
-            },
-            "before_sign_nonce": {
               "errors": [
-                122,
-                122,
-                122
-              ],
-              "contexts": [
-                119,
-                119,
-                119
+                123,
+                123,
+                123
               ]
             }
           },
+          "secret_derived_conditional_transfers": 0,
           "sensitivity_control": {
             "artefact": "83f67826e2ca53dd8e014fe5442d2e77ba96ee7af35eeb78a312112a4e0a7c4f",
             "engine_on_path_per_repetition": 4,
             "limit": "predates the comb and exercises the P-256 ladder, establishing that the classifier sees P-256 frames; it does not reach the new inverse, and a branchy-inverse mutant was not built"
           }
         },
-        "branch_audit_carriers_classification": {
-          "P256Scalar::invert": {
-            "jcc": 2,
-            "cmov": 0,
-            "setcc": 0,
-            "class": "both public: the fixed 256-iteration loop counter and the bt test of the compile-time constant n-2"
-          },
-          "try_inverse_order": {
-            "jcc": 10,
-            "cmov": 1,
-            "setcc": 0,
-            "class": "pointer nullness, admits result, neg, limb count <= 4, Vec capacity/len and the copy-loop counter; the single cmovne is in that copy loop"
-          },
-          "from_canonical_reduced": {
-            "jcc": 0,
-            "cmov": 0,
-            "setcc": 0
-          },
-          "P256Scalar::to_canonical": {
-            "jcc": 0,
-            "cmov": 0,
-            "setcc": 0
-          },
-          "ossl_ec_group_do_inverse_ord": {
-            "jcc": 11,
-            "cmov": 0,
-            "setcc": 1,
-            "class": "method-column and mont_data nullness, allocation/return tags and the ctx stack counter; setne normalises the public success flag"
-          },
-          "mont_reduce_into": {
-            "jcc": 2,
-            "cmov": 0,
-            "setcc": 2,
-            "class": "pre-existing fixed REDC length and masks"
-          },
-          "wide_mul_x86": {
-            "jcc": 0,
-            "cmov": 0,
-            "setcc": 9,
-            "class": "pre-existing carry masks"
-          },
-          "normalise_branchless": {
-            "jcc": 5,
-            "cmov": 5,
-            "setcc": 0,
-            "class": "pre-existing; Vec length/capacity, not limb values"
-          },
-          "store_coordinate": {
-            "jcc": 10,
-            "cmov": 5,
-            "setcc": 0,
-            "class": "pre-existing; allocation capacity and normalised length"
-          }
-        },
-        "result": "PASS: zero engine-on-path and zero engine-origin contexts with the private scalar and the nonce source tainted; the before artefact reads the same 0; the sensitivity control reports 4 engine-on-path per repetition; every jcc/setcc/cmov in the new carrier is classified public-bound; BINSEC -checkct and a branchy-inverse mutation control are NOT_RUN and recorded",
+        "harness_kind": "pfp4_dso_ct.c: the PFP-3 DSO harness plus one sign-nonce population that marks the installed RAND_METHOD output undefined; limb-value taint, LOADED/MAPS/FOREIGN identity, negative control and the PFP-2 attribution classifier are unchanged",
+        "harness_sha256": "81f73b05e54427a034eef34c4c94cc5066d99f4e47be261edec346d4cb8cf95e",
+        "harness_source_sha256": "c45afa69d2fba29b73948bd59fa158eadd498d83fdb23e04d86cfd6b2edf4f74",
+        "kind": "CTGRIND_PLUS_BRANCH_AUDIT",
         "reference": {
           "path": "evidence/performance-frontier/campaigns/PFP-4/AUDIT.md",
           "present": true,
           "sha256": "9824cec93e9073c44e88db8ddbdd61ef2f5bfab36fc7ca14dc7bd5edad94d8fc"
-        }
+        },
+        "result": "PASS: zero engine-on-path and zero engine-origin contexts with the private scalar and the nonce source tainted; the before artefact reads the same 0; the sensitivity control reports 4 engine-on-path per repetition; every jcc/setcc/cmov in the new carrier is classified public-bound; BINSEC -checkct and a branchy-inverse mutation control are NOT_RUN and recorded"
       },
       "description": "order inversion replaced at DSO 4e6ec312: P256Scalar::invert computes k^(n-2) mod n over the public compile-time exponent in the audited Mont<OrderDomain> kernel, admitted only under PFP-3's fixed_base::admits predicate, with the generic bn_mod_exp_mont_fixed_top kept for every other group/generator/curve/method and for negative or wider-than-four-limb operands; 0 -> 0 and non-canonical reduction are preserved; DSO-bound 4,096 supplied-nonce and 4,096 deterministic-nonce signatures are byte-identical to the authority; the W3-bound pipeline conversion remains refused and unimplemented",
       "differential_courts": {
@@ -1007,6 +1007,21 @@
       "measurement": {
         "candidate_sha256": "4e6ec312313b3f1ef68ec9c0c4fc698a76f334ee9da38a6fcdfa7d8945c53e77",
         "classification": "SCOPED_OBSERVATION",
+        "ecdsa256": {
+          "authority_us": 12.752,
+          "bound_reference": "~9.1x reference / 9.24x absolute ceiling; the shortfall is recorded, not discharged",
+          "candidate_us": 130.957,
+          "ci95": [
+            10.26,
+            10.31
+          ],
+          "previous_ci95": [
+            10.55,
+            10.62
+          ],
+          "previous_ratio": 10.58,
+          "ratio": 10.28
+        },
         "identity": {
           "instrument": "cross-library single-operation latency, 15 paired processes pinned to one CPU, median of paired ratios with a 20,000-resample percentile bootstrap",
           "population": "40d1537b1a86851a17c49636cd5620704c4836bf6153074fd964f1c3a4fe691e",
@@ -1023,21 +1038,6 @@
           "path": "evidence/performance-frontier/campaigns/PFP-4/timing-4e6ec312/results.json",
           "present": true,
           "sha256": "9064e6fce2eaedbb0bc8001f0e50b718a687dbd94a6da1cd8e9bb3ec0ad692e9"
-        },
-        "ecdsa256": {
-          "candidate_us": 130.957,
-          "authority_us": 12.752,
-          "ratio": 10.28,
-          "ci95": [
-            10.26,
-            10.31
-          ],
-          "previous_ratio": 10.58,
-          "previous_ci95": [
-            10.55,
-            10.62
-          ],
-          "bound_reference": "~9.1x reference / 9.24x absolute ceiling; the shortfall is recorded, not discharged"
         }
       },
       "queue_item": "PFP-4",
@@ -1096,14 +1096,14 @@
         "source_commit": "a005a33c482f47850a72661a363e7186bde42c5c"
       },
       "constant_time_audit": {
-        "kind": "BINARY_BRANCH_AUDIT",
-        "candidate_sha256": "842efa27197ea8c408d77a8316c1dbb35a06146e0033b7df7d7f9cced88a2f47",
-        "harness_sha256": "5d54f3a1995263032fbdd23f9ccd533b50fa53b283199b2e1f43a3002cd1dfd4",
         "branch_audit": {
           "path": "evidence/performance-frontier/campaigns/PFP-5/raw/branch-audit.md",
           "present": true,
           "sha256": "ffffd6ab1754d2aff90be0bf77611f9ebd2b511c74d09ae728aae59564fd1b3b"
         },
+        "candidate_sha256": "842efa27197ea8c408d77a8316c1dbb35a06146e0033b7df7d7f9cced88a2f47",
+        "harness_sha256": "5d54f3a1995263032fbdd23f9ccd533b50fa53b283199b2e1f43a3002cd1dfd4",
+        "kind": "BINARY_BRANCH_AUDIT",
         "reference": {
           "path": "evidence/performance-frontier/campaigns/PFP-5/raw/branch-audit.md",
           "present": true,
@@ -1291,27 +1291,27 @@
         "source_commit": "ff87f8488e206896ffdd82259af2fcf4ba269209"
       },
       "constant_time_audit": {
-        "kind": "CTGRIND_PLUS_BRANCH_AUDIT",
-        "candidate_sha256": "88c0c7e04d52a1bf84d665fdd691bddf2bbe700e35505d95bf145bfdc3774d87",
-        "harness_kind": "classify_widths.py over disasm_sites.py from the declared digest objdump of mont_mul_ladder_into; every jcc/setcc/cmov enumerated, flag source and arithmetic consumer asserted per site; all eight widths are inlined into the one carrier",
-        "harness_sha256": "c0b6fe90318d465d86c2669fcf6c18ca3b0e93f1f7d61821c1077f8ef027d663",
         "branch_audit": {
           "path": "evidence/performance-frontier/campaigns/M-A1/raw/disasm/classification.md",
           "present": true,
           "sha256": "b1310b1e9db5e39759454f235e9b754d90c32e95486f8b84420ecb44811b7f09"
         },
+        "candidate_sha256": "88c0c7e04d52a1bf84d665fdd691bddf2bbe700e35505d95bf145bfdc3774d87",
+        "ctgrind": {
+          "contexts": 0,
+          "errors": 0,
+          "kind": "SOURCE_BOUND_EXPONENT_TAINT_PLUS_DSO_BASE_PROBE",
+          "note": "bn::arith::tests::ctgrind_secret_exponent_window (four-limb modulus, so the width-4 specialised kernel) with the exponent limb bytes tainted: 0 errors / 0 contexts, origins none; negative control 4 errors / 1 context. DSO-bound pfp27 ladder probe (base tainted) on the candidate and the previous build: 0 contexts, 3 reps each. Not a constant-time proof; dynamic ctgrind covers width 4, the other widths are covered structurally by the branch audit."
+        },
+        "finding": "CIOS carrier mont_mul_ladder_into at 0x2fa7d0/0x2431: 40 jcc (40 public-bound, 0 secret-derived), 64 setcc (0 public geometry, 64 secret carry/borrow flags consumed arithmetically, none reaching control), 0 cmovcc. Secret-derived control transfers: none. Re-derived from 88c0c7e04d52a1bf84d665fdd691bddf2bbe700e35505d95bf145bfdc3774d87, not inherited.",
+        "harness_kind": "classify_widths.py over disasm_sites.py from the declared digest objdump of mont_mul_ladder_into; every jcc/setcc/cmov enumerated, flag source and arithmetic consumer asserted per site; all eight widths are inlined into the one carrier",
+        "harness_sha256": "c0b6fe90318d465d86c2669fcf6c18ca3b0e93f1f7d61821c1077f8ef027d663",
+        "kind": "CTGRIND_PLUS_BRANCH_AUDIT",
         "reference": {
           "path": "evidence/performance-frontier/campaigns/M-A1/raw/disasm/classification.md",
           "present": true,
           "sha256": "b1310b1e9db5e39759454f235e9b754d90c32e95486f8b84420ecb44811b7f09"
-        },
-        "ctgrind": {
-          "kind": "SOURCE_BOUND_EXPONENT_TAINT_PLUS_DSO_BASE_PROBE",
-          "errors": 0,
-          "contexts": 0,
-          "note": "bn::arith::tests::ctgrind_secret_exponent_window (four-limb modulus, so the width-4 specialised kernel) with the exponent limb bytes tainted: 0 errors / 0 contexts, origins none; negative control 4 errors / 1 context. DSO-bound pfp27 ladder probe (base tainted) on the candidate and the previous build: 0 contexts, 3 reps each. Not a constant-time proof; dynamic ctgrind covers width 4, the other widths are covered structurally by the branch audit."
-        },
-        "finding": "CIOS carrier mont_mul_ladder_into at 0x2fa7d0/0x2431: 40 jcc (40 public-bound, 0 secret-derived), 64 setcc (0 public geometry, 64 secret carry/borrow flags consumed arithmetically, none reaching control), 0 cmovcc. Secret-derived control transfers: none. Re-derived from 88c0c7e04d52a1bf84d665fdd691bddf2bbe700e35505d95bf145bfdc3774d87, not inherited."
+        }
       },
       "description": "Fixed-width native Rust specialisation of the admitted CIOS Montgomery kernel. Eight const-generic kernels (4/6/9/16/32/48/64/128 limbs) replace the runtime-length slice kernel on the ladder path only; the generic kernel remains the differential reference and the fallback. The CIOS schedule and its T_i < 2m accumulator bound are unchanged. All 8,190 per-width differential pairs and 4,603 fallback pairs match the generic kernel; the 161-line ABI transcript is identical to the authority. Paired against the previous (PFP-6) build, cand/prev is 0.9782 (modexp2048), 0.9996 (modexp8192), 0.8646 (rsa2048), 0.9776 (dh-ffdhe2048) and 0.9839 (ecdsa256): the 16-limb path wins clearly, 32 and 48 limbs win modestly, 4 limbs is diluted by elliptic-curve work, and 128 limbs is unchanged.",
       "differential_courts": {
@@ -1352,19 +1352,116 @@
         "none_open_because": null,
         "open": [
           {
-            "id": "MA1-DIRTY-CANDIDATE",
             "description": "The candidate is an uncommitted worktree state (staging ff87f848 + the fixed-width change); two clean builds reproduce DSO 88c0c7e0 byte for byte, but it is not reproducible from a commit.",
-            "discharged": false
+            "discharged": false,
+            "id": "MA1-DIRTY-CANDIDATE"
           },
           {
-            "id": "MA1-AUDIT-SCOPE",
             "description": "The branch audit is an enumeration and local dataflow review of one artefact, not a secret-independence proof. Dynamic ctgrind covers the width-4 path; the other seven widths rest on the structural audit and are not independently tainted.",
-            "discharged": false
+            "discharged": false,
+            "id": "MA1-AUDIT-SCOPE"
           },
           {
-            "id": "MA1-SAFE-COMPATIBLE",
             "description": "This arm is a performance candidate, not SAFE_COMPATIBLE; no safety or compatibility conclusion is asserted beyond the same-digest transcript.",
-            "discharged": false
+            "discharged": false,
+            "id": "MA1-SAFE-COMPATIBLE"
+          }
+        ]
+      }
+    },
+    {
+      "arm_id": "PFP-8",
+      "assurance": {
+        "safe_compatible": false,
+        "semantic_assurance": false
+      },
+      "candidate": {
+        "artefact": {
+          "label": "No candidate change: PFP-8 is a measured refusal. The frozen source is staging b2cca665bea652c2c821205d516b28f3277f4ed1 (clean build-relevant tree); the artefact is the M-A1 DSO, and two fresh builds reproduce it byte for byte.",
+          "sha256": "88c0c7e04d52a1bf84d665fdd691bddf2bbe700e35505d95bf145bfdc3774d87"
+        },
+        "build_profile": "release, x86_64-unknown-linux-gnu, rustc 1.98.1 (48a229cea); cargo build --release --lib --offline, CARGO_BUILD_JOBS=4; two fresh CARGO_TARGET_DIR builds agree on DSO 88c0c7e04d52a1bf84d665fdd691bddf2bbe700e35505d95bf145bfdc3774d87 and archive 2ec133ca3fc74f4ca0c0b93a68a0d769679f8b63e9ddac3ca8383c7feb9dff93",
+        "source_commit": "b2cca665bea652c2c821205d516b28f3277f4ed1"
+      },
+      "constant_time_audit": {
+        "branch_audit": {
+          "path": "evidence/performance-frontier/campaigns/PFP-8/AUDIT.md",
+          "present": true,
+          "sha256": "d91a3e8a5f7615945e966be1e8ac30ba558f69ceffb7354de9b8f218d260669d"
+        },
+        "candidate_sha256": "88c0c7e04d52a1bf84d665fdd691bddf2bbe700e35505d95bf145bfdc3774d87",
+        "ctgrind": {
+          "contexts": 0,
+          "errors": 0,
+          "kind": "SOURCE_BOUND_EXPONENT_TAINT",
+          "note": "bn::arith::tests::ctgrind_secret_exponent_window with the exponent limb bytes tainted: 0 errors / 0 contexts, origins none; negative control 4 errors / 1 context. Debug test binary, CARGO_PROFILE_TEST_DEBUG=0; source-bound, not DSO-bound."
+        },
+        "harness_sha256": "9029c00d04f391596541fc537b8269def6aa1b45c2bddffd6738bc7f479ba7af",
+        "kind": "CTGRIND_PLUS_BRANCH_AUDIT",
+        "reference": {
+          "path": "evidence/performance-frontier/campaigns/PFP-8/AUDIT.md",
+          "present": true,
+          "sha256": "d91a3e8a5f7615945e966be1e8ac30ba558f69ceffb7354de9b8f218d260669d"
+        },
+        "result": "mont_mul_ladder_into (CIOS, all widths inlined) 40 jcc public, 64 setcc class-b carry/borrow consumed arithmetically, 0 cmovcc; run_mont_ladder (window loop + masked scan) 97 jcc public, 15 setcc (14 public, 1 bt secret-bit consumed as data), 2 public cmovcc; 0 secret-derived control transfers. A review aid, not a constant-time proof."
+      },
+      "description": "DH prepared-group (generator-table) optimisation for RFC 7919 and RFC 3526 groups: MEASURED and REFUSED. The per-call generator table build is 1.19% of the exponentiation (30/2,491 calls; 635,580/53,334,930 Ir at DSO 88c0c7e0). For w=5/6/7/8 the precompute share is 1.18/2.42/4.77/8.89%, but the masked scan grows with the table: the best prepared window (w=6) is 2.21% faster than the admitted w=5 baseline and w=8 is 2.02% slower. The shared secret's base is the peer's public value, so no generator table can be reused there (0%); the exchange bound is ~0.6%. All under 10%, so no source changed. A positional comb would help key generation only and needs a 0.7-89.5 MiB per-group table and a separate public-width decision; recorded, not implemented. Generator-2 doubling not implemented: the per-call multiplications are by table entries, not by g.",
+      "differential_courts": {
+        "candidate_sha256": "88c0c7e04d52a1bf84d665fdd691bddf2bbe700e35505d95bf145bfdc3774d87",
+        "reference": {
+          "path": "evidence/performance-frontier/campaigns/PFP-8/raw/differential.json",
+          "present": true,
+          "sha256": "4ea6b291d73785642c2bddab8c40093686b933c8e630d188ded6f0ce3d19dea0"
+        },
+        "result": "42/42 prepared-path comparisons agree across FFDHE-2048, FFDHE-3072 and MODP-2048 (6 shared-secret authority comparisons, 6 named-vs-explicit, 6 keygen g^priv cross-checks, 3 keygen shapes, 21 malformed-peer return codes). STOP PFP8-KEYGEN-PRESET-PRIV: 3/3 preset-private keygen cases diverge (candidate rc=1 with no public key; authority rc=0 and computes it); pre-existing and not repaired in this refusal batch."
+      },
+      "measurement": {
+        "candidate_sha256": "88c0c7e04d52a1bf84d665fdd691bddf2bbe700e35505d95bf145bfdc3774d87",
+        "classification": "SCOPED_OBSERVATION",
+        "identity": {
+          "instrument": "one process per arm per workload per repetition; arm order alternated; taskset -c 1; 15 repetitions; 10 calls per process; median of paired per-repetition ratios; 95% percentile bootstrap, 20,000 resamples, seed 0x50465038",
+          "population": "67409a07c887e61b7e5fadf2f2ef726ab3ca99973dd39d47234b149c3b30ae66",
+          "source": "staging b2cca665bea652c2c821205d516b28f3277f4ed1 (clean build-relevant tree); cand 88c0c7e0, prev 6d002db2 (the PFP-6 artefact), authority 611e511d",
+          "target": "x86_64 i9-13900K, taskset -c 1, court openssl-rs-court-tools:1, rustc 1.98.1 release",
+          "tool": "courts/performance-frontier/pfp8/bench_pfp8.c + run_timing.sh + analyse_timing.py"
+        },
+        "population": {
+          "digest": "67409a07c887e61b7e5fadf2f2ef726ab3ca99973dd39d47234b149c3b30ae66",
+          "frozen_before_execution": true
+        },
+        "record": {
+          "path": "evidence/performance-frontier/campaigns/PFP-8/timing/results.json",
+          "present": true,
+          "sha256": "b39ba7c0b8d52fdf09ceacd35432ddd2ac8b37a3b440fa79f1077b5e0f22b6bf"
+        }
+      },
+      "queue_item": "PFP-8",
+      "reuse": null,
+      "shortcuts": [],
+      "status": "EXPERIMENT",
+      "timing_obligations": {
+        "attempted_discharge": [],
+        "none_open_because": null,
+        "open": [
+          {
+            "description": "The generator table build is 1.19% of the exponentiation; the best prepared window is 2.21% faster and the shared secret is 0% because its base is peer-supplied. The optimisation is refused by the 10% bound, with the w=5..8 arithmetic recorded in BOUND.md.",
+            "discharged": false,
+            "id": "PFP8-REFUSED-TABLE-BUILD"
+          },
+          {
+            "description": "STOP (pre-existing): DH_generate_key on an object with a caller-supplied priv_key returns 0 and computes no public key, where the authority computes g^priv. src/dh/key.rs places ossl_dh_generate_public_key inside the 'generate block and break 'generate skips it when generate_new_key == 0; the authority's call is outside if (generate_new_key) (dh_key.c:265-387). Not repaired in this refusal batch.",
+            "discharged": false,
+            "id": "PFP8-KEYGEN-PRESET-PRIV"
+          },
+          {
+            "description": "The ~14x real-key-length ratios (keygen 14.82x, shared secret 14.04x) are the fixed-width ladder running 64 * md.len() = 2048 iterations for a 225-bit exponent, where the authority runs p->top * 64 = 256 (bn_exp.c:637). Using the public dh->length bound is a separate constant-time policy change, not a table; recorded, not implemented.",
+            "discharged": false,
+            "id": "PFP8-WIDTH-POLICY"
+          },
+          {
+            "description": "This arm is a performance refusal, not SAFE_COMPATIBLE; no safety or compatibility conclusion is asserted beyond the same-digest differential, ctgrind and audit.",
+            "discharged": false,
+            "id": "PFP8-SAFE-COMPATIBLE"
           }
         ]
       }
@@ -1745,6 +1842,141 @@
         "path": "evidence/performance-frontier/campaigns/M-A1/correctness/clippy.log",
         "present": true,
         "sha256": "b7fdf6070e0696b9300b0bc237f857b675ee6e18d808269b040e7289746c7598"
+      },
+      {
+        "path": "evidence/performance-frontier/campaigns/PFP-8/BOUND.md",
+        "present": true,
+        "sha256": "2fb4892506c675b9a87c77b5f90a354433b8f839cc5f37f5eebe7d5fed9bc8d3"
+      },
+      {
+        "path": "evidence/performance-frontier/campaigns/PFP-8/PROFILE.md",
+        "present": true,
+        "sha256": "2b2a366d40ce9398f991e1e22297707c1a665ae6dd1ac1a8b0b010cf20024bbc"
+      },
+      {
+        "path": "evidence/performance-frontier/campaigns/PFP-8/DIFFERENTIAL.md",
+        "present": true,
+        "sha256": "6781d7fe554dd7c59218121856945f022e14425e2d1e83c56de7b639dbea0917"
+      },
+      {
+        "path": "evidence/performance-frontier/campaigns/PFP-8/REFUSAL.md",
+        "present": true,
+        "sha256": "a3f926a97221809311f93a8aa52e1dd5f8bd648d7bfa715d4b4e9dc697fed3bf"
+      },
+      {
+        "path": "evidence/performance-frontier/campaigns/PFP-8/TAINT.md",
+        "present": true,
+        "sha256": "314076158f49c5ea120635acfc8164d8a91f7e0d6d384cc0c0c7b36a3c4741ff"
+      },
+      {
+        "path": "evidence/performance-frontier/campaigns/PFP-8/AUDIT.md",
+        "present": true,
+        "sha256": "d91a3e8a5f7615945e966be1e8ac30ba558f69ceffb7354de9b8f218d260669d"
+      },
+      {
+        "path": "evidence/performance-frontier/campaigns/PFP-8/TIMING.md",
+        "present": true,
+        "sha256": "e9501d1156c3ca723aa6369c049cfad49162e5b4665f07b632a1b1d00da1174d"
+      },
+      {
+        "path": "evidence/performance-frontier/campaigns/PFP-8/RECEIPT.md",
+        "present": true,
+        "sha256": "594d74362f81b7d1fb002ba2873cf0e13420ddb7915dc028db2d230f985e9091"
+      },
+      {
+        "path": "evidence/performance-frontier/campaigns/PFP-8/build/source.env",
+        "present": true,
+        "sha256": "34fe2d68d9d824bc191237be80e05df495f7d7d961e600e0ffac703aaa7de576"
+      },
+      {
+        "path": "evidence/performance-frontier/campaigns/PFP-8/build/variants.txt",
+        "present": true,
+        "sha256": "3ac2bdd68c0826698eb85e0051162321cc3206022efe41c93409811a247fabfb"
+      },
+      {
+        "path": "evidence/performance-frontier/campaigns/PFP-8/raw/differential.json",
+        "present": true,
+        "sha256": "4ea6b291d73785642c2bddab8c40093686b933c8e630d188ded6f0ce3d19dea0"
+      },
+      {
+        "path": "evidence/performance-frontier/campaigns/PFP-8/raw/operands.env",
+        "present": true,
+        "sha256": "2627ae49b4ed73a02b4af250016fc876ac353a68d4ab0fb6384d24c0cef11a31"
+      },
+      {
+        "path": "evidence/performance-frontier/campaigns/PFP-8/timing/results.json",
+        "present": true,
+        "sha256": "b39ba7c0b8d52fdf09ceacd35432ddd2ac8b37a3b440fa79f1077b5e0f22b6bf"
+      },
+      {
+        "path": "evidence/performance-frontier/campaigns/PFP-8/timing/population.json",
+        "present": true,
+        "sha256": "67409a07c887e61b7e5fadf2f2ef726ab3ca99973dd39d47234b149c3b30ae66"
+      },
+      {
+        "path": "evidence/performance-frontier/campaigns/PFP-8/timing/raw/run-meta.env",
+        "present": true,
+        "sha256": "7787041297cdadc68470674b7d90090e081465eff59cd83489772d5e375aa355"
+      },
+      {
+        "path": "evidence/performance-frontier/campaigns/PFP-8/ctgrind/summary.txt",
+        "present": true,
+        "sha256": "56ec8681a90f8fa14d2587c088d7d59a5b6b0738ab37d66d64133cf1d80124af"
+      },
+      {
+        "path": "evidence/performance-frontier/campaigns/PFP-8/ctgrind/origins.txt",
+        "present": true,
+        "sha256": "f7da5c8df1d735c035b27aaee5f2160a2cac35da12bf0052f3690d4439dad48f"
+      },
+      {
+        "path": "evidence/performance-frontier/campaigns/PFP-8/ctgrind/meta.txt",
+        "present": true,
+        "sha256": "44a0383221d6b0bda6cd2565e88fd19f817a023cf7653c599c4fb4979b362852"
+      },
+      {
+        "path": "evidence/performance-frontier/campaigns/PFP-8/audit/raw/disasm/carrier-identity.txt",
+        "present": true,
+        "sha256": "2cc99adb3ea92daa7b2f66b7f1bc5f140f172d267b07b1550a0d7677967e6d42"
+      },
+      {
+        "path": "evidence/performance-frontier/campaigns/PFP-8/audit/raw/disasm/kernel-classification.md",
+        "present": true,
+        "sha256": "b1310b1e9db5e39759454f235e9b754d90c32e95486f8b84420ecb44811b7f09"
+      },
+      {
+        "path": "evidence/performance-frontier/campaigns/PFP-8/audit/raw/disasm/ladder-classification.md",
+        "present": true,
+        "sha256": "80056c4ccb390e8b0a6cd1cda192748949325c7626f9d3f3c32d6d5a6bc4dea7"
+      },
+      {
+        "path": "courts/performance-frontier/pfp8/bench_pfp8.c",
+        "present": true,
+        "sha256": "9fae1d25b2cf9e23b6d9187fccf3e949634fb77b65d39edaefc558516b256b47"
+      },
+      {
+        "path": "courts/performance-frontier/pfp8/differential.py",
+        "present": true,
+        "sha256": "6c0c9191af622150f1e2c7fa08034dbac9db70d89d70c5c7c4e62ab04cdc848c"
+      },
+      {
+        "path": "courts/performance-frontier/pfp8/run_timing.sh",
+        "present": true,
+        "sha256": "6f184af77a97d5537e1e407cb56d98c7f0826a3c1811b64269b6619412104017"
+      },
+      {
+        "path": "courts/performance-frontier/pfp8/run_ctgrind.sh",
+        "present": true,
+        "sha256": "a9cf87d04203b1c533f3159e045a053365451c84ee32cb4a5c442c522508df10"
+      },
+      {
+        "path": "courts/performance-frontier/pfp8/run_branch_audit.sh",
+        "present": true,
+        "sha256": "bfe3772ead653b59597b4eae77275a3996dbb9a5afe300cb17966cf28eb52e84"
+      },
+      {
+        "path": "courts/performance-frontier/pfp8/build.sh",
+        "present": true,
+        "sha256": "5fec56f7bc82e7bf456ddb1b06f77afc8e31bda374767aeae26d294a1b5ca3dc"
       }
     ],
     "limits": [
