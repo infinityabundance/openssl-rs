@@ -1377,62 +1377,62 @@
       },
       "candidate": {
         "artefact": {
-          "label": "No candidate change: PFP-8 is a measured refusal. The frozen source is staging b2cca665bea652c2c821205d516b28f3277f4ed1 (clean build-relevant tree); the artefact is the M-A1 DSO, and two fresh builds reproduce it byte for byte.",
-          "sha256": "88c0c7e04d52a1bf84d665fdd691bddf2bbe700e35505d95bf145bfdc3774d87"
+          "label": "PFP8-WIDTH-POLICY implemented on top of staging 20b655ba: the DH method's constant-time ladder runs the group's public declared private-key bound (dh->length, else the named group's RFC 7919 key length, in limbs) instead of the modulus width; the modulus width remains the fallback for groups with no declared bound and for any exponent wider than the bound. Working-tree change to src/bn/arith.rs, src/bn/mont.rs and src/dh/key.rs; two fresh CARGO_TARGET_DIR builds agree byte for byte.",
+          "sha256": "6302e05a14e47b74bd546f03e7509e234a2884511ddec5c3f9a7f4382bd9a25b"
         },
-        "build_profile": "release, x86_64-unknown-linux-gnu, rustc 1.98.1 (48a229cea); cargo build --release --lib --offline, CARGO_BUILD_JOBS=4; two fresh CARGO_TARGET_DIR builds agree on DSO 88c0c7e04d52a1bf84d665fdd691bddf2bbe700e35505d95bf145bfdc3774d87 and archive 2ec133ca3fc74f4ca0c0b93a68a0d769679f8b63e9ddac3ca8383c7feb9dff93",
-        "source_commit": "b2cca665bea652c2c821205d516b28f3277f4ed1"
+        "build_profile": "release, x86_64-unknown-linux-gnu, rustc 1.98.1 (48a229cea); cargo build --release --lib --offline, CARGO_BUILD_JOBS=4; two fresh CARGO_TARGET_DIR builds agree on DSO 6302e05a14e47b74bd546f03e7509e234a2884511ddec5c3f9a7f4382bd9a25b and archive 72c27b70e77e58c99e3d84bf7c0397b44b2d8e44fb1b18c3666934918cef4e6d",
+        "source_commit": "20b655ba902e61d7680e30dfcb30feb4225397cc"
       },
       "constant_time_audit": {
         "branch_audit": {
-          "path": "evidence/performance-frontier/campaigns/PFP-8/AUDIT.md",
+          "path": "evidence/performance-frontier/campaigns/PFP-8/WIDTH-POLICY.md",
           "present": true,
-          "sha256": "d91a3e8a5f7615945e966be1e8ac30ba558f69ceffb7354de9b8f218d260669d"
+          "sha256": "dd02d4c181475da33160886440545fa1ab224363546c3fedbcbcf8c65e52dcc9"
         },
-        "candidate_sha256": "88c0c7e04d52a1bf84d665fdd691bddf2bbe700e35505d95bf145bfdc3774d87",
+        "candidate_sha256": "6302e05a14e47b74bd546f03e7509e234a2884511ddec5c3f9a7f4382bd9a25b",
         "ctgrind": {
           "contexts": 0,
           "errors": 0,
           "kind": "SOURCE_BOUND_EXPONENT_TAINT",
-          "note": "bn::arith::tests::ctgrind_secret_exponent_window with the exponent limb bytes tainted: 0 errors / 0 contexts, origins none; negative control 4 errors / 1 context. Debug test binary, CARGO_PROFILE_TEST_DEBUG=0; source-bound, not DSO-bound."
+          "note": "bn::arith::tests::ctgrind_secret_exponent_policy_width (the shortened 4-limb policy schedule) with the exponent limb bytes tainted: 0 errors / 0 contexts, origins none; its negative control CTGRIND_POLICY_CONTROL=1 reports 4 errors / 1 context. The unchanged modulus-width case bn::arith::tests::ctgrind_secret_exponent_window is also 0/0. Debug test binary, CARGO_PROFILE_TEST_DEBUG=0; source-bound, not DSO-bound."
         },
-        "harness_sha256": "9029c00d04f391596541fc537b8269def6aa1b45c2bddffd6738bc7f479ba7af",
+        "harness_sha256": "f784656412bfd9c5941374a0a7e41b266fa9ab2c131b059c197bf3684012662a",
         "kind": "CTGRIND_PLUS_BRANCH_AUDIT",
         "reference": {
-          "path": "evidence/performance-frontier/campaigns/PFP-8/AUDIT.md",
+          "path": "evidence/performance-frontier/campaigns/PFP-8/WIDTH-POLICY.md",
           "present": true,
-          "sha256": "d91a3e8a5f7615945e966be1e8ac30ba558f69ceffb7354de9b8f218d260669d"
+          "sha256": "dd02d4c181475da33160886440545fa1ab224363546c3fedbcbcf8c65e52dcc9"
         },
-        "result": "mont_mul_ladder_into (CIOS, all widths inlined) 40 jcc public, 64 setcc class-b carry/borrow consumed arithmetically, 0 cmovcc; run_mont_ladder (window loop + masked scan) 97 jcc public, 15 setcc (14 public, 1 bt secret-bit consumed as data), 2 public cmovcc; 0 secret-derived control transfers. A review aid, not a constant-time proof."
+        "result": "mont_mul_ladder_into 40 jcc (39 cmp/test, 1 reviewed geometry), 64 setcc class-b carry/borrow consumed arithmetically, 0 cmov; run_mont_ladder 100 jcc (84 cmp/test, 16 reviewed geometry), 18 setcc (17 cmp/test, 1 bt secret-bit consumed as data), 2 public cmov; bn_mod_exp_mont_impl 61 jcc, 4 setcc, 3 cmov, all public; dh_bn_mod_exp 3 jcc public; 0 secret-derived control transfers. A review aid, not a constant-time proof."
       },
-      "description": "DH prepared-group (generator-table) optimisation for RFC 7919 and RFC 3526 groups: MEASURED and REFUSED. The per-call generator table build is 1.19% of the exponentiation (30/2,491 calls; 635,580/53,334,930 Ir at DSO 88c0c7e0). For w=5/6/7/8 the precompute share is 1.18/2.42/4.77/8.89%, but the masked scan grows with the table: the best prepared window (w=6) is 2.21% faster than the admitted w=5 baseline and w=8 is 2.02% slower. The shared secret's base is the peer's public value, so no generator table can be reused there (0%); the exchange bound is ~0.6%. All under 10%, so no source changed. A positional comb would help key generation only and needs a 0.7-89.5 MiB per-group table and a separate public-width decision; recorded, not implemented. Generator-2 doubling not implemented: the per-call multiplications are by table entries, not by g.",
+      "description": "Two parts, one arm. (1) The prepared-group (generator-table) optimisation is MEASURED and REFUSED: the per-call table build is 1.19% of the exponentiation (30/2,491 calls; 635,580/53,334,930 Ir at DSO 88c0c7e0) and the best prepared window is 2.21% faster, all under the 10% bound, so no table was implemented. (2) The width policy is IMPLEMENTED at DSO 6302e05a14e47b74bd546f03e7509e234a2884511ddec5c3f9a7f4382bd9a25b: the DH ladder runs the group's public declared private-key bound (dh->length, else the RFC 7919 key length) rather than the modulus width, exactly the authority's exponent width, with the modulus width kept as the fallback. Key generation moves from 14.6981x to 2.6323x of the authority and the real-policy shared secret from 13.9578x to 1.9651x, while the 2039-bit-exponent shared secret is unchanged (cand/prev 1.0163 [0.9982, 1.0268]) because that exponent is outside the declared bound. 103/103 differential comparisons agree over all 11 prepared groups. The arm remains an EXPERIMENT: PFP8-REFUSED-TABLE-BUILD, PFP8-KEYGEN-PRESET-PRIV and PFP8-SAFE-COMPATIBLE stay open.",
       "differential_courts": {
-        "candidate_sha256": "88c0c7e04d52a1bf84d665fdd691bddf2bbe700e35505d95bf145bfdc3774d87",
+        "candidate_sha256": "6302e05a14e47b74bd546f03e7509e234a2884511ddec5c3f9a7f4382bd9a25b",
         "reference": {
-          "path": "evidence/performance-frontier/campaigns/PFP-8/raw/differential.json",
+          "path": "evidence/performance-frontier/campaigns/PFP-8/width-policy/raw/differential.json",
           "present": true,
-          "sha256": "4ea6b291d73785642c2bddab8c40093686b933c8e630d188ded6f0ce3d19dea0"
+          "sha256": "9c90fe02bc8c458d59017903f8979efc0b2eea456f3062492c18426cd1ee50b2"
         },
-        "result": "42/42 prepared-path comparisons agree across FFDHE-2048, FFDHE-3072 and MODP-2048 (6 shared-secret authority comparisons, 6 named-vs-explicit, 6 keygen g^priv cross-checks, 3 keygen shapes, 21 malformed-peer return codes). STOP PFP8-KEYGEN-PRESET-PRIV: 3/3 preset-private keygen cases diverge (candidate rc=1 with no public key; authority rc=0 and computes it); pre-existing and not repaired in this refusal batch."
+        "result": "103/103 comparisons agree across all 11 prepared groups (5 FFDHE, 5 MODP, MODP-1536): 11 shared-secret comparisons at a 222-bit exponent, 11 g^priv comparisons for the same exponent, 10 shared-secret comparisons at a 2039-bit exponent (the fallback), 44 key-generation comparisons (22 generated-pair shapes and 22 pairs recomputed by both libraries as g^priv), 6 named-vs-explicit constructions and the 21 malformed-peer return codes. 8 real key generations per group per library reach exactly the declared key length and limb count (raw/keylengths.json, 22/22). KNOWN STOP, not repaired: PFP8-KEYGEN-PRESET-PRIV (3/3 caller-supplied-private-key keygens diverge)."
       },
       "measurement": {
-        "candidate_sha256": "88c0c7e04d52a1bf84d665fdd691bddf2bbe700e35505d95bf145bfdc3774d87",
+        "candidate_sha256": "6302e05a14e47b74bd546f03e7509e234a2884511ddec5c3f9a7f4382bd9a25b",
         "classification": "SCOPED_OBSERVATION",
         "identity": {
-          "instrument": "one process per arm per workload per repetition; arm order alternated; taskset -c 1; 15 repetitions; 10 calls per process; median of paired per-repetition ratios; 95% percentile bootstrap, 20,000 resamples, seed 0x50465038",
-          "population": "67409a07c887e61b7e5fadf2f2ef726ab3ca99973dd39d47234b149c3b30ae66",
-          "source": "staging b2cca665bea652c2c821205d516b28f3277f4ed1 (clean build-relevant tree); cand 88c0c7e0, prev 6d002db2 (the PFP-6 artefact), authority 611e511d",
+          "instrument": "one process per arm per workload per repetition; arm order alternated; taskset -c 1; 15 repetitions; 10 calls per process; median of paired per-repetition ratios; 95% percentile bootstrap, 20,000 resamples, seed 0x50465038; workloads: keygen ffdhe2048, keygen ffdhe3072, shared secret 222-bit exponent (ffdhe2048), shared secret 2039-bit exponent (fallback), shared secret 275-bit exponent (ffdhe3072)",
+          "population": "width-policy/raw/operands-wp.env (PRIV225/PEER225 from the PFP-8 population, PRIV2048/PEER2048 from it, PRIV275 = PRIV225 << 53 | 1, PEER275 = 2)",
+          "source": "staging 20b655ba902e61d7680e30dfcb30feb4225397cc + working-tree src change; cand 6302e05a, prev 88c0c7e0 (the PFP-8/M-A1 artefact), authority 611e511d",
           "target": "x86_64 i9-13900K, taskset -c 1, court openssl-rs-court-tools:1, rustc 1.98.1 release",
-          "tool": "courts/performance-frontier/pfp8/bench_pfp8.c + run_timing.sh + analyse_timing.py"
+          "tool": "courts/performance-frontier/pfp8/bench_pfp8.c + run_timing_wp.sh + analyse_timing_wp.py"
         },
         "population": {
-          "digest": "67409a07c887e61b7e5fadf2f2ef726ab3ca99973dd39d47234b149c3b30ae66",
+          "digest": "99e63c66a386c813405eb0a349131ae6effa051b570d36eb6139d95aae5690bf",
           "frozen_before_execution": true
         },
         "record": {
-          "path": "evidence/performance-frontier/campaigns/PFP-8/timing/results.json",
+          "path": "evidence/performance-frontier/campaigns/PFP-8/width-policy/timing/results.json",
           "present": true,
-          "sha256": "b39ba7c0b8d52fdf09ceacd35432ddd2ac8b37a3b440fa79f1077b5e0f22b6bf"
+          "sha256": "086a8d4946a7b3d6ecae5ba3923017531c59020ce612cd2dc3efbf026b8e7736"
         }
       },
       "queue_item": "PFP-8",
@@ -1449,12 +1449,12 @@
             "id": "PFP8-REFUSED-TABLE-BUILD"
           },
           {
-            "description": "STOP (pre-existing): DH_generate_key on an object with a caller-supplied priv_key returns 0 and computes no public key, where the authority computes g^priv. src/dh/key.rs places ossl_dh_generate_public_key inside the 'generate block and break 'generate skips it when generate_new_key == 0; the authority's call is outside if (generate_new_key) (dh_key.c:265-387). Not repaired in this refusal batch.",
+            "description": "STOP (pre-existing): DH_generate_key on an object with a caller-supplied priv_key returns 0 and computes no public key, where the authority computes g^priv. src/dh/key.rs places ossl_dh_generate_public_key inside the 'generate block and break 'generate skips it when generate_new_key == 0; the authority's call is outside if (generate_new_key) (dh_key.c:265-387). Not repaired by the refusal batch or the width-policy batch: still a separate divergence.",
             "discharged": false,
             "id": "PFP8-KEYGEN-PRESET-PRIV"
           },
           {
-            "description": "The ~14x real-key-length ratios (keygen 14.82x, shared secret 14.04x) are the fixed-width ladder running 64 * md.len() = 2048 iterations for a 225-bit exponent, where the authority runs p->top * 64 = 256 (bn_exp.c:637). Using the public dh->length bound is a separate constant-time policy change, not a table; recorded, not implemented.",
+            "description": "IMPLEMENTED AND EVIDENCED at DSO 6302e05a14e47b74bd546f03e7509e234a2884511ddec5c3f9a7f4382bd9a25b (2026-11-27); the item is closed in evidence/performance-frontier/campaigns/PFP-8/WIDTH-POLICY.md and this register does not encode discharge for a performance arm (validator rule PA_TIMING_OBLIGATION_DISCHARGED_BY_PERFORMANCE), so the row remains listed. The ladder now runs 64*ceil(N/64) iterations with N = dh->length, else the named group's RFC 7919 key length (public configuration), matching the authority's exponent-width loop (bn_exp.c:637) instead of the modulus width; groups without a declared bound, and any exponent wider than the bound, keep the previous modulus-width ladder. 103/103 differential comparisons agree across all 11 prepared groups (including 44 key-generation rows and the 21 malformed-peer codes); 8 real keygens per group per library reach exactly the declared length. Timing at one digest: keygen 14.6981x -> 2.6323x, shared secret (222-bit exponent) 13.9578x -> 1.9651x, shared secret (2039-bit exponent) unchanged at 2.0130x with cand/prev 1.0163 [0.9982, 1.0268]; cand/prev 0.1805 keygen, 0.1390 shared secret, 0.1108 at ffdhe3072. ctgrind 0 errors / 0 contexts on the shortened schedule (control 4/1) and 0 secret-derived transfers in the four carriers.",
             "discharged": false,
             "id": "PFP8-WIDTH-POLICY"
           },

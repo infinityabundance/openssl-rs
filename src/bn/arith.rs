@@ -2433,6 +2433,75 @@ fn mod_exp_core_consttime_staged(
     run_mont_ladder(ad, exponent, md, width, n0, &rr, one_mont, window)
 }
 
+/// Constant-pattern exponentiation at a group's **public policy width**.
+///
+/// `policy_limbs` is the declared maximum private-key length of the group, in
+/// 64-bit limbs — `ceil(N / 64)` where `N` is the DH object's `length` (the
+/// caller's `DH_set_length` bound) or the named group's RFC 7919 key length.
+/// Both are public configuration of the object, never a property of the
+/// exponent, so the iteration count `64 * policy_limbs` is a constant for a
+/// given group and configuration.
+///
+/// Two admissions bound the change:
+///
+/// * The width never exceeds the modulus' limb count. A conforming private
+///   exponent is below `q < p`, so it cannot need more; a policy larger than
+///   the modulus (a decoded or caller-set value beyond `p`) therefore runs the
+///   modulus width, exactly as before, instead of an unbounded ladder.
+/// * An exponent **wider than the policy** — only a caller-supplied key outside
+///   the group's own declared bound — runs
+///   [`mod_exp_core_consttime_from_parts_prepared`] at the modulus width: the
+///   previous behaviour, unchanged, including its refusal of an exponent wider
+///   than the modulus. The result is never truncated. This is the same
+///   admission read of `pd.len()` that [`ladder_geometry`] documents, and the
+///   crate's own key generation cannot reach it.
+///
+/// Inside the policy the exponent is staged into a buffer of `policy_limbs`
+/// limbs — allocation and write count fixed by public geometry — and the
+/// ladder's schedule depends only on that width, never on the exponent's value
+/// or its normalised length.
+pub(crate) fn mod_exp_core_consttime_policy(
+    ad: &[Limb],
+    pd: &[Limb],
+    md: &[Limb],
+    policy_limbs: usize,
+    prepared: Option<&PreparedMontParams<'_>>,
+) -> Option<Vec<Limb>> {
+    if policy_limbs == 0 {
+        // No declared bound: exactly the modulus-width entry point.
+        return mod_exp_core_consttime_from_parts_prepared(ad, pd, md, md.len(), prepared);
+    }
+    // The same degenerate-modulus answers as `ladder_geometry`, whose comments
+    // give the reasons: `x mod 1` is zero, and an even modulus has no
+    // Montgomery form.
+    if md.is_empty() {
+        return None;
+    }
+    if md.len() == 1 && md[0] == 1 {
+        return Some(Vec::new());
+    }
+    if limbs::is_even(md) {
+        return mod_exp_core(ad, pd, md);
+    }
+    // The policy is public; the clamp to the modulus' limb count is public too.
+    let policy = policy_limbs.min(md.len());
+    let width = if pd.len() <= policy {
+        policy
+    } else {
+        // Outside the declared bound: the previous modulus-width ladder, which
+        // is also the previous answer for an exponent wider than the modulus.
+        md.len()
+    };
+    if pd.len() > width {
+        return None;
+    }
+    let exponent = fixed_width_exponent(pd, width)?;
+    match prepared {
+        Some(params) => mod_exp_core_consttime_prepared(ad, &exponent, md, width, params),
+        None => mod_exp_core_consttime_staged(ad, &exponent, md, width, LADDER_WINDOW_BITS),
+    }
+}
+
 /// The ladder reusing a prepared domain's `R`, `R^2` and `n0`.
 ///
 /// The caller has checked that the prepared parameters belong to `md`; the only
@@ -3678,6 +3747,63 @@ mod tests {
         })
     }
 
+    /// PFP8-WIDTH-POLICY: the policy-width ladder must answer exactly what the
+    /// modulus-width ladder answers, for every policy from zero limbs to one
+    /// beyond the modulus. Policies narrower than the exponent exercise the
+    /// documented fallback; a policy larger than the modulus is clamped.
+    #[test]
+    fn policy_width_matches_the_modulus_width_ladder() {
+        let mut cases = 0usize;
+        for m in pfp6_moduli() {
+            if m.len() > 4 || limbs::is_even(&m) {
+                continue;
+            }
+            let bits = m.len() * 64;
+            for e in pfp5_exponents(bits) {
+                for a in pfp6_operands(&m) {
+                    let reference = pfp5_answer(&a, &e, &m, Some(5));
+                    for policy in 0..=m.len() + 1 {
+                        let got =
+                            mod_exp_core_consttime_policy(&a, &e, &m, policy, None).map(|mut v| {
+                                limbs::normalise(&mut v);
+                                v
+                            });
+                        assert_eq!(
+                            got, reference,
+                            "policy {policy} disagrees with the modulus width: \
+                             a={a:?} e={e:?} m={m:?}"
+                        );
+                        cases += 1;
+                    }
+                }
+            }
+        }
+        assert!(cases >= 1000, "the population is not degenerate: {cases}");
+    }
+
+    /// The policy fallback is the previous modulus-width behaviour, including its
+    /// refusal of an exponent wider than the modulus: a policy never truncates.
+    #[test]
+    fn policy_width_never_truncates_and_refuses_wider_than_the_modulus() {
+        let m = pfp5_modulus(256, 0x5eed_1234);
+        let a = pfp6_pad(&[2], m.len());
+        let wide = pfp6_pad(&[1, 2, 3, 4, 5], m.len() + 1);
+        assert_eq!(
+            mod_exp_core_consttime_policy(&a, &wide, &m, 4, None).is_none(),
+            mod_exp_core_consttime_width(&a, &wide, &m, m.len()).is_none(),
+            "an exponent wider than the modulus is refused by both"
+        );
+        // A policy narrower than the exponent falls back to the modulus width and
+        // still answers the reference value.
+        let e = pfp6_pad(&[0xdead_beef, 0xfeed_face, 1, 7], m.len());
+        let reference = pfp5_answer(&a, &e, &m, Some(5));
+        let got = mod_exp_core_consttime_policy(&a, &e, &m, 2, None).map(|mut v| {
+            limbs::normalise(&mut v);
+            v
+        });
+        assert_eq!(got, reference);
+    }
+
     /// PFP-5: the fixed-window ladder must be value-for-value identical to the
     /// bit-at-a-time reference and to the variable-time oracle, for every window
     /// width, over edge and pseudorandom bases and exponents.
@@ -4014,6 +4140,70 @@ mod tests {
         }
 
         let mut got = mod_exp_core_consttime_width_with(&a, &e, &m, m.len(), Some(5));
+        if let Some(v) = got.as_mut() {
+            // Declassify only for the assertion below.
+            // SAFETY: `v` is a live, uniquely borrowed local.
+            unsafe {
+                valgrind_make_mem_defined(v.as_mut_ptr().cast::<u8>(), v.len() * 8);
+            }
+        }
+        assert_eq!(got, expected);
+    }
+
+    /// PFP8-WIDTH-POLICY ctgrind case: the **shortened** schedule. The modulus is
+    /// eight limbs and the policy four, so the ladder runs 256 iterations rather
+    /// than 512. The exponent's limb bytes are marked undefined and its length
+    /// stays defined, so the documented staging bounds test is not part of this
+    /// case. Memcheck must report no conditional jump and no secret-derived
+    /// address: the iteration count and every table index are the public policy,
+    /// and only limb values depend on the exponent.
+    ///
+    /// Gate: `valgrind --tool=memcheck --error-exitcode=99 <test-bin> --exact
+    /// bn::arith::tests::ctgrind_secret_exponent_policy_width --nocapture`.
+    /// `CTGRIND_POLICY_CONTROL=1` branches on a marked exponent limb (negative
+    /// control).
+    #[cfg(target_arch = "x86_64")]
+    #[test]
+    fn ctgrind_secret_exponent_policy_width() {
+        let mut m = vec![
+            0xffff_ffff_ffff_ff61u64,
+            0x0123_4567_89ab_cdef,
+            0xfedc_ba98_7654_3211,
+            0x9e37_79b9_7f4a_7c15,
+            0x1111_2222_3333_4445,
+            0x5555_6666_7777_8889,
+            0x9999_aaaa_bbbb_cccd,
+            0xdddd_eeee_ffff_0001,
+        ];
+        m[0] |= 1;
+        let a = vec![0x0f0f_0f0f_0f0f_0f0f, 0, 0, 0, 0, 0, 0, 0];
+        let e_defined = vec![
+            0x1234_5678_9abc_def1u64,
+            0xfedc_ba98_7654_3210,
+            0x0f0f_0f0f_0f0f_0f0f,
+            0x7fff_ffff_ffff_ffff,
+        ];
+        let expected = mod_exp_core_consttime_policy(&a, &e_defined, &m, 4, None);
+        assert!(expected.is_some());
+
+        let mut e = e_defined.clone();
+        // SAFETY: `e` is a live, uniquely borrowed buffer and the client request
+        // only marks its bytes' definedness.
+        unsafe {
+            valgrind_make_mem_undefined(e.as_mut_ptr().cast::<u8>(), e.len() * 8);
+        }
+        if std::env::var_os("CTGRIND_POLICY_CONTROL").is_some() {
+            // Negative control: memcheck must flag this branch on a marked limb.
+            let mut acc = 0u64;
+            for &limb in &e {
+                if limb & 1 == 1 {
+                    acc = acc.wrapping_add(1);
+                }
+            }
+            core::hint::black_box(acc);
+        }
+
+        let mut got = mod_exp_core_consttime_policy(&a, &e, &m, 4, None);
         if let Some(v) = got.as_mut() {
             // Declassify only for the assertion below.
             // SAFETY: `v` is a live, uniquely borrowed local.

@@ -1,0 +1,555 @@
+{
+  "authority": "/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+  "candidate": "/work/court/tmp/pfp8-wp-build/cand/distribution/libcrypto.so.3",
+  "comparisons": 103,
+  "mismatches": 0,
+  "rows": [
+    {
+      "case": "ffdhe2048/ss/priv225",
+      "detail": "rc_c=0 rc_a=0 len_c=512 len_a=512",
+      "equal": true
+    },
+    {
+      "case": "ffdhe2048/g^priv/priv225",
+      "detail": "rc_c=0 rc_a=0 len_c=512 len_a=512",
+      "equal": true
+    },
+    {
+      "case": "ffdhe2048/ss/priv2048",
+      "detail": "rc_c=0 rc_a=0 len_c=512 len_a=512",
+      "equal": true
+    },
+    {
+      "case": "ffdhe3072/ss/priv225",
+      "detail": "rc_c=0 rc_a=0 len_c=768 len_a=768",
+      "equal": true
+    },
+    {
+      "case": "ffdhe3072/g^priv/priv225",
+      "detail": "rc_c=0 rc_a=0 len_c=768 len_a=768",
+      "equal": true
+    },
+    {
+      "case": "ffdhe3072/ss/priv2048",
+      "detail": "rc_c=0 rc_a=0 len_c=768 len_a=768",
+      "equal": true
+    },
+    {
+      "case": "ffdhe4096/ss/priv225",
+      "detail": "rc_c=0 rc_a=0 len_c=1024 len_a=1024",
+      "equal": true
+    },
+    {
+      "case": "ffdhe4096/g^priv/priv225",
+      "detail": "rc_c=0 rc_a=0 len_c=1024 len_a=1024",
+      "equal": true
+    },
+    {
+      "case": "ffdhe4096/ss/priv2048",
+      "detail": "rc_c=0 rc_a=0 len_c=1024 len_a=1024",
+      "equal": true
+    },
+    {
+      "case": "ffdhe6144/ss/priv225",
+      "detail": "rc_c=0 rc_a=0 len_c=1536 len_a=1536",
+      "equal": true
+    },
+    {
+      "case": "ffdhe6144/g^priv/priv225",
+      "detail": "rc_c=0 rc_a=0 len_c=1536 len_a=1536",
+      "equal": true
+    },
+    {
+      "case": "ffdhe6144/ss/priv2048",
+      "detail": "rc_c=0 rc_a=0 len_c=1536 len_a=1536",
+      "equal": true
+    },
+    {
+      "case": "ffdhe8192/ss/priv225",
+      "detail": "rc_c=0 rc_a=0 len_c=2048 len_a=2048",
+      "equal": true
+    },
+    {
+      "case": "ffdhe8192/g^priv/priv225",
+      "detail": "rc_c=0 rc_a=0 len_c=2048 len_a=2048",
+      "equal": true
+    },
+    {
+      "case": "ffdhe8192/ss/priv2048",
+      "detail": "rc_c=0 rc_a=0 len_c=2048 len_a=2048",
+      "equal": true
+    },
+    {
+      "case": "modp1536/ss/priv225",
+      "detail": "rc_c=0 rc_a=0 len_c=384 len_a=384",
+      "equal": true
+    },
+    {
+      "case": "modp1536/g^priv/priv225",
+      "detail": "rc_c=0 rc_a=0 len_c=384 len_a=384",
+      "equal": true
+    },
+    {
+      "case": "modp2048/ss/priv225",
+      "detail": "rc_c=0 rc_a=0 len_c=512 len_a=512",
+      "equal": true
+    },
+    {
+      "case": "modp2048/g^priv/priv225",
+      "detail": "rc_c=0 rc_a=0 len_c=512 len_a=512",
+      "equal": true
+    },
+    {
+      "case": "modp2048/ss/priv2048",
+      "detail": "rc_c=0 rc_a=0 len_c=512 len_a=512",
+      "equal": true
+    },
+    {
+      "case": "modp3072/ss/priv225",
+      "detail": "rc_c=0 rc_a=0 len_c=768 len_a=768",
+      "equal": true
+    },
+    {
+      "case": "modp3072/g^priv/priv225",
+      "detail": "rc_c=0 rc_a=0 len_c=768 len_a=768",
+      "equal": true
+    },
+    {
+      "case": "modp3072/ss/priv2048",
+      "detail": "rc_c=0 rc_a=0 len_c=768 len_a=768",
+      "equal": true
+    },
+    {
+      "case": "modp4096/ss/priv225",
+      "detail": "rc_c=0 rc_a=0 len_c=1024 len_a=1024",
+      "equal": true
+    },
+    {
+      "case": "modp4096/g^priv/priv225",
+      "detail": "rc_c=0 rc_a=0 len_c=1024 len_a=1024",
+      "equal": true
+    },
+    {
+      "case": "modp4096/ss/priv2048",
+      "detail": "rc_c=0 rc_a=0 len_c=1024 len_a=1024",
+      "equal": true
+    },
+    {
+      "case": "modp6144/ss/priv225",
+      "detail": "rc_c=0 rc_a=0 len_c=1536 len_a=1536",
+      "equal": true
+    },
+    {
+      "case": "modp6144/g^priv/priv225",
+      "detail": "rc_c=0 rc_a=0 len_c=1536 len_a=1536",
+      "equal": true
+    },
+    {
+      "case": "modp6144/ss/priv2048",
+      "detail": "rc_c=0 rc_a=0 len_c=1536 len_a=1536",
+      "equal": true
+    },
+    {
+      "case": "modp8192/ss/priv225",
+      "detail": "rc_c=0 rc_a=0 len_c=2048 len_a=2048",
+      "equal": true
+    },
+    {
+      "case": "modp8192/g^priv/priv225",
+      "detail": "rc_c=0 rc_a=0 len_c=2048 len_a=2048",
+      "equal": true
+    },
+    {
+      "case": "modp8192/ss/priv2048",
+      "detail": "rc_c=0 rc_a=0 len_c=2048 len_a=2048",
+      "equal": true
+    },
+    {
+      "case": "ffdhe2048/keygen/candidate/shape",
+      "detail": "rc=0",
+      "equal": true
+    },
+    {
+      "case": "ffdhe2048/keygen/candidate/g^priv-identical",
+      "detail": "rc_c=0 rc_a=0 len_pub=512",
+      "equal": true
+    },
+    {
+      "case": "ffdhe2048/keygen/authority/shape",
+      "detail": "rc=0",
+      "equal": true
+    },
+    {
+      "case": "ffdhe2048/keygen/authority/g^priv-identical",
+      "detail": "rc_c=0 rc_a=0 len_pub=512",
+      "equal": true
+    },
+    {
+      "case": "ffdhe3072/keygen/candidate/shape",
+      "detail": "rc=0",
+      "equal": true
+    },
+    {
+      "case": "ffdhe3072/keygen/candidate/g^priv-identical",
+      "detail": "rc_c=0 rc_a=0 len_pub=768",
+      "equal": true
+    },
+    {
+      "case": "ffdhe3072/keygen/authority/shape",
+      "detail": "rc=0",
+      "equal": true
+    },
+    {
+      "case": "ffdhe3072/keygen/authority/g^priv-identical",
+      "detail": "rc_c=0 rc_a=0 len_pub=768",
+      "equal": true
+    },
+    {
+      "case": "ffdhe4096/keygen/candidate/shape",
+      "detail": "rc=0",
+      "equal": true
+    },
+    {
+      "case": "ffdhe4096/keygen/candidate/g^priv-identical",
+      "detail": "rc_c=0 rc_a=0 len_pub=1024",
+      "equal": true
+    },
+    {
+      "case": "ffdhe4096/keygen/authority/shape",
+      "detail": "rc=0",
+      "equal": true
+    },
+    {
+      "case": "ffdhe4096/keygen/authority/g^priv-identical",
+      "detail": "rc_c=0 rc_a=0 len_pub=1024",
+      "equal": true
+    },
+    {
+      "case": "ffdhe6144/keygen/candidate/shape",
+      "detail": "rc=0",
+      "equal": true
+    },
+    {
+      "case": "ffdhe6144/keygen/candidate/g^priv-identical",
+      "detail": "rc_c=0 rc_a=0 len_pub=1536",
+      "equal": true
+    },
+    {
+      "case": "ffdhe6144/keygen/authority/shape",
+      "detail": "rc=0",
+      "equal": true
+    },
+    {
+      "case": "ffdhe6144/keygen/authority/g^priv-identical",
+      "detail": "rc_c=0 rc_a=0 len_pub=1536",
+      "equal": true
+    },
+    {
+      "case": "ffdhe8192/keygen/candidate/shape",
+      "detail": "rc=0",
+      "equal": true
+    },
+    {
+      "case": "ffdhe8192/keygen/candidate/g^priv-identical",
+      "detail": "rc_c=0 rc_a=0 len_pub=2048",
+      "equal": true
+    },
+    {
+      "case": "ffdhe8192/keygen/authority/shape",
+      "detail": "rc=0",
+      "equal": true
+    },
+    {
+      "case": "ffdhe8192/keygen/authority/g^priv-identical",
+      "detail": "rc_c=0 rc_a=0 len_pub=2048",
+      "equal": true
+    },
+    {
+      "case": "modp1536/keygen/candidate/shape",
+      "detail": "rc=0",
+      "equal": true
+    },
+    {
+      "case": "modp1536/keygen/candidate/g^priv-identical",
+      "detail": "rc_c=0 rc_a=0 len_pub=384",
+      "equal": true
+    },
+    {
+      "case": "modp1536/keygen/authority/shape",
+      "detail": "rc=0",
+      "equal": true
+    },
+    {
+      "case": "modp1536/keygen/authority/g^priv-identical",
+      "detail": "rc_c=0 rc_a=0 len_pub=384",
+      "equal": true
+    },
+    {
+      "case": "modp2048/keygen/candidate/shape",
+      "detail": "rc=0",
+      "equal": true
+    },
+    {
+      "case": "modp2048/keygen/candidate/g^priv-identical",
+      "detail": "rc_c=0 rc_a=0 len_pub=512",
+      "equal": true
+    },
+    {
+      "case": "modp2048/keygen/authority/shape",
+      "detail": "rc=0",
+      "equal": true
+    },
+    {
+      "case": "modp2048/keygen/authority/g^priv-identical",
+      "detail": "rc_c=0 rc_a=0 len_pub=512",
+      "equal": true
+    },
+    {
+      "case": "modp3072/keygen/candidate/shape",
+      "detail": "rc=0",
+      "equal": true
+    },
+    {
+      "case": "modp3072/keygen/candidate/g^priv-identical",
+      "detail": "rc_c=0 rc_a=0 len_pub=768",
+      "equal": true
+    },
+    {
+      "case": "modp3072/keygen/authority/shape",
+      "detail": "rc=0",
+      "equal": true
+    },
+    {
+      "case": "modp3072/keygen/authority/g^priv-identical",
+      "detail": "rc_c=0 rc_a=0 len_pub=768",
+      "equal": true
+    },
+    {
+      "case": "modp4096/keygen/candidate/shape",
+      "detail": "rc=0",
+      "equal": true
+    },
+    {
+      "case": "modp4096/keygen/candidate/g^priv-identical",
+      "detail": "rc_c=0 rc_a=0 len_pub=1024",
+      "equal": true
+    },
+    {
+      "case": "modp4096/keygen/authority/shape",
+      "detail": "rc=0",
+      "equal": true
+    },
+    {
+      "case": "modp4096/keygen/authority/g^priv-identical",
+      "detail": "rc_c=0 rc_a=0 len_pub=1024",
+      "equal": true
+    },
+    {
+      "case": "modp6144/keygen/candidate/shape",
+      "detail": "rc=0",
+      "equal": true
+    },
+    {
+      "case": "modp6144/keygen/candidate/g^priv-identical",
+      "detail": "rc_c=0 rc_a=0 len_pub=1536",
+      "equal": true
+    },
+    {
+      "case": "modp6144/keygen/authority/shape",
+      "detail": "rc=0",
+      "equal": true
+    },
+    {
+      "case": "modp6144/keygen/authority/g^priv-identical",
+      "detail": "rc_c=0 rc_a=0 len_pub=1536",
+      "equal": true
+    },
+    {
+      "case": "modp8192/keygen/candidate/shape",
+      "detail": "rc=0",
+      "equal": true
+    },
+    {
+      "case": "modp8192/keygen/candidate/g^priv-identical",
+      "detail": "rc_c=0 rc_a=0 len_pub=2048",
+      "equal": true
+    },
+    {
+      "case": "modp8192/keygen/authority/shape",
+      "detail": "rc=0",
+      "equal": true
+    },
+    {
+      "case": "modp8192/keygen/authority/g^priv-identical",
+      "detail": "rc_c=0 rc_a=0 len_pub=2048",
+      "equal": true
+    },
+    {
+      "case": "ffdhe2048/named-vs-explicit/priv225",
+      "detail": "rc_n=0 rc_e=0 len_n=512 len_e=512",
+      "equal": true
+    },
+    {
+      "case": "ffdhe2048/named-vs-explicit/priv2048",
+      "detail": "rc_n=0 rc_e=0 len_n=512 len_e=512",
+      "equal": true
+    },
+    {
+      "case": "ffdhe3072/named-vs-explicit/priv225",
+      "detail": "rc_n=0 rc_e=0 len_n=768 len_e=768",
+      "equal": true
+    },
+    {
+      "case": "ffdhe3072/named-vs-explicit/priv2048",
+      "detail": "rc_n=0 rc_e=0 len_n=768 len_e=768",
+      "equal": true
+    },
+    {
+      "case": "modp2048/named-vs-explicit/priv225",
+      "detail": "rc_n=0 rc_e=0 len_n=512 len_e=512",
+      "equal": true
+    },
+    {
+      "case": "modp2048/named-vs-explicit/priv2048",
+      "detail": "rc_n=0 rc_e=0 len_n=512 len_e=512",
+      "equal": true
+    },
+    {
+      "case": "ffdhe2048/refusal/zero",
+      "detail": "cand_rc=-1 auth_rc=-1 exit_c=0 exit_a=0",
+      "equal": true
+    },
+    {
+      "case": "ffdhe2048/refusal/one",
+      "detail": "cand_rc=-1 auth_rc=-1 exit_c=0 exit_a=0",
+      "equal": true
+    },
+    {
+      "case": "ffdhe2048/refusal/p-2",
+      "detail": "cand_rc=256 auth_rc=256 exit_c=0 exit_a=0",
+      "equal": true
+    },
+    {
+      "case": "ffdhe2048/refusal/p-1",
+      "detail": "cand_rc=-1 auth_rc=-1 exit_c=0 exit_a=0",
+      "equal": true
+    },
+    {
+      "case": "ffdhe2048/refusal/p",
+      "detail": "cand_rc=-1 auth_rc=-1 exit_c=0 exit_a=0",
+      "equal": true
+    },
+    {
+      "case": "ffdhe2048/refusal/p+1",
+      "detail": "cand_rc=-1 auth_rc=-1 exit_c=0 exit_a=0",
+      "equal": true
+    },
+    {
+      "case": "ffdhe2048/refusal/two",
+      "detail": "cand_rc=256 auth_rc=256 exit_c=0 exit_a=0",
+      "equal": true
+    },
+    {
+      "case": "ffdhe3072/refusal/zero",
+      "detail": "cand_rc=-1 auth_rc=-1 exit_c=0 exit_a=0",
+      "equal": true
+    },
+    {
+      "case": "ffdhe3072/refusal/one",
+      "detail": "cand_rc=-1 auth_rc=-1 exit_c=0 exit_a=0",
+      "equal": true
+    },
+    {
+      "case": "ffdhe3072/refusal/p-2",
+      "detail": "cand_rc=384 auth_rc=384 exit_c=0 exit_a=0",
+      "equal": true
+    },
+    {
+      "case": "ffdhe3072/refusal/p-1",
+      "detail": "cand_rc=-1 auth_rc=-1 exit_c=0 exit_a=0",
+      "equal": true
+    },
+    {
+      "case": "ffdhe3072/refusal/p",
+      "detail": "cand_rc=-1 auth_rc=-1 exit_c=0 exit_a=0",
+      "equal": true
+    },
+    {
+      "case": "ffdhe3072/refusal/p+1",
+      "detail": "cand_rc=-1 auth_rc=-1 exit_c=0 exit_a=0",
+      "equal": true
+    },
+    {
+      "case": "ffdhe3072/refusal/two",
+      "detail": "cand_rc=384 auth_rc=384 exit_c=0 exit_a=0",
+      "equal": true
+    },
+    {
+      "case": "modp2048/refusal/zero",
+      "detail": "cand_rc=-1 auth_rc=-1 exit_c=0 exit_a=0",
+      "equal": true
+    },
+    {
+      "case": "modp2048/refusal/one",
+      "detail": "cand_rc=-1 auth_rc=-1 exit_c=0 exit_a=0",
+      "equal": true
+    },
+    {
+      "case": "modp2048/refusal/p-2",
+      "detail": "cand_rc=256 auth_rc=256 exit_c=0 exit_a=0",
+      "equal": true
+    },
+    {
+      "case": "modp2048/refusal/p-1",
+      "detail": "cand_rc=-1 auth_rc=-1 exit_c=0 exit_a=0",
+      "equal": true
+    },
+    {
+      "case": "modp2048/refusal/p",
+      "detail": "cand_rc=-1 auth_rc=-1 exit_c=0 exit_a=0",
+      "equal": true
+    },
+    {
+      "case": "modp2048/refusal/p+1",
+      "detail": "cand_rc=-1 auth_rc=-1 exit_c=0 exit_a=0",
+      "equal": true
+    },
+    {
+      "case": "modp2048/refusal/two",
+      "detail": "cand_rc=256 auth_rc=256 exit_c=0 exit_a=0",
+      "equal": true
+    },
+    {
+      "case": "ffdhe2048/keygen/preset-private",
+      "classification": "PFP8-KEYGEN-PRESET-PRIV",
+      "detail": "rc_c=1 rc_a=0 cand_pub=0 auth_pub=512",
+      "equal": false
+    },
+    {
+      "case": "ffdhe3072/keygen/preset-private",
+      "classification": "PFP8-KEYGEN-PRESET-PRIV",
+      "detail": "rc_c=1 rc_a=0 cand_pub=0 auth_pub=768",
+      "equal": false
+    },
+    {
+      "case": "ffdhe4096/keygen/preset-private",
+      "classification": "PFP8-KEYGEN-PRESET-PRIV",
+      "detail": "rc_c=1 rc_a=0 cand_pub=0 auth_pub=1024",
+      "equal": false
+    }
+  ],
+  "stops": [
+    {
+      "case": "ffdhe2048/keygen/preset-private",
+      "detail": "rc_c=1 rc_a=0 cand_pub=0 auth_pub=512"
+    },
+    {
+      "case": "ffdhe3072/keygen/preset-private",
+      "detail": "rc_c=1 rc_a=0 cand_pub=0 auth_pub=768"
+    },
+    {
+      "case": "ffdhe4096/keygen/preset-private",
+      "detail": "rc_c=1 rc_a=0 cand_pub=0 auth_pub=1024"
+    }
+  ]
+}

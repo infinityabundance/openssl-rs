@@ -1,0 +1,3 @@
+policy_taint test=ctgrind_secret_exponent_policy_width errors=0 contexts=0 valgrind_exit=0
+policy_control test=ctgrind_secret_exponent_policy_width errors=4 contexts=1 valgrind_exit=99
+window_taint test=ctgrind_secret_exponent_window errors=0 contexts=0 valgrind_exit=0

@@ -1,0 +1,68 @@
+bn_mod_exp_mont_impl	474f82	je	474f91 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn4mont20bn_mod_exp_mont_impl.llvm.2675173248668928877+0x31>	mov $0x8,%ecx	test %rsi,%rsi	jcc
+bn_mod_exp_mont_impl	474f8b	jne	475028 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn4mont20bn_mod_exp_mont_impl.llvm.2675173248668928877+0xc8>	mov 0x10(%r13),%rbx	test %rbx,%rbx	jcc
+bn_mod_exp_mont_impl	474f9f	je	474fb5 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn4mont20bn_mod_exp_mont_impl.llvm.2675173248668928877+0x55>	mov %rax,(%rsp)	test %r15,%r15	jcc
+bn_mod_exp_mont_impl	474fb1	jne	474fc1 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn4mont20bn_mod_exp_mont_impl.llvm.2675173248668928877+0x61>	mov $0x8,%ebp	test %r14,%r14	jcc
+bn_mod_exp_mont_impl	474fbf	je	474fce <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn4mont20bn_mod_exp_mont_impl.llvm.2675173248668928877+0x6e>	mov $0x8,%ebp	test %r14,%r14	jcc
+bn_mod_exp_mont_impl	474fc8	jne	4750a1 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn4mont20bn_mod_exp_mont_impl.llvm.2675173248668928877+0x141>	mov 0x10(%r14),%r12	test %r12,%r12	jcc
+bn_mod_exp_mont_impl	474fe0	je	474ff7 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn4mont20bn_mod_exp_mont_impl.llvm.2675173248668928877+0x97>	call 19d2a0 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs7runtime3err10raise_site>	test %r12,%r12	jcc
+bn_mod_exp_mont_impl	474ffc	je	475014 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn4mont20bn_mod_exp_mont_impl.llvm.2675173248668928877+0xb4>	xor %ebp,%ebp	test %rbx,%rbx	jcc
+bn_mod_exp_mont_impl	475062	je	475014 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn4mont20bn_mod_exp_mont_impl.llvm.2675173248668928877+0xb4>	call 161760 <_RNvMs5_NtCs6i54tJFfzR_5alloc7raw_vecNtB5_11RawVecInner11finish_growCsfBoMNNx3tZr_10openssl_rs.llvm.3946419414919775002>	cmpl $0x1,0x70(%rsp)	jcc
+bn_mod_exp_mont_impl	475096	jne	474f9c <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn4mont20bn_mod_exp_mont_impl.llvm.2675173248668928877+0x3c>	mov $0x8,%ecx	mov 0x48(%rsp),%r9	jcc
+bn_mod_exp_mont_impl	4750e3	je	474ff7 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn4mont20bn_mod_exp_mont_impl.llvm.2675173248668928877+0x97>	call 161760 <_RNvMs5_NtCs6i54tJFfzR_5alloc7raw_vecNtB5_11RawVecInner11finish_growCsfBoMNNx3tZr_10openssl_rs.llvm.3946419414919775002>	cmpl $0x1,0x70(%rsp)	jcc
+bn_mod_exp_mont_impl	47510b	je	474ff7 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn4mont20bn_mod_exp_mont_impl.llvm.2675173248668928877+0x97>	call *0x45d359(%rip)	cmp $0xffffffffffffffff,%r12	jcc
+bn_mod_exp_mont_impl	475117	je	474fd1 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn4mont20bn_mod_exp_mont_impl.llvm.2675173248668928877+0x71>	mov 0x0(%rbp),%rax	test $0x1,%al	jcc
+bn_mod_exp_mont_impl	475125	je	47517e <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn4mont20bn_mod_exp_mont_impl.llvm.2675173248668928877+0x21e>	mov 0x20(%rsp),%r10	test %r10,%r10	jcc
+bn_mod_exp_mont_impl	47513f	seta	%sil	lea 0x3(%rcx),%rsi	cmp %rsi,%r12	setcc
+bn_mod_exp_mont_impl	47514a	seta	%dil	seta %sil	cmp $0x7fffffff,%rdx	setcc
+bn_mod_exp_mont_impl	475156	je	47521e <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn4mont20bn_mod_exp_mont_impl.llvm.2675173248668928877+0x2be>	or %sil,%dil	mov 0x10(%rsp),%r8	jcc
+bn_mod_exp_mont_impl	47518f	je	47519c <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn4mont20bn_mod_exp_mont_impl.llvm.2675173248668928877+0x23c>	mov 0x10(%rsp),%r8	test %r13,%r13	jcc
+bn_mod_exp_mont_impl	475196	jne	475268 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn4mont20bn_mod_exp_mont_impl.llvm.2675173248668928877+0x308>	je 47519c <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn4mont20bn_mod_exp_mont_impl.llvm.2675173248668928877+0x23c>	testb $0x4,0x1c(%r13)	jcc
+bn_mod_exp_mont_impl	47519f	je	4751ac <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn4mont20bn_mod_exp_mont_impl.llvm.2675173248668928877+0x24c>	jne 475268 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn4mont20bn_mod_exp_mont_impl.llvm.2675173248668928877+0x308>	test %r15,%r15	jcc
+bn_mod_exp_mont_impl	4751a6	jne	475268 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn4mont20bn_mod_exp_mont_impl.llvm.2675173248668928877+0x308>	je 4751ac <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn4mont20bn_mod_exp_mont_impl.llvm.2675173248668928877+0x24c>	testb $0x4,0x1c(%r15)	jcc
+bn_mod_exp_mont_impl	4751b1	jne	475268 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn4mont20bn_mod_exp_mont_impl.llvm.2675173248668928877+0x308>	jne 475268 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn4mont20bn_mod_exp_mont_impl.llvm.2675173248668928877+0x308>	testb $0x4,0x1c(%r14)	jcc
+bn_mod_exp_mont_impl	4751e9	je	47533e <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn4mont20bn_mod_exp_mont_impl.llvm.2675173248668928877+0x3de>	cmpq $0xffffffffffffffff,0x28(%rsp)	lea 0x0(,%r12,8),%r14	jcc
+bn_mod_exp_mont_impl	475223	jne	47515c <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn4mont20bn_mod_exp_mont_impl.llvm.2675173248668928877+0x1fc>	jmp 475336 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn4mont20bn_mod_exp_mont_impl.llvm.2675173248668928877+0x3d6>	cmpl $0x40,0x78(%r10)	jcc
+bn_mod_exp_mont_impl	47522d	jne	47515c <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn4mont20bn_mod_exp_mont_impl.llvm.2675173248668928877+0x1fc>	jne 47515c <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn4mont20bn_mod_exp_mont_impl.llvm.2675173248668928877+0x1fc>	cmp %edx,0x70(%r10)	jcc
+bn_mod_exp_mont_impl	475237	jne	47515c <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn4mont20bn_mod_exp_mont_impl.llvm.2675173248668928877+0x1fc>	jne 47515c <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn4mont20bn_mod_exp_mont_impl.llvm.2675173248668928877+0x1fc>	cmp %r12,0x28(%r10)	jcc
+bn_mod_exp_mont_impl	475241	jne	47515c <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn4mont20bn_mod_exp_mont_impl.llvm.2675173248668928877+0x1fc>	jne 47515c <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn4mont20bn_mod_exp_mont_impl.llvm.2675173248668928877+0x1fc>	cmp %r12,0x10(%r10)	jcc
+bn_mod_exp_mont_impl	47524b	jne	47515c <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn4mont20bn_mod_exp_mont_impl.llvm.2675173248668928877+0x1fc>	jne 47515c <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn4mont20bn_mod_exp_mont_impl.llvm.2675173248668928877+0x1fc>	cmp %r12,0x40(%r10)	jcc
+bn_mod_exp_mont_impl	475259	jae	475365 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn4mont20bn_mod_exp_mont_impl.llvm.2675173248668928877+0x405>	mov 0x20(%r10),%rdx	cmp $0x4,%r12	jcc
+bn_mod_exp_mont_impl	47526d	je	4752b5 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn4mont20bn_mod_exp_mont_impl.llvm.2675173248668928877+0x355>	jmp 475716 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn4mont20bn_mod_exp_mont_impl.llvm.2675173248668928877+0x7b6>	testb $0x1,0x48(%rsp)	jcc
+bn_mod_exp_mont_impl	47527a	je	4752b5 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn4mont20bn_mod_exp_mont_impl.llvm.2675173248668928877+0x355>	mov 0x100(%rsp),%r13	test %r13,%r13	jcc
+bn_mod_exp_mont_impl	47528a	jne	475348 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn4mont20bn_mod_exp_mont_impl.llvm.2675173248668928877+0x3e8>	xor $0x1,%rax	or %rcx,%rax	jcc
+bn_mod_exp_mont_impl	4752bd	cmove	%r10,%rax	test %r10,%r10	lea 0x70(%rsp),%rax	cmovcc
+bn_mod_exp_mont_impl	4752f6	je	47533e <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn4mont20bn_mod_exp_mont_impl.llvm.2675173248668928877+0x3de>	cmpq $0xffffffffffffffff,0x28(%rsp)	lea 0x0(,%r12,8),%r14	jcc
+bn_mod_exp_mont_impl	47534e	cmovb	%r12,%r13	mov %rbp,%r15	cmp %r13,%r12	cmovcc
+bn_mod_exp_mont_impl	475355	cmova	%r12,%r13	cmovb %r12,%r13	cmp %r13,%r8	cmovcc
+bn_mod_exp_mont_impl	47535c	jbe	4753ce <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn4mont20bn_mod_exp_mont_impl.llvm.2675173248668928877+0x46e>	cmova %r12,%r13	cmp %r13,%r8	jcc
+bn_mod_exp_mont_impl	4753b5	jne	475387 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn4mont20bn_mod_exp_mont_impl.llvm.2675173248668928877+0x427>	add $0x20,%rdi	cmp %rdi,%rsi	jcc
+bn_mod_exp_mont_impl	4753e8	je	47542a <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn4mont20bn_mod_exp_mont_impl.llvm.2675173248668928877+0x4ca>	mov 0x50(%rsp),%rax	cmp $0xffffffffffffffff,%rax	jcc
+bn_mod_exp_mont_impl	4753fa	je	47550f <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn4mont20bn_mod_exp_mont_impl.llvm.2675173248668928877+0x5af>	mov 0x60(%rsp),%r8	test %r8,%r8	jcc
+bn_mod_exp_mont_impl	47541e	jae	47544e <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn4mont20bn_mod_exp_mont_impl.llvm.2675173248668928877+0x4ee>	and $0x3,%eax	cmp $0x3,%rcx	jcc
+bn_mod_exp_mont_impl	475443	jne	474ffe <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn4mont20bn_mod_exp_mont_impl.llvm.2675173248668928877+0x9e>	call *0x45c400(%rip)	test %rbx,%rbx	jcc
+bn_mod_exp_mont_impl	475476	je	4754c8 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn4mont20bn_mod_exp_mont_impl.llvm.2675173248668928877+0x568>	lea 0x20(%rdx),%r9	cmp %rsi,%rdi	jcc
+bn_mod_exp_mont_impl	475481	jae	475489 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn4mont20bn_mod_exp_mont_impl.llvm.2675173248668928877+0x529>	mov %rdi,%rcx	cmp %r11,%rdi	jcc
+bn_mod_exp_mont_impl	475495	jae	47549e <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn4mont20bn_mod_exp_mont_impl.llvm.2675173248668928877+0x53e>	lea 0x1(%rcx),%rdi	cmp %r11,%rdi	jcc
+bn_mod_exp_mont_impl	4754ab	jae	4754b4 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn4mont20bn_mod_exp_mont_impl.llvm.2675173248668928877+0x554>	inc %rdi	cmp %r11,%rdi	jcc
+bn_mod_exp_mont_impl	4754c1	jb	475463 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn4mont20bn_mod_exp_mont_impl.llvm.2675173248668928877+0x503>	inc %rdi	cmp %r11,%rdi	jcc
+bn_mod_exp_mont_impl	4754cb	je	47550f <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn4mont20bn_mod_exp_mont_impl.llvm.2675173248668928877+0x5af>	jmp 475468 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn4mont20bn_mod_exp_mont_impl.llvm.2675173248668928877+0x508>	test %rax,%rax	jcc
+bn_mod_exp_mont_impl	4754f5	je	47550f <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn4mont20bn_mod_exp_mont_impl.llvm.2675173248668928877+0x5af>	inc %rdi	cmp %rdi,%rax	jcc
+bn_mod_exp_mont_impl	4754fe	jb	4754e7 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn4mont20bn_mod_exp_mont_impl.llvm.2675173248668928877+0x587>	lea (%rcx,%rdi,1),%r9	cmp %r10,%r9	jcc
+bn_mod_exp_mont_impl	47550d	jne	4754f7 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn4mont20bn_mod_exp_mont_impl.llvm.2675173248668928877+0x597>	inc %rdi	cmp %rdi,%rax	jcc
+bn_mod_exp_mont_impl	475515	je	475543 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn4mont20bn_mod_exp_mont_impl.llvm.2675173248668928877+0x5e3>	jne 4754f7 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn4mont20bn_mod_exp_mont_impl.llvm.2675173248668928877+0x597>	cmpq $0x0,0x20(%rsp)	jcc
+bn_mod_exp_mont_impl	475572	seta	%al	movabs $0x1fffffffffffffff,%rax	cmp %rax,%rbp	setcc
+bn_mod_exp_mont_impl	475580	sete	%cl	lea 0x0(,%rbp,8),%rsi	test %rsi,%rsi	setcc
+bn_mod_exp_mont_impl	475585	jne	4755c4 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn4mont20bn_mod_exp_mont_impl.llvm.2675173248668928877+0x664>	sete %cl	or %al,%cl	jcc
+bn_mod_exp_mont_impl	4755bf	jne	475589 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn4mont20bn_mod_exp_mont_impl.llvm.2675173248668928877+0x629>	add $0x8,%rax	cmp %rax,%rsi	jcc
+bn_mod_exp_mont_impl	4755ca	je	4752e8 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn4mont20bn_mod_exp_mont_impl.llvm.2675173248668928877+0x388>	test %rdx,%rdx	mov %r15,%rbp	jcc
+bn_mod_exp_mont_impl	4755fe	je	475615 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn4mont20bn_mod_exp_mont_impl.llvm.2675173248668928877+0x6b5>	mov %rax,%r13	test %r12,%r12	jcc
+bn_mod_exp_mont_impl	475618	je	475630 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn4mont20bn_mod_exp_mont_impl.llvm.2675173248668928877+0x6d0>	call *0x45c22b(%rip)	test %rbx,%rbx	jcc
+bn_mod_exp_mont_impl	475676	je	4756ab <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn4mont20bn_mod_exp_mont_impl.llvm.2675173248668928877+0x74b>	call *0x45d03d(%rip)	test %rax,%rax	jcc
+bn_mod_exp_mont_impl	475683	jb	4756ab <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn4mont20bn_mod_exp_mont_impl.llvm.2675173248668928877+0x74b>	lea -0x2(%rcx),%edx	cmp $0x2,%edx	jcc
+bn_mod_exp_mont_impl	475688	je	4756ab <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn4mont20bn_mod_exp_mont_impl.llvm.2675173248668928877+0x74b>	jb 4756ab <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn4mont20bn_mod_exp_mont_impl.llvm.2675173248668928877+0x74b>	test %rcx,%rcx	jcc
+bn_mod_exp_mont_impl	4756b1	je	4756b8 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn4mont20bn_mod_exp_mont_impl.llvm.2675173248668928877+0x758>	mov (%r14),%rax	test %rax,%rax	jcc
+bn_mod_exp_mont_impl	4756c1	je	475014 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn4mont20bn_mod_exp_mont_impl.llvm.2675173248668928877+0xb4>	xor %ebp,%ebp	test %rsi,%rsi	jcc
+bn_mod_exp_mont_impl	4756dd	je	475708 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn4mont20bn_mod_exp_mont_impl.llvm.2675173248668928877+0x7a8>	mov 0x8(%r14),%rsi	test %rsi,%rsi	jcc
+bn_mod_exp_mont_impl	475728	jne	475716 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn4mont20bn_mod_exp_mont_impl.llvm.2675173248668928877+0x7b6>	or %rdi,%rsi	cmp %rcx,%r12	jcc
+bn_mod_exp_mont_impl	47579a	jne	47515c <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn4mont20bn_mod_exp_mont_impl.llvm.2675173248668928877+0x1fc>	xor %rcx,%rdi	or %rsi,%rdi	jcc
+bn_mod_exp_mont_impl	4757cd	jne	475191 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn4mont20bn_mod_exp_mont_impl.llvm.2675173248668928877+0x231>	mov %rcx,0x90(%rsp)	test %r13,%r13	jcc

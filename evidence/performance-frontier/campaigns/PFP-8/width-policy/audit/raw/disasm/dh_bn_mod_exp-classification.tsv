@@ -1,0 +1,4 @@
+symbol	addr	kind	insn	operand	class	sub	flag_source	consumed
+dh_bn_mod_exp	55243c	jcc	je	55245a	a	a-loop	test %rdi,%rdi	-
+dh_bn_mod_exp	552445	jcc	jg	552450	a	a-loop	test %r9d,%r9d	-
+dh_bn_mod_exp	55244e	jcc	jle	55245a	a	a-loop	test %r9d,%r9d	-

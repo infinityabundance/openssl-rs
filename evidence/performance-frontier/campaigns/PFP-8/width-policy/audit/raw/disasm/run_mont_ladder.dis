@@ -1,0 +1,1228 @@
+
+/work/court/tmp/pfp8-wp-build/cand/distribution/libcrypto.so.3:     file format elf64-x86-64
+
+
+Disassembly of section .text:
+
+00000000004763d0 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder>:
+  4763d0:	push   %rbp
+  4763d1:	push   %r15
+  4763d3:	push   %r14
+  4763d5:	push   %r13
+  4763d7:	push   %r12
+  4763d9:	push   %rbx
+  4763da:	sub    $0x118,%rsp
+  4763e1:	mov    %rdi,%r13
+  4763e4:	mov    0x178(%rsp),%rbp
+  4763ec:	mov    0x158(%rsp),%rdi
+  4763f4:	mov    %rdi,%rax
+  4763f7:	shr    $0x3a,%rax
+  4763fb:	jne    4766b7 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0x2e7>
+  476401:	mov    %r9,%r15
+  476404:	mov    %r8,%r14
+  476407:	mov    %rdi,0x90(%rsp)
+  47640f:	mov    %rcx,0xc8(%rsp)
+  476417:	mov    0x170(%rsp),%rax
+  47641f:	mov    %rax,0x98(%rsp)
+  476427:	mov    0x168(%rsp),%r12
+  47642f:	mov    0x160(%rsp),%rax
+  476437:	mov    %rax,0x30(%rsp)
+  47643c:	mov    0x150(%rsp),%rbx
+  476444:	cmp    %rbx,%rdx
+  476447:	jbe    476538 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0x168>
+  47644d:	lea    0x40(%rsp),%rdi
+  476452:	mov    %r15,0x38(%rsp)
+  476457:	mov    %r15,%rcx
+  47645a:	mov    %rbx,%r8
+  47645d:	call   54c370 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5limbs12rem_fallible>
+  476462:	mov    0x40(%rsp),%r15
+  476467:	cmp    $0xffffffffffffffff,%r15
+  47646b:	je     4766b7 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0x2e7>
+  476471:	mov    %r13,0x60(%rsp)
+  476476:	mov    %rbp,0x18(%rsp)
+  47647b:	mov    0x48(%rsp),%r13
+  476480:	test   %rbx,%rbx
+  476483:	mov    %r14,0xb0(%rsp)
+  47648b:	jne    476824 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0x454>
+  476491:	mov    $0x8,%r14d
+  476497:	xor    %ebp,%ebp
+  476499:	mov    %r14,%rdi
+  47649c:	mov    %r13,%rsi
+  47649f:	mov    %rbp,%rdx
+  4764a2:	call   *0x45bfb8(%rip)        # 8d2460 <memcpy@GLIBC_2.14>
+  4764a8:	movabs $0x1fffffffffffffff,%rax
+  4764b2:	cmp    %rax,%r15
+  4764b5:	seta   %al
+  4764b8:	lea    0x0(,%r15,8),%rsi
+  4764c0:	test   %rsi,%rsi
+  4764c3:	sete   %cl
+  4764c6:	or     %al,%cl
+  4764c8:	mov    0x18(%rsp),%rbp
+  4764cd:	jne    476519 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0x149>
+  4764cf:	xor    %eax,%eax
+  4764d1:	data16 data16 data16 data16 data16 cs nopw 0x0(%rax,%rax,1)
+  4764e0:	movb   $0x0,0x0(%r13,%rax,1)
+  4764e6:	movb   $0x0,0x1(%r13,%rax,1)
+  4764ec:	movb   $0x0,0x2(%r13,%rax,1)
+  4764f2:	movb   $0x0,0x3(%r13,%rax,1)
+  4764f8:	movb   $0x0,0x4(%r13,%rax,1)
+  4764fe:	movb   $0x0,0x5(%r13,%rax,1)
+  476504:	movb   $0x0,0x6(%r13,%rax,1)
+  47650a:	movb   $0x0,0x7(%r13,%rax,1)
+  476510:	add    $0x8,%rax
+  476514:	cmp    %rax,%rsi
+  476517:	jne    4764e0 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0x110>
+  476519:	test   %r15,%r15
+  47651c:	je     47652c <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0x15c>
+  47651e:	mov    $0x8,%edx
+  476523:	mov    %r13,%rdi
+  476526:	call   *0x45b314(%rip)        # 8d1840 <_DYNAMIC+0x15d0>
+  47652c:	mov    0x60(%rsp),%r13
+  476531:	mov    0x38(%rsp),%r15
+  476536:	jmp    47655c <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0x18c>
+  476538:	mov    %r14,0xb0(%rsp)
+  476540:	mov    $0x8,%r14d
+  476546:	test   %rbx,%rbx
+  476549:	jne    47667f <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0x2af>
+  47654f:	shl    $0x3,%rdx
+  476553:	mov    %r14,%rdi
+  476556:	call   *0x45bf04(%rip)        # 8d2460 <memcpy@GLIBC_2.14>
+  47655c:	lea    0x40(%rsp),%rdi
+  476561:	mov    %r14,%rsi
+  476564:	mov    %rbx,%rdx
+  476567:	mov    %r12,%rcx
+  47656a:	mov    0x98(%rsp),%r8
+  476572:	mov    %r15,%r9
+  476575:	push   0x30(%rsp)
+  476579:	push   %rbx
+  47657a:	call   165390 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith17mont_mul_fallible>
+  47657f:	add    $0x10,%rsp
+  476583:	mov    0x40(%rsp),%r12
+  476588:	cmp    $0xffffffffffffffff,%r12
+  47658c:	jne    4765fe <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0x22e>
+  47658e:	movq   $0xffffffffffffffff,0x0(%r13)
+  476596:	test   %rbx,%rbx
+  476599:	je     4766bf <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0x2ef>
+  47659f:	shl    $0x3,%rbx
+  4765a3:	xor    %eax,%eax
+  4765a5:	data16 cs nopw 0x0(%rax,%rax,1)
+  4765b0:	movb   $0x0,(%r14,%rax,1)
+  4765b5:	movb   $0x0,0x1(%r14,%rax,1)
+  4765bb:	movb   $0x0,0x2(%r14,%rax,1)
+  4765c1:	movb   $0x0,0x3(%r14,%rax,1)
+  4765c7:	movb   $0x0,0x4(%r14,%rax,1)
+  4765cd:	movb   $0x0,0x5(%r14,%rax,1)
+  4765d3:	movb   $0x0,0x6(%r14,%rax,1)
+  4765d9:	movb   $0x0,0x7(%r14,%rax,1)
+  4765df:	add    $0x8,%rax
+  4765e3:	cmp    %rax,%rbx
+  4765e6:	jne    4765b0 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0x1e0>
+  4765e8:	mov    $0x8,%edx
+  4765ed:	mov    %r14,%rdi
+  4765f0:	mov    %rbx,%rsi
+  4765f3:	call   *0x45b247(%rip)        # 8d1840 <_DYNAMIC+0x15d0>
+  4765f9:	jmp    4766bf <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0x2ef>
+  4765fe:	mov    %r15,0x38(%rsp)
+  476603:	lea    0x1(,%rbx,2),%rcx
+  47660b:	mov    0x48(%rsp),%r15
+  476610:	test   %rbx,%rbx
+  476613:	jne    47675f <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0x38f>
+  476619:	lea    0x40(%rsp),%rdi
+  47661e:	mov    $0x8,%eax
+  476623:	mov    %rax,0x98(%rsp)
+  47662b:	mov    $0x8,%edx
+  476630:	mov    $0x8,%r8d
+  476636:	mov    $0x8,%r9d
+  47663c:	xor    %esi,%esi
+  47663e:	call   161760 <_RNvMs5_NtCs6i54tJFfzR_5alloc7raw_vecNtB5_11RawVecInner11finish_growCsfBoMNNx3tZr_10openssl_rs.llvm.3946419414919775002>
+  476643:	cmpb   $0x0,0x40(%rsp)
+  476648:	je     47773b <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0x136b>
+  47664e:	movq   $0xffffffffffffffff,0x0(%r13)
+  476656:	test   %rbx,%rbx
+  476659:	je     4767a4 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0x3d4>
+  47665f:	lea    0x0(,%rbx,8),%rsi
+  476667:	mov    $0x8,%edx
+  47666c:	mov    0x98(%rsp),%rdi
+  476674:	call   *0x45b1c6(%rip)        # 8d1840 <_DYNAMIC+0x15d0>
+  47667a:	jmp    4767a4 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0x3d4>
+  47667f:	mov    %r15,0x38(%rsp)
+  476684:	mov    %rsi,0x60(%rsp)
+  476689:	mov    %rdx,%r15
+  47668c:	lea    0x40(%rsp),%rdi
+  476691:	mov    $0x8,%edx
+  476696:	mov    $0x8,%r8d
+  47669c:	mov    $0x8,%r9d
+  4766a2:	xor    %esi,%esi
+  4766a4:	mov    %rbx,%rcx
+  4766a7:	call   161760 <_RNvMs5_NtCs6i54tJFfzR_5alloc7raw_vecNtB5_11RawVecInner11finish_growCsfBoMNNx3tZr_10openssl_rs.llvm.3946419414919775002>
+  4766ac:	cmpb   $0x0,0x40(%rsp)
+  4766b1:	je     4768de <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0x50e>
+  4766b7:	movq   $0xffffffffffffffff,0x0(%r13)
+  4766bf:	mov    0x0(%rbp),%rsi
+  4766c3:	movabs $0x1fffffffffffffff,%rax
+  4766cd:	cmp    %rax,%rsi
+  4766d0:	seta   %cl
+  4766d3:	lea    0x0(,%rsi,8),%rax
+  4766db:	test   %rax,%rax
+  4766de:	sete   %dl
+  4766e1:	or     %cl,%dl
+  4766e3:	jne    476724 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0x354>
+  4766e5:	mov    0x8(%rbp),%rcx
+  4766e9:	xor    %edx,%edx
+  4766eb:	nopl   0x0(%rax,%rax,1)
+  4766f0:	movb   $0x0,(%rcx,%rdx,1)
+  4766f4:	movb   $0x0,0x1(%rcx,%rdx,1)
+  4766f9:	movb   $0x0,0x2(%rcx,%rdx,1)
+  4766fe:	movb   $0x0,0x3(%rcx,%rdx,1)
+  476703:	movb   $0x0,0x4(%rcx,%rdx,1)
+  476708:	movb   $0x0,0x5(%rcx,%rdx,1)
+  47670d:	movb   $0x0,0x6(%rcx,%rdx,1)
+  476712:	movb   $0x0,0x7(%rcx,%rdx,1)
+  476717:	add    $0x8,%rdx
+  47671b:	cmp    %rdx,%rax
+  47671e:	jne    4766f0 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0x320>
+  476720:	mov    0x0(%rbp),%rsi
+  476724:	test   %rsi,%rsi
+  476727:	je     47674d <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0x37d>
+  476729:	mov    0x8(%rbp),%rdi
+  47672d:	shl    $0x3,%rsi
+  476731:	mov    $0x8,%edx
+  476736:	add    $0x118,%rsp
+  47673d:	pop    %rbx
+  47673e:	pop    %r12
+  476740:	pop    %r13
+  476742:	pop    %r14
+  476744:	pop    %r15
+  476746:	pop    %rbp
+  476747:	jmp    *0x45b0f3(%rip)        # 8d1840 <_DYNAMIC+0x15d0>
+  47674d:	add    $0x118,%rsp
+  476754:	pop    %rbx
+  476755:	pop    %r12
+  476757:	pop    %r13
+  476759:	pop    %r14
+  47675b:	pop    %r15
+  47675d:	pop    %rbp
+  47675e:	ret
+  47675f:	mov    %rcx,0xf0(%rsp)
+  476767:	mov    0x50(%rsp),%rax
+  47676c:	mov    %rax,0x58(%rsp)
+  476771:	lea    0x40(%rsp),%rdi
+  476776:	mov    $0x8,%edx
+  47677b:	mov    $0x8,%r8d
+  476781:	mov    $0x8,%r9d
+  476787:	xor    %esi,%esi
+  476789:	mov    %rbx,%rcx
+  47678c:	call   161760 <_RNvMs5_NtCs6i54tJFfzR_5alloc7raw_vecNtB5_11RawVecInner11finish_growCsfBoMNNx3tZr_10openssl_rs.llvm.3946419414919775002>
+  476791:	cmpb   $0x0,0x40(%rsp)
+  476796:	je     476960 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0x590>
+  47679c:	movq   $0xffffffffffffffff,0x0(%r13)
+  4767a4:	movabs $0x1fffffffffffffff,%rax
+  4767ae:	cmp    %rax,%r12
+  4767b1:	seta   %al
+  4767b4:	lea    0x0(,%r12,8),%rsi
+  4767bc:	test   %rsi,%rsi
+  4767bf:	sete   %cl
+  4767c2:	or     %al,%cl
+  4767c4:	jne    476808 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0x438>
+  4767c6:	xor    %eax,%eax
+  4767c8:	nopl   0x0(%rax,%rax,1)
+  4767d0:	movb   $0x0,(%r15,%rax,1)
+  4767d5:	movb   $0x0,0x1(%r15,%rax,1)
+  4767db:	movb   $0x0,0x2(%r15,%rax,1)
+  4767e1:	movb   $0x0,0x3(%r15,%rax,1)
+  4767e7:	movb   $0x0,0x4(%r15,%rax,1)
+  4767ed:	movb   $0x0,0x5(%r15,%rax,1)
+  4767f3:	movb   $0x0,0x6(%r15,%rax,1)
+  4767f9:	movb   $0x0,0x7(%r15,%rax,1)
+  4767ff:	add    $0x8,%rax
+  476803:	cmp    %rax,%rsi
+  476806:	jne    4767d0 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0x400>
+  476808:	test   %r12,%r12
+  47680b:	je     476596 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0x1c6>
+  476811:	mov    $0x8,%edx
+  476816:	mov    %r15,%rdi
+  476819:	call   *0x45b021(%rip)        # 8d1840 <_DYNAMIC+0x15d0>
+  47681f:	jmp    476596 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0x1c6>
+  476824:	mov    0x50(%rsp),%rbp
+  476829:	lea    0x40(%rsp),%rdi
+  47682e:	mov    $0x8,%edx
+  476833:	mov    $0x8,%r8d
+  476839:	mov    $0x8,%r9d
+  47683f:	xor    %esi,%esi
+  476841:	mov    %rbx,%rcx
+  476844:	call   161760 <_RNvMs5_NtCs6i54tJFfzR_5alloc7raw_vecNtB5_11RawVecInner11finish_growCsfBoMNNx3tZr_10openssl_rs.llvm.3946419414919775002>
+  476849:	cmpb   $0x0,0x40(%rsp)
+  47684e:	je     476920 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0x550>
+  476854:	mov    0x60(%rsp),%rax
+  476859:	movq   $0xffffffffffffffff,(%rax)
+  476860:	movabs $0x1fffffffffffffff,%rax
+  47686a:	cmp    %rax,%r15
+  47686d:	seta   %al
+  476870:	lea    0x0(,%r15,8),%rsi
+  476878:	test   %rsi,%rsi
+  47687b:	sete   %cl
+  47687e:	or     %al,%cl
+  476880:	mov    0x18(%rsp),%rbp
+  476885:	jne    4768c2 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0x4f2>
+  476887:	xor    %eax,%eax
+  476889:	movb   $0x0,0x0(%r13,%rax,1)
+  47688f:	movb   $0x0,0x1(%r13,%rax,1)
+  476895:	movb   $0x0,0x2(%r13,%rax,1)
+  47689b:	movb   $0x0,0x3(%r13,%rax,1)
+  4768a1:	movb   $0x0,0x4(%r13,%rax,1)
+  4768a7:	movb   $0x0,0x5(%r13,%rax,1)
+  4768ad:	movb   $0x0,0x6(%r13,%rax,1)
+  4768b3:	movb   $0x0,0x7(%r13,%rax,1)
+  4768b9:	add    $0x8,%rax
+  4768bd:	cmp    %rax,%rsi
+  4768c0:	jne    476889 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0x4b9>
+  4768c2:	test   %r15,%r15
+  4768c5:	je     4766bf <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0x2ef>
+  4768cb:	mov    $0x8,%edx
+  4768d0:	mov    %r13,%rdi
+  4768d3:	call   *0x45af67(%rip)        # 8d1840 <_DYNAMIC+0x15d0>
+  4768d9:	jmp    4766bf <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0x2ef>
+  4768de:	mov    0x48(%rsp),%r14
+  4768e3:	mov    %r14,%rax
+  4768e6:	cmp    $0x1,%rbx
+  4768ea:	je     476907 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0x537>
+  4768ec:	lea    -0x8(,%rbx,8),%rdx
+  4768f4:	mov    %r14,%rdi
+  4768f7:	xor    %esi,%esi
+  4768f9:	call   *0x45af71(%rip)        # 8d1870 <memset@GLIBC_2.2.5>
+  4768ff:	lea    (%r14,%rbx,8),%rax
+  476903:	add    $0xfffffffffffffff8,%rax
+  476907:	movq   $0x0,(%rax)
+  47690e:	mov    %r15,%rdx
+  476911:	mov    0x60(%rsp),%rsi
+  476916:	mov    0x38(%rsp),%r15
+  47691b:	jmp    47654f <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0x17f>
+  476920:	mov    0x48(%rsp),%r14
+  476925:	mov    %r14,%rax
+  476928:	cmp    $0x1,%rbx
+  47692c:	je     476949 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0x579>
+  47692e:	lea    -0x8(,%rbx,8),%rdx
+  476936:	mov    %r14,%rdi
+  476939:	xor    %esi,%esi
+  47693b:	call   *0x45af2f(%rip)        # 8d1870 <memset@GLIBC_2.2.5>
+  476941:	lea    (%r14,%rbx,8),%rax
+  476945:	add    $0xfffffffffffffff8,%rax
+  476949:	movq   $0x0,(%rax)
+  476950:	cmp    %rbp,%rbx
+  476953:	cmovb  %rbx,%rbp
+  476957:	shl    $0x3,%rbp
+  47695b:	jmp    476499 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0xc9>
+  476960:	mov    %r13,0x60(%rsp)
+  476965:	mov    0x48(%rsp),%r13
+  47696a:	mov    %r13,%rax
+  47696d:	cmp    $0x1,%rbx
+  476971:	je     476991 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0x5c1>
+  476973:	lea    -0x8(,%rbx,8),%rdx
+  47697b:	mov    %r13,%rdi
+  47697e:	xor    %esi,%esi
+  476980:	call   *0x45aeea(%rip)        # 8d1870 <memset@GLIBC_2.2.5>
+  476986:	lea    -0x8(,%rbx,8),%rax
+  47698e:	add    %r13,%rax
+  476991:	movq   $0x0,(%rax)
+  476998:	lea    0x40(%rsp),%rdi
+  47699d:	mov    $0x8,%edx
+  4769a2:	mov    $0x8,%r8d
+  4769a8:	mov    $0x8,%r9d
+  4769ae:	xor    %esi,%esi
+  4769b0:	mov    %rbx,%rcx
+  4769b3:	call   161760 <_RNvMs5_NtCs6i54tJFfzR_5alloc7raw_vecNtB5_11RawVecInner11finish_growCsfBoMNNx3tZr_10openssl_rs.llvm.3946419414919775002>
+  4769b8:	cmpb   $0x0,0x40(%rsp)
+  4769bd:	mov    %r13,0x98(%rsp)
+  4769c5:	je     4769d8 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0x608>
+  4769c7:	mov    0x60(%rsp),%rax
+  4769cc:	movq   $0xffffffffffffffff,(%rax)
+  4769d3:	jmp    47665f <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0x28f>
+  4769d8:	mov    %rbp,0x18(%rsp)
+  4769dd:	mov    0x48(%rsp),%rax
+  4769e2:	mov    %rax,0x10(%rsp)
+  4769e7:	cmp    $0x1,%rbx
+  4769eb:	je     476a10 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0x640>
+  4769ed:	lea    -0x8(,%rbx,8),%rdx
+  4769f5:	mov    0x10(%rsp),%r13
+  4769fa:	mov    %r13,%rdi
+  4769fd:	xor    %esi,%esi
+  4769ff:	call   *0x45ae6b(%rip)        # 8d1870 <memset@GLIBC_2.2.5>
+  476a05:	lea    -0x8(,%rbx,8),%rax
+  476a0d:	add    %r13,%rax
+  476a10:	movq   $0x0,(%rax)
+  476a17:	lea    0x40(%rsp),%rdi
+  476a1c:	mov    $0x8,%edx
+  476a21:	mov    $0x8,%r8d
+  476a27:	mov    $0x8,%r9d
+  476a2d:	xor    %esi,%esi
+  476a2f:	lea    0x1(,%rbx,2),%rcx
+  476a37:	call   161760 <_RNvMs5_NtCs6i54tJFfzR_5alloc7raw_vecNtB5_11RawVecInner11finish_growCsfBoMNNx3tZr_10openssl_rs.llvm.3946419414919775002>
+  476a3c:	cmpb   $0x0,0x40(%rsp)
+  476a41:	je     476aa3 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0x6d3>
+  476a43:	mov    0x60(%rsp),%rax
+  476a48:	movq   $0xffffffffffffffff,(%rax)
+  476a4f:	lea    0x0(,%rbx,8),%rsi
+  476a57:	xor    %eax,%eax
+  476a59:	mov    0x10(%rsp),%rdi
+  476a5e:	movb   $0x0,(%rdi,%rax,1)
+  476a62:	movb   $0x0,0x1(%rdi,%rax,1)
+  476a67:	movb   $0x0,0x2(%rdi,%rax,1)
+  476a6c:	movb   $0x0,0x3(%rdi,%rax,1)
+  476a71:	movb   $0x0,0x4(%rdi,%rax,1)
+  476a76:	movb   $0x0,0x5(%rdi,%rax,1)
+  476a7b:	movb   $0x0,0x6(%rdi,%rax,1)
+  476a80:	movb   $0x0,0x7(%rdi,%rax,1)
+  476a85:	add    $0x8,%rax
+  476a89:	cmp    %rax,%rsi
+  476a8c:	jne    476a5e <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0x68e>
+  476a8e:	mov    $0x8,%edx
+  476a93:	call   *0x45ada7(%rip)        # 8d1840 <_DYNAMIC+0x15d0>
+  476a99:	mov    0x18(%rsp),%rbp
+  476a9e:	jmp    47665f <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0x28f>
+  476aa3:	mov    0x48(%rsp),%r13
+  476aa8:	mov    %rbx,%rbp
+  476aab:	shl    $0x4,%rbp
+  476aaf:	mov    %r13,%rdi
+  476ab2:	xor    %esi,%esi
+  476ab4:	mov    %rbp,%rdx
+  476ab7:	call   *0x45adb3(%rip)        # 8d1870 <memset@GLIBC_2.2.5>
+  476abd:	mov    %rbp,0x110(%rsp)
+  476ac5:	movq   $0x0,0x0(%r13,%rbp,1)
+  476ace:	lea    0x40(%rsp),%rdi
+  476ad3:	mov    $0x8,%edx
+  476ad8:	mov    $0x8,%r8d
+  476ade:	mov    $0x8,%r9d
+  476ae4:	xor    %esi,%esi
+  476ae6:	mov    %rbx,%rcx
+  476ae9:	call   161760 <_RNvMs5_NtCs6i54tJFfzR_5alloc7raw_vecNtB5_11RawVecInner11finish_growCsfBoMNNx3tZr_10openssl_rs.llvm.3946419414919775002>
+  476aee:	cmpb   $0x0,0x40(%rsp)
+  476af3:	je     476bfc <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0x82c>
+  476af9:	mov    0x60(%rsp),%rax
+  476afe:	movq   $0xffffffffffffffff,(%rax)
+  476b05:	mov    $0x1,%bpl
+  476b08:	mov    %rbx,0x8(%rsp)
+  476b0d:	shlq   $0x3,0xf0(%rsp)
+  476b16:	mov    0x110(%rsp),%rcx
+  476b1e:	or     $0x8,%rcx
+  476b22:	xor    %eax,%eax
+  476b24:	movb   $0x0,0x0(%r13,%rax,1)
+  476b2a:	movb   $0x0,0x1(%r13,%rax,1)
+  476b30:	movb   $0x0,0x2(%r13,%rax,1)
+  476b36:	movb   $0x0,0x3(%r13,%rax,1)
+  476b3c:	movb   $0x0,0x4(%r13,%rax,1)
+  476b42:	movb   $0x0,0x5(%r13,%rax,1)
+  476b48:	movb   $0x0,0x6(%r13,%rax,1)
+  476b4e:	movb   $0x0,0x7(%r13,%rax,1)
+  476b54:	add    $0x8,%rax
+  476b58:	cmp    %rax,%rcx
+  476b5b:	jne    476b24 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0x754>
+  476b5d:	mov    $0x8,%edx
+  476b62:	mov    %r13,%rdi
+  476b65:	mov    0xf0(%rsp),%rsi
+  476b6d:	call   *0x45accd(%rip)        # 8d1840 <_DYNAMIC+0x15d0>
+  476b73:	movabs $0x1fffffffffffffff,%rax
+  476b7d:	mov    0x8(%rsp),%rcx
+  476b82:	cmp    %rax,%rcx
+  476b85:	seta   %al
+  476b88:	lea    0x0(,%rcx,8),%rsi
+  476b90:	test   %rsi,%rsi
+  476b93:	sete   %cl
+  476b96:	or     %al,%cl
+  476b98:	jne    476bd1 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0x801>
+  476b9a:	xor    %eax,%eax
+  476b9c:	mov    0x10(%rsp),%rcx
+  476ba1:	movb   $0x0,(%rcx,%rax,1)
+  476ba5:	movb   $0x0,0x1(%rcx,%rax,1)
+  476baa:	movb   $0x0,0x2(%rcx,%rax,1)
+  476baf:	movb   $0x0,0x3(%rcx,%rax,1)
+  476bb4:	movb   $0x0,0x4(%rcx,%rax,1)
+  476bb9:	movb   $0x0,0x5(%rcx,%rax,1)
+  476bbe:	movb   $0x0,0x6(%rcx,%rax,1)
+  476bc3:	movb   $0x0,0x7(%rcx,%rax,1)
+  476bc8:	add    $0x8,%rax
+  476bcc:	cmp    %rax,%rsi
+  476bcf:	jne    476ba1 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0x7d1>
+  476bd1:	cmpq   $0x0,0x8(%rsp)
+  476bd7:	je     476be9 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0x819>
+  476bd9:	mov    $0x8,%edx
+  476bde:	mov    0x10(%rsp),%rdi
+  476be3:	call   *0x45ac57(%rip)        # 8d1840 <_DYNAMIC+0x15d0>
+  476be9:	test   %bpl,%bpl
+  476bec:	mov    0x18(%rsp),%rbp
+  476bf1:	jne    476656 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0x286>
+  476bf7:	jmp    4767a4 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0x3d4>
+  476bfc:	mov    0x48(%rsp),%rax
+  476c01:	mov    %rax,0x28(%rsp)
+  476c06:	cmp    $0x1,%rbx
+  476c0a:	je     476c2f <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0x85f>
+  476c0c:	lea    -0x8(,%rbx,8),%rdx
+  476c14:	mov    0x28(%rsp),%rbp
+  476c19:	mov    %rbp,%rdi
+  476c1c:	xor    %esi,%esi
+  476c1e:	call   *0x45ac4c(%rip)        # 8d1870 <memset@GLIBC_2.2.5>
+  476c24:	lea    -0x8(,%rbx,8),%rax
+  476c2c:	add    %rbp,%rax
+  476c2f:	movq   $0x0,(%rax)
+  476c36:	lea    0x40(%rsp),%rdi
+  476c3b:	mov    $0x8,%edx
+  476c40:	mov    $0x8,%r8d
+  476c46:	mov    $0x8,%r9d
+  476c4c:	xor    %esi,%esi
+  476c4e:	mov    %rbx,%rcx
+  476c51:	call   161760 <_RNvMs5_NtCs6i54tJFfzR_5alloc7raw_vecNtB5_11RawVecInner11finish_growCsfBoMNNx3tZr_10openssl_rs.llvm.3946419414919775002>
+  476c56:	cmpb   $0x0,0x40(%rsp)
+  476c5b:	je     476c86 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0x8b6>
+  476c5d:	mov    0x60(%rsp),%rax
+  476c62:	movq   $0xffffffffffffffff,(%rax)
+  476c69:	lea    0x0(,%rbx,8),%rax
+  476c71:	mov    %rax,0xc0(%rsp)
+  476c79:	mov    $0x1,%bpl
+  476c7c:	mov    %rbx,0x8(%rsp)
+  476c81:	jmp    47702d <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0xc5d>
+  476c86:	mov    0x48(%rsp),%rax
+  476c8b:	mov    %rax,0xb8(%rsp)
+  476c93:	cmp    $0x1,%rbx
+  476c97:	jne    476caa <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0x8da>
+  476c99:	mov    0xb8(%rsp),%rax
+  476ca1:	movq   $0x1,(%rax)
+  476ca8:	jmp    476ce3 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0x913>
+  476caa:	lea    -0x8(,%rbx,8),%rdx
+  476cb2:	mov    0xb8(%rsp),%rbp
+  476cba:	mov    %rbp,%rdi
+  476cbd:	xor    %esi,%esi
+  476cbf:	call   *0x45abab(%rip)        # 8d1870 <memset@GLIBC_2.2.5>
+  476cc5:	movq   $0x0,-0x8(%rbp,%rbx,8)
+  476cce:	movq   $0x1,0x0(%rbp)
+  476cd6:	mov    %rbx,%rax
+  476cd9:	shr    $0x3b,%rax
+  476cdd:	jne    476f68 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0xb98>
+  476ce3:	mov    %rbx,%rsi
+  476ce6:	shl    $0x5,%rsi
+  476cea:	lea    0x40(%rsp),%rdi
+  476cef:	xor    %edx,%edx
+  476cf1:	call   473320 <_RINvNtNtCsfBoMNNx3tZr_10openssl_rs7runtime5alloc10try_zeroedyEB6_>
+  476cf6:	mov    0x40(%rsp),%rax
+  476cfb:	mov    %rax,0xd8(%rsp)
+  476d03:	cmp    $0xffffffffffffffff,%rax
+  476d07:	je     476f68 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0xb98>
+  476d0d:	mov    0x48(%rsp),%rax
+  476d12:	mov    %rax,0x70(%rsp)
+  476d17:	mov    0x50(%rsp),%rax
+  476d1c:	mov    %rax,0x88(%rsp)
+  476d24:	lea    0x40(%rsp),%rdi
+  476d29:	mov    %rbx,%rsi
+  476d2c:	xor    %edx,%edx
+  476d2e:	call   473320 <_RINvNtNtCsfBoMNNx3tZr_10openssl_rs7runtime5alloc10try_zeroedyEB6_>
+  476d33:	mov    0x40(%rsp),%rax
+  476d38:	mov    %rax,0xd0(%rsp)
+  476d40:	cmp    $0xffffffffffffffff,%rax
+  476d44:	je     476f72 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0xba2>
+  476d4a:	mov    0x48(%rsp),%rax
+  476d4f:	mov    %rax,0x80(%rsp)
+  476d57:	cmp    0x88(%rsp),%rbx
+  476d5f:	ja     477811 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0x1441>
+  476d65:	mov    0x18(%rsp),%rax
+  476d6a:	mov    0x10(%rax),%rax
+  476d6e:	mov    %rax,0xa8(%rsp)
+  476d76:	cmp    %rax,%rbx
+  476d79:	ja     477829 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0x1459>
+  476d7f:	mov    0x50(%rsp),%rax
+  476d84:	mov    %rax,0xe0(%rsp)
+  476d8c:	mov    0x18(%rsp),%rax
+  476d91:	mov    0x8(%rax),%rsi
+  476d95:	lea    0x0(,%rbx,8),%rdx
+  476d9d:	mov    0x70(%rsp),%rdi
+  476da2:	mov    %rsi,0x20(%rsp)
+  476da7:	mov    %rdx,0xc0(%rsp)
+  476daf:	call   *0x45b6ab(%rip)        # 8d2460 <memcpy@GLIBC_2.14>
+  476db5:	mov    0x88(%rsp),%rbp
+  476dbd:	lea    (%rbx,%rbx,1),%rax
+  476dc1:	mov    %rax,0x78(%rsp)
+  476dc6:	lea    (%rbx,%rbx,1),%rax
+  476dca:	sub    %rax,%rbp
+  476dcd:	jb     47784c <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0x147c>
+  476dd3:	cmp    0x58(%rsp),%rbx
+  476dd8:	jne    477860 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0x1490>
+  476dde:	shlq   $0x6,0x90(%rsp)
+  476de7:	mov    0x70(%rsp),%rax
+  476dec:	lea    (%rax,%rbx,8),%rdi
+  476df0:	mov    %r15,%rsi
+  476df3:	lea    0x0(,%rbx,8),%rdx
+  476dfb:	call   *0x45b65f(%rip)        # 8d2460 <memcpy@GLIBC_2.14>
+  476e01:	mov    0x70(%rsp),%rax
+  476e06:	lea    0x0(,%rbx,8),%rcx
+  476e0e:	add    %rcx,%rax
+  476e11:	mov    %rax,0x8(%rsp)
+  476e16:	mov    $0x2,%eax
+  476e1b:	mov    %rax,0x58(%rsp)
+  476e20:	mov    $0x1e,%eax
+  476e25:	mov    %rax,0x68(%rsp)
+  476e2a:	lea    0x40ddc7(%rip),%rax        # 884bf8 <anon.9855385651731e61b7d1510ea039e32b.355.llvm.2675173248668928877+0x258>
+  476e31:	mov    %rax,0xa0(%rsp)
+  476e39:	subq   $0x1,0x68(%rsp)
+  476e3f:	jb     4770be <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0xcee>
+  476e45:	mov    0x78(%rsp),%rax
+  476e4a:	cmp    0x88(%rsp),%rax
+  476e52:	ja     477799 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0x13c9>
+  476e58:	mov    0x58(%rsp),%rax
+  476e5d:	dec    %rax
+  476e60:	mul    %rbx
+  476e63:	jo     4778c9 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0x14f9>
+  476e69:	cmp    %rax,0x78(%rsp)
+  476e6e:	jb     4777bc <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0x13ec>
+  476e74:	cmp    %rbp,%rbx
+  476e77:	ja     4777cb <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0x13fb>
+  476e7d:	mov    0x70(%rsp),%rcx
+  476e82:	lea    (%rcx,%rax,8),%rdi
+  476e86:	add    %rbx,0x78(%rsp)
+  476e8b:	lea    0x0(,%rbx,8),%rax
+  476e93:	mov    0x8(%rsp),%r8
+  476e98:	add    %rax,%r8
+  476e9b:	sub    %rbx,%rbp
+  476e9e:	incq   0x58(%rsp)
+  476ea3:	sub    $0x8,%rsp
+  476ea7:	mov    %rbx,%rsi
+  476eaa:	mov    %r15,%rdx
+  476ead:	mov    %rbx,%rcx
+  476eb0:	mov    %r8,0x10(%rsp)
+  476eb5:	mov    %rbx,%r9
+  476eb8:	push   %rbx
+  476eb9:	push   0x38(%rsp)
+  476ebd:	lea    0x1(%rbx,%rbx,1),%rax
+  476ec2:	push   %rax
+  476ec3:	push   %r13
+  476ec5:	push   0x58(%rsp)
+  476ec9:	push   %rbx
+  476eca:	push   0x70(%rsp)
+  476ece:	call   478370 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith20mont_mul_ladder_into>
+  476ed3:	add    $0x40,%rsp
+  476ed7:	test   %al,%al
+  476ed9:	jne    476e39 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0xa69>
+  476edf:	mov    %rbx,0x8(%rsp)
+  476ee4:	movabs $0x1fffffffffffffff,%rax
+  476eee:	mov    0xd0(%rsp),%rcx
+  476ef6:	cmp    %rax,%rcx
+  476ef9:	seta   %al
+  476efc:	lea    0x0(,%rcx,8),%rsi
+  476f04:	test   %rsi,%rsi
+  476f07:	sete   %cl
+  476f0a:	or     %al,%cl
+  476f0c:	jne    476f48 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0xb78>
+  476f0e:	xor    %eax,%eax
+  476f10:	mov    0x80(%rsp),%rcx
+  476f18:	movb   $0x0,(%rcx,%rax,1)
+  476f1c:	movb   $0x0,0x1(%rcx,%rax,1)
+  476f21:	movb   $0x0,0x2(%rcx,%rax,1)
+  476f26:	movb   $0x0,0x3(%rcx,%rax,1)
+  476f2b:	movb   $0x0,0x4(%rcx,%rax,1)
+  476f30:	movb   $0x0,0x5(%rcx,%rax,1)
+  476f35:	movb   $0x0,0x6(%rcx,%rax,1)
+  476f3a:	movb   $0x0,0x7(%rcx,%rax,1)
+  476f3f:	add    $0x8,%rax
+  476f43:	cmp    %rax,%rsi
+  476f46:	jne    476f18 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0xb48>
+  476f48:	cmpq   $0x0,0xd0(%rsp)
+  476f51:	je     476f77 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0xba7>
+  476f53:	mov    $0x8,%edx
+  476f58:	mov    0x80(%rsp),%rdi
+  476f60:	call   *0x45a8da(%rip)        # 8d1840 <_DYNAMIC+0x15d0>
+  476f66:	jmp    476f77 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0xba7>
+  476f68:	mov    %rbx,0x8(%rsp)
+  476f6d:	jmp    476ff3 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0xc23>
+  476f72:	mov    %rbx,0x8(%rsp)
+  476f77:	movabs $0x1fffffffffffffff,%rax
+  476f81:	mov    0xd8(%rsp),%rcx
+  476f89:	cmp    %rax,%rcx
+  476f8c:	seta   %al
+  476f8f:	lea    0x0(,%rcx,8),%rsi
+  476f97:	test   %rsi,%rsi
+  476f9a:	sete   %cl
+  476f9d:	or     %al,%cl
+  476f9f:	jne    476fd8 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0xc08>
+  476fa1:	xor    %eax,%eax
+  476fa3:	mov    0x70(%rsp),%rcx
+  476fa8:	movb   $0x0,(%rcx,%rax,1)
+  476fac:	movb   $0x0,0x1(%rcx,%rax,1)
+  476fb1:	movb   $0x0,0x2(%rcx,%rax,1)
+  476fb6:	movb   $0x0,0x3(%rcx,%rax,1)
+  476fbb:	movb   $0x0,0x4(%rcx,%rax,1)
+  476fc0:	movb   $0x0,0x5(%rcx,%rax,1)
+  476fc5:	movb   $0x0,0x6(%rcx,%rax,1)
+  476fca:	movb   $0x0,0x7(%rcx,%rax,1)
+  476fcf:	add    $0x8,%rax
+  476fd3:	cmp    %rax,%rsi
+  476fd6:	jne    476fa8 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0xbd8>
+  476fd8:	cmpq   $0x0,0xd8(%rsp)
+  476fe1:	je     476ff3 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0xc23>
+  476fe3:	mov    $0x8,%edx
+  476fe8:	mov    0x70(%rsp),%rdi
+  476fed:	call   *0x45a84d(%rip)        # 8d1840 <_DYNAMIC+0x15d0>
+  476ff3:	mov    0x60(%rsp),%rax
+  476ff8:	movq   $0xffffffffffffffff,(%rax)
+  476fff:	lea    0x0(,%rbx,8),%rax
+  477007:	mov    %rax,0xc0(%rsp)
+  47700f:	mov    $0x1,%bpl
+  477012:	mov    $0x8,%edx
+  477017:	mov    0xb8(%rsp),%rdi
+  47701f:	mov    0xc0(%rsp),%rsi
+  477027:	call   *0x45a813(%rip)        # 8d1840 <_DYNAMIC+0x15d0>
+  47702d:	mov    0xc0(%rsp),%rax
+  477035:	lea    -0x1(%rax),%rcx
+  477039:	and    $0x7,%eax
+  47703c:	cmp    $0x7,%rcx
+  477040:	jae    477046 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0xc76>
+  477042:	xor    %ecx,%ecx
+  477044:	jmp    47708e <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0xcbe>
+  477046:	mov    0xc0(%rsp),%rdx
+  47704e:	and    $0xfffffffffffffff8,%rdx
+  477052:	xor    %ecx,%ecx
+  477054:	mov    0x28(%rsp),%rsi
+  477059:	movb   $0x0,(%rsi,%rcx,1)
+  47705d:	movb   $0x0,0x1(%rsi,%rcx,1)
+  477062:	movb   $0x0,0x2(%rsi,%rcx,1)
+  477067:	movb   $0x0,0x3(%rsi,%rcx,1)
+  47706c:	movb   $0x0,0x4(%rsi,%rcx,1)
+  477071:	movb   $0x0,0x5(%rsi,%rcx,1)
+  477076:	movb   $0x0,0x6(%rsi,%rcx,1)
+  47707b:	movb   $0x0,0x7(%rsi,%rcx,1)
+  477080:	add    $0x8,%rcx
+  477084:	cmp    %rcx,%rdx
+  477087:	jne    477059 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0xc89>
+  477089:	test   %rax,%rax
+  47708c:	je     4770a1 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0xcd1>
+  47708e:	add    0x28(%rsp),%rcx
+  477093:	xor    %edx,%edx
+  477095:	movb   $0x0,(%rcx,%rdx,1)
+  477099:	inc    %rdx
+  47709c:	cmp    %rdx,%rax
+  47709f:	jne    477095 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0xcc5>
+  4770a1:	mov    $0x8,%edx
+  4770a6:	mov    0x28(%rsp),%rdi
+  4770ab:	mov    0xc0(%rsp),%rsi
+  4770b3:	call   *0x45a787(%rip)        # 8d1840 <_DYNAMIC+0x15d0>
+  4770b9:	jmp    476b0d <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0x73d>
+  4770be:	cmp    %rbx,0xa8(%rsp)
+  4770c6:	jne    477871 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0x14a1>
+  4770cc:	mov    0x20(%rsp),%rdi
+  4770d1:	mov    0x70(%rsp),%rsi
+  4770d6:	lea    0x0(,%rbx,8),%rdx
+  4770de:	call   *0x45b37c(%rip)        # 8d2460 <memcpy@GLIBC_2.14>
+  4770e4:	cmpq   $0x0,0x90(%rsp)
+  4770ed:	je     4776a7 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0x12d7>
+  4770f3:	mov    0x90(%rsp),%rax
+  4770fb:	or     $0x4,%rax
+  4770ff:	movabs $0xcccccccccccccccd,%rcx
+  477109:	mul    %rcx
+  47710c:	shr    $0x2,%rdx
+  477110:	mov    %rdx,0xe8(%rsp)
+  477118:	mov    0xe0(%rsp),%rdi
+  477120:	lea    0x0(,%rdi,8),%rcx
+  477128:	mov    %rcx,0xf8(%rsp)
+  477130:	cmp    %rdi,%rbx
+  477133:	cmovb  %rbx,%rdi
+  477137:	mov    0x18(%rsp),%rax
+  47713c:	mov    (%rax),%rax
+  47713f:	mov    %rax,0x8(%rsp)
+  477144:	lea    0x0(,%rdi,8),%r8
+  47714c:	mov    0x80(%rsp),%rsi
+  477154:	lea    (%rsi,%rdi,8),%rax
+  477158:	imul   $0xf8,%rbx,%rcx
+  47715f:	mov    0x70(%rsp),%rdx
+  477164:	add    %rdx,%rcx
+  477167:	lea    (%rcx,%rdi,8),%rcx
+  47716b:	cmp    %rcx,%rsi
+  47716e:	setb   %cl
+  477171:	cmp    %rax,%rdx
+  477174:	setb   %al
+  477177:	and    %cl,%al
+  477179:	mov    %al,0xa0(%rsp)
+  477180:	movabs $0xffffffffffffffc,%rax
+  47718a:	and    %rdi,%rax
+  47718d:	mov    %rax,0x108(%rsp)
+  477195:	mov    %rdi,0x58(%rsp)
+  47719a:	and    $0x3,%edi
+  47719d:	mov    %rdi,0xa8(%rsp)
+  4771a5:	and    $0xffffffffffffffe0,%r8
+  4771a9:	mov    %r8,0x78(%rsp)
+  4771ae:	lea    0x10(%rdx),%rax
+  4771b2:	mov    %rax,0x100(%rsp)
+  4771ba:	mov    0xe8(%rsp),%rax
+  4771c2:	dec    %rax
+  4771c5:	mov    %rax,0xe8(%rsp)
+  4771cd:	lea    (%rax,%rax,4),%rax
+  4771d1:	cmp    0x90(%rsp),%rax
+  4771d9:	jae    47720c <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0xe3c>
+  4771db:	mov    %rax,%rdi
+  4771de:	shr    $0x6,%rdi
+  4771e2:	cmp    0xb0(%rsp),%rdi
+  4771ea:	jae    4778dd <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0x150d>
+  4771f0:	mov    0xc8(%rsp),%rcx
+  4771f8:	mov    (%rcx,%rdi,8),%rcx
+  4771fc:	xor    %edx,%edx
+  4771fe:	bt     %rax,%rcx
+  477202:	setb   %dl
+  477205:	mov    %rdx,0x68(%rsp)
+  47720a:	jmp    477215 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0xe45>
+  47720c:	movq   $0x0,0x68(%rsp)
+  477215:	lea    0x1(%rax),%rcx
+  477219:	cmp    0x90(%rsp),%rcx
+  477221:	jae    477258 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0xe88>
+  477223:	mov    %rcx,%rdi
+  477226:	shr    $0x6,%rdi
+  47722a:	cmp    0xb0(%rsp),%rdi
+  477232:	jae    4778dd <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0x150d>
+  477238:	mov    0xc8(%rsp),%rdx
+  477240:	mov    (%rdx,%rdi,8),%rdx
+  477244:	shr    %cl,%rdx
+  477247:	and    $0x1,%edx
+  47724a:	mov    0x68(%rsp),%rcx
+  47724f:	lea    (%rcx,%rdx,2),%rcx
+  477253:	mov    %rcx,0x68(%rsp)
+  477258:	lea    0x2(%rax),%rcx
+  47725c:	cmp    0x90(%rsp),%rcx
+  477264:	jae    47729b <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0xecb>
+  477266:	mov    %rcx,%rdi
+  477269:	shr    $0x6,%rdi
+  47726d:	cmp    0xb0(%rsp),%rdi
+  477275:	jae    4778dd <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0x150d>
+  47727b:	mov    0xc8(%rsp),%rdx
+  477283:	mov    (%rdx,%rdi,8),%rdx
+  477287:	shr    %cl,%rdx
+  47728a:	and    $0x1,%edx
+  47728d:	mov    0x68(%rsp),%rcx
+  477292:	lea    (%rcx,%rdx,4),%rcx
+  477296:	mov    %rcx,0x68(%rsp)
+  47729b:	lea    0x3(%rax),%rcx
+  47729f:	cmp    0x90(%rsp),%rcx
+  4772a7:	jae    4772de <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0xf0e>
+  4772a9:	mov    %rcx,%rdi
+  4772ac:	shr    $0x6,%rdi
+  4772b0:	cmp    0xb0(%rsp),%rdi
+  4772b8:	jae    4778dd <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0x150d>
+  4772be:	mov    0xc8(%rsp),%rdx
+  4772c6:	mov    (%rdx,%rdi,8),%rdx
+  4772ca:	shr    %cl,%rdx
+  4772cd:	and    $0x1,%edx
+  4772d0:	mov    0x68(%rsp),%rcx
+  4772d5:	lea    (%rcx,%rdx,8),%rcx
+  4772d9:	mov    %rcx,0x68(%rsp)
+  4772de:	add    $0x4,%rax
+  4772e2:	cmp    0x90(%rsp),%rax
+  4772ea:	jae    47731d <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0xf4d>
+  4772ec:	mov    %rax,%rdi
+  4772ef:	shr    $0x6,%rdi
+  4772f3:	cmp    0xb0(%rsp),%rdi
+  4772fb:	jae    4778dd <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0x150d>
+  477301:	mov    0xc8(%rsp),%rcx
+  477309:	mov    (%rcx,%rdi,8),%rdx
+  47730d:	mov    %eax,%ecx
+  47730f:	shr    %cl,%rdx
+  477312:	shl    $0x4,%edx
+  477315:	and    $0x10,%edx
+  477318:	add    %rdx,0x68(%rsp)
+  47731d:	sub    $0x8,%rsp
+  477321:	mov    0x28(%rsp),%rdi
+  477326:	mov    %rbx,%rsi
+  477329:	mov    %rdi,%rdx
+  47732c:	mov    %rbx,%rcx
+  47732f:	mov    0x18(%rsp),%r8
+  477334:	mov    %rbx,%r9
+  477337:	push   %rbx
+  477338:	push   0x38(%rsp)
+  47733c:	lea    0x1(%rbx,%rbx,1),%rax
+  477341:	push   %rax
+  477342:	push   %r13
+  477344:	push   0x58(%rsp)
+  477348:	push   %rbx
+  477349:	push   0x70(%rsp)
+  47734d:	call   478370 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith20mont_mul_ladder_into>
+  477352:	add    $0x40,%rsp
+  477356:	test   %al,%al
+  477358:	je     476edf <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0xb0f>
+  47735e:	mov    0x18(%rsp),%rax
+  477363:	mov    %rbx,(%rax)
+  477366:	mov    0x10(%rsp),%rdi
+  47736b:	mov    %rdi,0x8(%rax)
+  47736f:	mov    %rbx,0x10(%rax)
+  477373:	sub    $0x8,%rsp
+  477377:	mov    %rbx,%rsi
+  47737a:	mov    %rdi,%rdx
+  47737d:	mov    %rbx,%rcx
+  477380:	mov    0x28(%rsp),%r8
+  477385:	mov    %rbx,%r9
+  477388:	push   %rbx
+  477389:	push   0x38(%rsp)
+  47738d:	lea    0x1(%rbx,%rbx,1),%rax
+  477392:	push   %rax
+  477393:	push   %r13
+  477395:	push   0x58(%rsp)
+  477399:	push   %rbx
+  47739a:	push   0x70(%rsp)
+  47739e:	call   478370 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith20mont_mul_ladder_into>
+  4773a3:	add    $0x40,%rsp
+  4773a7:	test   %al,%al
+  4773a9:	je     477763 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0x1393>
+  4773af:	mov    0x18(%rsp),%rax
+  4773b4:	mov    0x8(%rsp),%rcx
+  4773b9:	mov    %rcx,(%rax)
+  4773bc:	mov    0x20(%rsp),%rdi
+  4773c1:	mov    %rdi,0x8(%rax)
+  4773c5:	mov    %rbx,0x10(%rax)
+  4773c9:	sub    $0x8,%rsp
+  4773cd:	mov    %rbx,%rsi
+  4773d0:	mov    %rdi,%rdx
+  4773d3:	mov    %rbx,%rcx
+  4773d6:	mov    0x18(%rsp),%r8
+  4773db:	mov    %rbx,%r9
+  4773de:	push   %rbx
+  4773df:	push   0x38(%rsp)
+  4773e3:	lea    0x1(%rbx,%rbx,1),%rax
+  4773e8:	push   %rax
+  4773e9:	push   %r13
+  4773eb:	push   0x58(%rsp)
+  4773ef:	push   %rbx
+  4773f0:	push   0x70(%rsp)
+  4773f4:	call   478370 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith20mont_mul_ladder_into>
+  4773f9:	add    $0x40,%rsp
+  4773fd:	test   %al,%al
+  4773ff:	je     476edf <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0xb0f>
+  477405:	mov    0x18(%rsp),%rax
+  47740a:	mov    %rbx,(%rax)
+  47740d:	mov    0x10(%rsp),%rdi
+  477412:	mov    %rdi,0x8(%rax)
+  477416:	mov    %rbx,0x10(%rax)
+  47741a:	sub    $0x8,%rsp
+  47741e:	mov    %rbx,%rsi
+  477421:	mov    %rdi,%rdx
+  477424:	mov    %rbx,%rcx
+  477427:	mov    0x28(%rsp),%r8
+  47742c:	mov    %rbx,%r9
+  47742f:	push   %rbx
+  477430:	push   0x38(%rsp)
+  477434:	lea    0x1(%rbx,%rbx,1),%rax
+  477439:	push   %rax
+  47743a:	push   %r13
+  47743c:	push   0x58(%rsp)
+  477440:	push   %rbx
+  477441:	push   0x70(%rsp)
+  477445:	call   478370 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith20mont_mul_ladder_into>
+  47744a:	add    $0x40,%rsp
+  47744e:	test   %al,%al
+  477450:	je     477763 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0x1393>
+  477456:	mov    0x18(%rsp),%rax
+  47745b:	mov    0x8(%rsp),%rcx
+  477460:	mov    %rcx,(%rax)
+  477463:	mov    0x20(%rsp),%rdi
+  477468:	mov    %rdi,0x8(%rax)
+  47746c:	mov    %rbx,0x10(%rax)
+  477470:	sub    $0x8,%rsp
+  477474:	mov    %rbx,%rsi
+  477477:	mov    %rdi,%rdx
+  47747a:	mov    %rbx,%rcx
+  47747d:	mov    0x18(%rsp),%r8
+  477482:	mov    %rbx,%r9
+  477485:	push   %rbx
+  477486:	push   0x38(%rsp)
+  47748a:	lea    0x1(%rbx,%rbx,1),%rax
+  47748f:	push   %rax
+  477490:	push   %r13
+  477492:	push   0x58(%rsp)
+  477496:	push   %rbx
+  477497:	push   0x70(%rsp)
+  47749b:	call   478370 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith20mont_mul_ladder_into>
+  4774a0:	add    $0x40,%rsp
+  4774a4:	test   %al,%al
+  4774a6:	je     476edf <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0xb0f>
+  4774ac:	mov    0x18(%rsp),%rax
+  4774b1:	mov    %rbx,(%rax)
+  4774b4:	mov    0x10(%rsp),%rcx
+  4774b9:	mov    %rcx,0x8(%rax)
+  4774bd:	mov    %rbx,0x10(%rax)
+  4774c1:	cmpq   $0x0,0xe0(%rsp)
+  4774ca:	je     4774e4 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0x1114>
+  4774cc:	mov    0x80(%rsp),%rdi
+  4774d4:	xor    %esi,%esi
+  4774d6:	mov    0xf8(%rsp),%rdx
+  4774de:	call   *0x45a38c(%rip)        # 8d1870 <memset@GLIBC_2.2.5>
+  4774e4:	mov    0x70(%rsp),%rdi
+  4774e9:	mov    0x100(%rsp),%r8
+  4774f1:	xor    %ecx,%ecx
+  4774f3:	jmp    477510 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0x1140>
+  4774f5:	inc    %rcx
+  4774f8:	lea    0x0(,%rbx,8),%rax
+  477500:	add    %rax,%r8
+  477503:	add    %rax,%rdi
+  477506:	cmp    $0x20,%rcx
+  47750a:	je     477633 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0x1263>
+  477510:	mov    %rcx,%rax
+  477513:	mul    %rbx
+  477516:	jo     477897 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0x14c7>
+  47751c:	mov    %rax,%rsi
+  47751f:	add    %rbx,%rsi
+  477522:	jb     4778b0 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0x14e0>
+  477528:	cmp    0x88(%rsp),%rsi
+  477530:	ja     477772 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0x13a2>
+  477536:	cmpq   $0x0,0x58(%rsp)
+  47753c:	je     4774f5 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0x1125>
+  47753e:	mov    %rcx,%rax
+  477541:	xor    0x68(%rsp),%rax
+  477546:	neg    %rax
+  477549:	shr    $0x3f,%rax
+  47754d:	jne    4774f5 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0x1125>
+  47754f:	cmpq   $0x4,0x58(%rsp)
+  477555:	setb   %al
+  477558:	or     0xa0(%rsp),%al
+  47755f:	test   $0x1,%al
+  477561:	je     477567 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0x1197>
+  477563:	xor    %edx,%edx
+  477565:	jmp    4775b5 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0x11e5>
+  477567:	xor    %eax,%eax
+  477569:	movups -0x10(%r8,%rax,1),%xmm0
+  47756f:	movups (%r8,%rax,1),%xmm1
+  477574:	mov    0x80(%rsp),%rdx
+  47757c:	movups (%rdx,%rax,1),%xmm2
+  477580:	orps   %xmm0,%xmm2
+  477583:	movups 0x10(%rdx,%rax,1),%xmm0
+  477588:	orps   %xmm1,%xmm0
+  47758b:	movups %xmm2,(%rdx,%rax,1)
+  47758f:	movups %xmm0,0x10(%rdx,%rax,1)
+  477594:	add    $0x20,%rax
+  477598:	cmp    %rax,0x78(%rsp)
+  47759d:	jne    477569 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0x1199>
+  47759f:	mov    0x108(%rsp),%rax
+  4775a7:	mov    %rax,%rdx
+  4775aa:	cmp    %rax,0x58(%rsp)
+  4775af:	je     4774f5 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0x1125>
+  4775b5:	mov    %rdx,%rax
+  4775b8:	cmpq   $0x0,0xa8(%rsp)
+  4775c1:	je     4775e6 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0x1216>
+  4775c3:	mov    0xa8(%rsp),%rsi
+  4775cb:	mov    %rdx,%rax
+  4775ce:	mov    (%rdi,%rax,8),%r9
+  4775d2:	mov    0x80(%rsp),%r10
+  4775da:	or     %r9,(%r10,%rax,8)
+  4775de:	inc    %rax
+  4775e1:	dec    %rsi
+  4775e4:	jne    4775ce <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0x11fe>
+  4775e6:	sub    0x58(%rsp),%rdx
+  4775eb:	cmp    $0xfffffffffffffffc,%rdx
+  4775ef:	ja     4774f5 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0x1125>
+  4775f5:	mov    -0x10(%r8,%rax,8),%rdx
+  4775fa:	mov    0x80(%rsp),%rsi
+  477602:	or     %rdx,(%rsi,%rax,8)
+  477606:	mov    -0x8(%r8,%rax,8),%rdx
+  47760b:	or     %rdx,0x8(%rsi,%rax,8)
+  477610:	mov    (%r8,%rax,8),%rdx
+  477614:	or     %rdx,0x10(%rsi,%rax,8)
+  477619:	mov    0x8(%r8,%rax,8),%rdx
+  47761e:	or     %rdx,0x18(%rsi,%rax,8)
+  477623:	add    $0x4,%rax
+  477627:	cmp    %rax,0x58(%rsp)
+  47762c:	jne    4775f5 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0x1225>
+  47762e:	jmp    4774f5 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0x1125>
+  477633:	sub    $0x8,%rsp
+  477637:	mov    0x18(%rsp),%rdi
+  47763c:	mov    %rbx,%rsi
+  47763f:	mov    0x88(%rsp),%rdx
+  477647:	mov    0xe8(%rsp),%rcx
+  47764f:	mov    0x28(%rsp),%r8
+  477654:	mov    %rbx,%r9
+  477657:	push   %rbx
+  477658:	push   0x38(%rsp)
+  47765c:	lea    0x1(%rbx,%rbx,1),%rax
+  477661:	push   %rax
+  477662:	push   %r13
+  477664:	push   0x58(%rsp)
+  477668:	push   %rbx
+  477669:	push   0x70(%rsp)
+  47766d:	call   478370 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith20mont_mul_ladder_into>
+  477672:	add    $0x40,%rsp
+  477676:	test   %al,%al
+  477678:	je     477763 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0x1393>
+  47767e:	mov    0x18(%rsp),%rax
+  477683:	mov    0x8(%rsp),%rcx
+  477688:	mov    %rcx,(%rax)
+  47768b:	mov    0x20(%rsp),%rcx
+  477690:	mov    %rcx,0x8(%rax)
+  477694:	mov    %rbx,0x10(%rax)
+  477698:	cmpq   $0x0,0xe8(%rsp)
+  4776a1:	jne    4771ba <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0xdea>
+  4776a7:	sub    $0x8,%rsp
+  4776ab:	mov    0x28(%rsp),%rdi
+  4776b0:	mov    %rbx,%rsi
+  4776b3:	mov    0xc0(%rsp),%rdx
+  4776bb:	mov    %rbx,%rcx
+  4776be:	mov    0xa0(%rsp),%r8
+  4776c6:	mov    %rbx,%r9
+  4776c9:	push   %rbx
+  4776ca:	push   0x38(%rsp)
+  4776ce:	lea    0x1(%rbx,%rbx,1),%rax
+  4776d3:	push   %rax
+  4776d4:	push   %r13
+  4776d6:	push   0x58(%rsp)
+  4776da:	push   %rbx
+  4776db:	push   0x70(%rsp)
+  4776df:	call   478370 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith20mont_mul_ladder_into>
+  4776e4:	add    $0x40,%rsp
+  4776e8:	test   %al,%al
+  4776ea:	je     476edf <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0xb0f>
+  4776f0:	mov    0xd0(%rsp),%rdi
+  4776f8:	mov    0x80(%rsp),%rsi
+  477700:	call   472e60 <_RINvNtCsgxBkk5gSRhY_4core3ptr9drop_glueINtNtNtCsfBoMNNx3tZr_10openssl_rs7runtime6secret9SecretBufyEEBI_>
+  477705:	mov    0xd8(%rsp),%rdi
+  47770d:	mov    0x70(%rsp),%rsi
+  477712:	call   472e60 <_RINvNtCsgxBkk5gSRhY_4core3ptr9drop_glueINtNtNtCsfBoMNNx3tZr_10openssl_rs7runtime6secret9SecretBufyEEBI_>
+  477717:	mov    0x60(%rsp),%rcx
+  47771c:	mov    %rbx,(%rcx)
+  47771f:	mov    0x98(%rsp),%rax
+  477727:	mov    %rax,0x8(%rcx)
+  47772b:	mov    %rbx,0x10(%rcx)
+  47772f:	xor    %ebp,%ebp
+  477731:	mov    %rbx,0x8(%rsp)
+  477736:	jmp    477012 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0xc42>
+  47773b:	mov    %rbp,0x18(%rsp)
+  477740:	mov    0x48(%rsp),%r13
+  477745:	movq   $0x0,0x0(%r13)
+  47774d:	lea    0x40d354(%rip),%rdx        # 884aa8 <anon.9855385651731e61b7d1510ea039e32b.355.llvm.2675173248668928877+0x108>
+  477754:	xor    %edi,%edi
+  477756:	xor    %esi,%esi
+  477758:	call   *0x45b3ba(%rip)        # 8d2b18 <_DYNAMIC+0x28a8>
+  47775e:	jmp    4778f7 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0x1527>
+  477763:	mov    0x20(%rsp),%rax
+  477768:	mov    %rax,0x10(%rsp)
+  47776d:	jmp    476ee4 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0xb14>
+  477772:	lea    0x40d377(%rip),%rcx        # 884af0 <anon.9855385651731e61b7d1510ea039e32b.355.llvm.2675173248668928877+0x150>
+  477779:	mov    0x20(%rsp),%rdx
+  47777e:	mov    %rdx,0x10(%rsp)
+  477783:	mov    %rax,%rdi
+  477786:	mov    0x88(%rsp),%rdx
+  47778e:	call   *0x45c15c(%rip)        # 8d38f0 <_DYNAMIC+0x3680>
+  477794:	jmp    4778f7 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0x1527>
+  477799:	lea    0x248cf1(%rip),%rdi        # 6c0491 <anon.9855385651731e61b7d1510ea039e32b.156.llvm.2675173248668928877+0xae>
+  4777a0:	lea    0x40d409(%rip),%rdx        # 884bb0 <anon.9855385651731e61b7d1510ea039e32b.355.llvm.2675173248668928877+0x210>
+  4777a7:	mov    $0x13,%esi
+  4777ac:	mov    %rbx,0x8(%rsp)
+  4777b1:	call   *0x45c459(%rip)        # 8d3c10 <_DYNAMIC+0x39a0>
+  4777b7:	jmp    4778f7 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0x1527>
+  4777bc:	mov    0x78(%rsp),%rcx
+  4777c1:	mov    %rcx,0x88(%rsp)
+  4777c9:	jmp    4777e9 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0x1419>
+  4777cb:	xor    %eax,%eax
+  4777cd:	mov    %rbx,0x78(%rsp)
+  4777d2:	mov    %rbp,0x88(%rsp)
+  4777da:	lea    0x40d3ff(%rip),%rcx        # 884be0 <anon.9855385651731e61b7d1510ea039e32b.355.llvm.2675173248668928877+0x240>
+  4777e1:	mov    %rcx,0xa0(%rsp)
+  4777e9:	mov    %rbx,0x8(%rsp)
+  4777ee:	mov    %rax,%rdi
+  4777f1:	mov    0x78(%rsp),%rsi
+  4777f6:	mov    0x88(%rsp),%rdx
+  4777fe:	mov    0xa0(%rsp),%rcx
+  477806:	call   *0x45c0e4(%rip)        # 8d38f0 <_DYNAMIC+0x3680>
+  47780c:	jmp    4778f7 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0x1527>
+  477811:	lea    0x40d410(%rip),%rax        # 884c28 <anon.9855385651731e61b7d1510ea039e32b.355.llvm.2675173248668928877+0x288>
+  477818:	mov    %rax,0xa0(%rsp)
+  477820:	xor    %eax,%eax
+  477822:	mov    %rbx,0x78(%rsp)
+  477827:	jmp    4777e9 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0x1419>
+  477829:	lea    0x40d320(%rip),%rax        # 884b50 <anon.9855385651731e61b7d1510ea039e32b.355.llvm.2675173248668928877+0x1b0>
+  477830:	mov    %rax,0xa0(%rsp)
+  477838:	xor    %eax,%eax
+  47783a:	mov    %rbx,0x78(%rsp)
+  47783f:	mov    0xa8(%rsp),%rcx
+  477847:	jmp    4777c1 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0x13f1>
+  47784c:	lea    0x40d3bd(%rip),%rax        # 884c10 <anon.9855385651731e61b7d1510ea039e32b.355.llvm.2675173248668928877+0x270>
+  477853:	mov    %rax,0xa0(%rsp)
+  47785b:	mov    %rbx,%rax
+  47785e:	jmp    4777e9 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0x1419>
+  477860:	lea    0x40d301(%rip),%rdx        # 884b68 <anon.9855385651731e61b7d1510ea039e32b.355.llvm.2675173248668928877+0x1c8>
+  477867:	mov    %rbx,0xa8(%rsp)
+  47786f:	jmp    47787d <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0x14ad>
+  477871:	lea    0x40d308(%rip),%rdx        # 884b80 <anon.9855385651731e61b7d1510ea039e32b.355.llvm.2675173248668928877+0x1e0>
+  477878:	mov    %rbx,0x58(%rsp)
+  47787d:	mov    %rbx,0x8(%rsp)
+  477882:	mov    0xa8(%rsp),%rdi
+  47788a:	mov    0x58(%rsp),%rsi
+  47788f:	call   *0x45b86b(%rip)        # 8d3100 <_DYNAMIC+0x2e90>
+  477895:	jmp    4778f7 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0x1527>
+  477897:	lea    0x40d222(%rip),%rdi        # 884ac0 <anon.9855385651731e61b7d1510ea039e32b.355.llvm.2675173248668928877+0x120>
+  47789e:	mov    0x20(%rsp),%rax
+  4778a3:	mov    %rax,0x10(%rsp)
+  4778a8:	call   *0x45a512(%rip)        # 8d1dc0 <_DYNAMIC+0x1b50>
+  4778ae:	jmp    4778f7 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0x1527>
+  4778b0:	lea    0x40d221(%rip),%rdi        # 884ad8 <anon.9855385651731e61b7d1510ea039e32b.355.llvm.2675173248668928877+0x138>
+  4778b7:	mov    0x20(%rsp),%rax
+  4778bc:	mov    %rax,0x10(%rsp)
+  4778c1:	call   *0x45aa79(%rip)        # 8d2340 <_DYNAMIC+0x20d0>
+  4778c7:	jmp    4778f7 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0x1527>
+  4778c9:	lea    0x40d2f8(%rip),%rdi        # 884bc8 <anon.9855385651731e61b7d1510ea039e32b.355.llvm.2675173248668928877+0x228>
+  4778d0:	mov    %rbx,0x8(%rsp)
+  4778d5:	call   *0x45a4e5(%rip)        # 8d1dc0 <_DYNAMIC+0x1b50>
+  4778db:	jmp    4778f7 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0x1527>
+  4778dd:	lea    0x40d2b4(%rip),%rdx        # 884b98 <anon.9855385651731e61b7d1510ea039e32b.355.llvm.2675173248668928877+0x1f8>
+  4778e4:	mov    %rbx,0x8(%rsp)
+  4778e9:	mov    0xb0(%rsp),%rsi
+  4778f1:	call   *0x45b221(%rip)        # 8d2b18 <_DYNAMIC+0x28a8>
+  4778f7:	ud2
+  4778f9:	mov    %rax,0x30(%rsp)
+  4778fe:	mov    0xd0(%rsp),%rdi
+  477906:	mov    0x80(%rsp),%rsi
+  47790e:	call   472e60 <_RINvNtCsgxBkk5gSRhY_4core3ptr9drop_glueINtNtNtCsfBoMNNx3tZr_10openssl_rs7runtime6secret9SecretBufyEEBI_>
+  477913:	mov    0xd8(%rsp),%rdi
+  47791b:	mov    0x70(%rsp),%rsi
+  477920:	call   472e60 <_RINvNtCsgxBkk5gSRhY_4core3ptr9drop_glueINtNtNtCsfBoMNNx3tZr_10openssl_rs7runtime6secret9SecretBufyEEBI_>
+  477925:	jmp    477954 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0x1584>
+  477927:	mov    %rax,0x30(%rsp)
+  47792c:	mov    $0x8,%eax
+  477931:	mov    %rax,0x98(%rsp)
+  477939:	movq   $0x0,0x8(%rsp)
+  477942:	mov    %rax,0x10(%rsp)
+  477947:	mov    %rax,0xb8(%rsp)
+  47794f:	mov    %rax,0x28(%rsp)
+  477954:	test   %rbx,%rbx
+  477957:	jne    477987 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0x15b7>
+  477959:	mov    %rbx,%rdi
+  47795c:	mov    0x28(%rsp),%rsi
+  477961:	call   472e60 <_RINvNtCsgxBkk5gSRhY_4core3ptr9drop_glueINtNtNtCsfBoMNNx3tZr_10openssl_rs7runtime6secret9SecretBufyEEBI_>
+  477966:	lea    0x1(,%rbx,2),%rdi
+  47796e:	mov    %r13,%rsi
+  477971:	call   472e60 <_RINvNtCsgxBkk5gSRhY_4core3ptr9drop_glueINtNtNtCsfBoMNNx3tZr_10openssl_rs7runtime6secret9SecretBufyEEBI_>
+  477976:	mov    0x8(%rsp),%rdi
+  47797b:	mov    0x10(%rsp),%rsi
+  477980:	call   472e60 <_RINvNtCsgxBkk5gSRhY_4core3ptr9drop_glueINtNtNtCsfBoMNNx3tZr_10openssl_rs7runtime6secret9SecretBufyEEBI_>
+  477985:	jmp    4779e8 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0x1618>
+  477987:	lea    0x0(,%rbx,8),%rsi
+  47798f:	lea    0x12cc3a(%rip),%rbp        # 5a45d0 <_RNvCs1njKG4L9aB3_7___rustc14___rust_dealloc>
+  477996:	mov    $0x8,%edx
+  47799b:	mov    0xb8(%rsp),%rdi
+  4779a3:	call   *%rbp
+  4779a5:	mov    %rbx,%rdi
+  4779a8:	mov    0x28(%rsp),%rsi
+  4779ad:	call   472e60 <_RINvNtCsgxBkk5gSRhY_4core3ptr9drop_glueINtNtNtCsfBoMNNx3tZr_10openssl_rs7runtime6secret9SecretBufyEEBI_>
+  4779b2:	lea    0x1(,%rbx,2),%rdi
+  4779ba:	mov    %r13,%rsi
+  4779bd:	call   472e60 <_RINvNtCsgxBkk5gSRhY_4core3ptr9drop_glueINtNtNtCsfBoMNNx3tZr_10openssl_rs7runtime6secret9SecretBufyEEBI_>
+  4779c2:	mov    0x8(%rsp),%rdi
+  4779c7:	mov    0x10(%rsp),%rsi
+  4779cc:	call   472e60 <_RINvNtCsgxBkk5gSRhY_4core3ptr9drop_glueINtNtNtCsfBoMNNx3tZr_10openssl_rs7runtime6secret9SecretBufyEEBI_>
+  4779d1:	mov    $0x8,%edx
+  4779d6:	mov    0x98(%rsp),%rdi
+  4779de:	lea    0x0(,%rbx,8),%rsi
+  4779e6:	call   *%rbp
+  4779e8:	mov    %r12,%rdi
+  4779eb:	mov    %r15,%rsi
+  4779ee:	call   472e60 <_RINvNtCsgxBkk5gSRhY_4core3ptr9drop_glueINtNtNtCsfBoMNNx3tZr_10openssl_rs7runtime6secret9SecretBufyEEBI_>
+  4779f3:	jmp    477a0b <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0x163b>
+  4779f5:	mov    %rbp,0x18(%rsp)
+  4779fa:	mov    %rax,0x30(%rsp)
+  4779ff:	jmp    477a16 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith15run_mont_ladder+0x1646>
+  477a01:	mov    %rbp,0x18(%rsp)
+  477a06:	mov    %rax,0x30(%rsp)
+  477a0b:	mov    %rbx,%rdi
+  477a0e:	mov    %r14,%rsi
+  477a11:	call   472e60 <_RINvNtCsgxBkk5gSRhY_4core3ptr9drop_glueINtNtNtCsfBoMNNx3tZr_10openssl_rs7runtime6secret9SecretBufyEEBI_>
+  477a16:	mov    0x18(%rsp),%rbp
+  477a1b:	mov    0x0(%rbp),%rdi
+  477a1f:	mov    0x8(%rbp),%rsi
+  477a23:	call   472e60 <_RINvNtCsgxBkk5gSRhY_4core3ptr9drop_glueINtNtNtCsfBoMNNx3tZr_10openssl_rs7runtime6secret9SecretBufyEEBI_>
+  477a28:	mov    0x30(%rsp),%rdi
+  477a2d:	call   1610a0 <_Unwind_Resume@plt>

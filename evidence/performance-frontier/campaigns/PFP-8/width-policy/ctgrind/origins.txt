@@ -1,0 +1,6 @@
+--- policy_control.log
+==293113== Conditional jump or move depends on uninitialised value(s)
+--- policy_taint.log
+origins: none
+--- window_taint.log
+origins: none

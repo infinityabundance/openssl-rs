@@ -1,0 +1,30 @@
+{
+  "mont_mul_ladder_into": {
+    "4783ab": "const-generic width-dispatch geometry check (xor/or of limb-count masks); operands are public geometry — identical instruction sequence to the M-A1 site 0x2fa80b, relocated"
+  },
+  "run_mont_ladder": {
+    "4763fb": "slice/alloc layout high-bit check (shr 58) on a pointer tag — public (old 0x2f895b)",
+    "4764cd": "allocation-length overflow mask (test/sete/or) — public length, never a limb",
+    "4766e3": "allocation-size overflow mask (test/sete/or after lea x8) — public length",
+    "4767c4": "allocation-size overflow mask (test/sete/or after lea x8) — public length",
+    "476885": "allocation-length overflow mask (test/sete/or) — public length",
+    "476b98": "allocation-size overflow mask (test/sete/or after lea x8) — public length",
+    "476cdd": "slice capacity high-bit check (shr 59) on an allocation length — public (old 0x2f9239)",
+    "476dcd": "allocation-size difference borrow (sub) on lengths — public (old 0x2f931a)",
+    "476e3f": "allocation counter underflow (subq) — public (old 0x2f9397)",
+    "476e63": "window-table size overflow (mul/jo) — public geometry (old 0x2f93bb)",
+    "476f0c": "allocation-size overflow mask (test/sete/or after lea x8) — public length",
+    "476f9f": "allocation-size overflow mask (test/sete/or after lea x8) — public length",
+    "477516": "window-table size overflow (mul/jo) — public geometry (old 0x2f9a1f)",
+    "477522": "window-table size overflow (add/jb) — public geometry (old 0x2f9a2b)",
+    "47754d": "alloc layout capacity/alignment difference (xor/neg/shr 63) on lengths — public (old 0x2f9a50)",
+    "4775e4": "masked-scan accumulation loop over the row's public limb count (dec/jne) — the branch reads the count, the ORed limbs are secret data"
+  },
+  "bn_mod_exp_mont_impl": {
+    "475156": "BN_num_bits > INT_MAX check (cmp/seta/or) — public length",
+    "47528a": "BN_FLG_CONSTTIME identity of a and p (xor $1, or) — public flags",
+    "475585": "allocation-length overflow mask (test/sete/or) — public length",
+    "47579a": "documented context-identity declassification boundary (`context_matches`: whole-width accumulation, one final equality test; `bn::mont::tests::ctgrind_context_matches_declassifies_at_the_equality_decision`) — unchanged by this batch"
+  },
+  "dh_bn_mod_exp": {}
+}

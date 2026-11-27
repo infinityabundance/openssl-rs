@@ -67,7 +67,7 @@ use crate::bn::bignum::{
     BN_with_flags, BigNum,
 };
 use crate::bn::ctx::{BN_CTX_end, BN_CTX_free, BN_CTX_get, BN_CTX_new_ex, BN_CTX_start, BnCtx};
-use crate::bn::mont::{BN_MONT_CTX_free, BN_MONT_CTX_set_locked, BN_mod_exp_mont, MontCtx};
+use crate::bn::mont::{bn_mod_exp_mont_policy, BN_MONT_CTX_free, BN_MONT_CTX_set_locked, MontCtx};
 use crate::bn::rand::{BN_priv_rand_ex, BN_RAND_BOTTOM_ANY, BN_RAND_TOP_ONE};
 use crate::ffc::key_generate::ossl_ffc_generate_private_key;
 use crate::ffc::params_validate::ossl_ffc_params_simple_validate;
@@ -394,23 +394,69 @@ pub extern "C" fn DH_get_default_method() -> *const DhMethod {
 
 /// `static int dh_bn_mod_exp(...)` — `dh_key.c:189-198`.
 ///
-/// The `#ifdef S390X_MOD_EXP` arm is not taken on this profile, so the body is
+/// The `#ifdef S390X_MOD_EXP` arm is not taken on this profile, so the authority's body is
 /// `BN_mod_exp_mont(r, a, p, m, ctx, m_ctx)`.
+///
+/// **Deliberate, recorded divergence:** the authority ignores `dh` here, so its
+/// constant-time ladder runs `p->top * BN_BITS2` regardless of the group's declared
+/// private-key length. This body passes the object's public bound (`dh->length`, else the
+/// named group's RFC 7919 key length) to the ladder, whose iteration count is then fixed by
+/// the group rather than the modulus. The bound is configuration, not key material; the
+/// value computed is identical, and `PFP8-WIDTH-POLICY` records the timing consequence.
 ///
 /// # Safety
 ///
-/// Every pointer is as `BN_mod_exp_mont`'s own contract requires.
+/// Every pointer is as `BN_mod_exp_mont`'s own contract requires; `dh` is NULL or a live
+/// object whose parameters and key bound are readable.
 unsafe extern "C" fn dh_bn_mod_exp(
-    _dh: *const Dh,
+    dh: *const Dh,
     r: *mut BigNum,
     a: *const BigNum,
     p: *const BigNum,
     m: *const BigNum,
-    ctx: *mut BnCtx,
+    _ctx: *mut BnCtx,
     m_ctx: *mut MontCtx,
 ) -> c_int {
-    // SAFETY: forwarded under this function's contract.
-    unsafe { BN_mod_exp_mont(r, a, p, m, ctx, m_ctx) }
+    // SAFETY: `dh` is NULL or a live object per this entry point's contract.
+    let policy = unsafe { dh_policy_limbs(dh) };
+    // SAFETY: forwarded under this function's contract. `ctx` is unused by the Montgomery
+    // entry point here, exactly as it is in the authority's body.
+    unsafe { bn_mod_exp_mont_policy(r, a, p, m, m_ctx, policy) }
+}
+
+/// The group's declared maximum private-key length, in 64-bit limbs.
+///
+/// `dh->length` is the caller's explicit bound (`DH_set_length`, or a decoded
+/// `recommended-private-length`); when it is unset, the named group's RFC 7919 key length
+/// (`params.keylength`, the value `ossl_ffc_generate_private_key` falls back to) is the
+/// bound generation uses. Both are public configuration of the object and neither is a
+/// property of any private exponent, so the iteration count derived from them is constant
+/// for a given group and configuration.
+///
+/// `0` means "no declared bound" — an unnamed group with no length and no key length, where
+/// generation uses `BN_num_bits(q)` or `BN_num_bits(p) - 2` — and keeps the modulus-width
+/// ladder.
+///
+/// # Safety
+///
+/// `dh` is NULL or a live `Dh` whose `length` and `params.keylength` are readable.
+unsafe fn dh_policy_limbs(dh: *const Dh) -> usize {
+    if dh.is_null() {
+        return 0;
+    }
+    // SAFETY: `dh` is non-NULL above and is a live object per every caller of the table
+    // entry point.
+    let bits = unsafe {
+        if (*dh).length > 0 {
+            (*dh).length
+        } else {
+            (*dh).params.keylength
+        }
+    };
+    if bits <= 0 {
+        return 0;
+    }
+    (bits as usize).div_ceil(64)
 }
 
 /// `static int dh_init(DH *dh)` — `dh_key.c:200-205`.
@@ -1045,6 +1091,77 @@ mod tests {
                 rebuilt > reused,
                 "disabling reuse must add the precomputation allocations: reused={reused} rebuilt={rebuilt}"
             );
+            DH_free(dh);
+        }
+    }
+
+    /// PFP8-WIDTH-POLICY: the ladder width is the group's declared private-key
+    /// bound in limbs — public configuration, not key material.
+    #[test]
+    fn the_policy_width_is_the_groups_declared_key_length() {
+        use crate::dh::group_params::DH_new_by_nid;
+        use crate::dh::object::DH_set_length;
+        use crate::runtime::obj::{
+            NID_ffdhe2048, NID_ffdhe3072, NID_ffdhe4096, NID_ffdhe6144, NID_ffdhe8192,
+            NID_modp_1536, NID_modp_2048, NID_modp_8192,
+        };
+
+        // 225/275/325/375/400 are the authority's `ffc_dh.c` key lengths; the
+        // policy width is `ceil(bits / 64)`.
+        let cases = [
+            (NID_ffdhe2048, 4),
+            (NID_ffdhe3072, 5),
+            (NID_ffdhe4096, 6),
+            (NID_ffdhe6144, 6),
+            (NID_ffdhe8192, 7),
+            (NID_modp_1536, 4),
+            (NID_modp_2048, 4),
+            (NID_modp_8192, 7),
+        ];
+        for (nid, expected) in cases {
+            // SAFETY: the object is this test's own and live.
+            unsafe {
+                let dh = DH_new_by_nid(nid);
+                assert!(!dh.is_null());
+                assert_eq!(dh_policy_limbs(dh), expected, "NID {nid}");
+                // A caller's explicit length overrides the group's.
+                assert_eq!(DH_set_length(dh, 640), 1);
+                assert_eq!(dh_policy_limbs(dh), 10);
+                DH_free(dh);
+            }
+        }
+    }
+
+    /// PFP8-WIDTH-POLICY: a real key generation through the policy width answers
+    /// exactly `g^priv mod p` computed by the full modulus-width ladder, and the
+    /// generated private key stays inside the group's declared bound.
+    #[test]
+    fn the_policy_width_keygen_equals_the_modulus_width_exponentiation() {
+        use crate::bn::arith::mod_exp_core_consttime_from_parts;
+        use crate::bn::bignum::magnitude;
+        use crate::dh::group_params::DH_new_by_nid;
+        use crate::runtime::obj::NID_ffdhe2048;
+
+        // SAFETY: every object below is this test's own and live.
+        unsafe {
+            let dh = DH_new_by_nid(NID_ffdhe2048);
+            assert!(!dh.is_null());
+            assert_eq!(DH_generate_key(dh), 1);
+            assert!(
+                BN_num_bits((*dh).priv_key) <= 225,
+                "the declared key length"
+            );
+
+            let md = magnitude(Some(&*(*dh).params.p));
+            let ad = magnitude(Some(&*(*dh).params.g));
+            let pd = magnitude(Some(&*(*dh).priv_key));
+            let Some(mut expected) = mod_exp_core_consttime_from_parts(ad, pd, md, md.len()) else {
+                unreachable!("the modulus-width ladder answers for this group")
+            };
+            let mut got = magnitude(Some(&*(*dh).pub_key)).to_vec();
+            crate::bn::limbs::normalise(&mut expected);
+            crate::bn::limbs::normalise(&mut got);
+            assert_eq!(got, expected, "pub == g^priv mod p");
             DH_free(dh);
         }
     }

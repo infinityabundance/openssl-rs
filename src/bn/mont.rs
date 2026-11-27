@@ -45,8 +45,8 @@ use core::ffi::{c_int, c_ulong};
 use core::sync::atomic::{AtomicPtr, Ordering};
 
 use crate::bn::arith::{
-    mod_exp_core, mod_exp_core_consttime_from_parts_prepared, mont_mul_fallible, pad_to,
-    PreparedMontParams,
+    mod_exp_core, mod_exp_core_consttime_from_parts_prepared, mod_exp_core_consttime_policy,
+    mont_mul_fallible, pad_to, PreparedMontParams,
 };
 use crate::bn::bignum::{
     as_mut, as_ref, magnitude, parts_fallible, store, store_consttime, BigNum,
@@ -861,6 +861,48 @@ pub unsafe extern "C" fn BN_mod_exp_mont(
     _ctx: *mut BnCtx,
     in_mont: *mut MontCtx,
 ) -> c_int {
+    // SAFETY: the caller's contract, forwarded unchanged.
+    unsafe { bn_mod_exp_mont_impl(r, a, p, m, in_mont, None) }
+}
+
+/// `BN_mod_exp_mont` with the constant-time ladder bounded by a **public policy
+/// width**, in 64-bit limbs.
+///
+/// Only the DH method table uses this. `dh->length` (or, when that is unset, the
+/// named group's RFC 7919 key length) is the maximum private-key length the
+/// group declares, so a conforming exponent is `ceil(length / 64)` limbs wide
+/// and the ladder need not run at the modulus width. The bound is public
+/// configuration; the result is bit-for-bit the modulus-width ladder's. `0`
+/// means "no declared bound" and is exactly [`BN_mod_exp_mont`].
+///
+/// # Safety
+///
+/// As [`BN_mod_exp_mont`].
+pub(crate) unsafe fn bn_mod_exp_mont_policy(
+    r: *mut BigNum,
+    a: *const BigNum,
+    p: *const BigNum,
+    m: *const BigNum,
+    in_mont: *mut MontCtx,
+    policy_limbs: usize,
+) -> c_int {
+    // SAFETY: forwarded under this function's contract.
+    unsafe { bn_mod_exp_mont_impl(r, a, p, m, in_mont, Some(policy_limbs)) }
+}
+
+/// [`BN_mod_exp_mont`]'s body, with an optional public **policy width** for the
+/// constant-time ladder.
+///
+/// `policy_limbs` is consulted only on the constant-time path, exactly as
+/// `BN_FLG_CONSTTIME` is; the variable-time path is unchanged.
+unsafe fn bn_mod_exp_mont_impl(
+    r: *mut BigNum,
+    a: *const BigNum,
+    p: *const BigNum,
+    m: *const BigNum,
+    in_mont: *mut MontCtx,
+    policy_limbs: Option<usize>,
+) -> c_int {
     guard_ffi(0, || {
         // SAFETY: `a` is null-or-live per this function's `# Safety` section.
         let x = unsafe { as_ref(a) };
@@ -908,9 +950,23 @@ pub unsafe extern "C" fn BN_mod_exp_mont(
         let result = if consttime {
             // The authority's `BN_mod_exp` dispatches on the same flags. The
             // modulus is odd here (the refusal above), so the Montgomery-form
-            // ladder is available. Its width is the modulus' limb count — a
-            // public parameter — never the exponent's normalised length.
-            mod_exp_core_consttime_from_parts_prepared(&ad, pd, &md, md.len(), prepared.as_ref())
+            // ladder is available. Without a policy width the loop width is the
+            // modulus' limb count — a public parameter — never the exponent's
+            // normalised length. With one (the DH method), it is the group's
+            // declared private-key bound, also public; see
+            // [`mod_exp_core_consttime_policy`].
+            match policy_limbs {
+                Some(policy) => {
+                    mod_exp_core_consttime_policy(&ad, pd, &md, policy, prepared.as_ref())
+                }
+                None => mod_exp_core_consttime_from_parts_prepared(
+                    &ad,
+                    pd,
+                    &md,
+                    md.len(),
+                    prepared.as_ref(),
+                ),
+            }
         } else {
             mod_exp_core(&ad, pd, &md)
         };

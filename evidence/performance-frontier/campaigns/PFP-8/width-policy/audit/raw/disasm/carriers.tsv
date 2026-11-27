@@ -1,0 +1,4 @@
+mont_mul_ladder_into	mont_mul_ladder_into	0000000000478370	0000000000002431
+run_mont_ladder	run_mont_ladder	00000000004763d0	0000000000001662
+bn_mod_exp_mont_impl	bn_mod_exp_mont_impl	0000000000474f60	0000000000000878
+dh_bn_mod_exp	dh_bn_mod_exp	0000000000552430	0000000000000050

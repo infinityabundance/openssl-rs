@@ -1,0 +1,3 @@
+dh_bn_mod_exp	55243c	je	55245a <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2dh3key13dh_bn_mod_exp+0x2a>	mov 0x10(%rsp),%r8	test %rdi,%rdi	jcc
+dh_bn_mod_exp	552445	jg	552450 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2dh3key13dh_bn_mod_exp+0x20>	mov 0x68(%rdi),%r9d	test %r9d,%r9d	jcc
+dh_bn_mod_exp	55244e	jle	55245a <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2dh3key13dh_bn_mod_exp+0x2a>	mov 0x60(%rdi),%r9d	test %r9d,%r9d	jcc

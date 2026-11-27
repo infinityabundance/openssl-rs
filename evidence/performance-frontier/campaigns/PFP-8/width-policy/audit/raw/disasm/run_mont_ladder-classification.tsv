@@ -1,0 +1,121 @@
+symbol	addr	kind	insn	operand	class	sub	flag_source	consumed
+run_mont_ladder	4763fb	jcc	jne	4766b7	a	a-geom:slice/alloc layout high-bit check (shr 58) on a pointer tag — public (old 0x2f895b)	shr $0x3a,%rax	-
+run_mont_ladder	476447	jcc	jbe	476538	a	a-loop	cmp %rbx,%rdx	-
+run_mont_ladder	47646b	jcc	je	4766b7	a	a-loop	cmp $0xffffffffffffffff,%r15	-
+run_mont_ladder	47648b	jcc	jne	476824	a	a-loop	test %rbx,%rbx	-
+run_mont_ladder	4764b5	setcc	seta	%al	a	a-geom	cmp %rax,%r15	-
+run_mont_ladder	4764c3	setcc	sete	%cl	a	a-geom	test %rsi,%rsi	-
+run_mont_ladder	4764cd	jcc	jne	476519	a	a-geom:allocation-length overflow mask (test/sete/or) — public length, never a limb	or %al,%cl	-
+run_mont_ladder	476517	jcc	jne	4764e0	a	a-loop	cmp %rax,%rsi	-
+run_mont_ladder	47651c	jcc	je	47652c	a	a-loop	test %r15,%r15	-
+run_mont_ladder	476549	jcc	jne	47667f	a	a-loop	test %rbx,%rbx	-
+run_mont_ladder	47658c	jcc	jne	4765fe	a	a-loop	cmp $0xffffffffffffffff,%r12	-
+run_mont_ladder	476599	jcc	je	4766bf	a	a-loop	test %rbx,%rbx	-
+run_mont_ladder	4765e6	jcc	jne	4765b0	a	a-loop	cmp %rax,%rbx	-
+run_mont_ladder	476613	jcc	jne	47675f	a	a-loop	test %rbx,%rbx	-
+run_mont_ladder	476648	jcc	je	47773b	a	a-loop	cmpb $0x0,0x40(%rsp)	-
+run_mont_ladder	476659	jcc	je	4767a4	a	a-loop	test %rbx,%rbx	-
+run_mont_ladder	4766b1	jcc	je	4768de	a	a-loop	cmpb $0x0,0x40(%rsp)	-
+run_mont_ladder	4766d0	setcc	seta	%cl	a	a-geom	cmp %rax,%rsi	-
+run_mont_ladder	4766de	setcc	sete	%dl	a	a-geom	test %rax,%rax	-
+run_mont_ladder	4766e3	jcc	jne	476724	a	a-geom:allocation-size overflow mask (test/sete/or after lea x8) — public length	or %cl,%dl	-
+run_mont_ladder	47671e	jcc	jne	4766f0	a	a-loop	cmp %rdx,%rax	-
+run_mont_ladder	476727	jcc	je	47674d	a	a-loop	test %rsi,%rsi	-
+run_mont_ladder	476796	jcc	je	476960	a	a-loop	cmpb $0x0,0x40(%rsp)	-
+run_mont_ladder	4767b1	setcc	seta	%al	a	a-geom	cmp %rax,%r12	-
+run_mont_ladder	4767bf	setcc	sete	%cl	a	a-geom	test %rsi,%rsi	-
+run_mont_ladder	4767c4	jcc	jne	476808	a	a-geom:allocation-size overflow mask (test/sete/or after lea x8) — public length	or %al,%cl	-
+run_mont_ladder	476806	jcc	jne	4767d0	a	a-loop	cmp %rax,%rsi	-
+run_mont_ladder	47680b	jcc	je	476596	a	a-loop	test %r12,%r12	-
+run_mont_ladder	47684e	jcc	je	476920	a	a-loop	cmpb $0x0,0x40(%rsp)	-
+run_mont_ladder	47686d	setcc	seta	%al	a	a-geom	cmp %rax,%r15	-
+run_mont_ladder	47687b	setcc	sete	%cl	a	a-geom	test %rsi,%rsi	-
+run_mont_ladder	476885	jcc	jne	4768c2	a	a-geom:allocation-length overflow mask (test/sete/or) — public length	or %al,%cl	-
+run_mont_ladder	4768c0	jcc	jne	476889	a	a-loop	cmp %rax,%rsi	-
+run_mont_ladder	4768c5	jcc	je	4766bf	a	a-loop	test %r15,%r15	-
+run_mont_ladder	4768ea	jcc	je	476907	a	a-loop	cmp $0x1,%rbx	-
+run_mont_ladder	47692c	jcc	je	476949	a	a-loop	cmp $0x1,%rbx	-
+run_mont_ladder	476953	cmovcc	cmovb	%rbx,%rbp	a	a-loop	cmp %rbp,%rbx	-
+run_mont_ladder	476971	jcc	je	476991	a	a-loop	cmp $0x1,%rbx	-
+run_mont_ladder	4769c5	jcc	je	4769d8	a	a-loop	cmpb $0x0,0x40(%rsp)	-
+run_mont_ladder	4769eb	jcc	je	476a10	a	a-loop	cmp $0x1,%rbx	-
+run_mont_ladder	476a41	jcc	je	476aa3	a	a-loop	cmpb $0x0,0x40(%rsp)	-
+run_mont_ladder	476a8c	jcc	jne	476a5e	a	a-loop	cmp %rax,%rsi	-
+run_mont_ladder	476af3	jcc	je	476bfc	a	a-loop	cmpb $0x0,0x40(%rsp)	-
+run_mont_ladder	476b5b	jcc	jne	476b24	a	a-loop	cmp %rax,%rcx	-
+run_mont_ladder	476b85	setcc	seta	%al	a	a-geom	cmp %rax,%rcx	-
+run_mont_ladder	476b93	setcc	sete	%cl	a	a-geom	test %rsi,%rsi	-
+run_mont_ladder	476b98	jcc	jne	476bd1	a	a-geom:allocation-size overflow mask (test/sete/or after lea x8) — public length	or %al,%cl	-
+run_mont_ladder	476bcf	jcc	jne	476ba1	a	a-loop	cmp %rax,%rsi	-
+run_mont_ladder	476bd7	jcc	je	476be9	a	a-loop	cmpq $0x0,0x8(%rsp)	-
+run_mont_ladder	476bf1	jcc	jne	476656	a	a-loop	test %bpl,%bpl	-
+run_mont_ladder	476c0a	jcc	je	476c2f	a	a-loop	cmp $0x1,%rbx	-
+run_mont_ladder	476c5b	jcc	je	476c86	a	a-loop	cmpb $0x0,0x40(%rsp)	-
+run_mont_ladder	476c97	jcc	jne	476caa	a	a-loop	cmp $0x1,%rbx	-
+run_mont_ladder	476cdd	jcc	jne	476f68	a	a-geom:slice capacity high-bit check (shr 59) on an allocation length — public (old 0x2f9239)	shr $0x3b,%rax	-
+run_mont_ladder	476d07	jcc	je	476f68	a	a-loop	cmp $0xffffffffffffffff,%rax	-
+run_mont_ladder	476d44	jcc	je	476f72	a	a-loop	cmp $0xffffffffffffffff,%rax	-
+run_mont_ladder	476d5f	jcc	ja	477811	a	a-loop	cmp 0x88(%rsp),%rbx	-
+run_mont_ladder	476d79	jcc	ja	477829	a	a-loop	cmp %rax,%rbx	-
+run_mont_ladder	476dcd	jcc	jb	47784c	a	a-geom:allocation-size difference borrow (sub) on lengths — public (old 0x2f931a)	sub %rax,%rbp	-
+run_mont_ladder	476dd8	jcc	jne	477860	a	a-loop	cmp 0x58(%rsp),%rbx	-
+run_mont_ladder	476e3f	jcc	jb	4770be	a	a-geom:allocation counter underflow (subq) — public (old 0x2f9397)	subq $0x1,0x68(%rsp)	-
+run_mont_ladder	476e52	jcc	ja	477799	a	a-loop	cmp 0x88(%rsp),%rax	-
+run_mont_ladder	476e63	jcc	jo	4778c9	a	a-geom:window-table size overflow (mul/jo) — public geometry (old 0x2f93bb)	mul %rbx	-
+run_mont_ladder	476e6e	jcc	jb	4777bc	a	a-loop	cmp %rax,0x78(%rsp)	-
+run_mont_ladder	476e77	jcc	ja	4777cb	a	a-loop	cmp %rbp,%rbx	-
+run_mont_ladder	476ed9	jcc	jne	476e39	a	a-loop	test %al,%al	-
+run_mont_ladder	476ef9	setcc	seta	%al	a	a-geom	cmp %rax,%rcx	-
+run_mont_ladder	476f07	setcc	sete	%cl	a	a-geom	test %rsi,%rsi	-
+run_mont_ladder	476f0c	jcc	jne	476f48	a	a-geom:allocation-size overflow mask (test/sete/or after lea x8) — public length	or %al,%cl	-
+run_mont_ladder	476f46	jcc	jne	476f18	a	a-loop	cmp %rax,%rsi	-
+run_mont_ladder	476f51	jcc	je	476f77	a	a-loop	cmpq $0x0,0xd0(%rsp)	-
+run_mont_ladder	476f8c	setcc	seta	%al	a	a-geom	cmp %rax,%rcx	-
+run_mont_ladder	476f9a	setcc	sete	%cl	a	a-geom	test %rsi,%rsi	-
+run_mont_ladder	476f9f	jcc	jne	476fd8	a	a-geom:allocation-size overflow mask (test/sete/or after lea x8) — public length	or %al,%cl	-
+run_mont_ladder	476fd6	jcc	jne	476fa8	a	a-loop	cmp %rax,%rsi	-
+run_mont_ladder	476fe1	jcc	je	476ff3	a	a-loop	cmpq $0x0,0xd8(%rsp)	-
+run_mont_ladder	477040	jcc	jae	477046	a	a-loop	cmp $0x7,%rcx	-
+run_mont_ladder	477087	jcc	jne	477059	a	a-loop	cmp %rcx,%rdx	-
+run_mont_ladder	47708c	jcc	je	4770a1	a	a-loop	test %rax,%rax	-
+run_mont_ladder	47709f	jcc	jne	477095	a	a-loop	cmp %rdx,%rax	-
+run_mont_ladder	4770c6	jcc	jne	477871	a	a-loop	cmp %rbx,0xa8(%rsp)	-
+run_mont_ladder	4770ed	jcc	je	4776a7	a	a-loop	cmpq $0x0,0x90(%rsp)	-
+run_mont_ladder	477133	cmovcc	cmovb	%rbx,%rdi	a	a-loop	cmp %rdi,%rbx	-
+run_mont_ladder	47716e	setcc	setb	%cl	a	a-geom	cmp %rcx,%rsi	-
+run_mont_ladder	477174	setcc	setb	%al	a	a-geom	cmp %rax,%rdx	-
+run_mont_ladder	4771d9	jcc	jae	47720c	a	a-loop	cmp 0x90(%rsp),%rax	-
+run_mont_ladder	4771ea	jcc	jae	4778dd	a	a-loop	cmp 0xb0(%rsp),%rdi	-
+run_mont_ladder	477202	setcc	setb	%dl	b	b-secret-bit	bt %rax,%rcx	477205:mov %rdx,0x68(%rsp)
+run_mont_ladder	477221	jcc	jae	477258	a	a-loop	cmp 0x90(%rsp),%rcx	-
+run_mont_ladder	477232	jcc	jae	4778dd	a	a-loop	cmp 0xb0(%rsp),%rdi	-
+run_mont_ladder	477264	jcc	jae	47729b	a	a-loop	cmp 0x90(%rsp),%rcx	-
+run_mont_ladder	477275	jcc	jae	4778dd	a	a-loop	cmp 0xb0(%rsp),%rdi	-
+run_mont_ladder	4772a7	jcc	jae	4772de	a	a-loop	cmp 0x90(%rsp),%rcx	-
+run_mont_ladder	4772b8	jcc	jae	4778dd	a	a-loop	cmp 0xb0(%rsp),%rdi	-
+run_mont_ladder	4772ea	jcc	jae	47731d	a	a-loop	cmp 0x90(%rsp),%rax	-
+run_mont_ladder	4772fb	jcc	jae	4778dd	a	a-loop	cmp 0xb0(%rsp),%rdi	-
+run_mont_ladder	477358	jcc	je	476edf	a	a-loop	test %al,%al	-
+run_mont_ladder	4773a9	jcc	je	477763	a	a-loop	test %al,%al	-
+run_mont_ladder	4773ff	jcc	je	476edf	a	a-loop	test %al,%al	-
+run_mont_ladder	477450	jcc	je	477763	a	a-loop	test %al,%al	-
+run_mont_ladder	4774a6	jcc	je	476edf	a	a-loop	test %al,%al	-
+run_mont_ladder	4774ca	jcc	je	4774e4	a	a-loop	cmpq $0x0,0xe0(%rsp)	-
+run_mont_ladder	47750a	jcc	je	477633	a	a-loop	cmp $0x20,%rcx	-
+run_mont_ladder	477516	jcc	jo	477897	a	a-geom:window-table size overflow (mul/jo) — public geometry (old 0x2f9a1f)	mul %rbx	-
+run_mont_ladder	477522	jcc	jb	4778b0	a	a-geom:window-table size overflow (add/jb) — public geometry (old 0x2f9a2b)	add %rbx,%rsi	-
+run_mont_ladder	477530	jcc	ja	477772	a	a-loop	cmp 0x88(%rsp),%rsi	-
+run_mont_ladder	47753c	jcc	je	4774f5	a	a-loop	cmpq $0x0,0x58(%rsp)	-
+run_mont_ladder	47754d	jcc	jne	4774f5	a	a-geom:alloc layout capacity/alignment difference (xor/neg/shr 63) on lengths — public (old 0x2f9a50)	shr $0x3f,%rax	-
+run_mont_ladder	477555	setcc	setb	%al	a	a-geom	cmpq $0x4,0x58(%rsp)	-
+run_mont_ladder	477561	jcc	je	477567	a	a-loop	test $0x1,%al	-
+run_mont_ladder	47759d	jcc	jne	477569	a	a-loop	cmp %rax,0x78(%rsp)	-
+run_mont_ladder	4775af	jcc	je	4774f5	a	a-loop	cmp %rax,0x58(%rsp)	-
+run_mont_ladder	4775c1	jcc	je	4775e6	a	a-loop	cmpq $0x0,0xa8(%rsp)	-
+run_mont_ladder	4775e4	jcc	jne	4775ce	a	a-geom:masked-scan accumulation loop over the row's public limb count (dec/jne) — the branch reads the count, the ORed limbs are secret data	dec %rsi	-
+run_mont_ladder	4775ef	jcc	ja	4774f5	a	a-loop	cmp $0xfffffffffffffffc,%rdx	-
+run_mont_ladder	47762c	jcc	jne	4775f5	a	a-loop	cmp %rax,0x58(%rsp)	-
+run_mont_ladder	477678	jcc	je	477763	a	a-loop	test %al,%al	-
+run_mont_ladder	4776a1	jcc	jne	4771ba	a	a-loop	cmpq $0x0,0xe8(%rsp)	-
+run_mont_ladder	4776ea	jcc	je	476edf	a	a-loop	test %al,%al	-
+run_mont_ladder	477957	jcc	jne	477987	a	a-loop	test %rbx,%rbx	-

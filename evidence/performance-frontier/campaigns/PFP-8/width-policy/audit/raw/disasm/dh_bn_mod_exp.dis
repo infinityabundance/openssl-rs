@@ -1,0 +1,32 @@
+
+/work/court/tmp/pfp8-wp-build/cand/distribution/libcrypto.so.3:     file format elf64-x86-64
+
+
+Disassembly of section .text:
+
+0000000000552430 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2dh3key13dh_bn_mod_exp>:
+  552430:	push   %rax
+  552431:	mov    %r8,%rax
+  552434:	mov    0x10(%rsp),%r8
+  552439:	test   %rdi,%rdi
+  55243c:	je     55245a <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2dh3key13dh_bn_mod_exp+0x2a>
+  55243e:	mov    0x68(%rdi),%r9d
+  552442:	test   %r9d,%r9d
+  552445:	jg     552450 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2dh3key13dh_bn_mod_exp+0x20>
+  552447:	mov    0x60(%rdi),%r9d
+  55244b:	test   %r9d,%r9d
+  55244e:	jle    55245a <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2dh3key13dh_bn_mod_exp+0x2a>
+  552450:	add    $0x3f,%r9d
+  552454:	shr    $0x6,%r9d
+  552458:	jmp    55245d <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2dh3key13dh_bn_mod_exp+0x2d>
+  55245a:	xor    %r9d,%r9d
+  55245d:	mov    %r9,(%rsp)
+  552461:	mov    $0x1,%r9d
+  552467:	mov    %rsi,%rdi
+  55246a:	mov    %rdx,%rsi
+  55246d:	mov    %rcx,%rdx
+  552470:	mov    %rax,%rcx
+  552473:	call   474f60 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn4mont20bn_mod_exp_mont_impl.llvm.2675173248668928877>
+  552478:	pop    %rcx
+  552479:	ret
+  55247a:	call   *0x380358(%rip)        # 8d27d8 <_DYNAMIC+0x2568>

@@ -1,0 +1,207 @@
+{
+  "authority": "/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+  "authority_sha256": "611e511db4273c4b6b522031fd171efce71b80661bb8310c2a21dfd18ec0efd2",
+  "candidate": "/work/court/tmp/pfp8-wp-build/cand/distribution/libcrypto.so.3",
+  "candidate_sha256": "6302e05a14e47b74bd546f03e7509e234a2884511ddec5c3f9a7f4382bd9a25b",
+  "rows": [
+    {
+      "group": "ffdhe2048",
+      "keylength": 225,
+      "keylength_limbs": 4,
+      "library": "candidate",
+      "max_bits": 225,
+      "max_limbs": 4,
+      "nid": 1126
+    },
+    {
+      "group": "ffdhe2048",
+      "keylength": 225,
+      "keylength_limbs": 4,
+      "library": "authority",
+      "max_bits": 225,
+      "max_limbs": 4,
+      "nid": 1126
+    },
+    {
+      "group": "ffdhe3072",
+      "keylength": 275,
+      "keylength_limbs": 5,
+      "library": "candidate",
+      "max_bits": 275,
+      "max_limbs": 5,
+      "nid": 1127
+    },
+    {
+      "group": "ffdhe3072",
+      "keylength": 275,
+      "keylength_limbs": 5,
+      "library": "authority",
+      "max_bits": 275,
+      "max_limbs": 5,
+      "nid": 1127
+    },
+    {
+      "group": "ffdhe4096",
+      "keylength": 325,
+      "keylength_limbs": 6,
+      "library": "candidate",
+      "max_bits": 325,
+      "max_limbs": 6,
+      "nid": 1128
+    },
+    {
+      "group": "ffdhe4096",
+      "keylength": 325,
+      "keylength_limbs": 6,
+      "library": "authority",
+      "max_bits": 325,
+      "max_limbs": 6,
+      "nid": 1128
+    },
+    {
+      "group": "ffdhe6144",
+      "keylength": 375,
+      "keylength_limbs": 6,
+      "library": "candidate",
+      "max_bits": 375,
+      "max_limbs": 6,
+      "nid": 1129
+    },
+    {
+      "group": "ffdhe6144",
+      "keylength": 375,
+      "keylength_limbs": 6,
+      "library": "authority",
+      "max_bits": 375,
+      "max_limbs": 6,
+      "nid": 1129
+    },
+    {
+      "group": "ffdhe8192",
+      "keylength": 400,
+      "keylength_limbs": 7,
+      "library": "candidate",
+      "max_bits": 400,
+      "max_limbs": 7,
+      "nid": 1130
+    },
+    {
+      "group": "ffdhe8192",
+      "keylength": 400,
+      "keylength_limbs": 7,
+      "library": "authority",
+      "max_bits": 400,
+      "max_limbs": 7,
+      "nid": 1130
+    },
+    {
+      "group": "modp1536",
+      "keylength": 200,
+      "keylength_limbs": 4,
+      "library": "candidate",
+      "max_bits": 200,
+      "max_limbs": 4,
+      "nid": 1212
+    },
+    {
+      "group": "modp1536",
+      "keylength": 200,
+      "keylength_limbs": 4,
+      "library": "authority",
+      "max_bits": 200,
+      "max_limbs": 4,
+      "nid": 1212
+    },
+    {
+      "group": "modp2048",
+      "keylength": 225,
+      "keylength_limbs": 4,
+      "library": "candidate",
+      "max_bits": 225,
+      "max_limbs": 4,
+      "nid": 1213
+    },
+    {
+      "group": "modp2048",
+      "keylength": 225,
+      "keylength_limbs": 4,
+      "library": "authority",
+      "max_bits": 225,
+      "max_limbs": 4,
+      "nid": 1213
+    },
+    {
+      "group": "modp3072",
+      "keylength": 275,
+      "keylength_limbs": 5,
+      "library": "candidate",
+      "max_bits": 275,
+      "max_limbs": 5,
+      "nid": 1214
+    },
+    {
+      "group": "modp3072",
+      "keylength": 275,
+      "keylength_limbs": 5,
+      "library": "authority",
+      "max_bits": 275,
+      "max_limbs": 5,
+      "nid": 1214
+    },
+    {
+      "group": "modp4096",
+      "keylength": 325,
+      "keylength_limbs": 6,
+      "library": "candidate",
+      "max_bits": 325,
+      "max_limbs": 6,
+      "nid": 1215
+    },
+    {
+      "group": "modp4096",
+      "keylength": 325,
+      "keylength_limbs": 6,
+      "library": "authority",
+      "max_bits": 325,
+      "max_limbs": 6,
+      "nid": 1215
+    },
+    {
+      "group": "modp6144",
+      "keylength": 375,
+      "keylength_limbs": 6,
+      "library": "candidate",
+      "max_bits": 375,
+      "max_limbs": 6,
+      "nid": 1216
+    },
+    {
+      "group": "modp6144",
+      "keylength": 375,
+      "keylength_limbs": 6,
+      "library": "authority",
+      "max_bits": 375,
+      "max_limbs": 6,
+      "nid": 1216
+    },
+    {
+      "group": "modp8192",
+      "keylength": 400,
+      "keylength_limbs": 7,
+      "library": "candidate",
+      "max_bits": 400,
+      "max_limbs": 7,
+      "nid": 1217
+    },
+    {
+      "group": "modp8192",
+      "keylength": 400,
+      "keylength_limbs": 7,
+      "library": "authority",
+      "max_bits": 400,
+      "max_limbs": 7,
+      "nid": 1217
+    }
+  ],
+  "samples": 8
+}
