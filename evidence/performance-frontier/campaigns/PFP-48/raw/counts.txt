@@ -1,0 +1,29 @@
+=== per-product static counts (count_pfp48.py) ===
+tag=portable symbol=0x3b9770..0x3bbba1 insns=2196
+  census mulq=102 mulx=0 adcx=0 adox=0 imul=12
+  jump_table=0x68fadc
+  n=4   arm=0x3b980a region_insns= 422 products=   32 full_per_product=13.188
+        loop 0x3b9d70..0x3b9db6 body= 19 mul=2 loop_per_product=9.50
+        loop 0x3b9d30..0x3b9e16 body= 55 mul=4 loop_per_product=13.75
+  n=16  arm=0x3ba7c3 region_insns= 599 products=  512 full_per_product=1.170
+        loop 0x3ba9f0..0x3bae76 body=272 mul=33 loop_per_product=8.24
+  n=32  arm=0x3bb65a region_insns= 119 products= 2048 full_per_product=0.058
+        loop 0x3bb6d0..0x3bb713 body= 19 mul=2 loop_per_product=9.50
+        loop 0x3bb690..0x3bb773 body= 55 mul=4 loop_per_product=13.75
+  n=128 body=0x3b9cfa..0x3b9e3e region_insns=78 products=32768 full_per_product=0.002
+        128 loop 0x3b9d70..0x3b9db6 body= 19 mul=2 loop_per_product=9.50
+        128 loop 0x3b9d30..0x3b9e16 body= 55 mul=4 loop_per_product=13.75
+tag=bmi2 symbol=0x1972d0..0x19933c insns=1911
+  census mulq=0 mulx=121 adcx=0 adox=0 imul=12
+  jump_table=0x6570b8
+  n=4   arm=0x19736d region_insns= 322 products=   32 full_per_product=10.062
+        loop 0x1977d0..0x197813 body= 17 mul=2 loop_per_product=8.50
+        loop 0x197790..0x197875 body= 50 mul=5 loop_per_product=10.00
+  n=16  arm=0x198140 region_insns= 525 products=  512 full_per_product=1.025
+        loop 0x198360..0x19872c body=196 mul=33 loop_per_product=5.94
+  n=32  arm=0x198e42 region_insns= 112 products= 2048 full_per_product=0.055
+        loop 0x198eb0..0x198ef0 body= 17 mul=2 loop_per_product=8.50
+        loop 0x198e70..0x198f42 body= 49 mul=5 loop_per_product=9.80
+  n=128 body=0x19775c..0x19789d region_insns=72 products=32768 full_per_product=0.002
+        128 loop 0x1977d0..0x197813 body= 17 mul=2 loop_per_product=8.50
+        128 loop 0x197790..0x197875 body= 50 mul=5 loop_per_product=10.00

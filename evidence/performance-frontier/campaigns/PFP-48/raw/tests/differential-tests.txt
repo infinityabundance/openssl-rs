@@ -1,0 +1,15 @@
+   Compiling openssl-rs v0.0.49 (/work)
+    Finished `test` profile [unoptimized] target(s) in 29.09s
+     Running unittests src/lib.rs (court/tmp/pfp48/testtarget/debug/deps/openssl_rs-e4175eb2556030ca)
+
+running 4 tests
+test bn::arith::tests::pfp6_geometry_fails_closed ... ok
+PFP-6 squaring differential: exhaustive=144 sampled=254 mismatches=0
+test bn::arith::tests::pfp6_dedicated_squaring_matches_the_reference ... ok
+PFP-6 CIOS differential: exhaustive=3018 sampled=7890 mismatches=0
+test bn::arith::tests::pfp6_cios_matches_the_reference ... ok
+PFP-6 kernel congruence: sos=7890 cios=7890 sqr=254 mismatches=0
+test bn::arith::tests::pfp6_each_kernel_satisfies_the_congruence ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 2568 filtered out; finished in 0.08s
+

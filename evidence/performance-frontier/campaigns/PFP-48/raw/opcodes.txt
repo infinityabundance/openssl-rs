@@ -1,0 +1,3 @@
+=== whole-symbol opcode census (mont_mul_ladder_into) ===
+portable: mulq=102 mulx=0 adcx=0 adox=0 imul=12 
+bmi2: mulq=0 mulx=121 adcx=0 adox=0 imul=12 

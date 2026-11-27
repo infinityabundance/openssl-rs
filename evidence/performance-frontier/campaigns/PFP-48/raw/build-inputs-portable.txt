@@ -1,0 +1,18 @@
+tag=portable
+date=2026-11-27T22:44:40Z
+source_commit=af0a5a40ba4ad40732257b64a9aece26d13d6026
+src_tree=0181f90193fd0de86d26cd714e701380340ee432
+arith_sha256=2d0f42cce3c93a78babb8e96d89e854a570ba51ea4d338d3ab615bec2906e992
+dirty_src=
+rustc=rustc 1.98.1 (48a229cea 2026-09-01)
+cargo=cargo 1.98.1 (797e8a9bc 2026-08-05)
+cc=cc (Debian 12.2.0-14+deb12u1) 12.2.0
+target_triple=x86_64-unknown-linux-gnu
+profile=release
+rustflags=
+archive_sha256=780217af50eeacbaf24b7b017e92658afcd1868054a56def4ae7bea37bfd613a
+dso_path=/work/court/tmp/pfp48/portable/libcrypto.so.3
+dso_sha256=033f7fbf925b7451c016c1d1c1a78bfc31895de1ee0ada677fdfe7718837680b
+dso_size=17116976
+build_id=42751bbc0280abef99a25ec70c88a5e98b169571
+mont_mul_ladder_into addr=0x00000000003b9770 size=0x0000000000002431

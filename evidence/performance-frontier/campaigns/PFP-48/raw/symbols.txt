@@ -1,0 +1,11 @@
+=== wrapper / out-of-line kernel symbols ===
+-- mont kernel symbols (demangled) --
+00000000003b9770 0000000000002431 t openssl_rs::bn::arith::mont_mul_ladder_into
+-- variant --
+00000000001972d0 000000000000206c t openssl_rs::bn::arith::mont_mul_ladder_into
+-- variant: any call instruction inside mont_mul_ladder_into --
+      1 19776f:	call   *0x737133(%rip)        # 8ce8a8 <memset@GLIBC_2.2.5>
+      1 1978c5:	call   *0x736fdd(%rip)        # 8ce8a8 <memset@GLIBC_2.2.5>
+      1 197a96:	call   *0x736e0c(%rip)        # 8ce8a8 <memset@GLIBC_2.2.5>
+      1 198e55:	call   *0x735a4d(%rip)        # 8ce8a8 <memset@GLIBC_2.2.5>
+      1 199012:	call   *0x735890(%rip)        # 8ce8a8 <memset@GLIBC_2.2.5>
