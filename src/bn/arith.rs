@@ -94,7 +94,7 @@ use crate::bn::bignum::{
 use crate::bn::ctx::BnCtx;
 use crate::bn::limbs::{self, Limb};
 use crate::ffi::guard_ffi;
-use crate::runtime::constant_time::{constant_time_lt_s, constant_time_select};
+use crate::runtime::constant_time::{constant_time_eq_s, constant_time_lt_s, constant_time_select};
 use crate::runtime::err::err_sites::{
     BN_ADD_142, BN_DIV_217, BN_EXP_1324, BN_GCD_532, BN_MOD_194, BN_MOD_22, BN_MOD_307,
     BN_SQRT_352, BN_SQRT_43,
@@ -1676,6 +1676,21 @@ const LADDER_SCHEDULE: MontSchedule = MontSchedule::Sos;
 /// affected performance rows are re-run at the same digest.
 const LADDER_DEDICATED_SQUARING: bool = false;
 
+/// The fixed window width of the constant-time exponentiation ladder, or `None`
+/// for the bit-at-a-time reference.
+///
+/// The window is a constant-pattern schedule: the number of windows is
+/// `ceil(64 * width / w)` (public geometry), every window performs exactly `w`
+/// squarings, and the digit is selected from a `2^w`-entry table with a full
+/// masked scan — never an index. The exponent's value therefore changes only
+/// which table row is masked in, never the control flow or the addresses.
+///
+/// `Some(5)` is the admitted default (measured crossover in
+/// `evidence/performance-frontier/campaigns/PFP-5/`). `None` keeps the
+/// bit-at-a-time reference, which the differential court runs against the
+/// windowed path on every case.
+const LADDER_WINDOW_BITS: Option<u32> = Some(5);
+
 /// `a * b + c + d` for 64-bit terms, as a 128-bit value.
 ///
 /// The maximum is `(2^64-1)^2 + 2*(2^64-1) = 2^128 - 1`, so the arithmetic
@@ -2165,7 +2180,28 @@ pub(crate) fn mod_exp_core_consttime_width(
         LadderGeometry::VariableTime => mod_exp_core(ad, pd, md),
         LadderGeometry::Fixed(width) => {
             let exponent = fixed_width_exponent(pd, width)?;
-            mod_exp_core_consttime_staged(ad, &exponent, md, width)
+            mod_exp_core_consttime_staged(ad, &exponent, md, width, LADDER_WINDOW_BITS)
+        }
+    }
+}
+
+/// The [`mod_exp_core_consttime_width`] dispatch with an explicit window choice,
+/// so the differential court can run the bit-at-a-time reference (`None`) and the
+/// windowed schedules (`Some(4..=6)`) over the same population.
+#[cfg(test)]
+pub(crate) fn mod_exp_core_consttime_width_with(
+    ad: &[Limb],
+    pd: &[Limb],
+    md: &[Limb],
+    declared_limbs: usize,
+    window: Option<u32>,
+) -> Option<Vec<Limb>> {
+    match ladder_geometry(pd, md, declared_limbs)? {
+        LadderGeometry::Zero => Some(Vec::new()),
+        LadderGeometry::VariableTime => mod_exp_core(ad, pd, md),
+        LadderGeometry::Fixed(width) => {
+            let exponent = fixed_width_exponent(pd, width)?;
+            mod_exp_core_consttime_staged(ad, &exponent, md, width, window)
         }
     }
 }
@@ -2231,7 +2267,7 @@ pub(crate) fn mod_exp_core_consttime_from_parts_prepared(
             let exponent = fixed_width_exponent(pd, width)?;
             match prepared {
                 Some(params) => mod_exp_core_consttime_prepared(ad, &exponent, md, width, params),
-                None => mod_exp_core_consttime_staged(ad, &exponent, md, width),
+                None => mod_exp_core_consttime_staged(ad, &exponent, md, width, LADDER_WINDOW_BITS),
             }
         }
     }
@@ -2247,6 +2283,7 @@ fn mod_exp_core_consttime_staged(
     exponent: &SecretLimbs,
     md: &[Limb],
     width: usize,
+    window: Option<u32>,
 ) -> Option<Vec<Limb>> {
     let n = md.len();
     let n0 = mont_n0(md[0]);
@@ -2261,7 +2298,7 @@ fn mod_exp_core_consttime_staged(
     let mut one_plain = try_zeroed_limbs(n)?;
     one_plain[0] = 1;
     let one_mont = SecretBuf::from_vec(mont_mul_fallible(&rr, &one_plain, md, n0)?);
-    run_mont_ladder(ad, exponent, md, width, n0, &rr, one_mont)
+    run_mont_ladder(ad, exponent, md, width, n0, &rr, one_mont, window)
 }
 
 /// The ladder reusing a prepared domain's `R`, `R^2` and `n0`.
@@ -2278,13 +2315,23 @@ fn mod_exp_core_consttime_prepared(
     params: &PreparedMontParams<'_>,
 ) -> Option<Vec<Limb>> {
     let acc = pad_secret(params.one, md.len())?;
-    run_mont_ladder(ad, exponent, md, width, params.n0, params.rr, acc)
+    run_mont_ladder(
+        ad,
+        exponent,
+        md,
+        width,
+        params.n0,
+        params.rr,
+        acc,
+        LADDER_WINDOW_BITS,
+    )
 }
 
 /// The fixed-pattern Montgomery ladder, given its precomputed parameters.
 ///
 /// `exponent.len() == width`, `width` is public, `rr` is `R^2 mod m` and `acc`
 /// is a fresh buffer holding `R mod m`. Everything else is derived here.
+#[allow(clippy::too_many_arguments)]
 fn run_mont_ladder(
     ad: &[Limb],
     exponent: &SecretLimbs,
@@ -2293,6 +2340,7 @@ fn run_mont_ladder(
     n0: Limb,
     rr: &[Limb],
     mut acc: SecretLimbs,
+    window: Option<u32>,
 ) -> Option<Vec<Limb>> {
     let n = md.len();
     // Read the staged exponent through the borrowed secret view: a signature can
@@ -2341,6 +2389,28 @@ fn run_mont_ladder(
     let mut one = try_zeroed_limbs(n)?;
     one[0] = 1;
 
+    // The fixed-window schedule, when admitted, replaces only the multiplication
+    // half of the bit-at-a-time loop; the squarings, the base and accumulator
+    // bound arguments, and the conversion out of Montgomery form are unchanged.
+    // `None` runs the reference below.
+    if let Some(w) = window {
+        run_mont_ladder_window(
+            &exponent,
+            md,
+            bits,
+            n0,
+            &base,
+            &one,
+            &mut acc,
+            &mut product[..],
+            &mut squared,
+            &mut t,
+            &mut diff,
+            w,
+        )?;
+        return Some(product);
+    }
+
     for i in 0..bits {
         // The index is public: `i >> 6 < width`, the exponent buffer's length.
         let bit = (exponent[i >> 6] >> (i & 63)) & 1;
@@ -2376,6 +2446,144 @@ fn run_mont_ladder(
     // intermediate. The two `one` buffers hold the public constant 1 and are
     // deliberately ordinary.
     Some(product)
+}
+
+/// The fixed-window constant-time exponentiation body.
+///
+/// Consumes the same precomputed parameters as [`run_mont_ladder`] and writes the
+/// plain (non-Montgomery) result into `product`. `acc` and `scratch` alternate as
+/// the running Montgomery residue and its destination, so the borrows are derived
+/// from the owners rather than reasserted as raw slices.
+///
+/// ## Why the schedule is constant-time
+///
+/// * `entries = 2^w` and `windows = ceil(bits / w)` depend only on public geometry
+///   (`w` is a compile-time constant; `bits = 64 * width`).
+/// * Every window performs exactly `w` squarings and one multiplication, including
+///   the last window and including leading-zero windows.
+/// * The digit is built from the staged exponent with shifts and masks — value
+///   operations, no branch on a secret and no secret-dependent index.
+/// * [`select_window_digit`] scans all `entries` rows and combines them under an
+///   all-ones/all-zeros mask from `constant_time_eq_s`, so the *addresses* read
+///   are public and only the value depends on the secret digit.
+///
+/// The table holds secret powers of the base and lives in a [`SecretBuf`]; it is
+/// cleansed on every exit. The base, accumulator and conversion bounds are the
+/// ones established for the bit-at-a-time ladder (module documentation): every
+/// table entry is canonical in `[0, m)`, so each multiply's `a * b < m * R`
+/// precondition still holds inductively.
+#[allow(clippy::too_many_arguments)]
+fn run_mont_ladder_window(
+    exponent: &SecretRef<'_, Limb>,
+    md: &[Limb],
+    bits: usize,
+    n0: Limb,
+    base: &[Limb],
+    one: &[Limb],
+    acc: &mut SecretLimbs,
+    product: &mut [Limb],
+    scratch: &mut SecretLimbs,
+    t: &mut SecretLimbs,
+    diff: &mut SecretLimbs,
+    w: u32,
+) -> Option<()> {
+    let n = md.len();
+    let shift = usize::try_from(w).ok()?;
+    // Fail closed on a degenerate window rather than index a one-entry table.
+    let entries = 1usize.checked_shl(w)?;
+    if shift < 1 || entries < 2 {
+        return None;
+    }
+    let table_len = entries.checked_mul(n)?;
+    let mut table = SecretBuf::try_zeroed(table_len)?;
+    let mut selected = SecretBuf::try_zeroed(n)?;
+
+    // table[0] = R mod m (the Montgomery one, `acc` on entry), table[1] = base,
+    // and table[i] = table[i-1] * base. The loop bound is public geometry.
+    table[..n].copy_from_slice(&acc[..n]);
+    table[n..2 * n].copy_from_slice(base);
+    for i in 2..entries {
+        // Split the owner so the previous row is read while this row is written;
+        // both slices are disjoint ranges of the same allocation.
+        let (done, rest) = table.split_at_mut(i * n);
+        let prev = &done[(i - 1) * n..i * n];
+        let dst = &mut rest[..n];
+        if !mont_mul_ladder_into(prev, base, dst, md, n0, &mut t[..], &mut diff[..]) {
+            return None;
+        }
+    }
+
+    let windows = bits.checked_add(shift - 1)?.checked_div(shift)?;
+    acc.copy_from_slice(&table[..n]);
+
+    for hi in (0..windows).rev() {
+        // `window_start` and every bit position below are public: `hi`, `shift`,
+        // `bits` and the exponent buffer's length are public geometry.
+        let window_start = hi.checked_mul(shift)?;
+        let mut digit = 0u64;
+        for k in 0..shift {
+            let bitpos = window_start.checked_add(k)?;
+            let bit = if bitpos < bits {
+                (exponent[bitpos >> 6] >> (bitpos & 63)) & 1
+            } else {
+                0
+            };
+            digit |= bit << k;
+        }
+        for _ in 0..shift {
+            if !mont_mul_ladder_into(
+                &acc[..],
+                &acc[..],
+                &mut scratch[..],
+                md,
+                n0,
+                &mut t[..],
+                &mut diff[..],
+            ) {
+                return None;
+            }
+            core::mem::swap(acc, scratch);
+        }
+        select_window_digit(&table[..], n, entries, digit, &mut selected[..]);
+        if !mont_mul_ladder_into(
+            &acc[..],
+            &selected[..],
+            &mut scratch[..],
+            md,
+            n0,
+            &mut t[..],
+            &mut diff[..],
+        ) {
+            return None;
+        }
+        core::mem::swap(acc, scratch);
+    }
+
+    // Convert out of Montgomery form: `acc * 1 * R^-1`.
+    if !mont_mul_ladder_into(&acc[..], one, product, md, n0, &mut t[..], &mut diff[..]) {
+        return None;
+    }
+    Some(())
+}
+
+/// `out = table[digit]` by a full masked scan of every row.
+///
+/// `j` and every limb index are loop counters over public table geometry; the only
+/// secret input is `digit`, and it enters solely through the mask. The result is
+/// assembled with bitwise AND/OR, which cannot be lowered to a branch on `mask`
+/// (unlike a select between two live values, which is why `constant_time_select`
+/// carries a barrier). `out` is zeroed first so the OR accumulation is exact.
+fn select_window_digit(table: &[Limb], n: usize, entries: usize, digit: u64, out: &mut [Limb]) {
+    for slot in out.iter_mut() {
+        *slot = 0;
+    }
+    for j in 0..entries {
+        let mask = constant_time_eq_s(digit as usize, j) as Limb;
+        let row = &table[j * n..j * n + n];
+        for (slot, &v) in out.iter_mut().zip(row.iter()) {
+            *slot |= v & mask;
+        }
+    }
 }
 
 /// `int BN_mod_exp_simple(BIGNUM *r, const BIGNUM *a, const BIGNUM *p, const BIGNUM *m, BN_CTX *ctx)`
@@ -3279,6 +3487,144 @@ mod tests {
         }
     }
 
+    /// A deterministic odd modulus of exactly `bits` bits (a non-zero top limb),
+    /// the Montgomery admission shape.
+    fn pfp5_modulus(bits: usize, seed: u64) -> Vec<u64> {
+        let n = bits / 64;
+        let mut state = seed | 1;
+        let mut m: Vec<u64> = (0..n).map(|_| pfp6_xorshift(&mut state)).collect();
+        m[0] |= 1;
+        m[n - 1] |= 1u64 << 63;
+        m
+    }
+
+    /// The exponent classes the differential requires: zero, one, two, a small
+    /// one-limb value, a full-width pseudorandom value and all-ones.
+    fn pfp5_exponents(bits: usize) -> Vec<Vec<u64>> {
+        let n = bits / 64;
+        let mut state = 0xa5a5_5a5a_1234_5678u64 ^ bits as u64;
+        let rand: Vec<u64> = (0..n).map(|_| pfp6_xorshift(&mut state)).collect();
+        vec![
+            Vec::new(),
+            vec![1],
+            vec![2],
+            vec![0x0123_4567_89ab_cdef],
+            rand,
+            vec![u64::MAX; n],
+        ]
+    }
+
+    /// The base classes: `0`, `1`, `2`, `m-1` and a pseudorandom residue.
+    fn pfp5_bases(m: &[u64]) -> Vec<Vec<u64>> {
+        let n = m.len();
+        let mut state = 0x5eed_0000_0000_0000u64 ^ (n as u64);
+        let raw: Vec<u64> = (0..n).map(|_| pfp6_xorshift(&mut state)).collect();
+        let Some(r) = limbs::rem_fallible(&raw, m) else {
+            unreachable!("a remainder succeeds")
+        };
+        vec![
+            pfp6_pad(&[], n),
+            pfp6_pad(&[1], n),
+            pfp6_pad(&[2], n),
+            limbs::sub(m, &[1]),
+            pfp6_pad(&r, n),
+        ]
+    }
+
+    fn pfp5_answer(a: &[u64], e: &[u64], m: &[u64], window: Option<u32>) -> Option<Vec<u64>> {
+        mod_exp_core_consttime_width_with(a, e, m, m.len(), window).map(|mut v| {
+            limbs::normalise(&mut v);
+            v
+        })
+    }
+
+    /// PFP-5: the fixed-window ladder must be value-for-value identical to the
+    /// bit-at-a-time reference and to the variable-time oracle, for every window
+    /// width, over edge and pseudorandom bases and exponents.
+    ///
+    /// Scope: moduli up to 256 bits here; the larger widths are in
+    /// `pfp5_window_matches_on_large_moduli` and, at 8192 bits, in the
+    /// authority-bound DSO differential (a debug-profile 8192-bit ladder costs
+    /// minutes per case, so it is not in the routine suite).
+    #[test]
+    fn pfp5_window_matches_the_bit_at_a_time_ladder() {
+        let mut cases = 0usize;
+        for m in pfp6_moduli() {
+            if m.len() > 4 || limbs::is_even(&m) {
+                continue;
+            }
+            let bits = m.len() * 64;
+            for e in pfp5_exponents(bits) {
+                for a in pfp6_operands(&m) {
+                    let oracle = mod_exp_core(&a, &e, &m).map(|mut v| {
+                        limbs::normalise(&mut v);
+                        v
+                    });
+                    let reference = pfp5_answer(&a, &e, &m, None);
+                    assert_eq!(
+                        reference, oracle,
+                        "reference disagrees with oracle: a={a:?} e={e:?} m={m:?}"
+                    );
+                    for w in [Some(4u32), Some(5), Some(6)] {
+                        let got = pfp5_answer(&a, &e, &m, w);
+                        assert_eq!(
+                            got, reference,
+                            "window {w:?} disagrees with the bit-at-a-time ladder: a={a:?} e={e:?} m={m:?}"
+                        );
+                        cases += 1;
+                    }
+                }
+            }
+        }
+        assert!(
+            cases >= 1000,
+            "the population is unexpectedly small: {cases}"
+        );
+        eprintln!("pfp5 window-vs-reference comparisons: {cases} (moduli <= 256 bits)");
+    }
+
+    /// PFP-5 large-moduli differential: 1024, 2048 and 3072 bit odd moduli, full
+    /// width and edge exponents, against the bit-at-a-time ladder. Every window
+    /// digit and every window boundary is exercised. A single mismatch fails.
+    #[test]
+    fn pfp5_window_matches_on_large_moduli() {
+        let mut cases = 0usize;
+        for (bits, seed, keep) in [
+            (
+                1024usize,
+                0x1024_0000_0000_0001u64,
+                &[0usize, 1, 2, 3, 4, 5][..],
+            ),
+            (2048, 0x2048_0000_0000_0001, &[0usize, 3, 4, 5][..]),
+            (3072, 0x3072_0000_0000_0001, &[1usize, 4, 5][..]),
+        ] {
+            let m = pfp5_modulus(bits, seed);
+            let all = pfp5_exponents(bits);
+            let bs = pfp5_bases(&m);
+            for &idx in keep {
+                let e = &all[idx];
+                for a in &bs {
+                    let reference = pfp5_answer(a, e, &m, None);
+                    let got = pfp5_answer(a, e, &m, Some(5));
+                    assert_eq!(
+                        got, reference,
+                        "window disagrees at {bits} bits: a={a:?} e={e:?}"
+                    );
+                    cases += 1;
+                }
+            }
+        }
+        assert!(
+            cases >= 60,
+            "the large-moduli population is unexpectedly small: {cases}"
+        );
+        assert!(
+            cases >= 40,
+            "the large-moduli population is unexpectedly small: {cases}"
+        );
+        eprintln!("pfp5 large-moduli window-vs-reference comparisons: {cases}");
+    }
+
     /// ctgrind taint case for the secret-base reduction.
     ///
     /// This is the arithmetic of `ec_field_inverse_mod_ord`, which
@@ -3476,6 +3822,66 @@ mod tests {
             vec![1u64],
             "a * a^-1 == 1"
         );
+    }
+
+    /// PFP-5 ctgrind case for the **fixed-window** ladder: the exponent is secret
+    /// and every value derived from it — the window digit, the scanned table row,
+    /// the accumulator — is secret too.
+    ///
+    /// Only the exponent's limb bytes are marked undefined; its length stays
+    /// defined, so the documented staging bounds test is not part of this case.
+    /// Memcheck must report no conditional jump and no secret-derived address
+    /// inside `run_mont_ladder_window` or `select_window_digit`.
+    ///
+    /// Gate: `valgrind --tool=memcheck --error-exitcode=99 <test-bin> --exact
+    /// bn::arith::tests::ctgrind_secret_exponent_window --nocapture`.
+    /// `CTGRIND_CONTROL=1` branches on a marked exponent limb (negative control).
+    #[cfg(target_arch = "x86_64")]
+    #[test]
+    fn ctgrind_secret_exponent_window() {
+        let mut m = vec![
+            0xffff_ffff_ffff_ff61u64,
+            0x0123_4567_89ab_cdef,
+            0xfedc_ba98_7654_3211,
+            0x9e37_79b9_7f4a_7c15,
+        ];
+        m[0] |= 1;
+        let a = vec![0x0f0f_0f0f_0f0f_0f0f, 0, 0, 0];
+        let e_defined = vec![
+            0x1234_5678_9abc_def1u64,
+            0xfedc_ba98_7654_3210,
+            0x0f0f_0f0f_0f0f_0f0f,
+            0x7fff_ffff_ffff_ffff,
+        ];
+        let expected = mod_exp_core_consttime_width_with(&a, &e_defined, &m, m.len(), Some(5));
+        assert!(expected.is_some());
+
+        let mut e = e_defined.clone();
+        // SAFETY: `e` is a live, uniquely borrowed buffer and the client request
+        // only marks its bytes' definedness.
+        unsafe {
+            valgrind_make_mem_undefined(e.as_mut_ptr().cast::<u8>(), e.len() * 8);
+        }
+        if std::env::var_os("CTGRIND_CONTROL").is_some() {
+            // Negative control: memcheck must flag this branch on a marked limb.
+            let mut acc = 0u64;
+            for &limb in &e {
+                if limb & 1 == 1 {
+                    acc = acc.wrapping_add(1);
+                }
+            }
+            core::hint::black_box(acc);
+        }
+
+        let mut got = mod_exp_core_consttime_width_with(&a, &e, &m, m.len(), Some(5));
+        if let Some(v) = got.as_mut() {
+            // Declassify only for the assertion below.
+            // SAFETY: `v` is a live, uniquely borrowed local.
+            unsafe {
+                valgrind_make_mem_defined(v.as_mut_ptr().cast::<u8>(), v.len() * 8);
+            }
+        }
+        assert_eq!(got, expected);
     }
 
     /// `VALGRIND_MAKE_MEM_UNDEFINED` as the amd64 client request.

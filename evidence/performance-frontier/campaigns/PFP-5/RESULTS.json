@@ -1,0 +1,114 @@
+{
+  "schema": "openssl-rs/performance-frontier/pfp5/results/v1",
+  "item": "PFP-5",
+  "decision": "PROCEED",
+  "window_bits": 5,
+  "identity": {
+    "baseline_source_commit": "a005a33c482f47850a72661a363e7186bde42c5c",
+    "baseline_dso_sha256": "4e6ec312313b3f1ef68ec9c0c4fc698a76f334ee9da38a6fcdfa7d8945c53e77",
+    "baseline_arith_sha256": "06005795079c9957ba2b35c6816c423b507f427705842284aa9c23d0e0759a1c",
+    "candidate_dso_sha256": "842efa27197ea8c408d77a8316c1dbb35a06146e0033b7df7d7f9cced88a2f47",
+    "candidate_archive_sha256": "a6be79a74bfa8485b7e86ffda6019dc7b30b08f2836152a809f3abd31dc8791a",
+    "candidate_clean_builds_agreeing": 3,
+    "authority": "openssl-3.6.4-production",
+    "authority_dso_sha256": "611e511db4273c4b6b522031fd171efce71b80661bb8310c2a21dfd18ec0efd2",
+    "build": {
+      "rustc": "1.98.1",
+      "cargo": "1.98.1",
+      "profile": "release",
+      "command": "cargo build --release --lib --offline",
+      "jobs": 4
+    }
+  },
+  "bound": {
+    "mont_mul_baseline_2048": 4098,
+    "mont_mul_window_w5_2048": 2533.8,
+    "predicted_speedup_2048": 1.617,
+    "predicted_removed_percent_2048": 38.2,
+    "mont_mul_baseline_8192": 16386,
+    "mont_mul_window_w5_8192": 9907.7,
+    "predicted_speedup_8192": 1.654,
+    "predicted_removed_percent_8192": 39.5,
+    "amdahl_ceiling_percent_of_mont": 49.98
+  },
+  "profile_instructions": {
+    "baseline": {
+      "modexp2048_total": 380171921,
+      "modexp2048_mont": 370768020,
+      "modexp2048_mont_share_percent": 97.53,
+      "modexp8192_total": 22417200193,
+      "modexp8192_mont": 22225963716,
+      "modexp8192_mont_share_percent": 99.15,
+      "dh_ffdhe2048_total": 380450886,
+      "dh_ffdhe2048_mont": 370768020,
+      "dh_ffdhe2048_mont_share_percent": 97.45,
+      "rsa2048_total": 314475001,
+      "rsa2048_mont": 225093884,
+      "rsa2048_mont_share_percent": 71.58,
+      "rsa2048_mod_inverse_consttime": 64617738
+    },
+    "candidate": {
+      "modexp2048_total": 232973247,
+      "modexp2048_mont": 225476412,
+      "modexp2048_mont_share_percent": 96.78,
+      "modexp8192_total": 13497383045,
+      "modexp8192_mont": 13382418276,
+      "modexp8192_mont_share_percent": 99.15,
+      "dh_ffdhe2048_total": 233252565,
+      "dh_ffdhe2048_mont": 225476412,
+      "dh_ffdhe2048_mont_share_percent": 96.67,
+      "rsa2048_total": 225959993,
+      "rsa2048_mont": 137837012,
+      "rsa2048_mont_share_percent": 61.00,
+      "rsa2048_mod_inverse_consttime": 64617726
+    }
+  },
+  "timing_candidate_over_authority": {
+    "modexp2048": {"ratio": 2.501, "ci95": [2.500, 2.501]},
+    "modexp8192": {"ratio": 2.927, "ci95": [2.924, 2.930]},
+    "rsa2048": {"ratio": 2.982, "ci95": [2.980, 2.985]},
+    "dh-ffdhe2048": {"ratio": 2.500, "ci95": [2.499, 2.502]},
+    "ecdsa256": {"ratio": 10.238, "ci95": [10.215, 10.262], "note": "control, unchanged"}
+  },
+  "timing_paired_baseline_over_candidate": {
+    "modexp2048": {"speedup": 1.652, "ci95": [1.651, 1.652], "removed_percent": 39.5},
+    "modexp8192": {"speedup": 1.660, "ci95": [1.659, 1.662], "removed_percent": 39.8},
+    "dh-ffdhe2048": {"speedup": 1.652, "ci95": [1.651, 1.652], "removed_percent": 39.5},
+    "rsa2048": {"speedup": 1.532, "ci95": [1.530, 1.535], "removed_percent": 34.7},
+    "ecdsa256": {"speedup": 1.004, "ci95": [1.003, 1.009], "removed_percent": 0.4}
+  },
+  "differential": {
+    "in_crate_window_vs_reference": 3420,
+    "in_crate_reference_vs_oracle": 1140,
+    "in_crate_large_moduli": 65,
+    "authority_modexp_cases": 150,
+    "authority_transcript_lines": 161,
+    "mismatches": 0
+  },
+  "ctgrind": {
+    "binary_sha256": "4d998db64ed7d49b943e01f44f2b2991b637e262606bac59e1553a9dd339aa9e",
+    "binding": "source-bound debug test binary, not DSO-bound",
+    "modexp_secret_exponent": {"errors": 0, "contexts": 0},
+    "rsa_secret_exponents_and_key": {"errors": 96821, "contexts": 112, "window_contexts": 0},
+    "rsa_secret_moduli_baseline": {"errors": 96659, "contexts": 112, "window_contexts": 0}
+  },
+  "branch_audit": {
+    "dso_sha256": "842efa27197ea8c408d77a8316c1dbb35a06146e0033b7df7d7f9cced88a2f47",
+    "run_mont_ladder": {"jcc": 100, "div_idiv": 0, "cmov": 2, "setcc": 18, "jo_jno": 2, "cpuid": 0},
+    "mont_mul_sos_into": {"jcc": 19, "div_idiv": 0, "cmov": 0, "setcc": 10, "jo_jno": 0, "cpuid": 0},
+    "secret_derived_entries": 0
+  },
+  "gates": {
+    "cargo_fmt": "clean",
+    "cargo_clippy_all_targets_d_warnings": "clean",
+    "cargo_test_lib_bn": {"passed": 159, "failed": 0},
+    "cargo_test_lib_all": {"passed": 2491, "failed": 0, "ignored": 54}
+  },
+  "timing_obligations_discharged": 0,
+  "limitations": [
+    "SCOPED_OBSERVATION on a virtualised court with no PMU",
+    "ctgrind is source-bound (test binary), not DSO-bound; DSO-level taint is PFP-21",
+    "8192-bit bit-at-a-time differential runs only at the authority level, not in the debug suite",
+    "the branch audit is a review aid, not a secret-independence proof; the taint run is the independence evidence"
+  ]
+}

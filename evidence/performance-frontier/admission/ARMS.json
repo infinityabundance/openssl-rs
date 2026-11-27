@@ -1068,6 +1068,103 @@
           }
         ]
       }
+    },
+    {
+      "arm_id": "PFP-5",
+      "assurance": {
+        "safe_compatible": false,
+        "semantic_assurance": false
+      },
+      "candidate": {
+        "artefact": {
+          "label": "distribution-shaped libcrypto.so.3 from staging HEAD a005a33c4 with the uncommitted PFP-5 fixed-window ladder; three clean rebuilds agree",
+          "sha256": "842efa27197ea8c408d77a8316c1dbb35a06146e0033b7df7d7f9cced88a2f47"
+        },
+        "build_profile": "release, x86_64-unknown-linux-gnu, rustc 1.98.1; staging HEAD a005a33c482f47850a72661a363e7186bde42c5c with uncommitted build-relevant changes in src/bn/arith.rs (plus test-only changes in src/rsa/ossl.rs); three independent clean builds reproduce DSO 842efa27 and archive a6be79a74bfa8485b7e86ffda6019dc7b30b08f2836152a809f3abd31dc8791a byte for byte",
+        "source_commit": "a005a33c482f47850a72661a363e7186bde42c5c"
+      },
+      "constant_time_audit": {
+        "kind": "BINARY_BRANCH_AUDIT",
+        "candidate_sha256": "842efa27197ea8c408d77a8316c1dbb35a06146e0033b7df7d7f9cced88a2f47",
+        "harness_sha256": "5d54f3a1995263032fbdd23f9ccd533b50fa53b283199b2e1f43a3002cd1dfd4",
+        "branch_audit": {
+          "path": "evidence/performance-frontier/campaigns/PFP-5/raw/branch-audit.md",
+          "present": true,
+          "sha256": "ffffd6ab1754d2aff90be0bf77611f9ebd2b511c74d09ae728aae59564fd1b3b"
+        },
+        "reference": {
+          "path": "evidence/performance-frontier/campaigns/PFP-5/raw/branch-audit.md",
+          "present": true,
+          "sha256": "ffffd6ab1754d2aff90be0bf77611f9ebd2b511c74d09ae728aae59564fd1b3b"
+        },
+        "result": "run_mont_ladder (window+scan inlined) 100 jcc / 0 div / 2 cmov / 18 setcc / 0 cpuid; mont_mul_sos_into 19 / 0 / 0 / 10 / 0. All conditional transfers public-bound; 0 secret-derived entries. Supporting source-bound ctgrind: secret exponent 0 errors/0 contexts; RSA secret exponents+key 96,821/112 contexts with 0 window contexts. A review aid, not a secret-independence proof."
+      },
+      "description": "fixed-window constant-time BN exponentiation (w=5, full masked table scan) replacing the per-bit multiplication half of the ladder",
+      "differential_courts": {
+        "candidate_sha256": "842efa27197ea8c408d77a8316c1dbb35a06146e0033b7df7d7f9cced88a2f47",
+        "reference": {
+          "path": "evidence/performance-frontier/campaigns/PFP-5/DIFFERENTIAL.md",
+          "present": true,
+          "sha256": "ed95b38d299966f26bb7d7485f66e892cb83f301600ac754fdeac0543e88555e"
+        },
+        "result": "PASS"
+      },
+      "measurement": {
+        "candidate_sha256": "842efa27197ea8c408d77a8316c1dbb35a06146e0033b7df7d7f9cced88a2f47",
+        "classification": "SCOPED_OBSERVATION",
+        "identity": {
+          "instrument": "candidate vs 3.6.4 authority single-operation latency, 15 process-level repetitions, plus a paired baseline/candidate comparison at the two digests",
+          "population": "1d33143a7ee97208c25da95dadd0c7eafcce300794f71a78e6f6b3da60d7fa88",
+          "source": "a005a33c482f47850a72661a363e7186bde42c5c with the uncommitted PFP-5 change",
+          "target": "x86_64-unknown-linux-gnu release",
+          "tool": "courts/performance-frontier/pfp5/bench_pfp5.c and analyse_pfp5.py/analyse_pair.py"
+        },
+        "population": {
+          "digest": "1d33143a7ee97208c25da95dadd0c7eafcce300794f71a78e6f6b3da60d7fa88",
+          "frozen_at": "c9a0fdd58429ef13ca9b25ddccbc84a832787277",
+          "frozen_before_execution": true
+        },
+        "record": {
+          "path": "evidence/performance-frontier/campaigns/PFP-5/RESULTS.json",
+          "present": true,
+          "sha256": "dce25519896ee78e469e16e3b031c64dae160edfec14627ff2398ce02ab4f34c"
+        }
+      },
+      "queue_item": "PFP-5",
+      "reuse": null,
+      "shortcuts": [],
+      "status": "CANDIDATE",
+      "timing_obligations": {
+        "attempted_discharge": [],
+        "none_open_because": null,
+        "open": [
+          {
+            "description": "ctgrind is source-bound (debug test binary 4d998db6), not DSO-bound; the audit at 842efa27 is a binary branch audit. DSO-level taint remains PFP-21.",
+            "discharged": false,
+            "id": "PFP5-DSO-CTGRIND"
+          },
+          {
+            "description": "The 8192-bit bit-at-a-time reference comparison is not in the debug suite; 8192 bits is covered against the authority only.",
+            "discharged": false,
+            "id": "PFP5-8192-REFERENCE-DIFFERENTIAL"
+          },
+          {
+            "description": "The candidate is built from uncommitted source on a005a33c4; three clean builds agree but it is not reproducible from a commit until committed.",
+            "discharged": false,
+            "id": "PFP5-DIRTY-CANDIDATE"
+          },
+          {
+            "description": "The venue exposes no PMU; the measurement is SCOPED_OBSERVATION.",
+            "discharged": false,
+            "id": "PFP5-NO-PMU"
+          },
+          {
+            "description": "The consumer dependency closure is not discharged; this arm is a performance candidate, not SAFE_COMPATIBLE, and asserts no safety or compatibility conclusion.",
+            "discharged": false,
+            "id": "PFP5-SAFE-COMPATIBLE"
+          }
+        ]
+      }
     }
   ],
   "author": {

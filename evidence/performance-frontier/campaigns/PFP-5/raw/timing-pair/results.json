@@ -1,0 +1,101 @@
+{
+  "dh-ffdhe2048": {
+    "base_us": 4922.162,
+    "candidate_us": 2980.628,
+    "speedup_base_over_candidate": 1.6517296364997234,
+    "speedup_ci95": [
+      1.6509914654375588,
+      1.65245083497653
+    ],
+    "removed_percent": 39.45740405075262,
+    "n": 15
+  },
+  "dh-ffdhe3072": {
+    "base_us": 17023.534,
+    "candidate_us": 10295.985,
+    "speedup_base_over_candidate": 1.6531181636322656,
+    "speedup_ci95": [
+      1.6502630328579286,
+      1.654528229495675
+    ],
+    "removed_percent": 39.5082564574344,
+    "n": 15
+  },
+  "dh-modp2048": {
+    "base_us": 4922.017,
+    "candidate_us": 2978.826,
+    "speedup_base_over_candidate": 1.6525914143041236,
+    "speedup_ci95": [
+      1.6521185684158526,
+      1.653431349654229
+    ],
+    "removed_percent": 39.48897523341655,
+    "n": 15
+  },
+  "dh-synth2048": {
+    "base_us": 4920.973,
+    "candidate_us": 2978.027,
+    "speedup_base_over_candidate": 1.6523955774574919,
+    "speedup_ci95": [
+      1.6514907626171975,
+      1.6532634490351468
+    ],
+    "removed_percent": 39.48180365268951,
+    "n": 15
+  },
+  "dh-synth3072": {
+    "base_us": 17016.985,
+    "candidate_us": 10304.945,
+    "speedup_base_over_candidate": 1.6529185481904474,
+    "speedup_ci95": [
+      1.6484914904977086,
+      1.6535570691682382
+    ],
+    "removed_percent": 39.500951145187265,
+    "n": 15
+  },
+  "ecdsa256": {
+    "base_us": 131.217,
+    "candidate_us": 130.14,
+    "speedup_base_over_candidate": 1.0043382122280964,
+    "speedup_ci95": [
+      1.003037083169946,
+      1.0092197817420616
+    ],
+    "removed_percent": 0.43194734356190034,
+    "n": 15
+  },
+  "modexp2048": {
+    "base_us": 4913.979,
+    "candidate_us": 2976.596,
+    "speedup_base_over_candidate": 1.651737302647926,
+    "speedup_ci95": [
+      1.6505021975869385,
+      1.6522345438808046
+    ],
+    "removed_percent": 39.457685044898824,
+    "n": 15
+  },
+  "modexp8192": {
+    "base_us": 358243.554,
+    "candidate_us": 215747.496,
+    "speedup_base_over_candidate": 1.660425708950059,
+    "speedup_ci95": [
+      1.6587101259250996,
+      1.6624101752959395
+    ],
+    "removed_percent": 39.774481049662114,
+    "n": 15
+  },
+  "rsa2048": {
+    "base_us": 1601.705,
+    "candidate_us": 1044.769,
+    "speedup_base_over_candidate": 1.532256953348362,
+    "speedup_ci95": [
+      1.5298940179442542,
+      1.5349933369291242
+    ],
+    "removed_percent": 34.73679477748484,
+    "n": 15
+  }
+}

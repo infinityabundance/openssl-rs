@@ -1,0 +1,29 @@
+--------------------------------------------------------------------------------
+Profile data file '/work/court/tmp/pfp5/profile/cg/rsa2048.out' (creator: callgrind-3.19.0)
+--------------------------------------------------------------------------------
+I1 cache: 
+D1 cache: 
+LL cache: 
+Timerange: Basic block 0 - 33112629
+Trigger: Program termination
+Profiled target:  /work/court/tmp/pfp5/profile/bench_pfp5 --lib /work/court/tmp/pfp5/build/distribution/libcrypto.so.3 --rsa-der /work/courts/phase18/timing/fixtures/rsa2048.der --dh-ffdhe2048 /work/evidence/performance-frontier/campaigns/PFP-1/performance/fixtures/ffdhe2048.hex --dh-ffdhe3072 /work/evidence/performance-frontier/campaigns/PFP-1/performance/fixtures/ffdhe3072.hex --dh-modp2048 /work/evidence/performance-frontier/campaigns/PFP-1/performance/fixtures/modp2048.hex --prepared --only rsa2048 (PID 208214, part 1)
+Events recorded:  Ir
+Events shown:     Ir
+Event sort order: Ir
+Thresholds:       90
+Include dirs:     
+User annotated:   
+Auto-annotation:  on
+
+--------------------------------------------------------------------------------
+Ir                   
+--------------------------------------------------------------------------------
+225,959,993 (100.0%)  PROGRAM TOTALS
+
+--------------------------------------------------------------------------------
+Ir                    file:function
+--------------------------------------------------------------------------------
+137,837,012 (61.00%)  ???:openssl_rs::bn::arith::mont_mul_sos_into [/work/court/tmp/pfp5/build/distribution/libcrypto.so.3]
+ 64,617,726 (28.60%)  ???:openssl_rs::bn::limbs::mod_inverse_consttime [/work/court/tmp/pfp5/build/distribution/libcrypto.so.3]
+  4,310,002 ( 1.91%)  ???:openssl_rs::bn::limbs::pow2_mod_consttime [/work/court/tmp/pfp5/build/distribution/libcrypto.so.3]
+

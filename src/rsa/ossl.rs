@@ -4857,6 +4857,77 @@ mod tests {
         }
     }
 
+    /// PFP-5 ctgrind case for the RSA private operation with the **private
+    /// exponents and private key** tainted: `d`, `dmp1`, `dmq1`, `p` and `q` are
+    /// all secret, so the fixed-window ladder consumes a secret exponent over a
+    /// secret modulus.
+    ///
+    /// The message stays defined; `RSA_FLAG_NO_BLINDING` keeps the DRBG out.
+    /// Memcheck must report no new context from `run_mont_ladder_window` or
+    /// `select_window_digit`.
+    ///
+    /// Gate: `valgrind --tool=memcheck --error-exitcode=99 <test-bin> --exact
+    /// rsa::ossl::tests::ctgrind_rsa_crt_secret_exponents --nocapture`.
+    #[cfg(target_arch = "x86_64")]
+    #[test]
+    fn ctgrind_rsa_crt_secret_exponents() {
+        use crate::evp::pkey_ctx::RSA_NO_PADDING;
+        use crate::rsa::gen::RSA_generate_key_ex;
+        use crate::rsa::object::{
+            RSA_free, RSA_get0_factors, RSA_get0_key, RSA_new, RSA_private_encrypt, RSA_size,
+        };
+
+        // SAFETY: every pointer below is a fresh object this test owns, null-
+        // checked, and every length is the buffer's own.
+        unsafe {
+            let e = BN_new();
+            assert!(!e.is_null());
+            assert_eq!(BN_set_word(e, 65537), 1);
+            let rsa = RSA_new();
+            assert!(!rsa.is_null());
+            assert_eq!(RSA_generate_key_ex(rsa, 2048, e, core::ptr::null_mut()), 1);
+
+            BN_MONT_CTX_free((*rsa)._method_mod_p);
+            (*rsa)._method_mod_p = ptr::null_mut();
+            BN_MONT_CTX_free((*rsa)._method_mod_q);
+            (*rsa)._method_mod_q = ptr::null_mut();
+            (*rsa).flags |= RSA_FLAG_NO_BLINDING;
+
+            let mut p: *const BigNum = ptr::null();
+            let mut q: *const BigNum = ptr::null();
+            RSA_get0_factors(rsa, &mut p, &mut q);
+            let mut n: *const BigNum = ptr::null();
+            let mut pub_e: *const BigNum = ptr::null();
+            let mut d: *const BigNum = ptr::null();
+            RSA_get0_key(rsa, &mut n, &mut pub_e, &mut d);
+            assert!(!p.is_null() && !q.is_null() && !d.is_null());
+
+            // Taint the private exponents and the private primes.
+            for m in [p, q, d, (*rsa).dmp1, (*rsa).dmq1] {
+                let limbs = &(*m).d;
+                valgrind_make_mem_undefined(limbs.as_ptr() as *mut u8, limbs.len() * 8);
+            }
+
+            let size = RSA_size(rsa) as usize;
+            let mut pt = [0u8; 256];
+            pt[255] = 0x42;
+            let mut ct = [0u8; 256];
+            assert_eq!(
+                RSA_private_encrypt(
+                    size as c_int,
+                    pt.as_ptr(),
+                    ct.as_mut_ptr(),
+                    rsa,
+                    RSA_NO_PADDING
+                ),
+                size as c_int
+            );
+
+            RSA_free(rsa);
+            BN_free(e);
+        }
+    }
+
     /// Sweep every seam-visible allocation in the CRT private operation
     /// (`rsa_ossl_mod_exp`) through both arms: the smooth combined exponentiation
     /// and the generic per-prime arm. Each injected failure must return the
