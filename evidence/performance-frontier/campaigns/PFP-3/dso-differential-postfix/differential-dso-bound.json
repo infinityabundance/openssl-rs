@@ -1,0 +1,106 @@
+{
+  "campaign": "PFP-2",
+  "cases": {
+    "mul-g": {
+      "authority_output_sha256": "a9e1068d9c28846fd8beec36d372845723e9f253f3c09602fe93bfb7a23361fd",
+      "candidate_output_sha256": "a9e1068d9c28846fd8beec36d372845723e9f253f3c09602fe93bfb7a23361fd",
+      "compared_lines": 4096,
+      "expected_compared_lines": 4096,
+      "mismatches": 0
+    },
+    "mul-p": {
+      "authority_output_sha256": "bcb22a91415f5a8593262b56935218f0a21712b2bbedddb2d8824d485af9e23b",
+      "candidate_output_sha256": "bcb22a91415f5a8593262b56935218f0a21712b2bbedddb2d8824d485af9e23b",
+      "compared_lines": 4096,
+      "expected_compared_lines": 4096,
+      "mismatches": 0
+    }
+  },
+  "ecdsa": {
+    "directions": [
+      {
+        "direction": "candidate->authority",
+        "public_key": "04bf5059d3b5add005c7966801051ecaacdf4bb1cb3ffb84b8a8fbd917d67ed01308014f073922a15bee7413b15a8f2d895061a72746fcc7ab78562d15bae15b63",
+        "signed": "256",
+        "signer": "candidate",
+        "verified": "256",
+        "verifier": "authority"
+      },
+      {
+        "direction": "authority->candidate",
+        "public_key": "04bf5059d3b5add005c7966801051ecaacdf4bb1cb3ffb84b8a8fbd917d67ed01308014f073922a15bee7413b15a8f2d895061a72746fcc7ab78562d15bae15b63",
+        "signed": "256",
+        "signer": "authority",
+        "verified": "256",
+        "verifier": "candidate"
+      }
+    ],
+    "public_key_agreement": true,
+    "signatures_file_sha256": {
+      "authority": "577bbd723eec27eebdbff4689267925ba5b75def654a46efcd5dec70e2de24bf",
+      "candidate": "1455ea631a313a2bf3b1e6cb4aa4d480dffca7168bb7f1209eff420f0af2cf0a"
+    },
+    "signatures_per_direction": 256
+  },
+  "identity_proof": {
+    "all_ok": true,
+    "file": "raw/identity-check.tsv",
+    "method": "each process printed LOADED realpath/dev/ino/size for the file it mapped and LIB from dladdr(BN_new); the runner compared those fields with stat(2) on the expected on-disk DSO and required a /proc/self/maps entry",
+    "rows": 8
+  },
+  "instrument": {
+    "binary_sha256": "c7de3157dc4018bd425301485638c7686c09139c899da20424b718a7a57117ab",
+    "loader_pattern": "dlopen(RTLD_NOW|RTLD_LOCAL), one libcrypto.so.3 per process, as courts/phase18/timing/bench_api.c",
+    "operation_shape": "k*G as in the campaign's ctgrind harness minimal_mul.c, widened to a fixed population; k*P for the variable-base court",
+    "source": "pfp2_dso_differential.c",
+    "source_sha256": "fd67b943889ab710af9f3c246e3119c2f28561dc6a47084ee96f5a5d5f64affc"
+  },
+  "limitations": [
+    "Internal field operations (p256::mont_reduce_into, p256::wide_mul_x86, bn::limbs::normalise) have no exported entry point and were not called directly; they are exercised only through EC_POINT_mul and ECDSA. No source-level test is substituted while claiming this court is DSO-bound.",
+    "ECDSA signatures are not compared byte-for-byte because the nonces are random; the court compares acceptance in both directions, the derived public key and the message sequence.",
+    "The candidate is the frozen distribution DSO; it was not rebuilt in this court. Its digest is checked before and after execution.",
+    "This is a compatibility/correctness court. It is not a constant-time result and not a safety conclusion."
+  ],
+  "population": {
+    "case_counts": {
+      "ecdsa_sign_cross_verify_per_direction": 256,
+      "mul_g": 4096,
+      "mul_p": 4096
+    },
+    "derivation": "scalar_for(seed, domain, i) is splitmix64 over (seed ^ domain ^ i*0x9e3779b97f4a7c15); the 32-byte big-endian result has its top bit cleared and low bit set, so it is in [1, 2^255) and therefore a non-zero P-256 scalar below n. mul-p draws j for P=j*G from domain BASE and k for k*P from domain SCALAR. ECDSA draws d from domain KEY and each message digest from domain MSG. The authority and candidate do not derive the values themselves; the harness supplies identical bytes to both.",
+    "description": "scalar multiplications and ECDSA sign/cross-verify through the exported libcrypto.so.3 ABI",
+    "domains": {
+      "base": "0x5032464742415331",
+      "key": "0x503246474b455931",
+      "message": "0x503246474d534731",
+      "mul_g": "0x503246474d554c31",
+      "scalar": "0x5032464753434c31"
+    },
+    "seed": "0x5046503250485032"
+  },
+  "raw_outputs": {
+    "mul-g-authority.out": "2bd9043afef615b53d198c4a31ae70592afcf1a7b0271fabfd405b6e68a3f92e",
+    "mul-g-candidate.out": "9e50077932c80ce4bb2dd3daa43899aa934cf3d88f7206500c6f5e461b3a9be1",
+    "mul-p-authority.out": "0c6247d82c11d2ed8e7e4659777b2be5cd8d6ccc2973715f18f49275e23f6b01",
+    "mul-p-candidate.out": "f8926113631901b3900993ff5894b349837c58f9989b8e39e32c3142f06abcc3",
+    "sign-authority.out": "2bb4e2b648de89da9e9b9f84e1fe2423222ec58fd511890298b62a82d51caab7",
+    "sign-candidate.out": "bc37044854915daed83249b654096f3a852fe4ca5e9cece4a1449eccfa053e63",
+    "verify-authority.out": "06003eb06a13ed03f1443416d2ce8a4004e0ef2f3a91ad58a8ae658928b793ef",
+    "verify-candidate.out": "b7e5012a7498fb4ea634e09e4b2ece90cc905c361f155802c94692efbd6f9bae"
+  },
+  "record_id": "PFP2-DSO-DIFFERENTIAL-83f67826",
+  "result": "PASS",
+  "schema": "openssl-rs/performance/pfp2-dso-differential/v1",
+  "subjects": {
+    "authority": {
+      "label": "OpenSSL 3.6.4 production authority",
+      "path": "/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+      "sha256": "611e511db4273c4b6b522031fd171efce71b80661bb8310c2a21dfd18ec0efd2"
+    },
+    "candidate": {
+      "label": "distribution-shaped libcrypto.so.3 (PFP-2 post-fix)",
+      "path": "/work/court/tmp/pfp3-d/distribution/libcrypto.so.3",
+      "sha256": "ecbefb7d4ecd05cb08f5ade57e64ce2cd81de24bcd68b0c236a8640a18559053"
+    }
+  }
+}

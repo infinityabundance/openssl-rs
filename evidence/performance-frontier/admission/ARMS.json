@@ -559,68 +559,117 @@
       },
       "candidate": {
         "artefact": {
-          "label": "distribution-shaped libcrypto.so.3 from clean staging commit 289f11187 (PFP-3)",
-          "sha256": "04611380847a708a591a9786734915c4295cc0e164d94025dc937b797ffb15d4"
+          "label": "distribution-shaped libcrypto.so.3 from staging f8d5c4b33 + uncommitted branch-free fixed-base admission (PFP-3 post-fix)",
+          "sha256": "ecbefb7d4ecd05cb08f5ade57e64ce2cd81de24bcd68b0c236a8640a18559053"
         },
-        "build_profile": "release, x86_64-unknown-linux-gnu, rustc 1.98.1; clean committed tree 289f111877ce7aa9a9a76d25bf76357f57ed6582 (src tree 11a5d18f); src fingerprint ca5cc146006b4d771fc4b9a9ffd8109199f25c61ef7de0d9e90160232bd2d46a; a fresh-target rebuild reproduces the DSO and archive 6c2133c0 byte for byte",
-        "source_commit": "289f111877ce7aa9a9a76d25bf76357f57ed6582"
+        "build_profile": "release, x86_64-unknown-linux-gnu, rustc 1.98.1; staging f8d5c4b33cf751a0dd805fa7cf0d730915e1d073 with an uncommitted src/ec/p256/fixed_base.rs branch-free admission (source fingerprint 52219f14f2402ffcb2b1ce5abcc843c168b79fb4798b9db66e50b5683c3b0aee, 887 files; build_relevant_clean=false, recorded in the timing identity); two fresh-target builds reproduce the DSO and archive 14f76179c517213a35c3c1d69e3dccb722e228f7e12a81efceecb15bdac12bf6 byte for byte",
+        "source_commit": "f8d5c4b33cf751a0dd805fa7cf0d730915e1d073"
       },
       "constant_time_audit": {
         "kind": "CTGRIND_PLUS_BRANCH_AUDIT",
-        "candidate_sha256": "04611380847a708a591a9786734915c4295cc0e164d94025dc937b797ffb15d4",
-        "harness_kind": "pfp3_dso_ct.c: the PFP-21 DSO harness with one added population (mul-g-fixed, EC_POINT_mul(k,NULL,NULL)); taint verification, LOADED/MAPS/FOREIGN identity proof and the attribution classifier unchanged",
-        "harness_sha256": "5840dbd51e76cce9eefb611067ce2aaf6ac15d71486ae0e76832ed5da5d5faa3",
+        "candidate_sha256": "ecbefb7d4ecd05cb08f5ade57e64ce2cd81de24bcd68b0c236a8640a18559053",
+        "harness_kind": "pfp3_dso_ct.c: the PFP-21 DSO harness with all eight populations, the limb-value taint, LOADED/MAPS/FOREIGN identity proof, negative control and attribution classifier unchanged; only the candidate digest/path changed",
+        "harness_sha256": "c89d64d892b941e8d148b9662e2adc6781e054adb8bda637914c95820d5fb732",
+        "harness_source_sha256": "ea18ec93bb961328d6c268b4fc1307e0489c01ea62f0a1c33ba962fafa85771d",
         "branch_audit_harness_sha256": "5d54f3a1995263032fbdd23f9ccd533b50fa53b283199b2e1f43a3002cd1dfd4",
         "branch_audit": {
-          "path": "evidence/performance-frontier/campaigns/PFP-3/audit/raw/audit-pfp3.md",
+          "path": "evidence/performance-frontier/campaigns/PFP-3/audit-postfix/raw/audit-pfp3.md",
           "present": true,
-          "sha256": "7b8b0b5e5b421ee57c600b23418023228b0de93349fb28c47f8ceb90dcf3c6bc"
+          "sha256": "c94c5b1b6b8ea347253f8dbfc900707634509a9003ae4d56e28cd29aa332100d"
         },
         "branch_audit_carriers": {
-          "path": "evidence/performance-frontier/campaigns/PFP-3/audit/raw/carriers.json",
+          "path": "evidence/performance-frontier/campaigns/PFP-3/audit-postfix/raw/carriers.json",
           "present": true,
-          "sha256": "e266c3fc75bcb6e04e6cc9d6381567eddcc083a58a84c8d9803b774e8dc5982d"
+          "sha256": "2a61f6221c12379086501574dcdd0537d0c2fdae0bb7dae4b2746d6745840fe2"
         },
         "ctgrind": {
           "engine_on_path": 0,
           "engine_origins": 0,
-          "secret_derived_conditional_transfers": 1,
-          "finding": "je at ossl_ec_wNAF_mul+0x1938 (file vaddr 0x242138), condition the ct_ge(k, ORDER_MODULUS) admission result: a secret-dependent early exit. try_fixed_base_mul is inlined into the ec::mult driver, so the frame is named ossl_ec_wNAF_mul and the classifier's engine-on-path is 0.",
+          "secret_derived_conditional_transfers": 0,
+          "finding": "none. The pre-fix je at ossl_ec_wNAF_mul+0x1938 (the ct_ge(k, n) admission early exit) is gone: the in-range mask is folded into the scalar the comb consumes. mul-g-fixed is 0/0/0 errors/contexts (was 1/1/1); the pre-PFP-20 sensitivity control still reports 4 engine-on-path per repetition.",
           "populations": {
             "mul_g_fixed": {
               "errors": [
-                1,
-                1,
-                1
+                0,
+                0,
+                0
               ],
               "contexts": [
-                1,
-                1,
-                1
+                0,
+                0,
+                0
               ]
             },
             "mul_g": {
               "errors": [
-                3621,
+                3645,
+                3631,
+                3606
+              ],
+              "contexts": [
+                225,
+                209,
+                196
+              ]
+            },
+            "mul_p": {
+              "errors": [
+                3596,
                 3606,
                 3670
               ],
               "contexts": [
-                200,
+                186,
                 197,
-                233
+                236
+              ]
+            },
+            "mul_g_bytes": {
+              "errors": [
+                3661,
+                3636,
+                3607
+              ],
+              "contexts": [
+                228,
+                216,
+                197
               ]
             },
             "sign": {
               "errors": [
-                123,
-                123,
-                123
+                122,
+                122,
+                122
               ],
               "contexts": [
-                120,
-                120,
-                120
+                119,
+                119,
+                119
+              ]
+            },
+            "sign_ex": {
+              "errors": [
+                24,
+                24,
+                24
+              ],
+              "contexts": [
+                24,
+                24,
+                24
+              ]
+            },
+            "sign_ex_k": {
+              "errors": [
+                33042,
+                33007,
+                32978
+              ],
+              "contexts": [
+                460,
+                442,
+                427
               ]
             },
             "control": {
@@ -670,11 +719,11 @@
             "class": "public doubling loop"
           },
           "ossl_ec_wNAF_mul": {
-            "jcc": 186,
-            "cmov": 33,
+            "jcc": 183,
+            "cmov": 34,
             "setcc": 5,
             "div": 4,
-            "class": "general wNAF (pre-existing) + inlined fixed-base admission; secret-derived jcc at +0x1938"
+            "class": "general wNAF (pre-existing); no secret-derived jcc; the admission-mask jcc (test $0x1,%cl) is absent (pre-fix 186 jcc)"
           }
         },
         "mutation_control": {
@@ -691,35 +740,36 @@
             "path": "evidence/performance-frontier/campaigns/PFP-3/mutation/raw/mutation-record.json",
             "present": true,
             "sha256": "d56c5db1630989d86c92c16ec3c88b03060dec400edfc8c0e962c8568615b6b1"
-          }
+          },
+          "digest_scope": "control built from the pre-fix candidate at 04611380; not re-run at ecbefb7d. It establishes that the comb (not a ladder fallback) is load-bearing, not a post-fix timing claim."
         },
-        "result": "STOP: one secret-derived conditional transfer in the fixed-base admission; shared inventory 31/31 exit 0; six carriers exact-symbol resolved; the jcc is reproduced by ctgrind and by the branch audit",
+        "result": "PASS: zero secret-derived conditional transfers on mul-g-fixed; shared inventory 31/31 exit 0; six carriers resolved; wNAF jcc 186 -> 183 and no test $0x1,%cl admission-mask jcc; ctgrind independently reports 0 contexts and the pre-PFP-20 sensitivity control still fires",
         "reference": {
-          "path": "evidence/performance-frontier/campaigns/PFP-3/audit/AUDIT.md",
+          "path": "evidence/performance-frontier/campaigns/PFP-3/audit-postfix/AUDIT.md",
           "present": true,
-          "sha256": "af371f4d1a0f190c8c3b657b8bae5317d5cd445abfe422bfe39cf7cec71a9d94"
+          "sha256": "ebf6bab7829104a77c372f3d195b81f9e8fe1fdaaa4c693801bce94ee15e383b"
         }
       },
-      "description": "fixed-base P-256 multiplication: a 16-entry comb table derived at first use from the tracked EC_CURVE_DATA generator, masked full-scan constant-time selection, and exact-group admission with refusal tests; DSO-bound differential of 4,096 k*G and 4,096 k*P plus ECDSA cross-verification at 04611380; the fixed-base admission carries a secret-derived conditional transfer (ct_ge(k, n) early exit), which is a STOP for the constant-time conjunct",
+      "description": "fixed-base P-256 multiplication: a 16-entry comb table derived at first use from the tracked EC_CURVE_DATA generator, masked full-scan constant-time selection, and exact-group admission with refusal tests; the scalar range admission is now branch-free (the in-range mask is folded into the scalar the comb consumes, so an out-of-range value is replaced by k-n before multiplication) at DSO ecbefb7d; DSO-bound differential of 4,096 k*G and 4,096 k*P plus ECDSA cross-verification; ctgrind 0 contexts on mul-g-fixed and no admission-mask branch in the audit",
       "differential_courts": {
-        "candidate_sha256": "04611380847a708a591a9786734915c4295cc0e164d94025dc937b797ffb15d4",
-        "note": "4,096 k*G and 4,096 k*P serialised points compared with the authority, 0 mismatches; 256+256 ECDSA cross-verifications accepted with one agreed public key; 8/8 identity rows ok. In-crate 4,096-case fixed-versus-variable differential also 0 mismatches.",
+        "candidate_sha256": "ecbefb7d4ecd05cb08f5ade57e64ce2cd81de24bcd68b0c236a8640a18559053",
+        "note": "4,096 k*G and 4,096 k*P serialised points compared with the authority, 0 mismatches (candidate streams equal the authority a9e1068d… and bcb22a91…); 256+256 ECDSA cross-verifications accepted with one agreed public key; 8/8 identity rows ok. In-crate 4,096-case fixed-versus-variable differential also 0 mismatches, and the new out-of-range test checks k = n, n+1, n+2, 2^256-1 against the ladder.",
         "reference": {
-          "path": "evidence/performance-frontier/campaigns/PFP-3/dso-differential/differential-dso-bound.json",
+          "path": "evidence/performance-frontier/campaigns/PFP-3/dso-differential-postfix/differential-dso-bound.json",
           "present": true,
-          "sha256": "a014588b7dc6cc0d8646c407ea104a5d766f1e139eb012c65f252a1e8dce116a"
+          "sha256": "cef8b5fc85f2b208a8e4fc990f5c354f3ebf76d12f947904bec5a56ecf0104b7"
         },
         "result": "PASS"
       },
       "measurement": {
-        "candidate_sha256": "04611380847a708a591a9786734915c4295cc0e164d94025dc937b797ffb15d4",
+        "candidate_sha256": "ecbefb7d4ecd05cb08f5ade57e64ce2cd81de24bcd68b0c236a8640a18559053",
         "classification": "SCOPED_OBSERVATION",
         "identity": {
           "instrument": "cross-library single-operation latency, 15 paired processes pinned to one CPU, median of paired ratios with a 20,000-resample percentile bootstrap (ecdsa256); the ecdh row uses the PFP-29 per-path instrument with the same conventions",
           "population": "40d1537b1a86851a17c49636cd5620704c4836bf6153074fd964f1c3a4fe691e",
-          "source": "289f111877ce7aa9a9a76d25bf76357f57ed6582, the clean committed PFP-3 source; the DSO was rebuilt from it",
+          "source": "f8d5c4b33cf751a0dd805fa7cf0d730915e1d073 with the uncommitted branch-free fixed-base admission (build_relevant_clean=false); the DSO was rebuilt from it and two fresh builds reproduce ecbefb7d",
           "target": "x86_64-unknown-linux-gnu release",
-          "tool": "courts/phase18/timing/bench_api.c, analyse_bench_api.py; timing-04611380/run_timing.sh; pfp29_paths.c for ecdh"
+          "tool": "courts/phase18/timing/bench_api.c, analyse_bench_api.py; timing-ecbefb7d/run_timing.sh; pfp29_paths.c for ecdh"
         },
         "population": {
           "digest": "40d1537b1a86851a17c49636cd5620704c4836bf6153074fd964f1c3a4fe691e",
@@ -727,47 +777,42 @@
           "frozen_before_execution": true
         },
         "record": {
-          "path": "evidence/performance-frontier/campaigns/PFP-3/timing-04611380/results.json",
+          "path": "evidence/performance-frontier/campaigns/PFP-3/timing-ecbefb7d/results.json",
           "present": true,
-          "sha256": "81da64153ad33e4c9b47d9e29cc77d617f359d5ec5b29dc7880aa35bb038a0e5"
+          "sha256": "9c6e9b2680b40e4e7a8e632a15efba6619aaff88b72256d654da5ebe6869d0db"
         },
         "ecdsa256": {
-          "candidate_us": 135.695,
-          "authority_us": 12.73,
-          "ratio": 10.64,
+          "candidate_us": 134.485,
+          "authority_us": 12.721,
+          "ratio": 10.58,
           "ci95": [
-            10.61,
-            10.67
+            10.55,
+            10.62
           ]
         },
         "ecdh": {
-          "candidate_us": 222.658,
-          "authority_us": 32.805,
-          "ratio": 6.79,
+          "candidate_us": 224.29,
+          "authority_us": 33.165,
+          "ratio": 6.72,
           "ci95": [
-            4.69,
-            6.9
+            6.67,
+            6.83
           ],
           "record": {
-            "path": "evidence/performance-frontier/campaigns/PFP-3/timing-04611380/raw/ecdh-timing.json",
+            "path": "evidence/performance-frontier/campaigns/PFP-3/timing-ecbefb7d/raw/ecdh-timing.json",
             "present": true,
-            "sha256": "e3ec3f97d261c5d9926807cc816ab4b0ff9d8478d847e9163fef6d8483e3d9b6"
+            "sha256": "51ff773130fa359b8b57b6f74df00d60f44238bb2814a8261e362beb8157ee03"
           }
         }
       },
       "queue_item": "PFP-3",
       "reuse": null,
       "shortcuts": [],
-      "status": "EXPERIMENT",
+      "status": "CANDIDATE",
       "timing_obligations": {
         "attempted_discharge": [],
         "none_open_because": null,
         "open": [
-          {
-            "description": "The fixed-base admission branches on the secret-derived ct_ge(k, n) result (je at ossl_ec_wNAF_mul+0x1938). Remove it, or establish without branching on a secret-derived value that the predicate is independent of the secret for the admitted population. This is a src/ change and is not made here.",
-            "discharged": false,
-            "id": "PFP3-CT-BRANCH"
-          },
           {
             "description": "The PFP-34 coverage mapping still lists the ladder targets for the ecdsa-sign paths; at this candidate those paths route to the fixed-base comb, so the coverage-to-path join is stale and must be extended to the fixed-base carriers before the release gate can speak about this candidate.",
             "discharged": false,
@@ -783,7 +828,7 @@
     }
   ],
   "author": {
-    "identity": "openssl-rs performance programme (staging session, 2026-11-26)",
+    "identity": "openssl-rs performance programme (staging session, 2026-11-27)",
     "role": "producer"
   },
   "producer": {

@@ -36,25 +36,30 @@
   * **timing at the digest**: `ecdsa256` 10.64× [10.61, 10.67], `ecdh` 6.79×
     [4.69, 6.90] (`timing-04611380/REPORT.md`);
   * **ctgrind + branch audit at the digest**: run and cross-agreeing.
-- **Obligations retained — STOP.**
-  * The fixed-base admission contains one **secret-derived conditional
+- **Obligations retained — STOP at `04611380` (historical).**
+  * The fixed-base admission contained one **secret-derived conditional
     transfer**: `je` at `ossl_ec_wNAF_mul+0x1938`, the `ct_ge(k, n)` early
-    exit. ctgrind reports it as the only secret-dependent context of
-    `mul-g-fixed`; the branch audit reproduces it exactly.
-  * Until it is removed or shown independent of the secret in the admitted
-    population (a `src/` change, out of scope here), the constant-time conjunct
-    is a STOP: **PFP-3 is not `DONE` and the arm is not `CANDIDATE`**.
-  * T23/T24/T29 remain open as before.
+    exit. ctgrind reported it as the only secret-dependent context of
+    `mul-g-fixed`; the branch audit reproduced it exactly.
+  * That STOP is **resolved at `ecbefb7d`** (2026-11-27) by the branch-free
+    admission described in [`POST-FIX.md`](POST-FIX.md): the in-range mask is
+    folded into the scalar the comb consumes (`reduced = k - (n & mask)`), so
+    the decision is exact and arithmetic. ctgrind `mul-g-fixed` is
+    **0/0/0** contexts (was 1/1/1), the sensitivity control still fires, and
+    the branch audit has no admission-mask jcc (186 → 183).
+  * T23/T24/T29 and `PFP3-P34-COVERAGE` remain open as before;
+    `PFP3-CT-BRANCH` is removed from the arm's open set.
 - **Compatibility tested.** DSO-bound: 4,096 `k·G`, 4,096 `k·P`, 256+256 ECDSA
   cross-verifications, 0 mismatches; in-crate 4,096 fixed-vs-variable, 0
-  mismatches; full library suite 2,484 passed / 0 failed / 54 ignored; `fmt`
-  and `clippy -D warnings` clean.
+  mismatches; `cargo test --lib -- p256` 29 passed / 0 failed; `fmt` clean.
 - **Does every remaining unsafe op have an explicit validity contract?** Yes for
   the new boundary; the safety inventory is unchanged.
 - **Divergence classification.** No observable-behaviour deviation on the tested
   population. The performance change is an implementation strategy, not a
-  semantics change. The admission branch is a constant-time defect in the
-  candidate, not a reproduced authority behaviour.
-- **Honest state.** `STOP` (row `PARTIAL`). The acceptance clause that fails is
-  the constant-time audit. No speed or constant-time claim is upgraded by the
-  timing figures.
+  semantics change. The admission branch was a constant-time defect in the
+  candidate, not a reproduced authority behaviour, and it is removed at
+  `ecbefb7d`.
+- **Honest state.** `DONE` at `ecbefb7d` per the PFP-3 acceptance conjuncts
+  (clean audit, zero taint on the path, every correctness block, timing at one
+  digest); the arm is `CANDIDATE`. The pre-fix receipt at `04611380` remains
+  `STOP` (`PARTIAL`) as the historical record.

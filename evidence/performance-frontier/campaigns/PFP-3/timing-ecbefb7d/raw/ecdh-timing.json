@@ -1,0 +1,18 @@
+{
+  "authority_us_median": 33.1649,
+  "bootstrap": {
+    "resamples": 20000,
+    "seed": "0x50465030",
+    "statistic": "median paired ratio"
+  },
+  "candidate_us_median": 224.2904,
+  "ci95": [
+    6.67068195592328,
+    6.829496415922249
+  ],
+  "digest": "ecbefb7d4ecd05cb08f5ade57e64ce2cd81de24bcd68b0c236a8640a18559053",
+  "iters_per_rep": 20,
+  "ratio_median": 6.717633855478356,
+  "repetitions": 15,
+  "workload": "ecdh"
+}

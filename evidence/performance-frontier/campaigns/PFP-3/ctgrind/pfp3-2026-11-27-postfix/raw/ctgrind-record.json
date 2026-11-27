@@ -1,0 +1,463 @@
+{
+  "candidate_sha256": "ecbefb7d4ecd05cb08f5ade57e64ce2cd81de24bcd68b0c236a8640a18559053",
+  "harness_binary_sha256": "c89d64d892b941e8d148b9662e2adc6781e054adb8bda637914c95820d5fb732",
+  "harness_source_sha256": "ea18ec93bb961328d6c268b4fc1307e0489c01ea62f0a1c33ba962fafa85771d",
+  "populations": {
+    "a/control": {
+      "contexts": [
+        0
+      ],
+      "engine_on_path_union": 0,
+      "errors": [
+        0
+      ],
+      "origin_in_engine_union": 0,
+      "per_class_union": {},
+      "top_origins": []
+    },
+    "a/mul-g": {
+      "contexts": [
+        225,
+        209,
+        196
+      ],
+      "engine_on_path_union": 0,
+      "errors": [
+        3645,
+        3631,
+        3606
+      ],
+      "origin_in_engine_union": 0,
+      "per_class_union": {
+        "C": 66,
+        "D": 5,
+        "E": 157
+      },
+      "top_origins": [
+        {
+          "contexts": 32,
+          "fn": "BN_nnmod",
+          "loc": "in /work/court/tmp/pfp3-ctgrind-postfix/a/libcrypto.so.3"
+        },
+        {
+          "contexts": 29,
+          "fn": "openssl_rs::bn::limbs::divide_fallible",
+          "loc": "in /work/court/tmp/pfp3-ctgrind-postfix/a/libcrypto.so.3"
+        },
+        {
+          "contexts": 27,
+          "fn": "BN_add",
+          "loc": "in /work/court/tmp/pfp3-ctgrind-postfix/a/libcrypto.so.3"
+        },
+        {
+          "contexts": 22,
+          "fn": "openssl_rs::bn::limbs::mul_fallible",
+          "loc": "in /work/court/tmp/pfp3-ctgrind-postfix/a/libcrypto.so.3"
+        },
+        {
+          "contexts": 19,
+          "fn": "memset",
+          "loc": "in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so"
+        },
+        {
+          "contexts": 15,
+          "fn": "BN_sub",
+          "loc": "in /work/court/tmp/pfp3-ctgrind-postfix/a/libcrypto.so.3"
+        },
+        {
+          "contexts": 13,
+          "fn": "BN_mul",
+          "loc": "in /work/court/tmp/pfp3-ctgrind-postfix/a/libcrypto.so.3"
+        },
+        {
+          "contexts": 13,
+          "fn": "BN_mod_add_quick",
+          "loc": "in /work/court/tmp/pfp3-ctgrind-postfix/a/libcrypto.so.3"
+        }
+      ]
+    },
+    "a/mul-g-bytes": {
+      "contexts": [
+        228,
+        216,
+        197
+      ],
+      "engine_on_path_union": 0,
+      "errors": [
+        3661,
+        3636,
+        3607
+      ],
+      "origin_in_engine_union": 0,
+      "per_class_union": {
+        "C": 72,
+        "D": 5,
+        "E": 151
+      },
+      "top_origins": [
+        {
+          "contexts": 32,
+          "fn": "BN_nnmod",
+          "loc": "in /work/court/tmp/pfp3-ctgrind-postfix/a/libcrypto.so.3"
+        },
+        {
+          "contexts": 28,
+          "fn": "openssl_rs::bn::limbs::divide_fallible",
+          "loc": "in /work/court/tmp/pfp3-ctgrind-postfix/a/libcrypto.so.3"
+        },
+        {
+          "contexts": 22,
+          "fn": "openssl_rs::bn::limbs::mul_fallible",
+          "loc": "in /work/court/tmp/pfp3-ctgrind-postfix/a/libcrypto.so.3"
+        },
+        {
+          "contexts": 21,
+          "fn": "memset",
+          "loc": "in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so"
+        },
+        {
+          "contexts": 20,
+          "fn": "openssl_rs::bn::limbs::sub_fallible",
+          "loc": "in /work/court/tmp/pfp3-ctgrind-postfix/a/libcrypto.so.3"
+        },
+        {
+          "contexts": 18,
+          "fn": "BN_add",
+          "loc": "in /work/court/tmp/pfp3-ctgrind-postfix/a/libcrypto.so.3"
+        },
+        {
+          "contexts": 15,
+          "fn": "BN_sub",
+          "loc": "in /work/court/tmp/pfp3-ctgrind-postfix/a/libcrypto.so.3"
+        },
+        {
+          "contexts": 13,
+          "fn": "BN_mul",
+          "loc": "in /work/court/tmp/pfp3-ctgrind-postfix/a/libcrypto.so.3"
+        }
+      ]
+    },
+    "a/mul-g-fixed": {
+      "contexts": [
+        0,
+        0,
+        0
+      ],
+      "engine_on_path_union": 0,
+      "errors": [
+        0,
+        0,
+        0
+      ],
+      "origin_in_engine_union": 0,
+      "per_class_union": {},
+      "top_origins": []
+    },
+    "a/mul-p": {
+      "contexts": [
+        186,
+        197,
+        236
+      ],
+      "engine_on_path_union": 0,
+      "errors": [
+        3596,
+        3606,
+        3670
+      ],
+      "origin_in_engine_union": 0,
+      "per_class_union": {
+        "C": 71,
+        "D": 5,
+        "E": 160
+      },
+      "top_origins": [
+        {
+          "contexts": 32,
+          "fn": "BN_nnmod",
+          "loc": "in /work/court/tmp/pfp3-ctgrind-postfix/a/libcrypto.so.3"
+        },
+        {
+          "contexts": 29,
+          "fn": "openssl_rs::bn::limbs::divide_fallible",
+          "loc": "in /work/court/tmp/pfp3-ctgrind-postfix/a/libcrypto.so.3"
+        },
+        {
+          "contexts": 22,
+          "fn": "openssl_rs::bn::limbs::mul_fallible",
+          "loc": "in /work/court/tmp/pfp3-ctgrind-postfix/a/libcrypto.so.3"
+        },
+        {
+          "contexts": 15,
+          "fn": "memset",
+          "loc": "in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so"
+        },
+        {
+          "contexts": 13,
+          "fn": "BN_mul",
+          "loc": "in /work/court/tmp/pfp3-ctgrind-postfix/a/libcrypto.so.3"
+        },
+        {
+          "contexts": 13,
+          "fn": "BN_mod_add_quick",
+          "loc": "in /work/court/tmp/pfp3-ctgrind-postfix/a/libcrypto.so.3"
+        },
+        {
+          "contexts": 12,
+          "fn": "BN_uadd",
+          "loc": "in /work/court/tmp/pfp3-ctgrind-postfix/a/libcrypto.so.3"
+        },
+        {
+          "contexts": 12,
+          "fn": "BN_sub",
+          "loc": "in /work/court/tmp/pfp3-ctgrind-postfix/a/libcrypto.so.3"
+        }
+      ]
+    },
+    "a/sign": {
+      "contexts": [
+        119,
+        119,
+        119
+      ],
+      "engine_on_path_union": 0,
+      "errors": [
+        122,
+        122,
+        122
+      ],
+      "origin_in_engine_union": 0,
+      "per_class_union": {
+        "C": 14,
+        "D": 10,
+        "E": 95
+      },
+      "top_origins": [
+        {
+          "contexts": 47,
+          "fn": "memmove",
+          "loc": "in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so"
+        },
+        {
+          "contexts": 10,
+          "fn": "openssl_rs::bn::limbs::divide_fallible",
+          "loc": "in /work/court/tmp/pfp3-ctgrind-postfix/a/libcrypto.so.3"
+        },
+        {
+          "contexts": 9,
+          "fn": "BN_to_montgomery",
+          "loc": "in /work/court/tmp/pfp3-ctgrind-postfix/a/libcrypto.so.3"
+        },
+        {
+          "contexts": 8,
+          "fn": "<alloc::raw_vec::RawVecInner>::finish_grow",
+          "loc": "in /work/court/tmp/pfp3-ctgrind-postfix/a/libcrypto.so.3"
+        },
+        {
+          "contexts": 6,
+          "fn": "BN_mod_mul_montgomery",
+          "loc": "in /work/court/tmp/pfp3-ctgrind-postfix/a/libcrypto.so.3"
+        },
+        {
+          "contexts": 4,
+          "fn": "openssl_rs::ec::smpl::ossl_ec_GFp_simple_is_at_infinity",
+          "loc": "in /work/court/tmp/pfp3-ctgrind-postfix/a/libcrypto.so.3"
+        },
+        {
+          "contexts": 4,
+          "fn": "alloc",
+          "loc": "unix.rs:13"
+        },
+        {
+          "contexts": 4,
+          "fn": "malloc",
+          "loc": "in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so"
+        }
+      ]
+    },
+    "a/sign-ex": {
+      "contexts": [
+        24,
+        24,
+        24
+      ],
+      "engine_on_path_union": 0,
+      "errors": [
+        24,
+        24,
+        24
+      ],
+      "origin_in_engine_union": 0,
+      "per_class_union": {
+        "C": 1,
+        "E": 23
+      },
+      "top_origins": [
+        {
+          "contexts": 12,
+          "fn": "memmove",
+          "loc": "in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so"
+        },
+        {
+          "contexts": 4,
+          "fn": "BN_to_montgomery",
+          "loc": "in /work/court/tmp/pfp3-ctgrind-postfix/a/libcrypto.so.3"
+        },
+        {
+          "contexts": 2,
+          "fn": "BN_mod_mul_montgomery",
+          "loc": "in /work/court/tmp/pfp3-ctgrind-postfix/a/libcrypto.so.3"
+        },
+        {
+          "contexts": 2,
+          "fn": "<alloc::raw_vec::RawVecInner>::finish_grow",
+          "loc": "in /work/court/tmp/pfp3-ctgrind-postfix/a/libcrypto.so.3"
+        },
+        {
+          "contexts": 1,
+          "fn": "openssl_rs::bn::arith::mod_add_reduced_ct",
+          "loc": "in /work/court/tmp/pfp3-ctgrind-postfix/a/libcrypto.so.3"
+        },
+        {
+          "contexts": 1,
+          "fn": "alloc",
+          "loc": "unix.rs:13"
+        },
+        {
+          "contexts": 1,
+          "fn": "malloc",
+          "loc": "in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so"
+        },
+        {
+          "contexts": 1,
+          "fn": "ossl_ecdsa_simple_sign_sig",
+          "loc": "in /work/court/tmp/pfp3-ctgrind-postfix/a/libcrypto.so.3"
+        }
+      ]
+    },
+    "a/sign-ex-k": {
+      "contexts": [
+        460,
+        442,
+        427
+      ],
+      "engine_on_path_union": 0,
+      "errors": [
+        33042,
+        33007,
+        32978
+      ],
+      "origin_in_engine_union": 0,
+      "per_class_union": {
+        "C": 222,
+        "D": 5,
+        "E": 233
+      },
+      "top_origins": [
+        {
+          "contexts": 104,
+          "fn": "openssl_rs::bn::limbs::divide_fallible",
+          "loc": "in /work/court/tmp/pfp3-ctgrind-postfix/a/libcrypto.so.3"
+        },
+        {
+          "contexts": 41,
+          "fn": "memset",
+          "loc": "in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so"
+        },
+        {
+          "contexts": 35,
+          "fn": "memmove",
+          "loc": "in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so"
+        },
+        {
+          "contexts": 32,
+          "fn": "openssl_rs::bn::limbs::sub_fallible",
+          "loc": "in /work/court/tmp/pfp3-ctgrind-postfix/a/libcrypto.so.3"
+        },
+        {
+          "contexts": 32,
+          "fn": "BN_nnmod",
+          "loc": "in /work/court/tmp/pfp3-ctgrind-postfix/a/libcrypto.so.3"
+        },
+        {
+          "contexts": 27,
+          "fn": "BN_add",
+          "loc": "in /work/court/tmp/pfp3-ctgrind-postfix/a/libcrypto.so.3"
+        },
+        {
+          "contexts": 25,
+          "fn": "openssl_rs::bn::limbs::mul_fallible",
+          "loc": "in /work/court/tmp/pfp3-ctgrind-postfix/a/libcrypto.so.3"
+        },
+        {
+          "contexts": 22,
+          "fn": "<alloc::raw_vec::RawVecInner>::finish_grow",
+          "loc": "in /work/court/tmp/pfp3-ctgrind-postfix/a/libcrypto.so.3"
+        }
+      ]
+    }
+  },
+  "sensitivity": {
+    "c/mul-g-fixed": {
+      "contexts": [
+        187,
+        206,
+        204
+      ],
+      "engine_on_path_union": 4,
+      "errors": [
+        1595,
+        1615,
+        1615
+      ],
+      "origin_in_engine_union": 0,
+      "per_class_union": {
+        "C": 99,
+        "D": 7,
+        "E": 100
+      },
+      "top_origins": [
+        {
+          "contexts": 64,
+          "fn": "openssl_rs::bn::limbs::divide_fallible",
+          "loc": "in /work/court/tmp/pfp2-fix/distribution/libcrypto.so.3"
+        },
+        {
+          "contexts": 30,
+          "fn": "openssl_rs::bn::limbs::mul_fallible",
+          "loc": "in /work/court/tmp/pfp2-fix/distribution/libcrypto.so.3"
+        },
+        {
+          "contexts": 20,
+          "fn": "BN_nnmod",
+          "loc": "in /work/court/tmp/pfp2-fix/distribution/libcrypto.so.3"
+        },
+        {
+          "contexts": 11,
+          "fn": "memset",
+          "loc": "in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so"
+        },
+        {
+          "contexts": 10,
+          "fn": "BN_sub",
+          "loc": "in /work/court/tmp/pfp2-fix/distribution/libcrypto.so.3"
+        },
+        {
+          "contexts": 9,
+          "fn": "BN_mod_add_quick",
+          "loc": "in /work/court/tmp/pfp2-fix/distribution/libcrypto.so.3"
+        },
+        {
+          "contexts": 8,
+          "fn": "BN_mul",
+          "loc": "in /work/court/tmp/pfp2-fix/distribution/libcrypto.so.3"
+        },
+        {
+          "contexts": 6,
+          "fn": "memmove",
+          "loc": "in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so"
+        }
+      ]
+    }
+  }
+}

@@ -1,10 +1,21 @@
 # PFP-3 — constant-time taint and binary branch audit at `04611380…`
 
-**Status: STOP.** Both instruments now exist at the digest and both find the
-same defect: the fixed-base admission contains **one secret-derived conditional
-transfer**. The PFP-3 row cannot be `DONE` and the arm cannot be `CANDIDATE`
-until it is removed or shown not to depend on the secret in the admitted
-population.
+**Status of the pre-fix artefact (`04611380`): STOP.** Both instruments existed
+at that digest and found the same defect: the fixed-base admission contained
+**one secret-derived conditional transfer**. The PFP-3 row could not be `DONE`
+and the arm could not be `CANDIDATE` until it was removed or shown not to depend
+on the secret in the admitted population.
+
+> **Resolved (2026-11-27, DSO `ecbefb7d…`).** The admission is now branch-free:
+> the in-range mask is folded into the scalar the comb consumes, and the
+> out-of-range value is replaced by its reduced representative (`k - n`) — the
+> same value the ladder multiplies — before any multiplication. ctgrind on
+> `mul-g-fixed` falls from **1/1/1** to **0/0/0** contexts, the pre-PFP-20
+> sensitivity control still reports **4 engine-on-path per repetition**, and the
+> branch audit’s `wNAF` jcc count falls 186 → 183 with **no** `test $0x1,%cl`
+> admission-mask jcc. See [`POST-FIX.md`](POST-FIX.md),
+> `ctgrind/pfp3-2026-11-27-postfix/CTGRIND.md` and `audit-postfix/AUDIT.md`. The
+> finding below is preserved as the historical record; it is not rewritten.
 
 ## The finding
 

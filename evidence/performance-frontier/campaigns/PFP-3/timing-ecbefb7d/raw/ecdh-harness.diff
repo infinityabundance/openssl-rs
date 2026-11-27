@@ -1,0 +1,16 @@
+--- /work/evidence/performance-frontier/campaigns/PFP-29/pfp29_paths.c	2026-11-26 08:38:57.282274859 +0000
++++ /work/evidence/performance-frontier/campaigns/PFP-3/timing-ecbefb7d/pfp3_ecdh_paths.c	2026-11-27 08:32:22.565787627 +0000
+@@ -1734,7 +1734,12 @@
+               (strcmp(mode, "ecdsa-verify") != 0) &&
+               (strcmp(mode, "emit") != 0) &&
+               (strcmp(mode, "sweep") != 0) &&
+-              (strcmp(mode, "verify-sweep") != 0);
++              (strcmp(mode, "verify-sweep") != 0) &&
++              /* PFP-3: wall timing is defined.  The taint reads the candidate's
++               * repr(Rust) BIGNUM layout, which is invalid on the authority
++               * DSO, so it is disabled for timed runs.  It does not affect the
++               * timed operation. */
++              !timing;
+ 
+     if (load_api(lib) == 0)
+         return 3;

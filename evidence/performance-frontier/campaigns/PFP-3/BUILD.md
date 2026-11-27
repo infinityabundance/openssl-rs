@@ -26,6 +26,20 @@ clean builds (`build/raw/build-inputs-a.txt`, `-b.txt`), so the measured,
 differentially-tested, audited and timed artefact is the one this commit builds.
 Record: `build/raw/build-inputs-c.txt`.
 
+## Post-fix rebuild at `f8d5c4b33` + uncommitted admission (2026-11-27)
+
+The branch-free admission changes only `src/ec/p256/fixed_base.rs` (uncommitted;
+the campaign does not commit). Two fresh-target builds were made:
+
+| build | archive sha256 | DSO sha256 | size | build-id |
+|---|---|---|---|---|
+| `pfp3-d` | `14f76179c517213a35c3c1d69e3dccb722e228f7e12a81efceecb15bdac12bf6` | `ecbefb7d4ecd05cb08f5ade57e64ce2cd81de24bcd68b0c236a8640a18559053` | 17,123,976 | `01b4e75402b7c299d8b10c6293d4159f2cd85f9f` |
+| `pfp3-e` | `14f76179c517213a35c3c1d69e3dccb722e228f7e12a81efceecb15bdac12bf6` | `ecbefb7d4ecd05cb08f5ade57e64ce2cd81de24bcd68b0c236a8640a18559053` | 17,123,976 | `01b4e75402b7c299d8b10c6293d4159f2cd85f9f` |
+
+Archive and DSO are byte-identical across the two builds. Source fingerprint
+`52219f14f2402ffcb2b1ce5abcc843c168b79fb4798b9db66e50b5683c3b0aee` (887 files),
+recorded before and after each build (`raw/build-inputs-{d,e}.txt`).
+
 ## Earlier two-build record (working tree at `b0ada60`)
 
 | build | archive sha256 | DSO sha256 | size | build-id |

@@ -1,0 +1,25 @@
+{"log": "a-control-r1.out", "contexts": 0, "per_class": {}, "engine_on_path": 0}
+{"log": "a-mul-g-bytes-r1.out", "contexts": 228, "per_class": {"C": 72, "E": 151, "D": 5}, "engine_on_path": 0}
+{"log": "a-mul-g-bytes-r2.out", "contexts": 216, "per_class": {"C": 64, "E": 147, "D": 5}, "engine_on_path": 0}
+{"log": "a-mul-g-bytes-r3.out", "contexts": 197, "per_class": {"C": 58, "E": 134, "D": 5}, "engine_on_path": 0}
+{"log": "a-mul-g-fixed-r1.out", "contexts": 0, "per_class": {}, "engine_on_path": 0}
+{"log": "a-mul-g-fixed-r2.out", "contexts": 0, "per_class": {}, "engine_on_path": 0}
+{"log": "a-mul-g-fixed-r3.out", "contexts": 0, "per_class": {}, "engine_on_path": 0}
+{"log": "a-mul-g-r1.out", "contexts": 225, "per_class": {"E": 157, "D": 5, "C": 63}, "engine_on_path": 0}
+{"log": "a-mul-g-r2.out", "contexts": 209, "per_class": {"E": 138, "D": 5, "C": 66}, "engine_on_path": 0}
+{"log": "a-mul-g-r3.out", "contexts": 196, "per_class": {"E": 135, "D": 5, "C": 56}, "engine_on_path": 0}
+{"log": "a-mul-p-r1.out", "contexts": 186, "per_class": {"E": 125, "D": 5, "C": 56}, "engine_on_path": 0}
+{"log": "a-mul-p-r2.out", "contexts": 197, "per_class": {"E": 134, "D": 5, "C": 58}, "engine_on_path": 0}
+{"log": "a-mul-p-r3.out", "contexts": 236, "per_class": {"E": 160, "D": 5, "C": 71}, "engine_on_path": 0}
+{"log": "a-sign-ex-k-r1.out", "contexts": 460, "per_class": {"C": 222, "E": 233, "D": 5}, "engine_on_path": 0}
+{"log": "a-sign-ex-k-r2.out", "contexts": 442, "per_class": {"C": 215, "E": 222, "D": 5}, "engine_on_path": 0}
+{"log": "a-sign-ex-k-r3.out", "contexts": 427, "per_class": {"C": 209, "E": 213, "D": 5}, "engine_on_path": 0}
+{"log": "a-sign-ex-r1.out", "contexts": 24, "per_class": {"E": 23, "C": 1}, "engine_on_path": 0}
+{"log": "a-sign-ex-r2.out", "contexts": 24, "per_class": {"E": 23, "C": 1}, "engine_on_path": 0}
+{"log": "a-sign-ex-r3.out", "contexts": 24, "per_class": {"E": 23, "C": 1}, "engine_on_path": 0}
+{"log": "a-sign-r1.out", "contexts": 119, "per_class": {"E": 95, "C": 14, "D": 10}, "engine_on_path": 0}
+{"log": "a-sign-r2.out", "contexts": 119, "per_class": {"E": 95, "C": 14, "D": 10}, "engine_on_path": 0}
+{"log": "a-sign-r3.out", "contexts": 119, "per_class": {"E": 95, "C": 14, "D": 10}, "engine_on_path": 0}
+{"log": "c-mul-g-fixed-r1.out", "contexts": 187, "per_class": {"E": 84, "D": 7, "C": 96}, "engine_on_path": 4}
+{"log": "c-mul-g-fixed-r2.out", "contexts": 206, "per_class": {"E": 100, "D": 7, "C": 99}, "engine_on_path": 4}
+{"log": "c-mul-g-fixed-r3.out", "contexts": 204, "per_class": {"E": 98, "D": 7, "C": 99}, "engine_on_path": 4}

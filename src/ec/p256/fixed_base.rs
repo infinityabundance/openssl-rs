@@ -44,6 +44,13 @@
 //! A modified generator, a custom curve and a foreign method each keep their own
 //! semantics: [`admits`] refuses them and the caller stays on the ladder. The
 //! refusal tests in this module's test section drive each case.
+//!
+//! The scalar's *value* is not an admission condition. A non-negative scalar of
+//! at most four limbs is reduced modulo the group order with a constant-time
+//! mask, and the comb consumes that representative — exactly the value the
+//! ladder multiplies. An in-range scalar is used unchanged and an out-of-range
+//! scalar uses `k - n` (`k < 2n` in this domain), so the result is the ladder's
+//! point in both cases without any conditional transfer on the secret.
 
 use core::ffi::c_int;
 use std::sync::OnceLock;
@@ -572,8 +579,16 @@ mod probe {
 /// Attempt `k·G` on the fixed-base comb.
 ///
 /// `None` means the call is not admitted (a different group, generator, method,
-/// an out-of-range scalar, or a non-Mont kernel) and the caller must stay on the
-/// ladder. `Some(1)` is a written result; `Some(0)` is a write-back failure.
+/// a negative or wider-than-four-limb scalar, or a non-Mont kernel) and the
+/// caller must stay on the ladder. `Some(1)` is a written result; `Some(0)` is a
+/// write-back failure.
+///
+/// The scalar *value* is admitted branch-free: it is reduced modulo the group
+/// order with a constant-time mask and the comb consumes the reduced
+/// representative, which is the value the ladder would multiply. An in-range
+/// scalar is unchanged and an out-of-range one uses `k - n` (`k < 2n` for a
+/// four-limb non-negative scalar), so the returned point is exactly the ladder's
+/// point for every input without a secret-dependent conditional transfer.
 ///
 /// # Safety
 ///
@@ -596,16 +611,32 @@ pub(crate) unsafe fn try_fixed_base_mul(
         }
 
         let scalar = &*scalar;
+        // `neg` and the limb count are public scalar metadata; a negative or
+        // wider-than-four-limb scalar keeps the generic path's semantics.
         if scalar.neg != 0 || scalar.d.len() > LIMBS {
             return None;
         }
         let mut k = [0u64; LIMBS];
         k[..scalar.d.len()].copy_from_slice(&scalar.d);
-        // `k·G` for `k ≥ n` (or with high bits) keeps the generic path's own
-        // mod-`n` semantics; the secret path is admitted only below `n`.
-        if ct_ge(&k, &ORDER_MODULUS) != 0 {
-            return None;
+
+        // Branch-free admission of the scalar value. `ct_ge` returns an
+        // all-ones mask when `k >= n`, and a non-negative four-limb scalar is
+        // below `2n`, so the value the ladder multiplies for an out-of-range
+        // scalar is exactly `k - n` (`k mod n`). Folding that mask into the
+        // scalar the comb consumes reproduces the ladder's point for every
+        // input without a conditional transfer, and the out-of-range value
+        // itself is never multiplied: it is replaced by its reduced
+        // representative first.
+        let out_of_range = ct_ge(&k, &ORDER_MODULUS);
+        let mut k_minus_n = [0u64; LIMBS];
+        let mut borrow = 0u64;
+        for i in 0..LIMBS {
+            let (limb, next) = sub_borrow(k[i], ORDER_MODULUS[i], borrow);
+            k_minus_n[i] = limb;
+            borrow = next;
         }
+        let mut reduced = [0u64; LIMBS];
+        select_limbs(&mut reduced, out_of_range, &k_minus_n, &k);
 
         let SelectedFieldKernel::Mont(kernel) = select_field_kernel() else {
             return None;
@@ -614,7 +645,7 @@ pub(crate) unsafe fn try_fixed_base_mul(
         let cb = P256Field::from_canonical(&kernel, &tracked_b());
         let table = mont_table();
 
-        let proj = table_mul(&kernel, &ca, &cb, table, &k);
+        let proj = table_mul(&kernel, &ca, &cb, table, &reduced);
         let affine = to_affine(&kernel, &proj);
 
         // Affine write-back. `z` is 1 for a finite result and 0 for infinity; the
@@ -822,6 +853,56 @@ mod tests {
             assert_eq!(probe::count(), before + 1);
             let generator = EC_GROUP_get0_generator(c.group);
             assert_eq!(EC_POINT_cmp(c.group, c.fast, generator, c.ctx), 0);
+        }
+    }
+
+    /// An out-of-range scalar is reduced branch-free and the comb returns the
+    /// ladder's point for it. The fast arm is entered (probe advances) for every
+    /// case, so this also guards that admission did not become a secret-derived
+    /// early exit.
+    #[test]
+    fn out_of_range_scalars_match_the_generator_ladder() {
+        // SAFETY: all objects live for the test and are released by `Ctx`.
+        unsafe {
+            let c = Ctx::new();
+            let generator = EC_GROUP_get0_generator(c.group);
+            assert!(!generator.is_null());
+
+            let n = ORDER_MODULUS.to_vec();
+            let mut n_plus_1 = n.clone();
+            n_plus_1[0] += 1;
+            let mut n_plus_2 = n.clone();
+            n_plus_2[0] += 2;
+            let cases = [
+                bn(n),
+                bn(n_plus_1),
+                bn(n_plus_2),
+                bn(vec![u64::MAX, u64::MAX, u64::MAX, u64::MAX]),
+            ];
+
+            for (case, scalar) in cases.iter().enumerate() {
+                let before = probe::count();
+                assert_eq!(
+                    EC_POINT_mul(c.group, c.fast, scalar, ptr::null(), ptr::null_mut(), c.ctx),
+                    1,
+                    "case {case}: fixed-base arm"
+                );
+                assert_eq!(
+                    probe::count(),
+                    before + 1,
+                    "case {case}: the branch-free admission must enter the comb"
+                );
+                assert_eq!(
+                    EC_POINT_mul(c.group, c.ladder, ptr::null(), generator, scalar, c.ctx),
+                    1,
+                    "case {case}: ladder arm"
+                );
+                assert_eq!(
+                    EC_POINT_cmp(c.group, c.fast, c.ladder, c.ctx),
+                    0,
+                    "case {case}: an out-of-range scalar must keep the ladder's point"
+                );
+            }
         }
     }
 
