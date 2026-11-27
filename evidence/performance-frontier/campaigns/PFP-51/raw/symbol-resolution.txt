@@ -1,0 +1,13 @@
+# PFP-51 symbol-resolution evidence
+dso=court/tmp/pfp51/B/libcrypto.so.3
+dso_sha256=dbf3d0a427ad9a63eb9b724f1434e2b48a3a005242e60e450cf49db922653e3a
+
+## identifiers ending in mont_mul_sos_into (defined symbols)
+0
+
+## identifiers ending in mont_mul (defined symbols)
+0000000000164590 t openssl_rs::bn::arith::mont_mul_fallible
+00000000003b9770 t openssl_rs::bn::arith::mont_mul_ladder_into
+
+## runs of the same check on the tracked 0.0.49 distribution DSO
+0

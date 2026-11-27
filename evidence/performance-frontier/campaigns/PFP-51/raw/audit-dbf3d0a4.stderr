@@ -1,0 +1,2 @@
+REFUSED target="Montgomery multiply (SOS kernel; the schedule LADDER_SCHEDULE selects)" symbol="arith::mont_mul_sos_into" reason=missing
+binary_branch_audit: FAIL-CLOSED: 1 of 31 expected targets were refused; this report is not a gate result.
