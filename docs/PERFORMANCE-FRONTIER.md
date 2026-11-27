@@ -564,6 +564,7 @@ forensics/performance/
 forensics/tools/
   performance_classification.py   PFP-18: classification binding and refusal
   performance_admission.py        PFP-19: arm admission and evidence reuse
+  kernel_verification.py          PFP-9: per-kernel provenance and no-inheritance
 
 evidence/performance-frontier/
   campaigns/  raw-results/  comparisons/  receipts/  attestations/
