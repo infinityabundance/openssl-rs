@@ -49,7 +49,10 @@ use crate::bn::bignum::{
 };
 use crate::bn::ctx::BnCtx;
 use crate::bn::limbs;
-use crate::bn::mont::{BN_mod_mul_montgomery, BN_to_montgomery, MontCtx};
+use crate::bn::mont::{
+    bn_mod_exp_mont_impl, BN_mod_exp_mont, BN_mod_mul_montgomery, BN_to_montgomery, LadderWidth,
+    MontCtx,
+};
 use crate::bn::rand::BN_priv_rand_range_ex;
 use crate::ffi::guard_ffi;
 use crate::runtime::err::err_sites::{
@@ -71,6 +74,18 @@ const BN_BLINDING_NO_UPDATE: c_ulong = 0x0000_0001;
 const BN_BLINDING_NO_RECREATE: c_ulong = 0x0000_0002;
 /// `BN_FLG_CONSTTIME` — `include/openssl/bn.h:67`.
 const BN_FLG_CONSTTIME: c_int = 0x04;
+
+/// The bare signature of the authority's `bn_mod_exp` member, named so the
+/// default-hook test can compare against `BN_mod_exp_mont` without spelling the
+/// function-pointer type at the call site.
+pub(crate) type BnModExpFn = unsafe extern "C" fn(
+    *mut BigNum,
+    *const BigNum,
+    *const BigNum,
+    *const BigNum,
+    *mut BnCtx,
+    *mut MontCtx,
+) -> c_int;
 
 /// The authority's `bn_mod_exp` member: `int (*)(BIGNUM *r, const BIGNUM *a,
 /// const BIGNUM *p, const BIGNUM *m, BN_CTX *ctx, BN_MONT_CTX *m_ctx)`, the sixth
@@ -996,10 +1011,33 @@ unsafe fn create_param_impl(
         }
 
         let used_mont_exp = match exp_eff {
-            // SAFETY: the pointer was installed by the caller, whose contract says
-            // it is safe to call with these arguments, and `mctx_eff` is live.
             Some(f) if !mctx_eff.is_null() => {
-                if f(a.get(), a.get(), e_eff, (*ret).mod_, ctx, mctx_eff) == 0 {
+                // The blinding exponent is the RSA public exponent, so its bit
+                // length is public. When the hook is the crate's own
+                // `BN_mod_exp_mont`, run the same fixed-pattern ladder at the
+                // exponent's limb width instead of the modulus' width — the
+                // authority's `bn_mod_exp_mont_fixed_top` uses `p->top *
+                // BN_BITS2` (the whole-limb length) for exactly this reason.
+                // A method-supplied hook is still honoured verbatim.
+                let rc = if core::ptr::fn_addr_eq(f, BN_mod_exp_mont as BnModExpFn) {
+                    // SAFETY: the pointer was installed by the caller, whose
+                    // contract says it is safe to call with these arguments, and
+                    // `mctx_eff` is live and validated inside.
+                    bn_mod_exp_mont_impl(
+                        a.get(),
+                        a.get(),
+                        e_eff,
+                        (*ret).mod_,
+                        mctx_eff,
+                        LadderWidth::PublicExponent,
+                    )
+                } else {
+                    // SAFETY: the pointer was installed by the caller, whose
+                    // contract says it is safe to call with these arguments, and
+                    // `mctx_eff` is live.
+                    f(a.get(), a.get(), e_eff, (*ret).mod_, ctx, mctx_eff)
+                };
+                if rc == 0 {
                     return false;
                 }
                 true
@@ -1405,6 +1443,61 @@ mod tests {
             BN_free(e);
             BN_free(m);
             BN_CTX_free(ctx);
+        }
+    }
+
+    /// PFP-40: the scheduled 32-call re-creation still yields a cancelling pair
+    /// after the re-blinding exponentiation moved to the public-exponent-width
+    /// ladder. The counter schedule is unchanged: the first `convert_ex` spends
+    /// the fresh `-1` state, and the re-creation fires when the counter would
+    /// reach `BN_BLINDING_COUNTER` (`32`). Forty rounds cross that boundary at
+    /// least once; every round must cancel.
+    ///
+    /// A Montgomery context is supplied on purpose: without one the refresh uses
+    /// `BN_mod_exp`, and only the Montgomery branch reaches the ladder this batch
+    /// changed.
+    #[test]
+    fn the_scheduled_recreation_still_yields_a_cancelling_pair() {
+        let m = hex(MODULUS);
+        let e = hex("010001");
+        let d = hex(PRIVATE_EXPONENT);
+        let keep = hex("123456789abcdef0fedcba9876543210");
+        let expect = hex("00");
+        // SAFETY: `BN_CTX_new` and `BN_MONT_CTX_new` take no pointers.
+        let ctx = unsafe { BN_CTX_new() };
+        // SAFETY: `BN_MONT_CTX_new` takes no pointers.
+        let mont = unsafe { BN_MONT_CTX_new() };
+        // SAFETY: every pointer is live.
+        unsafe {
+            assert_eq!(BN_MONT_CTX_set(mont, m, ctx), 1);
+        }
+        // SAFETY: every argument is live; the modulus is odd and large enough.
+        let b = unsafe { BN_BLINDING_create_param(core::ptr::null_mut(), e, m, ctx, None, mont) };
+        assert!(!b.is_null());
+        // SAFETY: all three are live.
+        unsafe { assert_eq!(BN_mod_exp(expect, keep, d, m, ctx), 1) };
+
+        // The first convert spends `-1 -> 0`; each later convert calls
+        // `BN_BLINDING_update`. The 32nd update after that reaches the counter
+        // and re-creates the factor through `create_param_impl`.
+        for round in 0..40 {
+            assert!(
+                // SAFETY: every pointer is live.
+                unsafe { round_trip_cancels(b, m, d, ctx, keep, expect) },
+                "round {round}: the re-created pair must still cancel"
+            );
+        }
+
+        // SAFETY: all four were allocated in this test.
+        unsafe {
+            BN_BLINDING_free(b);
+            BN_MONT_CTX_free(mont);
+            BN_CTX_free(ctx);
+            BN_free(keep);
+            BN_free(expect);
+            BN_free(d);
+            BN_free(e);
+            BN_free(m);
         }
     }
 

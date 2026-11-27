@@ -862,7 +862,7 @@ pub unsafe extern "C" fn BN_mod_exp_mont(
     in_mont: *mut MontCtx,
 ) -> c_int {
     // SAFETY: the caller's contract, forwarded unchanged.
-    unsafe { bn_mod_exp_mont_impl(r, a, p, m, in_mont, None, 0) }
+    unsafe { bn_mod_exp_mont_impl(r, a, p, m, in_mont, LadderWidth::Modulus) }
 }
 
 /// `BN_mod_exp_mont` with the constant-time ladder bounded by a **public policy
@@ -907,28 +907,74 @@ pub(crate) unsafe fn bn_mod_exp_mont_policy(
             p,
             m,
             in_mont,
-            Some(policy_limbs),
-            stored_exponent_limbs,
+            LadderWidth::Policy {
+                policy_limbs,
+                stored_exponent_limbs,
+            },
         )
     }
 }
 
-/// [`BN_mod_exp_mont`]'s body, with an optional public **policy width** for the
-/// constant-time ladder.
+/// How [`bn_mod_exp_mont_impl`] fixes the constant-time ladder's length.
 ///
-/// `policy_limbs` is consulted only on the constant-time path, exactly as
-/// `BN_FLG_CONSTTIME` is; the variable-time path is unchanged.
-/// `stored_exponent_limbs` is the exponent's normalised limb count, captured
-/// once by the key object at ingestion (PFP-39), and is used to resolve the
-/// ladder width instead of reading `p`'s length per operation.
-unsafe fn bn_mod_exp_mont_impl(
+/// The length is always a **public** limb count; the variants differ only in where
+/// that public bound comes from. None reads the exponent's value, and the
+/// fixed-pattern kernel is identical in every arm.
+pub(crate) enum LadderWidth {
+    /// The modulus' limb count — the C entry points' default. The exponent's
+    /// normalised length never enters the loop bound, so a secret exponent leaks
+    /// nothing through the schedule.
+    Modulus,
+    /// A public policy width from the key object (the DH method), widened to cover
+    /// a stored out-of-policy exponent.
+    Policy {
+        policy_limbs: usize,
+        stored_exponent_limbs: usize,
+    },
+    /// The exponent's own normalised limb count. Admissible only for an exponent
+    /// whose **length is public**.
+    ///
+    /// The RSA blinding refresh is the only selector: it raises the fresh factor
+    /// `A` to the public exponent `e` (`crypto/bn/bn_blind.c:288-294`), so `e`'s
+    /// length is not a secret and the fixed-pattern ladder may use it as its
+    /// public width instead of the modulus' width. The authority's
+    /// `bn_mod_exp_mont_fixed_top` sizes the same ladder from
+    /// `p->top * BN_BITS2` — the exponent's **whole-limb** length, kept that way
+    /// deliberately so the top bits of the last limb are not revealed
+    /// (`crypto/bn/bn_exp.c:633-637`) — which is exactly `pd.len()` limbs here.
+    /// For RSA's `e = 65537` that is one limb (64 bits) against the 32-limb
+    /// (2048-bit) modulus width this crate otherwise runs, a 32x shorter
+    /// schedule.
+    ///
+    /// The kernel is the same constant-pattern Montgomery ladder as the
+    /// [`Modulus`](LadderWidth::Modulus) arm; only the loop bound changes. Every
+    /// secret-dependent decision remains a mask over the accumulator, and the
+    /// base (the blinding factor) is never branched on. **No constant-time claim
+    /// is made about the exponent**: its length is observable by construction
+    /// and is public on this path. A secret exponent must not select this arm.
+    PublicExponent,
+}
+
+/// [`BN_mod_exp_mont`]'s body with an explicit public ladder-width policy.
+///
+/// The `Policy` arm is consulted only on the constant-time path, exactly as
+/// `BN_FLG_CONSTTIME` is; the variable-time path is unchanged. Its
+/// `stored_exponent_limbs` is the exponent's normalised limb count, captured once
+/// by the key object at ingestion (PFP-39), and is used to resolve the ladder width
+/// instead of reading `p`'s length per operation.
+///
+/// # Safety
+///
+/// As [`BN_mod_exp_mont`]: `r` is null or a live `BIGNUM`; `a`, `p` and `m` are each
+/// null or live; `r` may alias any of them; `in_mont` is null or a live
+/// `BN_MONT_CTX`.
+pub(crate) unsafe fn bn_mod_exp_mont_impl(
     r: *mut BigNum,
     a: *const BigNum,
     p: *const BigNum,
     m: *const BigNum,
     in_mont: *mut MontCtx,
-    policy_limbs: Option<usize>,
-    stored_exponent_limbs: usize,
+    width: LadderWidth,
 ) -> c_int {
     guard_ffi(0, || {
         // SAFETY: `a` is null-or-live per this function's `# Safety` section.
@@ -977,29 +1023,44 @@ unsafe fn bn_mod_exp_mont_impl(
         let result = if consttime {
             // The authority's `BN_mod_exp` dispatches on the same flags. The
             // modulus is odd here (the refusal above), so the Montgomery-form
-            // ladder is available. Without a policy width the loop width is the
-            // modulus' limb count — a public parameter — never the exponent's
-            // normalised length. With one (the DH method), the ladder width is
-            // resolved **once**, here, from that public bound and the exponent's
-            // normalised limb count — a length declassified at ingestion (PFP-43,
-            // PFP-39); the policy function never derives a width from the exponent.
-            // `pd.len()` is no longer read to choose the width; it survives only as
-            // the policy core's defensive refusal of an exponent wider than the
-            // resolved width (unreachable on every in-crate path, where the stored
-            // count was taken from this same key). See
-            // [`mod_exp_core_consttime_policy`].
-            match policy_limbs {
-                Some(policy) => {
-                    let width = resolve_ladder_width(policy, md.len(), stored_exponent_limbs);
+            // ladder is available. The loop width is always a **public** limb
+            // count, but the arms take it from different public sources:
+            // * `Modulus` (the C entry points) uses the modulus' limb count and
+            //   never reads the exponent's normalised length;
+            // * `Policy` (the DH method) uses a declared public bound, widened to
+            //   cover the exponent count captured at ingestion (PFP-43, PFP-39),
+            //   and only *refuses* an exponent wider than the resolved width;
+            // * `PublicExponent` (the RSA blinding refresh) uses the exponent's own
+            //   normalised limb count because that length is public on this path —
+            //   the authority's `bn_mod_exp_mont_fixed_top` uses `p->top * BN_BITS2`
+            //   for the same reason (`bn_exp.c:633-637`). This is the only arm that
+            //   derives the loop width from the exponent, and only the blinding
+            //   refresh selects it. See [`LadderWidth::PublicExponent`] and
+            //   [`mod_exp_core_consttime_policy`].
+            match width {
+                LadderWidth::Policy {
+                    policy_limbs,
+                    stored_exponent_limbs,
+                } => {
+                    let width = resolve_ladder_width(policy_limbs, md.len(), stored_exponent_limbs);
                     mod_exp_core_consttime_policy(&ad, pd, &md, width, prepared.as_ref())
                 }
-                None => mod_exp_core_consttime_from_parts_prepared(
+                LadderWidth::Modulus => mod_exp_core_consttime_from_parts_prepared(
                     &ad,
                     pd,
                     &md,
                     md.len(),
                     prepared.as_ref(),
                 ),
+                // The exponent's length is public on this arm (see
+                // [`LadderWidth::PublicExponent`]), so it may set the ladder
+                // width. `max(1)` keeps a zero exponent's staged buffer non-empty;
+                // the policy core handles the degenerate moduli and the
+                // out-of-width refusal.
+                LadderWidth::PublicExponent => {
+                    let width = pd.len().max(1);
+                    mod_exp_core_consttime_policy(&ad, pd, &md, width, prepared.as_ref())
+                }
             }
         } else {
             mod_exp_core(&ad, pd, &md)
@@ -2027,6 +2088,73 @@ mod tests {
                         BN_free(a);
                     }
                     BN_free(e);
+                }
+                BN_MONT_CTX_free(mont);
+                BN_free(m);
+            }
+        }
+        assert!(
+            cases >= 100,
+            "the population must be exercised, got {cases}"
+        );
+    }
+
+    /// PFP-40: the blinding entry point's exponent-width ladder is the same
+    /// function as the modulus-width ladder with a different loop bound. Over
+    /// adversarial moduli and public exponents of several widths, both answer
+    /// the variable-time oracle exactly. The width is a public exponent length on
+    /// this path; the secret base never selects the schedule.
+    #[test]
+    fn the_public_exponent_ladder_matches_the_modulus_width_ladder() {
+        const NULL: *mut BnCtx = core::ptr::null_mut();
+        let mut cases = 0usize;
+        for m_limbs in adversarial_moduli() {
+            let m_width = m_limbs.len();
+            // SAFETY: every object is created, used and released inside this test.
+            unsafe {
+                let m = new_owned(m_limbs.clone(), 0);
+                BN_set_flags(m, BN_FLG_CONSTTIME);
+                let mont = BN_MONT_CTX_new();
+                assert!(!mont.is_null());
+                assert_eq!(BN_MONT_CTX_set(mont, m, NULL), 1);
+                for e_width in [1usize, 2, m_width] {
+                    if e_width > m_width {
+                        continue;
+                    }
+                    for e_limbs in adversarial_exponents(e_width) {
+                        let e = new_owned(e_limbs.clone(), 0);
+                        for a_limbs in adversarial_bases(m_width) {
+                            let a = new_owned(a_limbs.clone(), 0);
+                            let Some(expected_limbs) = mod_exp_core(&a_limbs, &e_limbs, &m_limbs)
+                            else {
+                                unreachable!("the variable-time oracle answers every case");
+                            };
+                            let expected = new_owned(expected_limbs, 0);
+                            let narrow = BN_new();
+                            let wide = BN_new();
+                            assert_eq!(
+                                bn_mod_exp_mont_impl(
+                                    narrow,
+                                    a,
+                                    e,
+                                    m,
+                                    mont,
+                                    LadderWidth::PublicExponent,
+                                ),
+                                1,
+                                "public-exponent ladder m={m_limbs:?} e_width={e_width}"
+                            );
+                            assert_eq!(BN_mod_exp_mont(wide, a, e, m, NULL, mont), 1);
+                            assert_eq!(BN_ucmp(narrow, wide), 0, "narrow vs modulus width");
+                            assert_eq!(BN_ucmp(narrow, expected), 0, "narrow vs oracle");
+                            cases += 1;
+                            BN_free(narrow);
+                            BN_free(wide);
+                            BN_free(expected);
+                            BN_free(a);
+                        }
+                        BN_free(e);
+                    }
                 }
                 BN_MONT_CTX_free(mont);
                 BN_free(m);
