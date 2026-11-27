@@ -1,0 +1,4 @@
+[
+  {"family": "BN fixed-window ladder (window + scan inlined)", "module": "arith", "symbol": "run_mont_ladder"},
+  {"family": "BN Montgomery multiply (REDC inlined)", "module": "arith", "symbol": "mont_mul_sos_into"}
+]

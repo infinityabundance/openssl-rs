@@ -50,9 +50,22 @@ for j in 0..entries:                       // public
 
 * The address `table[j*n + l]` depends only on public loop counters.
 * The only secret input, `digit`, enters through a mask that is either all-ones
-  or all-zeros; the row is assembled with bitwise AND/OR, which cannot be
-  lowered to a branch on the mask (unlike a select between two live values, which
-  is why `constant_time_select` carries a barrier).
+  or all-zeros. The code reads public addresses and combines the rows with
+  bitwise AND/OR, and `constant_time_eq_s` supplies the mask.
+* **That is a design intent, not the evidence.** This project has already seen
+  the optimiser lower a comparison-derived mask or a masked select into a
+  conditional branch: PFP-2's REDC borrow became `test %rcx,%rcx; jne`, and
+  PFP-31's ML-KEM equality mask became `test %dl,%dl; jne`. "AND/OR cannot be
+  lowered to a branch" is therefore **not** a claim the source can support, and
+  source-level reasoning is not what establishes constant time here.
+* What was actually established is artefact-level: at DSO `842efa27`, the binary
+  branch audit classified every `jcc`/`setcc`/`cmov` in `run_mont_ladder` and
+  `mont_mul_sos_into` and found **no secret-derived transfer**, and ctgrind with
+  the secret exponent tainted reported 0 errors from 0 contexts. Those results
+  are bound to that exact digest, rustc 1.98.1, x86-64 and the release profile;
+  any source, toolchain or target change requires the audit to be re-run. The
+  barrier in `constant_time_select` remains, because it constrains the
+  optimisation without being a guarantee about emitted code.
 * `out` is zeroed before the scan, so the OR accumulation is exact.
 
 ## 4. Storage, bounds and constant-time discipline preserved

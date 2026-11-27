@@ -19,6 +19,11 @@ driver), compiled `-O2 -g`.
 | `rsa2048` | 1045.4 | 350.5 | **2.982** | [2.980, 2.985] |
 | `ecdsa256` (control) | 130.8 | 12.7 | 10.238 | [10.215, 10.262] |
 
+The authoritative mapping from this table is: `modexp2048` 2.501, `modexp8192`
+2.927, **RSA 2.982** and **DH 2.500**. The PFP-5 commit message transposed the
+RSA and DH "before" values; `RECEIPT.md` §8 records the correction and the
+correct pairing. The candidate figures in this table were never swapped.
+
 ## 2. Paired before/after at the two candidate digests
 
 Baseline `4e6ec312` and candidate `842efa27`, both rebuilt from their source and

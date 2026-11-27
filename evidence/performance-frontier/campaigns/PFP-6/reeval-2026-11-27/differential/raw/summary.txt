@@ -1,0 +1,4 @@
+a lines=161 authority_lines=161 result=IDENTICAL MX=150 RSA=8 DH=2
+b lines=161 authority_lines=161 result=IDENTICAL MX=150 RSA=8 DH=2
+c lines=161 authority_lines=161 result=IDENTICAL MX=150 RSA=8 DH=2
+d lines=161 authority_lines=161 result=IDENTICAL MX=150 RSA=8 DH=2

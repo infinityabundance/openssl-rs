@@ -88,7 +88,28 @@ RSA, blinding on and off, and both recorded DH groups.
 The measured gain meets the bound. Instruction counts agree (1.63–1.66× fewer
 Montgomery instructions).
 
-## 8. What this receipt does not establish
+## 8. Correction — RSA and DH transposed in the commit message (2026-11-27)
+
+The PFP-5 commit (`76652a46d`) lists the candidate/authority figures as
+"2.501x, 2.927x, 2.982x and 2.500x, against 4.20, 4.87, 4.13 and 4.57 before".
+That pairs the last two candidate values with the *wrong* "before" values: the
+candidate list is in the order `modexp2048`, `modexp8192`, RSA, DH, while the
+"before" list is in the order `modexp2048`, `modexp8192`, DH, RSA. RSA and DH
+are transposed. The commit message cannot be rewritten; this record is the
+authoritative mapping, read from `TIMING.md` §1.
+
+| workload | candidate/authority | before (base / stated) |
+|---|---:|---:|
+| `modexp2048` | **2.501** | 4.13 / 4.20 |
+| `modexp8192` | **2.927** | 4.86 / 4.87 |
+| `rsa2048` | **2.982** | **4.57** |
+| DH (`dh-ffdhe2048`, `dh-modp2048`) | **2.500** | **4.13** |
+
+RSA is 2.982× (was 4.57×), not 2.982× against 4.13×; DH is 2.500× (was
+4.13×), not 2.500× against 4.57×. No measurement changes; only the pairing in
+the commit prose was wrong.
+
+## 9. What this receipt does not establish
 
 * It is not a frontier result (no PMU).
 * It does not establish constant-time behaviour; ctgrind covers control flow and

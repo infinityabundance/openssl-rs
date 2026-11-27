@@ -2569,10 +2569,18 @@ fn run_mont_ladder_window(
 /// `out = table[digit]` by a full masked scan of every row.
 ///
 /// `j` and every limb index are loop counters over public table geometry; the only
-/// secret input is `digit`, and it enters solely through the mask. The result is
-/// assembled with bitwise AND/OR, which cannot be lowered to a branch on `mask`
-/// (unlike a select between two live values, which is why `constant_time_select`
-/// carries a barrier). `out` is zeroed first so the OR accumulation is exact.
+/// secret input is `digit`, and it enters solely through the mask. `out` is
+/// zeroed first so the OR accumulation is exact.
+///
+/// **The source shape is not the constant-time evidence.** Reading public
+/// addresses and combining them with bitwise AND/OR is the intent, but this
+/// project has observed the optimiser lower a comparison-derived mask or a
+/// masked select into a branch (PFP-2's REDC borrow, PFP-31's ML-KEM rejection
+/// mask). What was established for `digit` is artefact-level: at DSO
+/// `842efa27` (rustc 1.98.1, x86-64, release) the binary branch audit found no
+/// secret-derived transfer in `run_mont_ladder`, and ctgrind with the secret
+/// exponent tainted reported 0 contexts. A source, toolchain or target change
+/// invalidates that result and requires the audit to be re-run.
 fn select_window_digit(table: &[Limb], n: usize, entries: usize, digit: u64, out: &mut [Limb]) {
     for slot in out.iter_mut() {
         *slot = 0;

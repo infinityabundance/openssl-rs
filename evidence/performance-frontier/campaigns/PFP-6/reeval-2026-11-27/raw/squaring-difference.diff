@@ -1,0 +1,19 @@
+--- /work/court/tmp/pfp6-reeval/arith.restore.rs	2026-11-27 12:02:18.318543386 +0000
++++ src/bn/arith.rs	2026-11-27 12:03:04.965310415 +0000
+@@ -2531,15 +2531,7 @@
+             digit |= bit << k;
+         }
+         for _ in 0..shift {
+-            if !mont_mul_ladder_into(
+-                &acc[..],
+-                &acc[..],
+-                &mut scratch[..],
+-                md,
+-                n0,
+-                &mut t[..],
+-                &mut diff[..],
+-            ) {
++            if !mont_sqr_into(&acc[..], &mut scratch[..], md, n0, &mut t[..], &mut diff[..]) {
+                 return None;
+             }
+             core::mem::swap(acc, scratch);

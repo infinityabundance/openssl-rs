@@ -5,6 +5,10 @@
 `src/bn/arith.rs` worktree change (687 insertions, 39 deletions). The previous
 attempt left that file modified and uncommitted; this record resumes it.
 
+**Current (2026-11-27):** the `src/bn/arith.rs` work is committed; the
+re-evaluation at the PFP-5 composition is in the section below, and the new
+default artefact is DSO `66138460…`. The state remains PARTIAL.
+
 ## Committed-source identity supplement (added 2026-11-26, PFP-27/PFP-28)
 
 The identity statement above is superseded on this point: the `src/bn/arith.rs`
@@ -29,6 +33,22 @@ ctgrind, differential, timing) applies to `5e75b694` or `12023efe`, and this
 record does not cite it for them. The crossover table below measures C schedule
 transcriptions via `bench_mont.c`, not these artefacts, and is marked not
 applicable in `ARTEFACT-AUDIT.md` §6.
+
+## Re-evaluation at the PFP-5 composition (2026-11-27)
+
+The PFP-5 five-bit window changed the operation mix to **2,050 squarings and
+410 multiplications** at 2048 bits (83.33 % squarings; 8,195/1,639 at 8192).
+The dedicated squaring kernel was re-measured in the crate's release DSO at
+that mix, with 15 repetitions, `taskset -c 1`, paired ratios and intervals. It
+is **slower** than both SOS and CIOS in the squaring role:
+`B/A = 1.0822` at 2048 and `1.0048` at 8192; `D/C = 1.2628` and `1.1323`.
+`LADDER_DEDICATED_SQUARING` therefore remains **false**. The earlier negative
+was a per-kernel C transcription, not a whole-operation measurement at this
+mix; the two agree in direction, but the magnitudes do not transfer. CIOS is
+**0.8274×** the SOS operation at 2048 (`0.8379×` at 8192) and is the next
+measured default decision; it is not enabled in this batch. New default DSO
+`66138460…`; A and A2 agree byte for byte. Evidence: `REEVALUATION.md`,
+`RECEIPT.md`, `reeval-2026-11-27/`.
 
 ## What the uncommitted change was trying to do
 
@@ -145,11 +165,18 @@ The measured binary's SHA-256 is recorded in `ARMS.json`; the harness source is
 1. **FIOS and almost-Montgomery were not implemented or compared.** The PFP-6
    item names them; the harness records the omission rather than implying a
    result.
-2. **The crossover is a C transcription, not the crate's kernels or DSO.** No
-   affected API performance row was re-run at a candidate digest. Selecting
-   CIOS (or dedicated squaring) as the default is a separate, measured decision.
+2. **The crossover is a C transcription, not the crate's kernels or DSO.**
+   **Addressed for the squaring decision (2026-11-27):** the artefact timing in
+   `REEVALUATION.md` measures the four DSOs directly and is the evidence for
+   keeping dedicated squaring off. The C transcription is marked not applicable
+   and is not cited for that decision. What remains open is a DSO-bound
+   comparison of *other* schedules (FIOS/almost-Montgomery).
 3. **The candidate is uncommitted**, so it is not reproducible from a commit.
-4. **No binary branch audit at a candidate digest.** The branch-free claim is
-   source-level only.
+   **Still open (2026-11-27).** The re-evaluation built from the worktree state;
+   two clean builds reproduce it, but `build_relevant_clean=false`.
+4. **No binary branch audit at a candidate digest.** **Addressed at
+   `66138460` (2026-11-27):** both targets resolve uniquely; the counts and
+   addresses match PFP-5's `842efa27` audit (100/19 jcc, no secret-derived
+   transfer). The taint remains source-bound.
 5. The ladder default remains `Sos` and dedicated squaring remains off; the
    reference and every path are retained.

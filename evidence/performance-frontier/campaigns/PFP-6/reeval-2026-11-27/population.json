@@ -1,0 +1,37 @@
+{
+  "declared_by": "evidence/performance-frontier/campaigns/PFP-6/reeval-2026-11-27/run_timing.sh (written before execution)",
+  "mode": "prepared",
+  "repetitions": 15,
+  "cpu": 1,
+  "taskset": "taskset -c 1",
+  "harness": {
+    "path": "courts/performance-frontier/pfp5/bench_pfp5.c",
+    "sha256": "ac605a5a408322d33ce04f9fd88293fedb556daaec63de4320a87096d5336f9c",
+    "note": "the PFP-5/PFP-1 workload driver, unmodified"
+  },
+  "workloads": [
+    "modexp2048",
+    "dh-synth2048",
+    "dh-synth3072",
+    "dh-ffdhe2048",
+    "dh-ffdhe3072",
+    "dh-modp2048",
+    "rsa2048",
+    "ecdsa256",
+    "modexp8192"
+  ],
+  "fixtures": {
+    "rsa2048.der": "e21dc60477d01d7524cbeb840f15f6d03abf043adebff811d0ad2a9d8fa4e4f1",
+    "ffdhe2048.hex": "282f234f613de65db40d34eab8a6bd44b643b1dd066f371d6e39baab569f1ada",
+    "ffdhe3072.hex": "6bf9255618857cf8fef1dedff475e7b3c4d9b80ab3b98302c586492a04e1546d",
+    "modp2048.hex": "36ac9d9a9a8b3b943d4ebec1f280770b2a6ebef425140ac77a7db1675ddbc352"
+  },
+  "arms": {
+    "a": "661384603e0b661af384997676d8e88843f2b307b6abf73f56d472b03d888630",
+    "b": "5c0e0d90e9caf95f140fe98d386bab18e27072e78038a0ba3827706b4b900484",
+    "c": "ca0ae5387d81f42de6dd2207d0794840eb38b8cab1d4015d91d4aa4239569159",
+    "d": "a24c0aa2e9e09e1335445421c744809585bb680915b16108546f9b5f20ab1197"
+  },
+  "statistic": "median of the 15 paired per-repetition ratios; 95% percentile bootstrap, 20000 resamples, seed 0x50465036",
+  "frozen_before_execution": true
+}

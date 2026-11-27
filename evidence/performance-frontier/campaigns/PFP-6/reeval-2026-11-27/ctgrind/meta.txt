@@ -1,0 +1,6 @@
+source_commit=76652a46dcfb388656d964010268685ca032dff1
+arith_rs_sha256=66bd6c4c7f616f7d8101debf34cc2d4915eff225aba0dec4e119eccb5d682e83
+test_binary_sha256=bdb75cae9dfa9178ff3468a03886eec3a53bb64addf44f783292ff4fdb1ad2af
+valgrind_exit=0
+test_profile=debug, CARGO_PROFILE_TEST_DEBUG=0 (debuginfo=2 exceeded RLIMIT_DATA)
+note=debug test binary; source-bound, not DSO-bound; not a constant-time proof
