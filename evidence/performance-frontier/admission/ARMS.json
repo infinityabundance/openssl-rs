@@ -825,6 +825,50 @@
           }
         ]
       }
+    },
+    {
+      "arm_id": "PFP-4",
+      "assurance": {
+        "safe_compatible": false,
+        "semantic_assurance": false
+      },
+      "candidate": {
+        "artefact": {
+          "label": "PFP-3 post-fix distribution DSO ecbefb7d, the subject profiled for the PFP-4 W3 bound; no PFP-4 candidate was produced",
+          "sha256": "ecbefb7d4ecd05cb08f5ade57e64ce2cd81de24bcd68b0c236a8640a18559053"
+        },
+        "build_profile": "release, x86_64-unknown-linux-gnu; src tree 49809764f (PFP-3 branch-free admission)",
+        "source_commit": "49809764f82fff0649c677ea183e843401fa934a"
+      },
+      "constant_time_audit": null,
+      "description": "PFP-4 W3 bound over the ECDSA P-256 signing pipeline at digest ecbefb7d: k*G 85.77% of wall (80.93% of instructions), outside-k*G 14.23%; the PFP-4 scalar arithmetic + reduction + s expression + export is 0.45% of wall (Amdahl 1.005x) and was not implemented; the order inversion (12.7% wall) is a separate follow-up. Evidence: evidence/performance-frontier/campaigns/PFP-4/BOUND.md.",
+      "differential_courts": null,
+      "measurement": null,
+      "queue_item": "PFP-4",
+      "reuse": null,
+      "shortcuts": [],
+      "status": "EXPERIMENT",
+      "timing_obligations": {
+        "attempted_discharge": [],
+        "none_open_because": null,
+        "open": [
+          {
+            "description": "The W3 bound forbids the pipeline conversion: the PFP-4 scalar arithmetic, reduction, s expression and export are 0.45% of signing wall time, so no candidate was built.",
+            "discharged": false,
+            "id": "PFP4-W3-BOUND"
+          },
+          {
+            "description": "The only material remainder is the order inversion (~12.7% wall); a dedicated constant-time 4-limb inverse is a separate task and was not implemented or measured.",
+            "discharged": false,
+            "id": "PFP4-ORDER-INVERSION"
+          },
+          {
+            "description": "No 4,096-signature differential, defining-equation, round-trip, taint or binary branch audit was run because there is no implementation to gate.",
+            "discharged": false,
+            "id": "PFP4-GATES-NOT-RUN"
+          }
+        ]
+      }
     }
   ],
   "author": {

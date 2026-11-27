@@ -1,0 +1,14 @@
+CHECK pub=03b1c46f599c7d369cf9565c77b16948489cba9b5220355e202073bb03e588b44a r=256
+LOADED /work/court/tmp/pfp3-d/distribution/libcrypto.so.3
+IDENTITY dev_ino_match=1 size_match=1
+MODE sign     median_us=134.307 min_us=134.285 max_us=134.740 iters=3000 runs=7
+MODE mul      median_us=115.193 min_us=115.162 max_us=115.254 iters=3000 runs=7
+MODE signex   median_us=0.550 min_us=0.549 max_us=0.558 iters=3000 runs=7
+MODE inverse  median_us=14.303 min_us=14.253 max_us=14.329 iters=3000 runs=7
+MODE ordinv   median_us=19.347 min_us=19.343 max_us=19.352 iters=3000 runs=7
+MODE nmod     median_us=0.014 min_us=0.014 max_us=0.015 iters=3000 runs=7
+MODE rand     median_us=1.245 min_us=1.242 max_us=1.250 iters=3000 runs=7
+MODE affine   median_us=0.035 min_us=0.034 max_us=0.036 iters=3000 runs=7
+DECOMP sign=134.307 mul=115.193 signex=0.550 inverse=14.303 ordinv=19.347 nmod=0.014 rand=1.245 affine=0.035
+FRACTION_KG 0.857686
+FRACTION_OUTSIDE_KG 0.142314
