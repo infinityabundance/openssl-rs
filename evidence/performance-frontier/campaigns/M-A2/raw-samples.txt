@@ -1,0 +1,70 @@
+    Finished `release` profile [optimized] target(s) in 3.07s
+    Finished `release` profile [optimized] target(s) in 3.11s
+== default build: bench --reps=501, three runs ==
+{"mode":"bench","width":256,"pair":"52deferred-vs-64fixed","reps":501,"batch":2000,"a_median_ns":43.2945,"b_median_ns":12.5830,"ratio_median":3.441746,"ratio_ci95":[3.440372,3.442899],"a_min_ns":43.0815,"b_min_ns":12.4815,"ratio_min":3.451628}
+{"mode":"bench","width":256,"pair":"52deferred-vs-64slice","reps":501,"batch":2000,"a_median_ns":43.2360,"b_median_ns":32.5640,"ratio_median":1.327603,"ratio_ci95":[1.327398,1.327914],"a_min_ns":43.0640,"b_min_ns":32.4620,"ratio_min":1.326597}
+{"mode":"bench","width":256,"pair":"52rotate-vs-64fixed","reps":501,"batch":2000,"a_median_ns":36.0055,"b_median_ns":12.5875,"ratio_median":2.855560,"ratio_ci95":[2.852418,2.858971],"a_min_ns":35.8100,"b_min_ns":12.4625,"ratio_min":2.873420}
+{"mode":"bench","width":1024,"pair":"52deferred-vs-64fixed","reps":501,"batch":200,"a_median_ns":323.0650,"b_median_ns":229.1450,"ratio_median":1.402071,"ratio_ci95":[1.397441,1.407019],"a_min_ns":304.5700,"b_min_ns":221.4150,"ratio_min":1.375562}
+{"mode":"bench","width":1024,"pair":"52deferred-vs-64slice","reps":501,"batch":200,"a_median_ns":313.9000,"b_median_ns":242.5950,"ratio_median":1.291399,"ratio_ci95":[1.290359,1.292172],"a_min_ns":306.0550,"b_min_ns":239.9600,"ratio_min":1.275442}
+{"mode":"bench","width":1024,"pair":"52rotate-vs-64fixed","reps":501,"batch":200,"a_median_ns":368.6650,"b_median_ns":228.4250,"ratio_median":1.613419,"ratio_ci95":[1.611827,1.615217],"a_min_ns":360.8850,"b_min_ns":221.5200,"ratio_min":1.629131}
+{"mode":"bench","width":256,"pair":"52deferred-vs-64fixed","reps":501,"batch":2000,"a_median_ns":42.9960,"b_median_ns":12.8045,"ratio_median":3.412316,"ratio_ci95":[3.403239,3.415800],"a_min_ns":42.7040,"b_min_ns":12.4710,"ratio_min":3.424264}
+{"mode":"bench","width":256,"pair":"52deferred-vs-64slice","reps":501,"batch":2000,"a_median_ns":43.0055,"b_median_ns":32.5695,"ratio_median":1.320416,"ratio_ci95":[1.320163,1.320629],"a_min_ns":42.7585,"b_min_ns":32.4855,"ratio_min":1.316233}
+{"mode":"bench","width":256,"pair":"52rotate-vs-64fixed","reps":501,"batch":2000,"a_median_ns":36.0000,"b_median_ns":12.5575,"ratio_median":2.862518,"ratio_ci95":[2.860165,2.864456],"a_min_ns":35.8080,"b_min_ns":12.4695,"ratio_min":2.871647}
+{"mode":"bench","width":1024,"pair":"52deferred-vs-64fixed","reps":501,"batch":200,"a_median_ns":309.4750,"b_median_ns":226.3800,"ratio_median":1.372972,"ratio_ci95":[1.372073,1.373835],"a_min_ns":304.6100,"b_min_ns":221.4600,"ratio_min":1.375463}
+{"mode":"bench","width":1024,"pair":"52deferred-vs-64slice","reps":501,"batch":200,"a_median_ns":311.5400,"b_median_ns":242.0000,"ratio_median":1.278921,"ratio_ci95":[1.277854,1.280411],"a_min_ns":303.4500,"b_min_ns":239.5700,"ratio_min":1.266644}
+{"mode":"bench","width":1024,"pair":"52rotate-vs-64fixed","reps":501,"batch":200,"a_median_ns":362.6950,"b_median_ns":225.5250,"ratio_median":1.614666,"ratio_ci95":[1.612643,1.615636],"a_min_ns":360.7500,"b_min_ns":221.0700,"ratio_min":1.631836}
+{"mode":"bench","width":256,"pair":"52deferred-vs-64fixed","reps":501,"batch":2000,"a_median_ns":43.0255,"b_median_ns":12.5655,"ratio_median":3.425435,"ratio_ci95":[3.424397,3.426488],"a_min_ns":42.8445,"b_min_ns":12.4685,"ratio_min":3.436219}
+{"mode":"bench","width":256,"pair":"52deferred-vs-64slice","reps":501,"batch":2000,"a_median_ns":43.0130,"b_median_ns":32.7440,"ratio_median":1.313544,"ratio_ci95":[1.313336,1.313710],"a_min_ns":42.8350,"b_min_ns":32.6655,"ratio_min":1.311322}
+{"mode":"bench","width":256,"pair":"52rotate-vs-64fixed","reps":501,"batch":2000,"a_median_ns":36.0015,"b_median_ns":12.5630,"ratio_median":2.858647,"ratio_ci95":[2.857468,2.859941],"a_min_ns":35.8070,"b_min_ns":12.4825,"ratio_min":2.868576}
+{"mode":"bench","width":1024,"pair":"52deferred-vs-64fixed","reps":501,"batch":200,"a_median_ns":314.2550,"b_median_ns":226.8250,"ratio_median":1.381247,"ratio_ci95":[1.379121,1.382859],"a_min_ns":305.0300,"b_min_ns":220.8700,"ratio_min":1.381039}
+{"mode":"bench","width":1024,"pair":"52deferred-vs-64slice","reps":501,"batch":200,"a_median_ns":310.1100,"b_median_ns":241.8050,"ratio_median":1.282069,"ratio_ci95":[1.281152,1.282949],"a_min_ns":304.4450,"b_min_ns":239.9350,"ratio_min":1.268864}
+{"mode":"bench","width":1024,"pair":"52rotate-vs-64fixed","reps":501,"batch":200,"a_median_ns":454.6000,"b_median_ns":224.9900,"ratio_median":1.996757,"ratio_ci95":[1.964971,2.040786],"a_min_ns":361.2950,"b_min_ns":221.3050,"ratio_min":1.632566}
+== native build: bench --reps=501, three runs ==
+{"mode":"bench","width":256,"pair":"52deferred-vs-64fixed","reps":501,"batch":2000,"a_median_ns":45.4655,"b_median_ns":12.6230,"ratio_median":3.604058,"ratio_ci95":[3.603021,3.605158],"a_min_ns":45.3190,"b_min_ns":12.5290,"ratio_min":3.617128}
+{"mode":"bench","width":256,"pair":"52deferred-vs-64slice","reps":501,"batch":2000,"a_median_ns":45.5745,"b_median_ns":33.3195,"ratio_median":1.365518,"ratio_ci95":[1.365160,1.365818],"a_min_ns":45.2240,"b_min_ns":33.2020,"ratio_min":1.362087}
+{"mode":"bench","width":256,"pair":"52rotate-vs-64fixed","reps":501,"batch":2000,"a_median_ns":31.6100,"b_median_ns":12.6175,"ratio_median":2.505807,"ratio_ci95":[2.504759,2.506443],"a_min_ns":31.4635,"b_min_ns":12.5405,"ratio_min":2.508951}
+{"mode":"bench","width":1024,"pair":"52deferred-vs-64fixed","reps":501,"batch":200,"a_median_ns":307.9300,"b_median_ns":224.4850,"ratio_median":1.367534,"ratio_ci95":[1.363325,1.372845],"a_min_ns":293.3750,"b_min_ns":216.3600,"ratio_min":1.355958}
+{"mode":"bench","width":1024,"pair":"52deferred-vs-64slice","reps":501,"batch":200,"a_median_ns":300.7800,"b_median_ns":235.8700,"ratio_median":1.263918,"ratio_ci95":[1.262290,1.265999],"a_min_ns":293.8250,"b_min_ns":234.5500,"ratio_min":1.252718}
+{"mode":"bench","width":1024,"pair":"52rotate-vs-64fixed","reps":501,"batch":200,"a_median_ns":358.5500,"b_median_ns":222.4900,"ratio_median":1.608560,"ratio_ci95":[1.605042,1.613049],"a_min_ns":351.5750,"b_min_ns":216.0900,"ratio_min":1.626984}
+{"mode":"bench","width":256,"pair":"52deferred-vs-64fixed","reps":501,"batch":2000,"a_median_ns":44.5335,"b_median_ns":12.6360,"ratio_median":3.513733,"ratio_ci95":[3.511607,3.515750],"a_min_ns":44.1810,"b_min_ns":12.5420,"ratio_min":3.522644}
+{"mode":"bench","width":256,"pair":"52deferred-vs-64slice","reps":501,"batch":2000,"a_median_ns":44.4850,"b_median_ns":33.3210,"ratio_median":1.330035,"ratio_ci95":[1.329715,1.330709],"a_min_ns":44.1910,"b_min_ns":33.1990,"ratio_min":1.331094}
+{"mode":"bench","width":256,"pair":"52rotate-vs-64fixed","reps":501,"batch":2000,"a_median_ns":31.6025,"b_median_ns":12.6150,"ratio_median":2.505729,"ratio_ci95":[2.505054,2.506264],"a_min_ns":31.4205,"b_min_ns":12.5435,"ratio_min":2.504923}
+{"mode":"bench","width":1024,"pair":"52deferred-vs-64fixed","reps":501,"batch":200,"a_median_ns":300.1800,"b_median_ns":226.0400,"ratio_median":1.327530,"ratio_ci95":[1.326394,1.329146],"a_min_ns":291.2550,"b_min_ns":219.0250,"ratio_min":1.329780}
+{"mode":"bench","width":1024,"pair":"52deferred-vs-64slice","reps":501,"batch":200,"a_median_ns":301.6950,"b_median_ns":240.2950,"ratio_median":1.246304,"ratio_ci95":[1.245559,1.247792],"a_min_ns":289.7000,"b_min_ns":233.9400,"ratio_min":1.238352}
+{"mode":"bench","width":1024,"pair":"52rotate-vs-64fixed","reps":501,"batch":200,"a_median_ns":358.6300,"b_median_ns":221.7000,"ratio_median":1.604534,"ratio_ci95":[1.602782,1.606572],"a_min_ns":351.4400,"b_min_ns":217.6900,"ratio_min":1.614406}
+{"mode":"bench","width":256,"pair":"52deferred-vs-64fixed","reps":501,"batch":2000,"a_median_ns":45.5430,"b_median_ns":12.6250,"ratio_median":3.605281,"ratio_ci95":[3.603720,3.607170],"a_min_ns":45.2485,"b_min_ns":12.5550,"ratio_min":3.604022}
+{"mode":"bench","width":256,"pair":"52deferred-vs-64slice","reps":501,"batch":2000,"a_median_ns":45.5890,"b_median_ns":33.1550,"ratio_median":1.373103,"ratio_ci95":[1.372448,1.373810],"a_min_ns":45.3570,"b_min_ns":33.0200,"ratio_min":1.373622}
+{"mode":"bench","width":256,"pair":"52rotate-vs-64fixed","reps":501,"batch":2000,"a_median_ns":31.5845,"b_median_ns":12.6150,"ratio_median":2.503808,"ratio_ci95":[2.502675,2.504527],"a_min_ns":31.4485,"b_min_ns":12.5340,"ratio_min":2.509055}
+{"mode":"bench","width":1024,"pair":"52deferred-vs-64fixed","reps":501,"batch":200,"a_median_ns":299.1000,"b_median_ns":226.3050,"ratio_median":1.326028,"ratio_ci95":[1.324077,1.328065],"a_min_ns":290.2050,"b_min_ns":218.8700,"ratio_min":1.325924}
+{"mode":"bench","width":1024,"pair":"52deferred-vs-64slice","reps":501,"batch":200,"a_median_ns":292.7350,"b_median_ns":239.6950,"ratio_median":1.227714,"ratio_ci95":[1.223022,1.235192],"a_min_ns":289.5850,"b_min_ns":233.1500,"ratio_min":1.242054}
+{"mode":"bench","width":1024,"pair":"52rotate-vs-64fixed","reps":501,"batch":200,"a_median_ns":454.2700,"b_median_ns":222.1250,"ratio_median":2.027016,"ratio_ci95":[2.014743,2.042001],"a_min_ns":411.7050,"b_min_ns":216.6650,"ratio_min":1.900192}
+== callgrind instruction counts (dynamic Ir; PMU instructions/cycles events not supported in this venue) ==
+w=256 k=52 ops=0 Ir=287077
+w=256 k=52 ops=20000 Ir=11967196
+w=256 k=52r ops=0 Ir=287076
+w=256 k=52r ops=20000 Ir=11647194
+w=256 k=64f ops=0 Ir=287083
+w=256 k=64f ops=20000 Ir=6847200
+w=256 k=64s ops=0 Ir=287089
+w=256 k=64s ops=20000 Ir=13127208
+w=1024 k=52 ops=0 Ir=289490
+w=1024 k=52 ops=5000 Ir=37494594
+w=1024 k=52r ops=0 Ir=289516
+w=1024 k=52r ops=5000 Ir=33699591
+w=1024 k=64f ops=0 Ir=289523
+w=1024 k=64f ops=5000 Ir=24059598
+w=1024 k=64s ops=0 Ir=289529
+w=1024 k=64s ops=5000 Ir=32669605
+== correctness (release; final source) ==
+{"mode":"check","width":256,"moduli":6,"pairs":60924,"mismatches":0,"m64_pair":0,"m52_pair":0,"m_cross":0,"m_oracle":0,"oracle_checks":3510,"noncanonical":0,"nc64":0,"nc52":0,"conversion_failures":0}
+{"mode":"check","width":1024,"moduli":4,"pairs":13816,"mismatches":0,"m64_pair":0,"m52_pair":0,"m_cross":0,"m_oracle":0,"oracle_checks":872,"noncanonical":0,"nc64":0,"nc52":0,"conversion_failures":0}
+check_exit=0
+== unit tests (debug) ==
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+== fmt ==
+FMT_OK
+== clippy ==
+    Checking ma2 v0.0.0 (/work/courts/performance-frontier/m-a2)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.07s

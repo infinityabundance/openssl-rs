@@ -1,0 +1,33 @@
+# M-A2 experiment crate — NOT a production dependency and NOT a member of the
+# implementation package. The root Cargo.toml is a single-package manifest with
+# no workspace, so this nested manifest declares its own empty [workspace] table
+# to make itself a standalone workspace root. The root package does not
+# reference this directory; `courts/**` is excluded from packaging
+# (root Cargo.toml, `exclude`). Deleting this directory cannot affect src/.
+[package]
+name = "ma2"
+version = "0.0.0"
+edition = "2021"
+publish = false
+description = "M-A2 reduced-radix deferred-carry Montgomery multiplication experiment (no admission)"
+
+[workspace]
+
+[dependencies]
+
+[[bin]]
+name = "ma2"
+path = "src/main.rs"
+
+[lib]
+name = "ma2"
+path = "src/lib.rs"
+
+# One binary, one set of optimisation settings, so the radix-2^52 and
+# radix-2^64 prototypes in it are measured under identical code generation.
+[profile.release]
+opt-level = 3
+debug = false
+codegen-units = 1
+lto = true
+panic = "abort"
