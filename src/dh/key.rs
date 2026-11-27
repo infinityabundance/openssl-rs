@@ -1336,4 +1336,63 @@ mod tests {
             }
         }
     }
+
+    /// PFP-43: a caller-supplied private key wider than both the group's declared
+    /// policy and the modulus is not refused. `DH_generate_key` derives
+    /// `g^x mod p`, `DH_compute_key` agrees with an ordinary peer, and
+    /// `ossl_dh_check_pairwise` accepts the recomputed public key — the three
+    /// paths that reach `dh_bn_mod_exp`.
+    ///
+    /// The exponent is 2400 bits of `0xab` (300 bytes, the court's
+    /// `long_2400bit` preset) against the 2048-bit ffdhe2048 modulus: 38 limbs
+    /// versus 32, and far above the group's 225-bit declared key length.
+    #[test]
+    fn an_out_of_policy_private_key_derives_and_agrees() {
+        use crate::bn::bignum::BN_bin2bn;
+        use crate::dh::group_params::DH_new_by_nid;
+        use crate::dh::object::{DH_free, DH_get0_key, DH_set0_key, DH_size};
+        use crate::runtime::obj::NID_ffdhe2048;
+
+        let wide = [0xabu8; 300];
+        // SAFETY: every object and buffer below is this test's own and live;
+        // `DH_set0_key` takes ownership of `priv_a`, and `BN_bin2bn` copies the
+        // 300 bytes without retaining them.
+        unsafe {
+            let a = DH_new_by_nid(NID_ffdhe2048);
+            let b = DH_new_by_nid(NID_ffdhe2048);
+            assert!(!a.is_null() && !b.is_null());
+
+            let priv_a = BN_bin2bn(wide.as_ptr(), wide.len() as c_int, ptr::null_mut());
+            assert!(!priv_a.is_null());
+            assert_eq!(BN_num_bits(priv_a), 2400);
+            assert_eq!(DH_set0_key(a, ptr::null_mut(), priv_a), 1);
+
+            // keygen: `g^priv mod p` for the preset private key.
+            assert_eq!(DH_generate_key(a), 1, "the authority derives this key");
+            let mut pub_a: *const BigNum = ptr::null();
+            DH_get0_key(a, &mut pub_a, ptr::null_mut());
+            assert!(!pub_a.is_null());
+            assert!(BN_num_bits(pub_a) > 0);
+
+            // compute_key: an ordinary in-policy peer agrees with the wide key.
+            assert_eq!(DH_generate_key(b), 1);
+            let mut pub_b: *const BigNum = ptr::null();
+            DH_get0_key(b, &mut pub_b, ptr::null_mut());
+            assert!(!pub_b.is_null());
+            let len = DH_size(a) as usize;
+            let mut k1 = vec![0u8; len];
+            let mut k2 = vec![0u8; len];
+            let n1 = DH_compute_key_padded(k1.as_mut_ptr(), pub_b, a);
+            let n2 = DH_compute_key_padded(k2.as_mut_ptr(), pub_a, b);
+            assert_eq!(n1, len as c_int);
+            assert_eq!(n2, len as c_int);
+            assert_eq!(k1, k2, "shared-secret symmetry with one out-of-policy key");
+
+            // pairwise: recompute `g^priv` and compare with the stored public key.
+            assert_eq!(crate::dh::check::ossl_dh_check_pairwise(a, 0), 1);
+
+            DH_free(a);
+            DH_free(b);
+        }
+    }
 }

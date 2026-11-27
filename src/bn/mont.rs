@@ -46,7 +46,7 @@ use core::sync::atomic::{AtomicPtr, Ordering};
 
 use crate::bn::arith::{
     mod_exp_core, mod_exp_core_consttime_from_parts_prepared, mod_exp_core_consttime_policy,
-    mont_mul_fallible, pad_to, PreparedMontParams,
+    mont_mul_fallible, pad_to, resolve_ladder_width, PreparedMontParams,
 };
 use crate::bn::bignum::{
     as_mut, as_ref, magnitude, parts_fallible, store, store_consttime, BigNum,
@@ -875,6 +875,14 @@ pub unsafe extern "C" fn BN_mod_exp_mont(
 /// configuration; the result is bit-for-bit the modulus-width ladder's. `0`
 /// means "no declared bound" and is exactly [`BN_mod_exp_mont`].
 ///
+/// **A caller-supplied exponent wider than the policy is not refused.** The
+/// operand slices are in hand at this entry point, so the resolved ladder width
+/// is bound once here (PFP-43): `max(policy, exponent.len())` when the exponent
+/// fits the modulus, and the exponent's own limb count when it does not. The
+/// exponent's normalised length is a declassified length, never its value;
+/// the in-policy path (`exponent.len() <= policy`) is computationally identical
+/// to the former policy ladder.
+///
 /// # Safety
 ///
 /// As [`BN_mod_exp_mont`].
@@ -952,12 +960,15 @@ unsafe fn bn_mod_exp_mont_impl(
             // modulus is odd here (the refusal above), so the Montgomery-form
             // ladder is available. Without a policy width the loop width is the
             // modulus' limb count — a public parameter — never the exponent's
-            // normalised length. With one (the DH method), it is the group's
-            // declared private-key bound, also public; see
+            // normalised length. With one (the DH method), the ladder width is
+            // resolved **once**, here, from that public bound and the exponent's
+            // normalised limb count (a length, PFP-43); the policy function never
+            // derives a width from the exponent. See
             // [`mod_exp_core_consttime_policy`].
             match policy_limbs {
                 Some(policy) => {
-                    mod_exp_core_consttime_policy(&ad, pd, &md, policy, prepared.as_ref())
+                    let width = resolve_ladder_width(policy, md.len(), pd.len());
+                    mod_exp_core_consttime_policy(&ad, pd, &md, width, prepared.as_ref())
                 }
                 None => mod_exp_core_consttime_from_parts_prepared(
                     &ad,

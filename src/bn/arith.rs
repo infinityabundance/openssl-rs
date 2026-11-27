@@ -2433,42 +2433,73 @@ fn mod_exp_core_consttime_staged(
     run_mont_ladder(ad, exponent, md, width, n0, &rr, one_mont, window)
 }
 
-/// Constant-pattern exponentiation at a group's **public policy width**.
+/// Resolve the constant-time ladder width for **one** exponentiation, once.
 ///
-/// `policy_limbs` is the declared maximum private-key length of the group, in
-/// 64-bit limbs — `ceil(N / 64)` where `N` is the DH object's `length` (the
-/// caller's `DH_set_length` bound) or the named group's RFC 7919 key length.
-/// Both are public configuration of the object, never a property of the
-/// exponent, so the iteration count `64 * policy_limbs` is a constant for a
-/// given group and configuration.
+/// `policy_limbs` is the key object's declared public bound (`0` = none),
+/// `modulus_limbs` the modulus' public limb count, and `exponent_limbs` the
+/// supplied exponent's **normalised limb count** — a length, not a value.
 ///
-/// Two admissions bound the change:
+/// The formula is
 ///
-/// * The width never exceeds the modulus' limb count. A conforming private
-///   exponent is below `q < p`, so it cannot need more; a policy larger than
-///   the modulus (a decoded or caller-set value beyond `p`) therefore runs the
-///   modulus width, exactly as before, instead of an unbounded ladder.
-/// * An exponent **wider than the policy** — only a caller-supplied key outside
-///   the group's own declared bound — runs
-///   [`mod_exp_core_consttime_from_parts_prepared`] at the modulus width: the
-///   previous behaviour, unchanged, including its refusal of an exponent wider
-///   than the modulus. The result is never truncated. This is the same
-///   admission read of `pd.len()` that [`ladder_geometry`] documents, and the
-///   crate's own key generation cannot reach it.
+/// ```text
+/// (policy_limbs == 0 ? modulus_limbs : min(policy_limbs, modulus_limbs)).max(exponent_limbs)
+/// ```
 ///
-/// Inside the policy the exponent is staged into a buffer of `policy_limbs`
-/// limbs — allocation and write count fixed by public geometry — and the
-/// ladder's schedule depends only on that width, never on the exponent's value
-/// or its normalised length.
+/// It reproduces the PFP-8 policy exactly whenever the exponent fits the policy
+/// (`exponent_limbs <= policy_limbs <= modulus_limbs` gives `policy_limbs`, so
+/// the in-policy schedule is computationally unchanged), keeps the clamp that a
+/// policy wider than the modulus cannot exceed it, and otherwise **widens to
+/// cover an out-of-policy key** so the answer is `g^x mod p` rather than a
+/// refusal. The width is a length: it is declassified once here (PFP-43), never
+/// a limb value.
+pub(crate) fn resolve_ladder_width(
+    policy_limbs: usize,
+    modulus_limbs: usize,
+    exponent_limbs: usize,
+) -> usize {
+    let base = if policy_limbs == 0 {
+        modulus_limbs
+    } else {
+        policy_limbs.min(modulus_limbs)
+    };
+    base.max(exponent_limbs)
+}
+
+/// Constant-pattern exponentiation at an **explicitly resolved** ladder width.
+///
+/// `resolved_width` is produced once per operation by [`resolve_ladder_width`]
+/// at the C entry point in `bn::mont`, from the key object's declared public
+/// bound and the supplied exponent's normalised limb count. This function never
+/// derives a width from `pd`; it only stages the exponent into a buffer of
+/// `resolved_width` limbs — allocation and write count fixed by that width — and
+/// runs the ladder for `64 * resolved_width` iterations. No iteration consults
+/// the exponent's value or its normalised length.
+///
+/// The width is therefore a **length declassification** (PFP-43): it reflects
+/// how many limbs the private key occupies, never what they contain. For a
+/// conforming key (`pd.len() <= policy <= md.len()`) the width is exactly the
+/// policy, so the PFP-8 in-policy schedule is unchanged. A caller-supplied key
+/// wider than the policy — and, for a 2048-bit modulus, wider than the modulus
+/// itself — widens the ladder to cover it; the result is never truncated. The
+/// threat model and residual channel are recorded in
+/// `evidence/performance-frontier/campaigns/PFP-43/BOUNDS.md`.
+///
+/// `resolved_width == 0` is the "no resolved width" sentinel and delegates to
+/// the modulus-width entry point, exactly as the former `policy_limbs == 0` arm
+/// did. [`resolve_ladder_width`] never returns 0 for a non-empty modulus.
+///
+/// `pd.len() > resolved_width` is a caller contract violation; it is refused
+/// rather than truncated. The resolver makes it unreachable on every in-crate
+/// path, so it is a defensive check, not this function's width decision.
 pub(crate) fn mod_exp_core_consttime_policy(
     ad: &[Limb],
     pd: &[Limb],
     md: &[Limb],
-    policy_limbs: usize,
+    resolved_width: usize,
     prepared: Option<&PreparedMontParams<'_>>,
 ) -> Option<Vec<Limb>> {
-    if policy_limbs == 0 {
-        // No declared bound: exactly the modulus-width entry point.
+    if resolved_width == 0 {
+        // No resolved width: exactly the modulus-width entry point.
         return mod_exp_core_consttime_from_parts_prepared(ad, pd, md, md.len(), prepared);
     }
     // The same degenerate-modulus answers as `ladder_geometry`, whose comments
@@ -2483,22 +2514,15 @@ pub(crate) fn mod_exp_core_consttime_policy(
     if limbs::is_even(md) {
         return mod_exp_core(ad, pd, md);
     }
-    // The policy is public; the clamp to the modulus' limb count is public too.
-    let policy = policy_limbs.min(md.len());
-    let width = if pd.len() <= policy {
-        policy
-    } else {
-        // Outside the declared bound: the previous modulus-width ladder, which
-        // is also the previous answer for an exponent wider than the modulus.
-        md.len()
-    };
-    if pd.len() > width {
+    if pd.len() > resolved_width {
         return None;
     }
-    let exponent = fixed_width_exponent(pd, width)?;
+    let exponent = fixed_width_exponent(pd, resolved_width)?;
     match prepared {
-        Some(params) => mod_exp_core_consttime_prepared(ad, &exponent, md, width, params),
-        None => mod_exp_core_consttime_staged(ad, &exponent, md, width, LADDER_WINDOW_BITS),
+        Some(params) => mod_exp_core_consttime_prepared(ad, &exponent, md, resolved_width, params),
+        None => {
+            mod_exp_core_consttime_staged(ad, &exponent, md, resolved_width, LADDER_WINDOW_BITS)
+        }
     }
 }
 
@@ -3763,8 +3787,9 @@ mod tests {
                 for a in pfp6_operands(&m) {
                     let reference = pfp5_answer(&a, &e, &m, Some(5));
                     for policy in 0..=m.len() + 1 {
+                        let width = resolve_ladder_width(policy, m.len(), e.len());
                         let got =
-                            mod_exp_core_consttime_policy(&a, &e, &m, policy, None).map(|mut v| {
+                            mod_exp_core_consttime_policy(&a, &e, &m, width, None).map(|mut v| {
                                 limbs::normalise(&mut v);
                                 v
                             });
@@ -3781,27 +3806,203 @@ mod tests {
         assert!(cases >= 1000, "the population is not degenerate: {cases}");
     }
 
-    /// The policy fallback is the previous modulus-width behaviour, including its
-    /// refusal of an exponent wider than the modulus: a policy never truncates.
+    /// PFP-43 **supersedes** `policy_width_never_truncates_and_refuses_wider_than_the_modulus`.
+    ///
+    /// The former contract refused an exponent wider than the policy fallback
+    /// (`md.len()`), which made `DH_generate_key` answer 0 for a caller-supplied
+    /// 2400-bit key against a 2048-bit modulus while the authority returned
+    /// `g^x mod p`. The width is now **resolved to cover the exponent** (once, at
+    /// the C entry point) and the ladder is never truncated. The two obligations
+    /// the old test carried are kept: the in-policy path is exactly the policy,
+    /// and a widened path equals the independent ladders.
     #[test]
-    fn policy_width_never_truncates_and_refuses_wider_than_the_modulus() {
+    fn policy_width_widens_to_cover_the_exponent_and_never_truncates() {
         let m = pfp5_modulus(256, 0x5eed_1234);
         let a = pfp6_pad(&[2], m.len());
-        let wide = pfp6_pad(&[1, 2, 3, 4, 5], m.len() + 1);
-        assert_eq!(
-            mod_exp_core_consttime_policy(&a, &wide, &m, 4, None).is_none(),
-            mod_exp_core_consttime_width(&a, &wide, &m, m.len()).is_none(),
-            "an exponent wider than the modulus is refused by both"
-        );
-        // A policy narrower than the exponent falls back to the modulus width and
-        // still answers the reference value.
+        // In-policy: `width == policy` exactly, and the answer is the reference.
         let e = pfp6_pad(&[0xdead_beef, 0xfeed_face, 1, 7], m.len());
         let reference = pfp5_answer(&a, &e, &m, Some(5));
-        let got = mod_exp_core_consttime_policy(&a, &e, &m, 2, None).map(|mut v| {
+        let mut in_policy_cases = 0usize;
+        for policy in 1..=m.len() {
+            if e.len() > policy {
+                continue;
+            }
+            let width = resolve_ladder_width(policy, m.len(), e.len());
+            assert_eq!(width, policy, "an in-policy width must be the policy");
+            let got = mod_exp_core_consttime_policy(&a, &e, &m, width, None).map(|mut v| {
+                limbs::normalise(&mut v);
+                v
+            });
+            assert_eq!(
+                got, reference,
+                "policy {policy} disagrees with the modulus width"
+            );
+            in_policy_cases += 1;
+        }
+        assert!(in_policy_cases >= 1);
+
+        // Out of policy *and* wider than the modulus: accepted at a covering width.
+        let wide = pfp6_pad(&[1, 2, 3, 4, 5], m.len() + 1);
+        assert!(wide.len() > m.len());
+        let width = resolve_ladder_width(4, m.len(), wide.len());
+        assert_eq!(width, wide.len());
+        let Some(mut expected) = mod_exp_core_consttime_width(&a, &wide, &m, wide.len()) else {
+            unreachable!("the declared-width ladder answers a covering width")
+        };
+        limbs::normalise(&mut expected);
+        let got = mod_exp_core_consttime_policy(&a, &wide, &m, width, None).map(|mut v| {
             limbs::normalise(&mut v);
             v
         });
-        assert_eq!(got, reference);
+        assert_eq!(
+            got,
+            Some(expected),
+            "an exponent wider than the modulus is not refused"
+        );
+
+        // The high limbs are used, not dropped: the same base with the top limb
+        // removed answers a different value.
+        let truncation = mod_exp_core_consttime_policy(
+            &a,
+            &wide[..m.len()],
+            &m,
+            resolve_ladder_width(4, m.len(), m.len()),
+            None,
+        )
+        .map(|mut v| {
+            limbs::normalise(&mut v);
+            v
+        });
+        assert_ne!(got, truncation, "the exponent must not be truncated");
+
+        // A width that does not cover the exponent is a contract violation and is
+        // refused, never silently used to truncate.
+        assert!(mod_exp_core_consttime_policy(&a, &wide, &m, m.len(), None).is_none());
+    }
+
+    /// The ffdhe2048 prime (`OSSL_BIGNUM_FFDHE2048_P_BYTES`, big-endian) as limbs.
+    fn pfp43_ffdhe2048_p() -> Vec<Limb> {
+        let bytes = crate::bn::dh_data::OSSL_BIGNUM_FFDHE2048_P_BYTES;
+        let mut limbs = vec![0 as Limb; bytes.len().div_ceil(8)];
+        for (i, &byte) in bytes.iter().rev().enumerate() {
+            limbs[i / 8] |= (byte as Limb) << (8 * (i % 8));
+        }
+        limbs
+    }
+
+    /// PFP-43: a 2400-bit exponent against the 2048-bit ffdhe2048 modulus answers
+    /// the same value as two independent in-crate ladders and as the authority's
+    /// `pow(g, x, p)`. The exponent is `"ab" * 300`; the expected residue below
+    /// was computed independently with
+    /// `python3 -c 'pow(2, int("ab"*300,16), int(<ffdhe2048 p>,16))'` and is
+    /// stored little-endian, lowest limb first.
+    #[test]
+    fn pfp43_widened_ladder_matches_independent_paths_and_the_authority_constant() {
+        let m = pfp43_ffdhe2048_p();
+        assert_eq!(m.len(), 32, "ffdhe2048 is 2048 bits");
+        let a: Vec<Limb> = vec![2];
+        // 2400 bits of 0xab: 37 full limbs then a half limb, 38 limbs total.
+        let mut e: Vec<Limb> = vec![0xabab_abab_abab_abab; 37];
+        e.push(0xabab_abab);
+        assert_eq!(e.len(), 38);
+        // ffdhe2048's declared key length is 225 bits => 4 limbs.
+        let width = resolve_ladder_width(4, m.len(), e.len());
+        assert_eq!(width, 38);
+
+        let Some(mut got) = mod_exp_core_consttime_policy(&a, &e, &m, width, None) else {
+            unreachable!("the widened ladder answers")
+        };
+        limbs::normalise(&mut got);
+
+        // Independent in-crate path 1: the variable-time ladder.
+        let Some(mut oracle) = mod_exp_core(&a, &e, &m) else {
+            unreachable!("a nonzero modulus answers")
+        };
+        limbs::normalise(&mut oracle);
+        assert_eq!(got, oracle, "widened policy path != variable-time oracle");
+
+        // Independent in-crate path 2: the declared-width ladder.
+        let Some(mut declared) = mod_exp_core_consttime_width(&a, &e, &m, e.len()) else {
+            unreachable!("the declared-width ladder answers a covering width")
+        };
+        limbs::normalise(&mut declared);
+        assert_eq!(
+            got, declared,
+            "widened policy path != declared-width ladder"
+        );
+
+        // `pow(2, int("ab"*300, 16), ffdhe2048_p)`, little-endian limbs.
+        let expected: [Limb; 32] = [
+            0x9f26_3779_fc85_e662,
+            0xffdb_90ba_1c1e_9ace,
+            0x2bec_f1d3_1e28_26d8,
+            0xc07b_1e9c_1861_6b3e,
+            0xce2b_0219_b363_cfbc,
+            0x80af_ad5b_5928_41cc,
+            0xc931_8ee7_48c5_424c,
+            0x4ae5_eafd_5344_0a04,
+            0x3eed_d858_4f16_a7ec,
+            0x6c8c_79db_dcfd_be01,
+            0xcab1_0f1a_8ff7_c6da,
+            0x46f7_c29d_7ba3_b97d,
+            0x6750_07b0_4bc6_e6e0,
+            0x0115_6989_0282_d1a2,
+            0x5138_d0b3_f3cb_0ea5,
+            0x1ccd_cbf7_28d4_5a4b,
+            0x0309_84a1_c594_ae8c,
+            0x3ce3_c451_2d9b_79ab,
+            0x79e7_31eb_cb50_c329,
+            0x8491_630f_1862_0a30,
+            0xf8e8_4632_8414_f28e,
+            0xe197_a27b_bcc2_4421,
+            0xc571_b227_5230_2a57,
+            0x0143_563a_5a1e_340d,
+            0x8118_6734_76ac_c736,
+            0x05b6_1837_6b88_5a6f,
+            0xd665_bc6f_388f_85e6,
+            0x2b38_2123_f40d_282f,
+            0x9db2_10df_d045_e713,
+            0xe576_f648_4550_a310,
+            0xcc8f_8e84_77e0_3b11,
+            0x55ed_b9a4_c08f_e9e7,
+        ];
+        assert_eq!(got, expected, "widened path != pow(g, x, p)");
+    }
+
+    /// PFP-43 size boundaries: an exponent of exactly `64 * md.len()` bits, one
+    /// bit wider, and a 4096-bit exponent against the 2048-bit modulus all answer
+    /// what the variable-time ladder answers; none is refused.
+    #[test]
+    fn pfp43_widened_ladder_covers_the_size_boundaries() {
+        let m = pfp43_ffdhe2048_p();
+        let a: Vec<Limb> = vec![2];
+        let mut exact = vec![0 as Limb; 32];
+        exact[0] = 1;
+        exact[31] = 0x8000_0000_0000_0000;
+        let mut plus_one = vec![0 as Limb; 33];
+        plus_one[0] = 1;
+        plus_one[32] = 1;
+        let wide4096 = vec![Limb::MAX; 64];
+        for (name, e) in [
+            ("2048 bits == 64 * md.len()", exact),
+            ("2049 bits (+1)", plus_one),
+            ("4096 bits", wide4096),
+        ] {
+            let width = resolve_ladder_width(4, m.len(), e.len());
+            assert!(width >= e.len(), "{name}: width must cover the exponent");
+            let Some(mut got) = mod_exp_core_consttime_policy(&a, &e, &m, width, None) else {
+                unreachable!("{name}: the widened ladder answers")
+            };
+            limbs::normalise(&mut got);
+            let Some(mut oracle) = mod_exp_core(&a, &e, &m) else {
+                unreachable!("{name}: a nonzero modulus answers")
+            };
+            limbs::normalise(&mut oracle);
+            assert_eq!(
+                got, oracle,
+                "{name} disagrees with the variable-time ladder"
+            );
+        }
     }
 
     /// PFP-5: the fixed-window ladder must be value-for-value identical to the
