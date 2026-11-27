@@ -607,6 +607,12 @@ pub(crate) unsafe fn ossl_dh_generate_public_key(
 ///   top/bottom bit rules, and with a `q` the pair is partially validated and the exponent is
 ///   `ossl_ffc_generate_private_key` over `len(q)` at `MIN_STRENGTH`.
 ///
+/// Those three arms generate a *private* key, and the authority wraps them in
+/// `if (generate_new_key)`. Its `ossl_dh_generate_public_key` call is **outside** that block
+/// (`dh_key.c:370`), so all four key-state combinations — generated or caller-supplied private
+/// key, crossed with an absent or already-present public key — derive `g^priv mod p`, and an
+/// existing public-key slot is overwritten in place.
+///
 /// The `err:` label distinguishes a reused key from a fresh one with `pub_key != dh->pub_key`, so
 /// a caller who supplied a public key keeps it on failure and a caller who did not has theirs
 /// released.
@@ -677,80 +683,84 @@ unsafe extern "C" fn generate_key(dh: *mut Dh) -> c_int {
         }
 
         'generate: {
-            if generate_new_key == 0 {
-                break 'generate;
-            }
-
-            /* Is it an approved safe prime ? */
-            // SAFETY: `dh` is live per this function's contract.
-            if DH_get_nid(dh) != NID_undef {
-                let max_strength = c_int::from(ossl_ifc_ffc_compute_security_bits(BN_num_bits(
-                    (*dh).params.p,
-                )));
-                if (*dh).params.q.is_null() || (*dh).length > BN_num_bits((*dh).params.q) {
-                    break 'generate;
-                }
-                /* dh->length = maximum bit length of generated private key */
-                if ossl_ffc_generate_private_key(
-                    ctx,
-                    ptr::addr_of!((*dh).params),
-                    (*dh).length,
-                    max_strength,
-                    priv_key,
-                ) == 0
-                {
-                    break 'generate;
-                }
-            } else if (*dh).params.q.is_null() {
-                /* secret exponent length, must satisfy 2^l < (p-1)/2 */
-                let mut l = BN_num_bits((*dh).params.p);
-                if (*dh).length >= l {
-                    break 'generate;
-                }
-                l -= 2;
-                if (*dh).length != 0 && (*dh).length < l {
-                    l = (*dh).length;
-                }
-                if BN_priv_rand_ex(priv_key, l, BN_RAND_TOP_ONE, BN_RAND_BOTTOM_ANY, 0, ctx) == 0 {
-                    break 'generate;
-                }
-                /*
-                 * We handle just one known case where g is a quadratic non-residue:
-                 * for g = 2: p % 8 == 3
-                 */
-                if BN_is_word((*dh).params.g, DH_GENERATOR_2 as c_ulong) != 0
-                    && BN_is_bit_set((*dh).params.p, 2) == 0
-                {
-                    /* clear bit 0, since it won't be a secret anyway */
-                    if BN_clear_bit(priv_key, 0) == 0 {
+            /* The authority's `if (generate_new_key)` wraps only the private-key generation;
+             * `ossl_dh_generate_public_key` is called *outside* it (`dh_key.c:370`), so a
+             * caller-supplied private key still derives its public key and an existing public
+             * key is recomputed in place. Public-key computation belongs below, not in here. */
+            if generate_new_key != 0 {
+                /* Is it an approved safe prime ? */
+                // SAFETY: `dh` is live per this function's contract.
+                if DH_get_nid(dh) != NID_undef {
+                    let max_strength = c_int::from(ossl_ifc_ffc_compute_security_bits(
+                        BN_num_bits((*dh).params.p),
+                    ));
+                    if (*dh).params.q.is_null() || (*dh).length > BN_num_bits((*dh).params.q) {
                         break 'generate;
                     }
-                }
-            } else {
-                /* Do a partial check for invalid p, q, g */
-                if ossl_ffc_params_simple_validate(
-                    (*dh).libctx,
-                    ptr::addr_of!((*dh).params),
-                    FFC_PARAM_TYPE_DH,
-                    ptr::null_mut(),
-                ) == 0
-                {
-                    break 'generate;
-                }
-                /*
-                 * For FFC FIPS 186-4 keygen
-                 * security strength s = 112,
-                 * Max Private key size N = len(q)
-                 */
-                if ossl_ffc_generate_private_key(
-                    ctx,
-                    ptr::addr_of!((*dh).params),
-                    BN_num_bits((*dh).params.q),
-                    MIN_STRENGTH,
-                    priv_key,
-                ) == 0
-                {
-                    break 'generate;
+                    /* dh->length = maximum bit length of generated private key */
+                    if ossl_ffc_generate_private_key(
+                        ctx,
+                        ptr::addr_of!((*dh).params),
+                        (*dh).length,
+                        max_strength,
+                        priv_key,
+                    ) == 0
+                    {
+                        break 'generate;
+                    }
+                } else if (*dh).params.q.is_null() {
+                    /* secret exponent length, must satisfy 2^l < (p-1)/2 */
+                    let mut l = BN_num_bits((*dh).params.p);
+                    if (*dh).length >= l {
+                        break 'generate;
+                    }
+                    l -= 2;
+                    if (*dh).length != 0 && (*dh).length < l {
+                        l = (*dh).length;
+                    }
+                    if BN_priv_rand_ex(priv_key, l, BN_RAND_TOP_ONE, BN_RAND_BOTTOM_ANY, 0, ctx)
+                        == 0
+                    {
+                        break 'generate;
+                    }
+                    /*
+                     * We handle just one known case where g is a quadratic non-residue:
+                     * for g = 2: p % 8 == 3
+                     */
+                    if BN_is_word((*dh).params.g, DH_GENERATOR_2 as c_ulong) != 0
+                        && BN_is_bit_set((*dh).params.p, 2) == 0
+                    {
+                        /* clear bit 0, since it won't be a secret anyway */
+                        if BN_clear_bit(priv_key, 0) == 0 {
+                            break 'generate;
+                        }
+                    }
+                } else {
+                    /* Do a partial check for invalid p, q, g */
+                    if ossl_ffc_params_simple_validate(
+                        (*dh).libctx,
+                        ptr::addr_of!((*dh).params),
+                        FFC_PARAM_TYPE_DH,
+                        ptr::null_mut(),
+                    ) == 0
+                    {
+                        break 'generate;
+                    }
+                    /*
+                     * For FFC FIPS 186-4 keygen
+                     * security strength s = 112,
+                     * Max Private key size N = len(q)
+                     */
+                    if ossl_ffc_generate_private_key(
+                        ctx,
+                        ptr::addr_of!((*dh).params),
+                        BN_num_bits((*dh).params.q),
+                        MIN_STRENGTH,
+                        priv_key,
+                    ) == 0
+                    {
+                        break 'generate;
+                    }
                 }
             }
 
@@ -1163,6 +1173,167 @@ mod tests {
             crate::bn::limbs::normalise(&mut got);
             assert_eq!(got, expected, "pub == g^priv mod p");
             DH_free(dh);
+        }
+    }
+
+    /// `PFP8-KEYGEN-PRESET-PRIV`: all four `DH_generate_key` key-state combinations.
+    ///
+    /// **The expectations are the OpenSSL 3.6.4 authority's, not this crate's.**
+    /// `crypto/dh/dh_key.c:265-387` places `ossl_dh_generate_public_key()` *outside*
+    /// `if (generate_new_key)` (the call is at `dh_key.c:370`), so for a generated or a
+    /// caller-supplied private key, and with an absent or an already-present public-key slot,
+    /// the call answers 1, leaves the error queue empty, and ends with a public key; an existing
+    /// public-key slot is overwritten in place. The preset rows' expected values are the
+    /// authority's own `g^priv mod p` output for the `PRIV225` operands, recorded in
+    /// `evidence/performance-frontier/campaigns/PFP-8/raw/preset-priv-matrix.json` — they are
+    /// pins, not values recomputed by this crate.
+    #[test]
+    fn the_four_key_state_combinations_all_derive_the_public_key() {
+        use crate::bn::bignum::BN_set_word;
+        use crate::dh::group_params::DH_new_by_nid;
+        use crate::dh::object::{DH_free, DH_get0_key, DH_set0_key, DH_size};
+        use crate::runtime::err::{ERR_clear_error, ERR_peek_error};
+        use crate::runtime::obj::{NID_ffdhe2048, NID_ffdhe3072, NID_modp_2048};
+
+        /// The authority's `DH_generate_key` public key for `PRIV225`, per group.
+        const CASES: [(c_int, &str); 3] = [
+            (
+                NID_ffdhe2048,
+                "ddc74e099f0a7ed7cc42dda99f1ae76c3a4bfdf8e3a52e8e81a3bf67cc0ea2cfa203847b637094c5f774f1d51286fbd7ebfc5e94c61cfe1a796eb1ade0e5bd46b51044befc0f56dfcc61e219aa1858feac69d3d2f1f360f95515c9fe093daf29634895e7b2f1f2c9c7bb482df43096fb80f398468f59252084e61dab5a607f2fa301d70a60613959e2f77c69e31deabdd7d94a4e7367822f8b411bed9a1ba7c162e5ace3a7e5faef58c89add82a8560468a6615140d6679223f2ef8c3af979e93d926e90d2070d064085ebec911a7d89e07ef5fae03b89ba97404b166f93fa76b79e40d115c31498ff347652eab552ab009165ca8ef630146069b4367df1dcbb",
+            ),
+            (
+                NID_ffdhe3072,
+                "2d3712adf096f4e09265a854b6dab03156558ec98dab1d03d3559beba1e77c3643964734581b9b043a038b7b02108f2c24b03e4f76ae748f042771b45fd3aa861938dea61c4e23786b3265f4fb7b7578779cfa80e215859cc971b5b33ef0a321c0a9e39a421c7d6b21e491a6114b719957de35f52eb8f1ec852ac540d970b83444d1a28e6a1df282caa95e858f047e0ffd8f3df8e914c037c2d7c789b891f6da426c804d57a12858b479d5af6d54fedfb9a393129c0e001711073020c058e59777412d29a31991c12b8817579159a5626a6bd09d10f9d719cf902a077fa0510d3f49850864c9171f9cc09951531614a55061bed2cab155105ab18f2c6ade6882bf415870e38447449515c3b824b4af6fe8f514cd1dd9aaa07505151f1b10b85eabc1a1307125821f65efad0720ce4f88087a8b56e72d25c074247c4bfea0b056aa9de9661b9a14ca08864f0bbbc88b27bb79b42d526dd2f1965765d8a412a3247f591d9d9344f50e459db1653257e5dd72eece5cfb0652a5b8481be134b2c199",
+            ),
+            (
+                NID_modp_2048,
+                "39c0f02ec8b01f08879396d9f12ac5cf6e66992500ac76f453a01655e8a3b0028fa8ddaf7a5491c2a0a0d20c7c10d3734c2ff0c2cdaeb54a2646425b92b16200f44845f48aafca41006c1cfc72b476bfc8b1398964b73c1fe6ad3cbe293c835f985101606539ade3bde48b6430ce59774f1c137f2e466cad16c2ebeb40a497ea8cbe66f58b5322e14bdacfecb84e6b59e5dc1e2421aa4a01616aee3ac9b1a675e7b71f2e7ed92fb717f9b47a8d852c4de6812d253deeef77e05eecf9417f65793c2cf24d4c7503f98b4ce5fa3e7395b50010bbd1362f05266a6192b44680b6d0a3c77b0fc794702f4a2e3f6679dc7d62a0e47d91d4ba8c404337a646ae24c725",
+            ),
+        ];
+        let preset = "002605d5555b1446323a0d7efe724f93e54c7b3dc85ea4b0360ed5fe07";
+
+        // The preset's own bit length, which the authority preserves unchanged.
+        const PRESET_BITS: c_int = 222;
+
+        fn preset_bn(preset: &str) -> *mut BigNum {
+            // The preset is a compile-time lowercase hex literal; the assertion makes
+            // the nibble fallback below unreachable if it is ever edited wrongly.
+            assert!(
+                preset.len().is_multiple_of(2)
+                    && preset
+                        .bytes()
+                        .all(|c| c.is_ascii_digit() || (b'a'..=b'f').contains(&c)),
+                "the preset is even-length lowercase hex"
+            );
+            let nibble = |c: u8| match c {
+                b'0'..=b'9' => c - b'0',
+                _ => c - b'a' + 10,
+            };
+            let bytes: Vec<u8> = (0..preset.len())
+                .step_by(2)
+                .map(|i| {
+                    let raw = preset.as_bytes();
+                    (nibble(raw[i]) << 4) | nibble(raw[i + 1])
+                })
+                .collect();
+            // SAFETY: `bytes` is live for the call and `BN_bin2bn` does not retain it.
+            unsafe { BN_bin2bn(bytes.as_ptr(), bytes.len() as c_int, ptr::null_mut()) }
+        }
+
+        fn padded_hex(v: *const BigNum, bytes: c_int) -> String {
+            let mut out = vec![0u8; bytes as usize];
+            // SAFETY: `out` is writable for `bytes` bytes and `v` is a live borrowed key.
+            let rc = unsafe { BN_bn2binpad(v, out.as_mut_ptr(), bytes) };
+            assert_eq!(rc, bytes, "the key encodes to DH_size bytes");
+            out.iter().map(|b| format!("{b:02x}")).collect()
+        }
+
+        // SAFETY: every object and buffer below is this test's own and live; `DH_set0_key`
+        // takes ownership of its BIGNUM arguments, as its contract states.
+        unsafe {
+            for (nid, expected_pub) in CASES {
+                // (1) generated private key, public key absent.
+                {
+                    let dh = DH_new_by_nid(nid);
+                    assert!(!dh.is_null());
+                    ERR_clear_error();
+                    assert_eq!(DH_generate_key(dh), 1, "nid {nid}: absent/absent");
+                    assert_eq!(ERR_peek_error(), 0, "nid {nid}: success leaves no error");
+                    let mut pub_key: *const BigNum = ptr::null();
+                    let mut priv_key: *const BigNum = ptr::null();
+                    DH_get0_key(dh, &mut pub_key, &mut priv_key);
+                    assert!(!pub_key.is_null(), "nid {nid}: public key computed");
+                    assert!(!priv_key.is_null(), "nid {nid}: private key generated");
+                    DH_free(dh);
+                }
+
+                // (2) caller-supplied private key, public key absent.
+                {
+                    let dh = DH_new_by_nid(nid);
+                    assert!(!dh.is_null());
+                    assert_eq!(DH_set0_key(dh, ptr::null_mut(), preset_bn(preset)), 1);
+                    ERR_clear_error();
+                    assert_eq!(DH_generate_key(dh), 1, "nid {nid}: preset/absent");
+                    assert_eq!(ERR_peek_error(), 0, "nid {nid}: success leaves no error");
+                    let mut pub_key: *const BigNum = ptr::null();
+                    let mut priv_key: *const BigNum = ptr::null();
+                    DH_get0_key(dh, &mut pub_key, &mut priv_key);
+                    assert!(!pub_key.is_null(), "nid {nid}: public key computed");
+                    assert_eq!(BN_num_bits(priv_key), PRESET_BITS, "nid {nid}: key reused");
+                    assert_eq!(
+                        padded_hex(pub_key, DH_size(dh)),
+                        expected_pub,
+                        "nid {nid}: the authority's g^priv mod p"
+                    );
+                    DH_free(dh);
+                }
+
+                // (3) generated private key, public key slot present.
+                {
+                    let dh = DH_new_by_nid(nid);
+                    assert!(!dh.is_null());
+                    let sentinel = BN_new();
+                    assert!(!sentinel.is_null());
+                    assert_eq!(BN_set_word(sentinel, 2), 1);
+                    assert_eq!(DH_set0_key(dh, sentinel, ptr::null_mut()), 1);
+                    ERR_clear_error();
+                    assert_eq!(DH_generate_key(dh), 1, "nid {nid}: absent/present");
+                    assert_eq!(ERR_peek_error(), 0, "nid {nid}: success leaves no error");
+                    let mut pub_key: *const BigNum = ptr::null();
+                    let mut priv_key: *const BigNum = ptr::null();
+                    DH_get0_key(dh, &mut pub_key, &mut priv_key);
+                    assert!(!pub_key.is_null(), "nid {nid}: public key computed");
+                    assert!(
+                        BN_is_word(pub_key, 2) == 0,
+                        "nid {nid}: the supplied slot is overwritten"
+                    );
+                    DH_free(dh);
+                }
+
+                // (4) caller-supplied private key, public key slot present.
+                {
+                    let dh = DH_new_by_nid(nid);
+                    assert!(!dh.is_null());
+                    let sentinel = BN_new();
+                    assert!(!sentinel.is_null());
+                    assert_eq!(BN_set_word(sentinel, 2), 1);
+                    assert_eq!(DH_set0_key(dh, sentinel, preset_bn(preset)), 1);
+                    ERR_clear_error();
+                    assert_eq!(DH_generate_key(dh), 1, "nid {nid}: preset/present");
+                    assert_eq!(ERR_peek_error(), 0, "nid {nid}: success leaves no error");
+                    let mut pub_key: *const BigNum = ptr::null();
+                    let mut priv_key: *const BigNum = ptr::null();
+                    DH_get0_key(dh, &mut pub_key, &mut priv_key);
+                    assert!(!pub_key.is_null(), "nid {nid}: public key computed");
+                    assert_eq!(BN_num_bits(priv_key), PRESET_BITS, "nid {nid}: key reused");
+                    assert_eq!(
+                        padded_hex(pub_key, DH_size(dh)),
+                        expected_pub,
+                        "nid {nid}: the authority's g^priv mod p"
+                    );
+                    DH_free(dh);
+                }
+            }
         }
     }
 }

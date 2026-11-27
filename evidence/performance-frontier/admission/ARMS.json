@@ -1449,7 +1449,7 @@
             "id": "PFP8-REFUSED-TABLE-BUILD"
           },
           {
-            "description": "STOP (pre-existing): DH_generate_key on an object with a caller-supplied priv_key returns 0 and computes no public key, where the authority computes g^priv. src/dh/key.rs places ossl_dh_generate_public_key inside the 'generate block and break 'generate skips it when generate_new_key == 0; the authority's call is outside if (generate_new_key) (dh_key.c:265-387). Not repaired by the refusal batch or the width-policy batch: still a separate divergence.",
+            "description": "OPEN, PARTIALLY REPAIRED 2026-11-27. src/dh/key.rs now calls ossl_dh_generate_public_key outside if (generate_new_key), matching dh_key.c:370: a generated or caller-supplied private key, with an absent or present public slot, returns 1, computes g^priv mod p, overwrites an existing slot, and leaves the error queue empty. Candidate DSO e3ef3d84166a65408e5c89eaa4cc444a2c9208fea5e2acb1c272b6a0b612b187. A 30-row matrix agrees 26/30. EXACT RESIDUAL: a preset private exponent wider than a 2048-bit modulus (2400-bit on ffdhe2048/modp2048, both public states; 4/30 rows) still returns 0 with no public key, because src/bn/arith.rs::mod_exp_core_consttime_policy refuses pd.len() > md.len(); the authority's BN_mod_exp_mont_consttime computes it. Not repaired because the exponent width policy is out of scope for this batch. Evidence: evidence/performance-frontier/campaigns/PFP-8/PRESET-PRIV.md.",
             "discharged": false,
             "id": "PFP8-KEYGEN-PRESET-PRIV"
           },

@@ -1,0 +1,1642 @@
+{
+  "authority": "/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+  "authority_source": "crypto/dh/dh_key.c:265-387 (call site at :370)",
+  "candidate": "/work/court/tmp/pfp8-preset-priv-build/cand/distribution/libcrypto.so.3",
+  "detail": [
+    {
+      "auth": {
+        "case": "ffdhe2048/nid/priv_absent_pub_absent",
+        "crash": false,
+        "errs": [],
+        "exit": 0,
+        "priv_present_after": true,
+        "pub": "1a97c8f53534c3fca14456397c6db5b215ef6206df90ce1d52076327f62f0a4e7b0935d783bf95381d414c6f7219f066dee3ce7ff6b15437de187726c93e599d9e57e882b405a67be87e8dbc00cd33c755f47fa9b1a7528c4b4f67ea0b17db1b10e6d8443247c6dea815baa7401300c93200ad7431c6d0cb4f93eb9ca16555c9410914a1bb61c82db08afcf00ef8e6c8f2d7a240fced3032bae752402184bf5c7450975030b83695a6b5895b8fb006b40ae1f907eb36181a71b06fd09f539cdf7b05159eec328687b8c7274ca355d91a0b7c8776348671d9b847be89ae93261c3536cb1776a44929ecaf204367406eebca6cf52f8aa2a10e9a18ee0f41f96f85",
+        "pub_is_sentinel": false,
+        "pub_present": true,
+        "rc": 1
+      },
+      "cand": {
+        "case": "ffdhe2048/nid/priv_absent_pub_absent",
+        "crash": false,
+        "errs": [],
+        "exit": 0,
+        "priv_present_after": true,
+        "pub": "70cec2fb75a8686bbe75a2ee837d26b563775b2d0a80832ff2b15e81404622967bfb9165dc2ef716a10c10a7dd94e2de9f746cfa3800adeab9a7d281d8083795d3582b61ddfd6023aa3e6fa9a6422cb514ba8672edb5983dd3a80a38c539a16ed61b76ad77d280ee74e5a36e5689c9af99b2a9d831ce2aef955bc8906b939f2919faeba869c86243ab7fa4032edd0f6ef3a6e90bedc5e04e5913bda4692e81a7fbfb5712fbee1ec6554ab3e0f5ce2b635eb46b847549d568bacba3fb4d5e3380e65488bb04486251742caff55a805275b80d820e676b6e57df4a20eabd1e16c5e6993143390b8d91105c96658198ca3a55313df4ec11070d1cc4c7fd128b4d11",
+        "pub_is_sentinel": false,
+        "pub_present": true,
+        "rc": 1
+      },
+      "case": "ffdhe2048/nid/priv_absent_pub_absent",
+      "combo": "priv_absent_pub_absent",
+      "diffs": [],
+      "equal": true,
+      "group": "ffdhe2048",
+      "nid": 1126,
+      "old": {
+        "case": "ffdhe2048/nid/priv_absent_pub_absent",
+        "crash": false,
+        "errs": [],
+        "exit": 0,
+        "priv_present_after": true,
+        "pub": "d7b6e456cfe09e697dd88fecbb27a54cafa5d012921c001c7a0a171c0bfc801fe319673b3475b3c2b57c08990440bb5a0190adb48062245cb85811f423c802ad7bc3d893d8b9f29272c5f5c845a4e22f277192256224bc8418cd5da951e047615e519be88d839b4fe023af423e9e8de6b0cbbb52833a147107055b2731456a83dd93085dc538986d3657da2c7c60b38037e20f8cd7b0c815764a1fff1636f412749f9dbd4a5ab39a83028895e4bd0776c1ef5570dbb3af22535747285dc63bf0d8cd1f8cdf8959ea5ecabac6e0d967b97c48be42673542cb674837cb84f615e88487a3037dba8200d37b0ea050d5beaa760f5e37dd91a4a868193e534d4ab23a",
+        "pub_is_sentinel": false,
+        "pub_present": true,
+        "rc": 1
+      },
+      "old_diffs": [],
+      "old_equal": true,
+      "preset": "none",
+      "pub_comparable": false
+    },
+    {
+      "auth": {
+        "case": "ffdhe2048/nid/priv_preset_pub_absent/in_bound_225",
+        "crash": false,
+        "errs": [],
+        "exit": 0,
+        "priv_present_after": true,
+        "pub": "ddc74e099f0a7ed7cc42dda99f1ae76c3a4bfdf8e3a52e8e81a3bf67cc0ea2cfa203847b637094c5f774f1d51286fbd7ebfc5e94c61cfe1a796eb1ade0e5bd46b51044befc0f56dfcc61e219aa1858feac69d3d2f1f360f95515c9fe093daf29634895e7b2f1f2c9c7bb482df43096fb80f398468f59252084e61dab5a607f2fa301d70a60613959e2f77c69e31deabdd7d94a4e7367822f8b411bed9a1ba7c162e5ace3a7e5faef58c89add82a8560468a6615140d6679223f2ef8c3af979e93d926e90d2070d064085ebec911a7d89e07ef5fae03b89ba97404b166f93fa76b79e40d115c31498ff347652eab552ab009165ca8ef630146069b4367df1dcbb",
+        "pub_is_sentinel": false,
+        "pub_present": true,
+        "rc": 1
+      },
+      "cand": {
+        "case": "ffdhe2048/nid/priv_preset_pub_absent/in_bound_225",
+        "crash": false,
+        "errs": [],
+        "exit": 0,
+        "priv_present_after": true,
+        "pub": "ddc74e099f0a7ed7cc42dda99f1ae76c3a4bfdf8e3a52e8e81a3bf67cc0ea2cfa203847b637094c5f774f1d51286fbd7ebfc5e94c61cfe1a796eb1ade0e5bd46b51044befc0f56dfcc61e219aa1858feac69d3d2f1f360f95515c9fe093daf29634895e7b2f1f2c9c7bb482df43096fb80f398468f59252084e61dab5a607f2fa301d70a60613959e2f77c69e31deabdd7d94a4e7367822f8b411bed9a1ba7c162e5ace3a7e5faef58c89add82a8560468a6615140d6679223f2ef8c3af979e93d926e90d2070d064085ebec911a7d89e07ef5fae03b89ba97404b166f93fa76b79e40d115c31498ff347652eab552ab009165ca8ef630146069b4367df1dcbb",
+        "pub_is_sentinel": false,
+        "pub_present": true,
+        "rc": 1
+      },
+      "case": "ffdhe2048/nid/priv_preset_pub_absent/in_bound_225",
+      "combo": "priv_preset_pub_absent",
+      "diffs": [],
+      "equal": true,
+      "group": "ffdhe2048",
+      "nid": 1126,
+      "old": {
+        "case": "ffdhe2048/nid/priv_preset_pub_absent/in_bound_225",
+        "crash": false,
+        "errs": [
+          [
+            42467331,
+            5,
+            524291
+          ]
+        ],
+        "exit": 0,
+        "priv_present_after": true,
+        "pub": null,
+        "pub_is_sentinel": false,
+        "pub_present": false,
+        "rc": 0
+      },
+      "old_diffs": [
+        "rc: cand=0 auth=1",
+        "pub_present: cand=False auth=True",
+        "errs: cand=[[42467331, 5, 524291]] auth=[]",
+        "pub: cand=None auth='ddc74e099f0a7ed7cc42dda99f1ae76c3a4bfdf8e3a52e8e81a3bf67cc0ea2cfa203847b637094c5f774f1d51286fbd7ebfc5e94c61cfe1a796eb1ade0e5bd46b51044befc0f56dfcc61e219aa1858feac69d3d2f1f360f95515c9fe093daf29634895e7b2f1f2c9c7bb482df43096fb80f398468f59252084e61dab5a607f2fa301d70a60613959e2f77c69e31deabdd7d94a4e7367822f8b411bed9a1ba7c162e5ace3a7e5faef58c89add82a8560468a6615140d6679223f2ef8c3af979e93d926e90d2070d064085ebec911a7d89e07ef5fae03b89ba97404b166f93fa76b79e40d115c31498ff347652eab552ab009165ca8ef630146069b4367df1dcbb'"
+      ],
+      "old_equal": false,
+      "preset": "in_bound_225",
+      "pub_comparable": true
+    },
+    {
+      "auth": {
+        "case": "ffdhe2048/nid/priv_preset_pub_absent/short_1bit",
+        "crash": false,
+        "errs": [],
+        "exit": 0,
+        "priv_present_after": true,
+        "pub": "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002",
+        "pub_is_sentinel": false,
+        "pub_present": true,
+        "rc": 1
+      },
+      "cand": {
+        "case": "ffdhe2048/nid/priv_preset_pub_absent/short_1bit",
+        "crash": false,
+        "errs": [],
+        "exit": 0,
+        "priv_present_after": true,
+        "pub": "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002",
+        "pub_is_sentinel": false,
+        "pub_present": true,
+        "rc": 1
+      },
+      "case": "ffdhe2048/nid/priv_preset_pub_absent/short_1bit",
+      "combo": "priv_preset_pub_absent",
+      "diffs": [],
+      "equal": true,
+      "group": "ffdhe2048",
+      "nid": 1126,
+      "old": {
+        "case": "ffdhe2048/nid/priv_preset_pub_absent/short_1bit",
+        "crash": false,
+        "errs": [
+          [
+            42467331,
+            5,
+            524291
+          ]
+        ],
+        "exit": 0,
+        "priv_present_after": true,
+        "pub": null,
+        "pub_is_sentinel": false,
+        "pub_present": false,
+        "rc": 0
+      },
+      "old_diffs": [
+        "rc: cand=0 auth=1",
+        "pub_present: cand=False auth=True",
+        "errs: cand=[[42467331, 5, 524291]] auth=[]",
+        "pub: cand=None auth='00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002'"
+      ],
+      "old_equal": false,
+      "preset": "short_1bit",
+      "pub_comparable": true
+    },
+    {
+      "auth": {
+        "case": "ffdhe2048/nid/priv_preset_pub_absent/long_modulus_2048",
+        "crash": false,
+        "errs": [],
+        "exit": 0,
+        "priv_present_after": true,
+        "pub": "2ccef355935adc89ad9ca75f74ce4bf9a4725d53cfc8a98c7e693bb8add2f7c5a5a0507c7b599fa9d697744f4de6a690ae560c2d02bcba104c91e119bf21fd9cbef4258524266a2302a111ac6427c8656db701d43e8892e962e74b8faca84d8c9bae457a69f99c6ca68c1b6a8a24cb3c9d8900e66664f3b3d1b4926b5ca2c7f937a0baa9dabe4827e55054430a6eaf1a43c224f485d6a2d29f9aea569a50e8d55749d2d3f37cbe0d0805a2e699017c4afd013518eb4a34975f5f8c6b613f8956fd27845c56f2cbf73fd67451d0f4ecb8b3a262b7006ff524a2388e761c001d1090f92846e7feb4f60a9a13a0bfaf218f07b9c4b194e6ee5fb5e7c60d08861572",
+        "pub_is_sentinel": false,
+        "pub_present": true,
+        "rc": 1
+      },
+      "cand": {
+        "case": "ffdhe2048/nid/priv_preset_pub_absent/long_modulus_2048",
+        "crash": false,
+        "errs": [],
+        "exit": 0,
+        "priv_present_after": true,
+        "pub": "2ccef355935adc89ad9ca75f74ce4bf9a4725d53cfc8a98c7e693bb8add2f7c5a5a0507c7b599fa9d697744f4de6a690ae560c2d02bcba104c91e119bf21fd9cbef4258524266a2302a111ac6427c8656db701d43e8892e962e74b8faca84d8c9bae457a69f99c6ca68c1b6a8a24cb3c9d8900e66664f3b3d1b4926b5ca2c7f937a0baa9dabe4827e55054430a6eaf1a43c224f485d6a2d29f9aea569a50e8d55749d2d3f37cbe0d0805a2e699017c4afd013518eb4a34975f5f8c6b613f8956fd27845c56f2cbf73fd67451d0f4ecb8b3a262b7006ff524a2388e761c001d1090f92846e7feb4f60a9a13a0bfaf218f07b9c4b194e6ee5fb5e7c60d08861572",
+        "pub_is_sentinel": false,
+        "pub_present": true,
+        "rc": 1
+      },
+      "case": "ffdhe2048/nid/priv_preset_pub_absent/long_modulus_2048",
+      "combo": "priv_preset_pub_absent",
+      "diffs": [],
+      "equal": true,
+      "group": "ffdhe2048",
+      "nid": 1126,
+      "old": {
+        "case": "ffdhe2048/nid/priv_preset_pub_absent/long_modulus_2048",
+        "crash": false,
+        "errs": [
+          [
+            42467331,
+            5,
+            524291
+          ]
+        ],
+        "exit": 0,
+        "priv_present_after": true,
+        "pub": null,
+        "pub_is_sentinel": false,
+        "pub_present": false,
+        "rc": 0
+      },
+      "old_diffs": [
+        "rc: cand=0 auth=1",
+        "pub_present: cand=False auth=True",
+        "errs: cand=[[42467331, 5, 524291]] auth=[]",
+        "pub: cand=None auth='2ccef355935adc89ad9ca75f74ce4bf9a4725d53cfc8a98c7e693bb8add2f7c5a5a0507c7b599fa9d697744f4de6a690ae560c2d02bcba104c91e119bf21fd9cbef4258524266a2302a111ac6427c8656db701d43e8892e962e74b8faca84d8c9bae457a69f99c6ca68c1b6a8a24cb3c9d8900e66664f3b3d1b4926b5ca2c7f937a0baa9dabe4827e55054430a6eaf1a43c224f485d6a2d29f9aea569a50e8d55749d2d3f37cbe0d0805a2e699017c4afd013518eb4a34975f5f8c6b613f8956fd27845c56f2cbf73fd67451d0f4ecb8b3a262b7006ff524a2388e761c001d1090f92846e7feb4f60a9a13a0bfaf218f07b9c4b194e6ee5fb5e7c60d08861572'"
+      ],
+      "old_equal": false,
+      "preset": "long_modulus_2048",
+      "pub_comparable": true
+    },
+    {
+      "auth": {
+        "case": "ffdhe2048/nid/priv_preset_pub_absent/long_2400bit",
+        "crash": false,
+        "errs": [],
+        "exit": 0,
+        "priv_present_after": true,
+        "pub": "55edb9a4c08fe9e7cc8f8e8477e03b11e576f6484550a3109db210dfd045e7132b382123f40d282fd665bc6f388f85e605b618376b885a6f8118673476acc7360143563a5a1e340dc571b22752302a57e197a27bbcc24421f8e846328414f28e8491630f18620a3079e731ebcb50c3293ce3c4512d9b79ab030984a1c594ae8c1ccdcbf728d45a4b5138d0b3f3cb0ea5011569890282d1a2675007b04bc6e6e046f7c29d7ba3b97dcab10f1a8ff7c6da6c8c79dbdcfdbe013eedd8584f16a7ec4ae5eafd53440a04c9318ee748c5424c80afad5b592841ccce2b0219b363cfbcc07b1e9c18616b3e2becf1d31e2826d8ffdb90ba1c1e9ace9f263779fc85e662",
+        "pub_is_sentinel": false,
+        "pub_present": true,
+        "rc": 1
+      },
+      "cand": {
+        "case": "ffdhe2048/nid/priv_preset_pub_absent/long_2400bit",
+        "crash": false,
+        "errs": [
+          [
+            42467331,
+            5,
+            524291
+          ]
+        ],
+        "exit": 0,
+        "priv_present_after": true,
+        "pub": null,
+        "pub_is_sentinel": false,
+        "pub_present": false,
+        "rc": 0
+      },
+      "case": "ffdhe2048/nid/priv_preset_pub_absent/long_2400bit",
+      "combo": "priv_preset_pub_absent",
+      "diffs": [
+        "rc: cand=0 auth=1",
+        "pub_present: cand=False auth=True",
+        "errs: cand=[[42467331, 5, 524291]] auth=[]",
+        "pub: cand=None auth='55edb9a4c08fe9e7cc8f8e8477e03b11e576f6484550a3109db210dfd045e7132b382123f40d282fd665bc6f388f85e605b618376b885a6f8118673476acc7360143563a5a1e340dc571b22752302a57e197a27bbcc24421f8e846328414f28e8491630f18620a3079e731ebcb50c3293ce3c4512d9b79ab030984a1c594ae8c1ccdcbf728d45a4b5138d0b3f3cb0ea5011569890282d1a2675007b04bc6e6e046f7c29d7ba3b97dcab10f1a8ff7c6da6c8c79dbdcfdbe013eedd8584f16a7ec4ae5eafd53440a04c9318ee748c5424c80afad5b592841ccce2b0219b363cfbcc07b1e9c18616b3e2becf1d31e2826d8ffdb90ba1c1e9ace9f263779fc85e662'"
+      ],
+      "equal": false,
+      "group": "ffdhe2048",
+      "nid": 1126,
+      "old": {
+        "case": "ffdhe2048/nid/priv_preset_pub_absent/long_2400bit",
+        "crash": false,
+        "errs": [
+          [
+            42467331,
+            5,
+            524291
+          ]
+        ],
+        "exit": 0,
+        "priv_present_after": true,
+        "pub": null,
+        "pub_is_sentinel": false,
+        "pub_present": false,
+        "rc": 0
+      },
+      "old_diffs": [],
+      "old_equal": true,
+      "preset": "long_2400bit",
+      "pub_comparable": true
+    },
+    {
+      "auth": {
+        "case": "ffdhe2048/nid/priv_absent_pub_present",
+        "crash": false,
+        "errs": [],
+        "exit": 0,
+        "priv_present_after": true,
+        "pub": "749510a086be2f1a4ee73a73eacc513688f0d88ef65705b1cc3835f0776ec35f0eef76c8f9c5b4d77607914b0ee238ca49bbebeaaaffa66afbd77ba3b8b8cc6424b982a1860acaede8c92c0e260d8703f529ca6b21021ae609998c0e1431585bbbc58b8f63d5e391f696391e253a0508e9f6fc1495b1c1f32872ca4dcc253a250ab1555b0d9f4068c8fc4f4aa2e9cee3e7f45cb0c3d6d268830487bf4407dc7cfe8ed0dc9b0afecc88dac80185e68ae7aca7d2a83bcc34b28090ca06d450cee77eac05d541a8dc87d9414d457e5dfef45686f010aaca1e9b5f3737e33a719ed202fa77ef5a3475da6a5e5c998495661613536b4e034fcbccea151dd4fefa3683",
+        "pub_is_sentinel": false,
+        "pub_present": true,
+        "rc": 1
+      },
+      "cand": {
+        "case": "ffdhe2048/nid/priv_absent_pub_present",
+        "crash": false,
+        "errs": [],
+        "exit": 0,
+        "priv_present_after": true,
+        "pub": "e380e77a98c8f1dbb67af85e128a37eb77d5dc4f5cfdb3448474bb52bd4ec173c91b1638c576ebb4c70e827ed81a1a082efb83e6eeef9342dfa371c269e64b1d76fd8688479a36a8931acbbe6aa8516df951a5f1f40c1599ae65262bbb6959f2dce99f892bd5a2dda9b00b34fb2282785ca4ab8359890dcc71e55c02e629ad96f03b0d1a7a5bf90948c8280d05e41536b7eb9bd8a33d4e1e56e3162eba69cfa03d205c685d01f787dfc9538e0d3836e0eac988a6a3f87d179c184834ff5cb61f28a83f4a8f84a852a52805f70c6e954b6672405d0a4a3e80995f8bb3aebe72fe7684c1c1a51f2e90873d0a380242507cbd28ab0fb9c89d5cce144e64910a758d",
+        "pub_is_sentinel": false,
+        "pub_present": true,
+        "rc": 1
+      },
+      "case": "ffdhe2048/nid/priv_absent_pub_present",
+      "combo": "priv_absent_pub_present",
+      "diffs": [],
+      "equal": true,
+      "group": "ffdhe2048",
+      "nid": 1126,
+      "old": {
+        "case": "ffdhe2048/nid/priv_absent_pub_present",
+        "crash": false,
+        "errs": [],
+        "exit": 0,
+        "priv_present_after": true,
+        "pub": "a41a4ccb96ac31d84c2480d16517dbe71bb9b8382724ca934987b455fe7d275cb3f79b136ef9aefa19701ddc8bd62bff27965a0b35b42cf92c698616462fbf94def1e0032f00e366f7851310eb9af165f876b52f6a04f775d9bcdf7438a848bb52447bf93f40e415444edc891184ccf8162e2b51052a02e44868a77304ceaedee1d1d21d31d2fd42ab2318caaace67bca402caa18386de875053983e2226751e516f8313b4f4e70fba9204f87e5c7de0c394a288128fb81e9026eaff64d0c8cd3702a9601cfc941a1eb8168ba8a96041a53f906cecdb96b349b4d7cdad06075d9f96c3fded7c7ed75f461e073674cb572585ee4fe65b4a6a16009509efe94629",
+        "pub_is_sentinel": false,
+        "pub_present": true,
+        "rc": 1
+      },
+      "old_diffs": [],
+      "old_equal": true,
+      "preset": "none",
+      "pub_comparable": false
+    },
+    {
+      "auth": {
+        "case": "ffdhe2048/nid/priv_preset_pub_present/in_bound_225",
+        "crash": false,
+        "errs": [],
+        "exit": 0,
+        "priv_present_after": true,
+        "pub": "ddc74e099f0a7ed7cc42dda99f1ae76c3a4bfdf8e3a52e8e81a3bf67cc0ea2cfa203847b637094c5f774f1d51286fbd7ebfc5e94c61cfe1a796eb1ade0e5bd46b51044befc0f56dfcc61e219aa1858feac69d3d2f1f360f95515c9fe093daf29634895e7b2f1f2c9c7bb482df43096fb80f398468f59252084e61dab5a607f2fa301d70a60613959e2f77c69e31deabdd7d94a4e7367822f8b411bed9a1ba7c162e5ace3a7e5faef58c89add82a8560468a6615140d6679223f2ef8c3af979e93d926e90d2070d064085ebec911a7d89e07ef5fae03b89ba97404b166f93fa76b79e40d115c31498ff347652eab552ab009165ca8ef630146069b4367df1dcbb",
+        "pub_is_sentinel": false,
+        "pub_present": true,
+        "rc": 1
+      },
+      "cand": {
+        "case": "ffdhe2048/nid/priv_preset_pub_present/in_bound_225",
+        "crash": false,
+        "errs": [],
+        "exit": 0,
+        "priv_present_after": true,
+        "pub": "ddc74e099f0a7ed7cc42dda99f1ae76c3a4bfdf8e3a52e8e81a3bf67cc0ea2cfa203847b637094c5f774f1d51286fbd7ebfc5e94c61cfe1a796eb1ade0e5bd46b51044befc0f56dfcc61e219aa1858feac69d3d2f1f360f95515c9fe093daf29634895e7b2f1f2c9c7bb482df43096fb80f398468f59252084e61dab5a607f2fa301d70a60613959e2f77c69e31deabdd7d94a4e7367822f8b411bed9a1ba7c162e5ace3a7e5faef58c89add82a8560468a6615140d6679223f2ef8c3af979e93d926e90d2070d064085ebec911a7d89e07ef5fae03b89ba97404b166f93fa76b79e40d115c31498ff347652eab552ab009165ca8ef630146069b4367df1dcbb",
+        "pub_is_sentinel": false,
+        "pub_present": true,
+        "rc": 1
+      },
+      "case": "ffdhe2048/nid/priv_preset_pub_present/in_bound_225",
+      "combo": "priv_preset_pub_present",
+      "diffs": [],
+      "equal": true,
+      "group": "ffdhe2048",
+      "nid": 1126,
+      "old": {
+        "case": "ffdhe2048/nid/priv_preset_pub_present/in_bound_225",
+        "crash": false,
+        "errs": [
+          [
+            42467331,
+            5,
+            524291
+          ]
+        ],
+        "exit": 0,
+        "priv_present_after": true,
+        "pub": "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002",
+        "pub_is_sentinel": true,
+        "pub_present": true,
+        "rc": 0
+      },
+      "old_diffs": [
+        "rc: cand=0 auth=1",
+        "pub_is_sentinel: cand=True auth=False",
+        "errs: cand=[[42467331, 5, 524291]] auth=[]",
+        "pub: cand='00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002' auth='ddc74e099f0a7ed7cc42dda99f1ae76c3a4bfdf8e3a52e8e81a3bf67cc0ea2cfa203847b637094c5f774f1d51286fbd7ebfc5e94c61cfe1a796eb1ade0e5bd46b51044befc0f56dfcc61e219aa1858feac69d3d2f1f360f95515c9fe093daf29634895e7b2f1f2c9c7bb482df43096fb80f398468f59252084e61dab5a607f2fa301d70a60613959e2f77c69e31deabdd7d94a4e7367822f8b411bed9a1ba7c162e5ace3a7e5faef58c89add82a8560468a6615140d6679223f2ef8c3af979e93d926e90d2070d064085ebec911a7d89e07ef5fae03b89ba97404b166f93fa76b79e40d115c31498ff347652eab552ab009165ca8ef630146069b4367df1dcbb'"
+      ],
+      "old_equal": false,
+      "preset": "in_bound_225",
+      "pub_comparable": true
+    },
+    {
+      "auth": {
+        "case": "ffdhe2048/nid/priv_preset_pub_present/short_1bit",
+        "crash": false,
+        "errs": [],
+        "exit": 0,
+        "priv_present_after": true,
+        "pub": "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002",
+        "pub_is_sentinel": true,
+        "pub_present": true,
+        "rc": 1
+      },
+      "cand": {
+        "case": "ffdhe2048/nid/priv_preset_pub_present/short_1bit",
+        "crash": false,
+        "errs": [],
+        "exit": 0,
+        "priv_present_after": true,
+        "pub": "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002",
+        "pub_is_sentinel": true,
+        "pub_present": true,
+        "rc": 1
+      },
+      "case": "ffdhe2048/nid/priv_preset_pub_present/short_1bit",
+      "combo": "priv_preset_pub_present",
+      "diffs": [],
+      "equal": true,
+      "group": "ffdhe2048",
+      "nid": 1126,
+      "old": {
+        "case": "ffdhe2048/nid/priv_preset_pub_present/short_1bit",
+        "crash": false,
+        "errs": [
+          [
+            42467331,
+            5,
+            524291
+          ]
+        ],
+        "exit": 0,
+        "priv_present_after": true,
+        "pub": "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002",
+        "pub_is_sentinel": true,
+        "pub_present": true,
+        "rc": 0
+      },
+      "old_diffs": [
+        "rc: cand=0 auth=1",
+        "errs: cand=[[42467331, 5, 524291]] auth=[]"
+      ],
+      "old_equal": false,
+      "preset": "short_1bit",
+      "pub_comparable": true
+    },
+    {
+      "auth": {
+        "case": "ffdhe2048/nid/priv_preset_pub_present/long_modulus_2048",
+        "crash": false,
+        "errs": [],
+        "exit": 0,
+        "priv_present_after": true,
+        "pub": "2ccef355935adc89ad9ca75f74ce4bf9a4725d53cfc8a98c7e693bb8add2f7c5a5a0507c7b599fa9d697744f4de6a690ae560c2d02bcba104c91e119bf21fd9cbef4258524266a2302a111ac6427c8656db701d43e8892e962e74b8faca84d8c9bae457a69f99c6ca68c1b6a8a24cb3c9d8900e66664f3b3d1b4926b5ca2c7f937a0baa9dabe4827e55054430a6eaf1a43c224f485d6a2d29f9aea569a50e8d55749d2d3f37cbe0d0805a2e699017c4afd013518eb4a34975f5f8c6b613f8956fd27845c56f2cbf73fd67451d0f4ecb8b3a262b7006ff524a2388e761c001d1090f92846e7feb4f60a9a13a0bfaf218f07b9c4b194e6ee5fb5e7c60d08861572",
+        "pub_is_sentinel": false,
+        "pub_present": true,
+        "rc": 1
+      },
+      "cand": {
+        "case": "ffdhe2048/nid/priv_preset_pub_present/long_modulus_2048",
+        "crash": false,
+        "errs": [],
+        "exit": 0,
+        "priv_present_after": true,
+        "pub": "2ccef355935adc89ad9ca75f74ce4bf9a4725d53cfc8a98c7e693bb8add2f7c5a5a0507c7b599fa9d697744f4de6a690ae560c2d02bcba104c91e119bf21fd9cbef4258524266a2302a111ac6427c8656db701d43e8892e962e74b8faca84d8c9bae457a69f99c6ca68c1b6a8a24cb3c9d8900e66664f3b3d1b4926b5ca2c7f937a0baa9dabe4827e55054430a6eaf1a43c224f485d6a2d29f9aea569a50e8d55749d2d3f37cbe0d0805a2e699017c4afd013518eb4a34975f5f8c6b613f8956fd27845c56f2cbf73fd67451d0f4ecb8b3a262b7006ff524a2388e761c001d1090f92846e7feb4f60a9a13a0bfaf218f07b9c4b194e6ee5fb5e7c60d08861572",
+        "pub_is_sentinel": false,
+        "pub_present": true,
+        "rc": 1
+      },
+      "case": "ffdhe2048/nid/priv_preset_pub_present/long_modulus_2048",
+      "combo": "priv_preset_pub_present",
+      "diffs": [],
+      "equal": true,
+      "group": "ffdhe2048",
+      "nid": 1126,
+      "old": {
+        "case": "ffdhe2048/nid/priv_preset_pub_present/long_modulus_2048",
+        "crash": false,
+        "errs": [
+          [
+            42467331,
+            5,
+            524291
+          ]
+        ],
+        "exit": 0,
+        "priv_present_after": true,
+        "pub": "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002",
+        "pub_is_sentinel": true,
+        "pub_present": true,
+        "rc": 0
+      },
+      "old_diffs": [
+        "rc: cand=0 auth=1",
+        "pub_is_sentinel: cand=True auth=False",
+        "errs: cand=[[42467331, 5, 524291]] auth=[]",
+        "pub: cand='00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002' auth='2ccef355935adc89ad9ca75f74ce4bf9a4725d53cfc8a98c7e693bb8add2f7c5a5a0507c7b599fa9d697744f4de6a690ae560c2d02bcba104c91e119bf21fd9cbef4258524266a2302a111ac6427c8656db701d43e8892e962e74b8faca84d8c9bae457a69f99c6ca68c1b6a8a24cb3c9d8900e66664f3b3d1b4926b5ca2c7f937a0baa9dabe4827e55054430a6eaf1a43c224f485d6a2d29f9aea569a50e8d55749d2d3f37cbe0d0805a2e699017c4afd013518eb4a34975f5f8c6b613f8956fd27845c56f2cbf73fd67451d0f4ecb8b3a262b7006ff524a2388e761c001d1090f92846e7feb4f60a9a13a0bfaf218f07b9c4b194e6ee5fb5e7c60d08861572'"
+      ],
+      "old_equal": false,
+      "preset": "long_modulus_2048",
+      "pub_comparable": true
+    },
+    {
+      "auth": {
+        "case": "ffdhe2048/nid/priv_preset_pub_present/long_2400bit",
+        "crash": false,
+        "errs": [],
+        "exit": 0,
+        "priv_present_after": true,
+        "pub": "55edb9a4c08fe9e7cc8f8e8477e03b11e576f6484550a3109db210dfd045e7132b382123f40d282fd665bc6f388f85e605b618376b885a6f8118673476acc7360143563a5a1e340dc571b22752302a57e197a27bbcc24421f8e846328414f28e8491630f18620a3079e731ebcb50c3293ce3c4512d9b79ab030984a1c594ae8c1ccdcbf728d45a4b5138d0b3f3cb0ea5011569890282d1a2675007b04bc6e6e046f7c29d7ba3b97dcab10f1a8ff7c6da6c8c79dbdcfdbe013eedd8584f16a7ec4ae5eafd53440a04c9318ee748c5424c80afad5b592841ccce2b0219b363cfbcc07b1e9c18616b3e2becf1d31e2826d8ffdb90ba1c1e9ace9f263779fc85e662",
+        "pub_is_sentinel": false,
+        "pub_present": true,
+        "rc": 1
+      },
+      "cand": {
+        "case": "ffdhe2048/nid/priv_preset_pub_present/long_2400bit",
+        "crash": false,
+        "errs": [
+          [
+            42467331,
+            5,
+            524291
+          ]
+        ],
+        "exit": 0,
+        "priv_present_after": true,
+        "pub": "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002",
+        "pub_is_sentinel": true,
+        "pub_present": true,
+        "rc": 0
+      },
+      "case": "ffdhe2048/nid/priv_preset_pub_present/long_2400bit",
+      "combo": "priv_preset_pub_present",
+      "diffs": [
+        "rc: cand=0 auth=1",
+        "pub_is_sentinel: cand=True auth=False",
+        "errs: cand=[[42467331, 5, 524291]] auth=[]",
+        "pub: cand='00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002' auth='55edb9a4c08fe9e7cc8f8e8477e03b11e576f6484550a3109db210dfd045e7132b382123f40d282fd665bc6f388f85e605b618376b885a6f8118673476acc7360143563a5a1e340dc571b22752302a57e197a27bbcc24421f8e846328414f28e8491630f18620a3079e731ebcb50c3293ce3c4512d9b79ab030984a1c594ae8c1ccdcbf728d45a4b5138d0b3f3cb0ea5011569890282d1a2675007b04bc6e6e046f7c29d7ba3b97dcab10f1a8ff7c6da6c8c79dbdcfdbe013eedd8584f16a7ec4ae5eafd53440a04c9318ee748c5424c80afad5b592841ccce2b0219b363cfbcc07b1e9c18616b3e2becf1d31e2826d8ffdb90ba1c1e9ace9f263779fc85e662'"
+      ],
+      "equal": false,
+      "group": "ffdhe2048",
+      "nid": 1126,
+      "old": {
+        "case": "ffdhe2048/nid/priv_preset_pub_present/long_2400bit",
+        "crash": false,
+        "errs": [
+          [
+            42467331,
+            5,
+            524291
+          ]
+        ],
+        "exit": 0,
+        "priv_present_after": true,
+        "pub": "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002",
+        "pub_is_sentinel": true,
+        "pub_present": true,
+        "rc": 0
+      },
+      "old_diffs": [],
+      "old_equal": true,
+      "preset": "long_2400bit",
+      "pub_comparable": true
+    },
+    {
+      "auth": {
+        "case": "ffdhe3072/nid/priv_absent_pub_absent",
+        "crash": false,
+        "errs": [],
+        "exit": 0,
+        "priv_present_after": true,
+        "pub": "48bf0cc9b6e9e1abd7068e952f1e966b3b7f6ac0bdf70484ba9d4a9957c09a3b1678ca572b3e1c56bed865e972a0ed468eb989ced930fac53a5ebb6219a0b5dd7e6a47f2e2d894e8b1a39d325c1b932a0f0bfb6cb29578e6a03b2c0b8ad237b7671e3c0a2d234a8392d8a44c2b2546e1a0316c6d7c67b4ea2a8a4b4cb87903d2e74b7fd8d748b1f82dfc642cbf265c363a7ed069fd94174a891ca2757823fde7df801da38f2815f4c5171785565de0cb18d2b556657285a7a43602fe7a510d56e9160a1db6de73d058a4e6431494a67f8397c0daf189b891b5be1bf45260c68a2be88e6408f024b2790c6426dcfa8146dfcbd40f1c841a126dd5a6663189d570c6845fab7d6dd7cb4db6c161a8bf69db9bad7c0797caf11f5044fed3a67df13cdc1207a6a84d2db82ba7261eb3ecb1cbbb977f7ceb02ba448450886e8cd0294bdeb33bf0fc6fb81dc1cf10ba0859d912ba4de7da42ecad28ca21e52663238b092f2579d94bb922b14a8d810f083f487b8be1435783c6d159e4226ca9155aa467",
+        "pub_is_sentinel": false,
+        "pub_present": true,
+        "rc": 1
+      },
+      "cand": {
+        "case": "ffdhe3072/nid/priv_absent_pub_absent",
+        "crash": false,
+        "errs": [],
+        "exit": 0,
+        "priv_present_after": true,
+        "pub": "3808ee5ee61d7f6b5d12c9633dad4d169e82187c15213406f1a4c4e45e099d9d8c3b5678912ece7c9cdc9f4a4ca9bcabae209c1117893ac9e881d5e7efcaa15eddc4eb5b6d4b3f56694ac6d5c5e532778822d6dedec056ee1c421258de1a61582d526d2a6cad6034e2180fbe0863ae777370174ec2ccbb8814817ecb7420bb3a127943c51c461e6f655908926e3f87d2ae52a434871863b8f9b123def3aff01f63a99f5ce2efccbadb47778186be0030e0247a9d8d0dae37944eed59e8ec4346a46efb4f66267fe3ede591f94fd3d8e91cb22c9d7331344f45e31eb233637acfa4701ba355824663c20a9f9e39ce8624e45cf5c1b0dd29c56c0c3abe1fbcd9f3791b2f5c2b9637a77861705ca14b3d17b158e3c37f968fef97dec041f7eb42ad95f5677f08d0284a894330df3f2890119aae1273d82032104f5e7fce5ea716f298a9453238b28d72b1c3d11496f1ffa425eb00a5ae1a6fd50debaf2ebfc47c9068e0c710481a6e7ce2af264611dd9877c0714608f2822f92bd918161dd8ec8f7",
+        "pub_is_sentinel": false,
+        "pub_present": true,
+        "rc": 1
+      },
+      "case": "ffdhe3072/nid/priv_absent_pub_absent",
+      "combo": "priv_absent_pub_absent",
+      "diffs": [],
+      "equal": true,
+      "group": "ffdhe3072",
+      "nid": 1127,
+      "old": {
+        "case": "ffdhe3072/nid/priv_absent_pub_absent",
+        "crash": false,
+        "errs": [],
+        "exit": 0,
+        "priv_present_after": true,
+        "pub": "0df06324138177d5f37ca9040383d3b2142b4aecc784977761997ef8a5e8976071f151a1a37e328cff320b14c485f3e50375298a13937d6d4bf8b75585f1ad0cc688c2b26f27584fe35cb7e5a169a49d0acbcaa850f92989c945b6ced25c19b5b0403bdae17a384b71d8197f2f9120ce52a18933ebb8e08ca33a8ac84cb43de8e30a133788335b9e26b83b8868a17988437b9e315d4766f92008f756b50b6a51ed5007019a4c014dd0bc209412a19710b5b376f5e379116a3acde4eb70546a2fb7dceccd4bf22555475c41f3fe494df4eedbc8bf871c4f90323798abf759629206c2931efd4b9340babe2aced407e79dbbfa4dd103392bfeb3bac410d6250672a03ff852b64410c8887439bcb53943f29633fde45e5edf8c9519b5b404853557cfa33c1a84e23ea4dfa89779a8aa0ecb2bff33e6970507c0ce27d1ebecf66de972f63c7f532ea5e124b1e79d8eee467e221cb142f6d150b5fa5f0030007c86d91719b49c89d3503f5dfe4e94852f5fa2aafc54daa9b613999afa9cfb382701c0",
+        "pub_is_sentinel": false,
+        "pub_present": true,
+        "rc": 1
+      },
+      "old_diffs": [],
+      "old_equal": true,
+      "preset": "none",
+      "pub_comparable": false
+    },
+    {
+      "auth": {
+        "case": "ffdhe3072/nid/priv_preset_pub_absent/in_bound_225",
+        "crash": false,
+        "errs": [],
+        "exit": 0,
+        "priv_present_after": true,
+        "pub": "2d3712adf096f4e09265a854b6dab03156558ec98dab1d03d3559beba1e77c3643964734581b9b043a038b7b02108f2c24b03e4f76ae748f042771b45fd3aa861938dea61c4e23786b3265f4fb7b7578779cfa80e215859cc971b5b33ef0a321c0a9e39a421c7d6b21e491a6114b719957de35f52eb8f1ec852ac540d970b83444d1a28e6a1df282caa95e858f047e0ffd8f3df8e914c037c2d7c789b891f6da426c804d57a12858b479d5af6d54fedfb9a393129c0e001711073020c058e59777412d29a31991c12b8817579159a5626a6bd09d10f9d719cf902a077fa0510d3f49850864c9171f9cc09951531614a55061bed2cab155105ab18f2c6ade6882bf415870e38447449515c3b824b4af6fe8f514cd1dd9aaa07505151f1b10b85eabc1a1307125821f65efad0720ce4f88087a8b56e72d25c074247c4bfea0b056aa9de9661b9a14ca08864f0bbbc88b27bb79b42d526dd2f1965765d8a412a3247f591d9d9344f50e459db1653257e5dd72eece5cfb0652a5b8481be134b2c199",
+        "pub_is_sentinel": false,
+        "pub_present": true,
+        "rc": 1
+      },
+      "cand": {
+        "case": "ffdhe3072/nid/priv_preset_pub_absent/in_bound_225",
+        "crash": false,
+        "errs": [],
+        "exit": 0,
+        "priv_present_after": true,
+        "pub": "2d3712adf096f4e09265a854b6dab03156558ec98dab1d03d3559beba1e77c3643964734581b9b043a038b7b02108f2c24b03e4f76ae748f042771b45fd3aa861938dea61c4e23786b3265f4fb7b7578779cfa80e215859cc971b5b33ef0a321c0a9e39a421c7d6b21e491a6114b719957de35f52eb8f1ec852ac540d970b83444d1a28e6a1df282caa95e858f047e0ffd8f3df8e914c037c2d7c789b891f6da426c804d57a12858b479d5af6d54fedfb9a393129c0e001711073020c058e59777412d29a31991c12b8817579159a5626a6bd09d10f9d719cf902a077fa0510d3f49850864c9171f9cc09951531614a55061bed2cab155105ab18f2c6ade6882bf415870e38447449515c3b824b4af6fe8f514cd1dd9aaa07505151f1b10b85eabc1a1307125821f65efad0720ce4f88087a8b56e72d25c074247c4bfea0b056aa9de9661b9a14ca08864f0bbbc88b27bb79b42d526dd2f1965765d8a412a3247f591d9d9344f50e459db1653257e5dd72eece5cfb0652a5b8481be134b2c199",
+        "pub_is_sentinel": false,
+        "pub_present": true,
+        "rc": 1
+      },
+      "case": "ffdhe3072/nid/priv_preset_pub_absent/in_bound_225",
+      "combo": "priv_preset_pub_absent",
+      "diffs": [],
+      "equal": true,
+      "group": "ffdhe3072",
+      "nid": 1127,
+      "old": {
+        "case": "ffdhe3072/nid/priv_preset_pub_absent/in_bound_225",
+        "crash": false,
+        "errs": [
+          [
+            42467331,
+            5,
+            524291
+          ]
+        ],
+        "exit": 0,
+        "priv_present_after": true,
+        "pub": null,
+        "pub_is_sentinel": false,
+        "pub_present": false,
+        "rc": 0
+      },
+      "old_diffs": [
+        "rc: cand=0 auth=1",
+        "pub_present: cand=False auth=True",
+        "errs: cand=[[42467331, 5, 524291]] auth=[]",
+        "pub: cand=None auth='2d3712adf096f4e09265a854b6dab03156558ec98dab1d03d3559beba1e77c3643964734581b9b043a038b7b02108f2c24b03e4f76ae748f042771b45fd3aa861938dea61c4e23786b3265f4fb7b7578779cfa80e215859cc971b5b33ef0a321c0a9e39a421c7d6b21e491a6114b719957de35f52eb8f1ec852ac540d970b83444d1a28e6a1df282caa95e858f047e0ffd8f3df8e914c037c2d7c789b891f6da426c804d57a12858b479d5af6d54fedfb9a393129c0e001711073020c058e59777412d29a31991c12b8817579159a5626a6bd09d10f9d719cf902a077fa0510d3f49850864c9171f9cc09951531614a55061bed2cab155105ab18f2c6ade6882bf415870e38447449515c3b824b4af6fe8f514cd1dd9aaa07505151f1b10b85eabc1a1307125821f65efad0720ce4f88087a8b56e72d25c074247c4bfea0b056aa9de9661b9a14ca08864f0bbbc88b27bb79b42d526dd2f1965765d8a412a3247f591d9d9344f50e459db1653257e5dd72eece5cfb0652a5b8481be134b2c199'"
+      ],
+      "old_equal": false,
+      "preset": "in_bound_225",
+      "pub_comparable": true
+    },
+    {
+      "auth": {
+        "case": "ffdhe3072/nid/priv_preset_pub_absent/short_1bit",
+        "crash": false,
+        "errs": [],
+        "exit": 0,
+        "priv_present_after": true,
+        "pub": "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002",
+        "pub_is_sentinel": false,
+        "pub_present": true,
+        "rc": 1
+      },
+      "cand": {
+        "case": "ffdhe3072/nid/priv_preset_pub_absent/short_1bit",
+        "crash": false,
+        "errs": [],
+        "exit": 0,
+        "priv_present_after": true,
+        "pub": "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002",
+        "pub_is_sentinel": false,
+        "pub_present": true,
+        "rc": 1
+      },
+      "case": "ffdhe3072/nid/priv_preset_pub_absent/short_1bit",
+      "combo": "priv_preset_pub_absent",
+      "diffs": [],
+      "equal": true,
+      "group": "ffdhe3072",
+      "nid": 1127,
+      "old": {
+        "case": "ffdhe3072/nid/priv_preset_pub_absent/short_1bit",
+        "crash": false,
+        "errs": [
+          [
+            42467331,
+            5,
+            524291
+          ]
+        ],
+        "exit": 0,
+        "priv_present_after": true,
+        "pub": null,
+        "pub_is_sentinel": false,
+        "pub_present": false,
+        "rc": 0
+      },
+      "old_diffs": [
+        "rc: cand=0 auth=1",
+        "pub_present: cand=False auth=True",
+        "errs: cand=[[42467331, 5, 524291]] auth=[]",
+        "pub: cand=None auth='000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002'"
+      ],
+      "old_equal": false,
+      "preset": "short_1bit",
+      "pub_comparable": true
+    },
+    {
+      "auth": {
+        "case": "ffdhe3072/nid/priv_preset_pub_absent/long_modulus_2048",
+        "crash": false,
+        "errs": [],
+        "exit": 0,
+        "priv_present_after": true,
+        "pub": "db929ae8f7128633ff0e16010322b9dd2cc5d9dc54423c5ba6898e25f311e05efa7da5567b8e58dc977c9be292b4ba6f8946e72f85a0d2ca29430a97478701d3d437a7f75751a882cb22dbdaf97806aa65380d18c9c03d3e122b31789ae25d440606e47eba88dbb95f8d810c3054caefbf1357a7bf6c837cda3ebef8ede56a49fbdab5835b3ebdc607c887f869308f754435bf16275f7d9b9870a78c28f716f95fd18bd4b37a95d39d56b385c452c69388beda6ae4dc5d1fa8fd3f3d4ceff135b759203b1d3b27fc026102ca8d1428d813599a0d2e7492b620d4a486eb46f215844f704b0983f0835645285efa2def3eb6bec69ccd8ccfeff67cf4110e17434016bf0c1531b0b61b767050f3468d3709e8e69b478120d0b21d26864dd06913ab4813f3d18f31eb81b6c7e6494c2c0cdcaa5aa9b8dfe660d5b6c32da3484f0e6d67088718f622fef3ffe9d75f316e048fcd7b241789c47b6a2dd8185df56e6c7d65c33dc4e2293582f52736fa3db53d67d02e8f62ba3534ce5244cee9f8a962e0",
+        "pub_is_sentinel": false,
+        "pub_present": true,
+        "rc": 1
+      },
+      "cand": {
+        "case": "ffdhe3072/nid/priv_preset_pub_absent/long_modulus_2048",
+        "crash": false,
+        "errs": [],
+        "exit": 0,
+        "priv_present_after": true,
+        "pub": "db929ae8f7128633ff0e16010322b9dd2cc5d9dc54423c5ba6898e25f311e05efa7da5567b8e58dc977c9be292b4ba6f8946e72f85a0d2ca29430a97478701d3d437a7f75751a882cb22dbdaf97806aa65380d18c9c03d3e122b31789ae25d440606e47eba88dbb95f8d810c3054caefbf1357a7bf6c837cda3ebef8ede56a49fbdab5835b3ebdc607c887f869308f754435bf16275f7d9b9870a78c28f716f95fd18bd4b37a95d39d56b385c452c69388beda6ae4dc5d1fa8fd3f3d4ceff135b759203b1d3b27fc026102ca8d1428d813599a0d2e7492b620d4a486eb46f215844f704b0983f0835645285efa2def3eb6bec69ccd8ccfeff67cf4110e17434016bf0c1531b0b61b767050f3468d3709e8e69b478120d0b21d26864dd06913ab4813f3d18f31eb81b6c7e6494c2c0cdcaa5aa9b8dfe660d5b6c32da3484f0e6d67088718f622fef3ffe9d75f316e048fcd7b241789c47b6a2dd8185df56e6c7d65c33dc4e2293582f52736fa3db53d67d02e8f62ba3534ce5244cee9f8a962e0",
+        "pub_is_sentinel": false,
+        "pub_present": true,
+        "rc": 1
+      },
+      "case": "ffdhe3072/nid/priv_preset_pub_absent/long_modulus_2048",
+      "combo": "priv_preset_pub_absent",
+      "diffs": [],
+      "equal": true,
+      "group": "ffdhe3072",
+      "nid": 1127,
+      "old": {
+        "case": "ffdhe3072/nid/priv_preset_pub_absent/long_modulus_2048",
+        "crash": false,
+        "errs": [
+          [
+            42467331,
+            5,
+            524291
+          ]
+        ],
+        "exit": 0,
+        "priv_present_after": true,
+        "pub": null,
+        "pub_is_sentinel": false,
+        "pub_present": false,
+        "rc": 0
+      },
+      "old_diffs": [
+        "rc: cand=0 auth=1",
+        "pub_present: cand=False auth=True",
+        "errs: cand=[[42467331, 5, 524291]] auth=[]",
+        "pub: cand=None auth='db929ae8f7128633ff0e16010322b9dd2cc5d9dc54423c5ba6898e25f311e05efa7da5567b8e58dc977c9be292b4ba6f8946e72f85a0d2ca29430a97478701d3d437a7f75751a882cb22dbdaf97806aa65380d18c9c03d3e122b31789ae25d440606e47eba88dbb95f8d810c3054caefbf1357a7bf6c837cda3ebef8ede56a49fbdab5835b3ebdc607c887f869308f754435bf16275f7d9b9870a78c28f716f95fd18bd4b37a95d39d56b385c452c69388beda6ae4dc5d1fa8fd3f3d4ceff135b759203b1d3b27fc026102ca8d1428d813599a0d2e7492b620d4a486eb46f215844f704b0983f0835645285efa2def3eb6bec69ccd8ccfeff67cf4110e17434016bf0c1531b0b61b767050f3468d3709e8e69b478120d0b21d26864dd06913ab4813f3d18f31eb81b6c7e6494c2c0cdcaa5aa9b8dfe660d5b6c32da3484f0e6d67088718f622fef3ffe9d75f316e048fcd7b241789c47b6a2dd8185df56e6c7d65c33dc4e2293582f52736fa3db53d67d02e8f62ba3534ce5244cee9f8a962e0'"
+      ],
+      "old_equal": false,
+      "preset": "long_modulus_2048",
+      "pub_comparable": true
+    },
+    {
+      "auth": {
+        "case": "ffdhe3072/nid/priv_preset_pub_absent/long_2400bit",
+        "crash": false,
+        "errs": [],
+        "exit": 0,
+        "priv_present_after": true,
+        "pub": "86ab3e17475f99a444d1d6eec21ef65f0eb44c1f8f46236b69b036f3cf2422b4253a2eb70c52f79420b564237a479ad6a2cf8293d25a2f7600097834265c178b42a5880ab540d00f8e8845ecb1d24be393f0df43da3e9e90849573e4bfc214580d2efaacaf111f264a335af96b0c050f22ce79e67a768625b547f5bee8c1c9a356ea25f4cffbf7e1c10e64937d97c832c68efbabf310b466f8cff224dfcffa0e37177fd1c06b35b57297ef62667414c7c5b27c44f5d3b74138ccd632be7f390fa7056ac63ef8735348abadc93ab80e56791ec14acb074a1095b69fc7f64f31cd62fd0d1a817f432f5bbe01e5f3cbd6035e9035b17976705590935da115253b275b8eb3e3b9e86101a3a93f6629e979e5abbe0406830cbd9e15a02785faed49eb1a6df7bf30b100ed5ff8f996ec697fc583e06486cfe31192a898d870c5b991b610bd82f838786fdd0e8904c249841ecd6377d4c646365f62830c7f66a5ef9a5e47f550378620d79ad95c369de23b576987386b090115450a1e8eca9b66e8be9d",
+        "pub_is_sentinel": false,
+        "pub_present": true,
+        "rc": 1
+      },
+      "cand": {
+        "case": "ffdhe3072/nid/priv_preset_pub_absent/long_2400bit",
+        "crash": false,
+        "errs": [],
+        "exit": 0,
+        "priv_present_after": true,
+        "pub": "86ab3e17475f99a444d1d6eec21ef65f0eb44c1f8f46236b69b036f3cf2422b4253a2eb70c52f79420b564237a479ad6a2cf8293d25a2f7600097834265c178b42a5880ab540d00f8e8845ecb1d24be393f0df43da3e9e90849573e4bfc214580d2efaacaf111f264a335af96b0c050f22ce79e67a768625b547f5bee8c1c9a356ea25f4cffbf7e1c10e64937d97c832c68efbabf310b466f8cff224dfcffa0e37177fd1c06b35b57297ef62667414c7c5b27c44f5d3b74138ccd632be7f390fa7056ac63ef8735348abadc93ab80e56791ec14acb074a1095b69fc7f64f31cd62fd0d1a817f432f5bbe01e5f3cbd6035e9035b17976705590935da115253b275b8eb3e3b9e86101a3a93f6629e979e5abbe0406830cbd9e15a02785faed49eb1a6df7bf30b100ed5ff8f996ec697fc583e06486cfe31192a898d870c5b991b610bd82f838786fdd0e8904c249841ecd6377d4c646365f62830c7f66a5ef9a5e47f550378620d79ad95c369de23b576987386b090115450a1e8eca9b66e8be9d",
+        "pub_is_sentinel": false,
+        "pub_present": true,
+        "rc": 1
+      },
+      "case": "ffdhe3072/nid/priv_preset_pub_absent/long_2400bit",
+      "combo": "priv_preset_pub_absent",
+      "diffs": [],
+      "equal": true,
+      "group": "ffdhe3072",
+      "nid": 1127,
+      "old": {
+        "case": "ffdhe3072/nid/priv_preset_pub_absent/long_2400bit",
+        "crash": false,
+        "errs": [
+          [
+            42467331,
+            5,
+            524291
+          ]
+        ],
+        "exit": 0,
+        "priv_present_after": true,
+        "pub": null,
+        "pub_is_sentinel": false,
+        "pub_present": false,
+        "rc": 0
+      },
+      "old_diffs": [
+        "rc: cand=0 auth=1",
+        "pub_present: cand=False auth=True",
+        "errs: cand=[[42467331, 5, 524291]] auth=[]",
+        "pub: cand=None auth='86ab3e17475f99a444d1d6eec21ef65f0eb44c1f8f46236b69b036f3cf2422b4253a2eb70c52f79420b564237a479ad6a2cf8293d25a2f7600097834265c178b42a5880ab540d00f8e8845ecb1d24be393f0df43da3e9e90849573e4bfc214580d2efaacaf111f264a335af96b0c050f22ce79e67a768625b547f5bee8c1c9a356ea25f4cffbf7e1c10e64937d97c832c68efbabf310b466f8cff224dfcffa0e37177fd1c06b35b57297ef62667414c7c5b27c44f5d3b74138ccd632be7f390fa7056ac63ef8735348abadc93ab80e56791ec14acb074a1095b69fc7f64f31cd62fd0d1a817f432f5bbe01e5f3cbd6035e9035b17976705590935da115253b275b8eb3e3b9e86101a3a93f6629e979e5abbe0406830cbd9e15a02785faed49eb1a6df7bf30b100ed5ff8f996ec697fc583e06486cfe31192a898d870c5b991b610bd82f838786fdd0e8904c249841ecd6377d4c646365f62830c7f66a5ef9a5e47f550378620d79ad95c369de23b576987386b090115450a1e8eca9b66e8be9d'"
+      ],
+      "old_equal": false,
+      "preset": "long_2400bit",
+      "pub_comparable": true
+    },
+    {
+      "auth": {
+        "case": "ffdhe3072/nid/priv_absent_pub_present",
+        "crash": false,
+        "errs": [],
+        "exit": 0,
+        "priv_present_after": true,
+        "pub": "c821f7923e8ab9c99bd3f79ed846ffce56c1f5a85dda3a580bae906fa87d6f122b981521dcb58521f773b5d6b67ba656c915fb9a2dc0dfac47cc581289ea34ad36ea7c7247a7d2e03b2787023c0ba384be8750358291d12de16e8ca7211e8d2f8df4b355e4d430148d590825ec0b3b84327572d920d993d6e6b89cdd056491f217ac86969ea083c5f02b75df07bd79e58d03d4d4c1a62d0db3738fa8646e3e32ecc9f2f8d118efeb741b091696de84db92ef6a95afa339bbc3cb5612ce54dbdb4a22c7f5292ad5f5582e87e946b30209657ec0915dc70444c6da211e3f290f6f97ee023c2281a710ac3919e103542c817816e4def80586de50f1e42e8b4763f50d8180a5c6f92bd3845c9c06632ec8025e2503a5e35344f6663a8c94869fc5d9c3b7c54ce7f71e6f4ad205de1af8fea029660336dd16551dac24fd781e8b9a7456ecc1f2d60c43852045a2d03a4c179428f7113764a4d829ea12c5f590215267ed84cdc55ecf52d2619936dffc39e1074c5aae7156cbc2d8c399098ce6c95545",
+        "pub_is_sentinel": false,
+        "pub_present": true,
+        "rc": 1
+      },
+      "cand": {
+        "case": "ffdhe3072/nid/priv_absent_pub_present",
+        "crash": false,
+        "errs": [],
+        "exit": 0,
+        "priv_present_after": true,
+        "pub": "6dfde40db03a3aef5a0431c9fbee12fa2f331434caff3a4e8a2db3df18e53a30a4cc82496eb8bc3294c18dd5e85f5b1cd3558012848bf2993d11f5796ffbe0aac7180af5f414749fda136cef02c5cfc8a7b7789714dff21aff7e10fdbab30db073c3eb7d20c0d7a8d61bfc20ba6a1518fa1bb9d107bbfa5b08af1ff3cf0091081f48c98057af3b63897edafeda29d8def1a50934e0a00678b202a12646633fb0c5b80dd47e9e78579bb700c0723b0eb430078be7851b2220ac928020549dd80af9275f1d8d89b17452266538a2bda692843d5674094c814b05711a21a28748c566a2a5ff3ecc654b5be028575716ef68632f1b01bd69c312a90e440112512e130ca18a4505fbd21affe56a27df7bfc1bb5601f2560ebc047750bc68c7d97aad8691f74600c4322a4a05ebd185e401cef3e5f52285f7fc054bcd41536f2d3a409d7f8fcb818630cfd5a6e1f11f7a44fb39f702d7d39979ebbea5af496b81e51ad2e60957baa0deeb00bc4fb36f06779bcbdcb4d50e0f995ddb3a9ad487359a9b0",
+        "pub_is_sentinel": false,
+        "pub_present": true,
+        "rc": 1
+      },
+      "case": "ffdhe3072/nid/priv_absent_pub_present",
+      "combo": "priv_absent_pub_present",
+      "diffs": [],
+      "equal": true,
+      "group": "ffdhe3072",
+      "nid": 1127,
+      "old": {
+        "case": "ffdhe3072/nid/priv_absent_pub_present",
+        "crash": false,
+        "errs": [],
+        "exit": 0,
+        "priv_present_after": true,
+        "pub": "af78d61249a5bb705af5b11d6235167ed3e369da2f5ec6b0355e46c6c4926d9ba887c726e56eb8dfb4fd0e72e29ab76bd0d0e7d6c41d27b13405996cb25d9f41d7363e128bc92fa2787f66691bc0f252cb4fcd036c4f370006fc0626e0d844dd5121cfb46568bfa3e1e2e13ae56c597bf17d97b459ce9ae38da328a947dd4ab49bdd96c0839880d21f641f9c8477843556e3436fcadb1c03dc88440762a3a26c5c703a4eaceef23b11e826dc51969da1ad0f955be0ab707ce4560aae60b5b8031b8a60234d00a0c94ddf1e7de3fbd09b93dfe743ee152fe0c096caa860e31161bc9f42ed4b14028b6c51b3bf925e7682cee154326b61f4f3cde94d45e4dcf3e0479c68a2ae4d3c4ae2e5d47a3d2f891e783dba09c5630832edd915a3fa9a20793a1f2a6a9de8232fdf254f764daf850152bc23996819c9faf565f7ceeda6a638c0cbf2dbf72257f5cda471aee4e549ac58aef4f47b770d0f65a7fa65d63b2fc6804f7b82cbc689d7e943518e5d191d3f1fc6ae891547e881332e4e2f6879a47c",
+        "pub_is_sentinel": false,
+        "pub_present": true,
+        "rc": 1
+      },
+      "old_diffs": [],
+      "old_equal": true,
+      "preset": "none",
+      "pub_comparable": false
+    },
+    {
+      "auth": {
+        "case": "ffdhe3072/nid/priv_preset_pub_present/in_bound_225",
+        "crash": false,
+        "errs": [],
+        "exit": 0,
+        "priv_present_after": true,
+        "pub": "2d3712adf096f4e09265a854b6dab03156558ec98dab1d03d3559beba1e77c3643964734581b9b043a038b7b02108f2c24b03e4f76ae748f042771b45fd3aa861938dea61c4e23786b3265f4fb7b7578779cfa80e215859cc971b5b33ef0a321c0a9e39a421c7d6b21e491a6114b719957de35f52eb8f1ec852ac540d970b83444d1a28e6a1df282caa95e858f047e0ffd8f3df8e914c037c2d7c789b891f6da426c804d57a12858b479d5af6d54fedfb9a393129c0e001711073020c058e59777412d29a31991c12b8817579159a5626a6bd09d10f9d719cf902a077fa0510d3f49850864c9171f9cc09951531614a55061bed2cab155105ab18f2c6ade6882bf415870e38447449515c3b824b4af6fe8f514cd1dd9aaa07505151f1b10b85eabc1a1307125821f65efad0720ce4f88087a8b56e72d25c074247c4bfea0b056aa9de9661b9a14ca08864f0bbbc88b27bb79b42d526dd2f1965765d8a412a3247f591d9d9344f50e459db1653257e5dd72eece5cfb0652a5b8481be134b2c199",
+        "pub_is_sentinel": false,
+        "pub_present": true,
+        "rc": 1
+      },
+      "cand": {
+        "case": "ffdhe3072/nid/priv_preset_pub_present/in_bound_225",
+        "crash": false,
+        "errs": [],
+        "exit": 0,
+        "priv_present_after": true,
+        "pub": "2d3712adf096f4e09265a854b6dab03156558ec98dab1d03d3559beba1e77c3643964734581b9b043a038b7b02108f2c24b03e4f76ae748f042771b45fd3aa861938dea61c4e23786b3265f4fb7b7578779cfa80e215859cc971b5b33ef0a321c0a9e39a421c7d6b21e491a6114b719957de35f52eb8f1ec852ac540d970b83444d1a28e6a1df282caa95e858f047e0ffd8f3df8e914c037c2d7c789b891f6da426c804d57a12858b479d5af6d54fedfb9a393129c0e001711073020c058e59777412d29a31991c12b8817579159a5626a6bd09d10f9d719cf902a077fa0510d3f49850864c9171f9cc09951531614a55061bed2cab155105ab18f2c6ade6882bf415870e38447449515c3b824b4af6fe8f514cd1dd9aaa07505151f1b10b85eabc1a1307125821f65efad0720ce4f88087a8b56e72d25c074247c4bfea0b056aa9de9661b9a14ca08864f0bbbc88b27bb79b42d526dd2f1965765d8a412a3247f591d9d9344f50e459db1653257e5dd72eece5cfb0652a5b8481be134b2c199",
+        "pub_is_sentinel": false,
+        "pub_present": true,
+        "rc": 1
+      },
+      "case": "ffdhe3072/nid/priv_preset_pub_present/in_bound_225",
+      "combo": "priv_preset_pub_present",
+      "diffs": [],
+      "equal": true,
+      "group": "ffdhe3072",
+      "nid": 1127,
+      "old": {
+        "case": "ffdhe3072/nid/priv_preset_pub_present/in_bound_225",
+        "crash": false,
+        "errs": [
+          [
+            42467331,
+            5,
+            524291
+          ]
+        ],
+        "exit": 0,
+        "priv_present_after": true,
+        "pub": "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002",
+        "pub_is_sentinel": true,
+        "pub_present": true,
+        "rc": 0
+      },
+      "old_diffs": [
+        "rc: cand=0 auth=1",
+        "pub_is_sentinel: cand=True auth=False",
+        "errs: cand=[[42467331, 5, 524291]] auth=[]",
+        "pub: cand='000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002' auth='2d3712adf096f4e09265a854b6dab03156558ec98dab1d03d3559beba1e77c3643964734581b9b043a038b7b02108f2c24b03e4f76ae748f042771b45fd3aa861938dea61c4e23786b3265f4fb7b7578779cfa80e215859cc971b5b33ef0a321c0a9e39a421c7d6b21e491a6114b719957de35f52eb8f1ec852ac540d970b83444d1a28e6a1df282caa95e858f047e0ffd8f3df8e914c037c2d7c789b891f6da426c804d57a12858b479d5af6d54fedfb9a393129c0e001711073020c058e59777412d29a31991c12b8817579159a5626a6bd09d10f9d719cf902a077fa0510d3f49850864c9171f9cc09951531614a55061bed2cab155105ab18f2c6ade6882bf415870e38447449515c3b824b4af6fe8f514cd1dd9aaa07505151f1b10b85eabc1a1307125821f65efad0720ce4f88087a8b56e72d25c074247c4bfea0b056aa9de9661b9a14ca08864f0bbbc88b27bb79b42d526dd2f1965765d8a412a3247f591d9d9344f50e459db1653257e5dd72eece5cfb0652a5b8481be134b2c199'"
+      ],
+      "old_equal": false,
+      "preset": "in_bound_225",
+      "pub_comparable": true
+    },
+    {
+      "auth": {
+        "case": "ffdhe3072/nid/priv_preset_pub_present/short_1bit",
+        "crash": false,
+        "errs": [],
+        "exit": 0,
+        "priv_present_after": true,
+        "pub": "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002",
+        "pub_is_sentinel": true,
+        "pub_present": true,
+        "rc": 1
+      },
+      "cand": {
+        "case": "ffdhe3072/nid/priv_preset_pub_present/short_1bit",
+        "crash": false,
+        "errs": [],
+        "exit": 0,
+        "priv_present_after": true,
+        "pub": "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002",
+        "pub_is_sentinel": true,
+        "pub_present": true,
+        "rc": 1
+      },
+      "case": "ffdhe3072/nid/priv_preset_pub_present/short_1bit",
+      "combo": "priv_preset_pub_present",
+      "diffs": [],
+      "equal": true,
+      "group": "ffdhe3072",
+      "nid": 1127,
+      "old": {
+        "case": "ffdhe3072/nid/priv_preset_pub_present/short_1bit",
+        "crash": false,
+        "errs": [
+          [
+            42467331,
+            5,
+            524291
+          ]
+        ],
+        "exit": 0,
+        "priv_present_after": true,
+        "pub": "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002",
+        "pub_is_sentinel": true,
+        "pub_present": true,
+        "rc": 0
+      },
+      "old_diffs": [
+        "rc: cand=0 auth=1",
+        "errs: cand=[[42467331, 5, 524291]] auth=[]"
+      ],
+      "old_equal": false,
+      "preset": "short_1bit",
+      "pub_comparable": true
+    },
+    {
+      "auth": {
+        "case": "ffdhe3072/nid/priv_preset_pub_present/long_modulus_2048",
+        "crash": false,
+        "errs": [],
+        "exit": 0,
+        "priv_present_after": true,
+        "pub": "db929ae8f7128633ff0e16010322b9dd2cc5d9dc54423c5ba6898e25f311e05efa7da5567b8e58dc977c9be292b4ba6f8946e72f85a0d2ca29430a97478701d3d437a7f75751a882cb22dbdaf97806aa65380d18c9c03d3e122b31789ae25d440606e47eba88dbb95f8d810c3054caefbf1357a7bf6c837cda3ebef8ede56a49fbdab5835b3ebdc607c887f869308f754435bf16275f7d9b9870a78c28f716f95fd18bd4b37a95d39d56b385c452c69388beda6ae4dc5d1fa8fd3f3d4ceff135b759203b1d3b27fc026102ca8d1428d813599a0d2e7492b620d4a486eb46f215844f704b0983f0835645285efa2def3eb6bec69ccd8ccfeff67cf4110e17434016bf0c1531b0b61b767050f3468d3709e8e69b478120d0b21d26864dd06913ab4813f3d18f31eb81b6c7e6494c2c0cdcaa5aa9b8dfe660d5b6c32da3484f0e6d67088718f622fef3ffe9d75f316e048fcd7b241789c47b6a2dd8185df56e6c7d65c33dc4e2293582f52736fa3db53d67d02e8f62ba3534ce5244cee9f8a962e0",
+        "pub_is_sentinel": false,
+        "pub_present": true,
+        "rc": 1
+      },
+      "cand": {
+        "case": "ffdhe3072/nid/priv_preset_pub_present/long_modulus_2048",
+        "crash": false,
+        "errs": [],
+        "exit": 0,
+        "priv_present_after": true,
+        "pub": "db929ae8f7128633ff0e16010322b9dd2cc5d9dc54423c5ba6898e25f311e05efa7da5567b8e58dc977c9be292b4ba6f8946e72f85a0d2ca29430a97478701d3d437a7f75751a882cb22dbdaf97806aa65380d18c9c03d3e122b31789ae25d440606e47eba88dbb95f8d810c3054caefbf1357a7bf6c837cda3ebef8ede56a49fbdab5835b3ebdc607c887f869308f754435bf16275f7d9b9870a78c28f716f95fd18bd4b37a95d39d56b385c452c69388beda6ae4dc5d1fa8fd3f3d4ceff135b759203b1d3b27fc026102ca8d1428d813599a0d2e7492b620d4a486eb46f215844f704b0983f0835645285efa2def3eb6bec69ccd8ccfeff67cf4110e17434016bf0c1531b0b61b767050f3468d3709e8e69b478120d0b21d26864dd06913ab4813f3d18f31eb81b6c7e6494c2c0cdcaa5aa9b8dfe660d5b6c32da3484f0e6d67088718f622fef3ffe9d75f316e048fcd7b241789c47b6a2dd8185df56e6c7d65c33dc4e2293582f52736fa3db53d67d02e8f62ba3534ce5244cee9f8a962e0",
+        "pub_is_sentinel": false,
+        "pub_present": true,
+        "rc": 1
+      },
+      "case": "ffdhe3072/nid/priv_preset_pub_present/long_modulus_2048",
+      "combo": "priv_preset_pub_present",
+      "diffs": [],
+      "equal": true,
+      "group": "ffdhe3072",
+      "nid": 1127,
+      "old": {
+        "case": "ffdhe3072/nid/priv_preset_pub_present/long_modulus_2048",
+        "crash": false,
+        "errs": [
+          [
+            42467331,
+            5,
+            524291
+          ]
+        ],
+        "exit": 0,
+        "priv_present_after": true,
+        "pub": "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002",
+        "pub_is_sentinel": true,
+        "pub_present": true,
+        "rc": 0
+      },
+      "old_diffs": [
+        "rc: cand=0 auth=1",
+        "pub_is_sentinel: cand=True auth=False",
+        "errs: cand=[[42467331, 5, 524291]] auth=[]",
+        "pub: cand='000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002' auth='db929ae8f7128633ff0e16010322b9dd2cc5d9dc54423c5ba6898e25f311e05efa7da5567b8e58dc977c9be292b4ba6f8946e72f85a0d2ca29430a97478701d3d437a7f75751a882cb22dbdaf97806aa65380d18c9c03d3e122b31789ae25d440606e47eba88dbb95f8d810c3054caefbf1357a7bf6c837cda3ebef8ede56a49fbdab5835b3ebdc607c887f869308f754435bf16275f7d9b9870a78c28f716f95fd18bd4b37a95d39d56b385c452c69388beda6ae4dc5d1fa8fd3f3d4ceff135b759203b1d3b27fc026102ca8d1428d813599a0d2e7492b620d4a486eb46f215844f704b0983f0835645285efa2def3eb6bec69ccd8ccfeff67cf4110e17434016bf0c1531b0b61b767050f3468d3709e8e69b478120d0b21d26864dd06913ab4813f3d18f31eb81b6c7e6494c2c0cdcaa5aa9b8dfe660d5b6c32da3484f0e6d67088718f622fef3ffe9d75f316e048fcd7b241789c47b6a2dd8185df56e6c7d65c33dc4e2293582f52736fa3db53d67d02e8f62ba3534ce5244cee9f8a962e0'"
+      ],
+      "old_equal": false,
+      "preset": "long_modulus_2048",
+      "pub_comparable": true
+    },
+    {
+      "auth": {
+        "case": "ffdhe3072/nid/priv_preset_pub_present/long_2400bit",
+        "crash": false,
+        "errs": [],
+        "exit": 0,
+        "priv_present_after": true,
+        "pub": "86ab3e17475f99a444d1d6eec21ef65f0eb44c1f8f46236b69b036f3cf2422b4253a2eb70c52f79420b564237a479ad6a2cf8293d25a2f7600097834265c178b42a5880ab540d00f8e8845ecb1d24be393f0df43da3e9e90849573e4bfc214580d2efaacaf111f264a335af96b0c050f22ce79e67a768625b547f5bee8c1c9a356ea25f4cffbf7e1c10e64937d97c832c68efbabf310b466f8cff224dfcffa0e37177fd1c06b35b57297ef62667414c7c5b27c44f5d3b74138ccd632be7f390fa7056ac63ef8735348abadc93ab80e56791ec14acb074a1095b69fc7f64f31cd62fd0d1a817f432f5bbe01e5f3cbd6035e9035b17976705590935da115253b275b8eb3e3b9e86101a3a93f6629e979e5abbe0406830cbd9e15a02785faed49eb1a6df7bf30b100ed5ff8f996ec697fc583e06486cfe31192a898d870c5b991b610bd82f838786fdd0e8904c249841ecd6377d4c646365f62830c7f66a5ef9a5e47f550378620d79ad95c369de23b576987386b090115450a1e8eca9b66e8be9d",
+        "pub_is_sentinel": false,
+        "pub_present": true,
+        "rc": 1
+      },
+      "cand": {
+        "case": "ffdhe3072/nid/priv_preset_pub_present/long_2400bit",
+        "crash": false,
+        "errs": [],
+        "exit": 0,
+        "priv_present_after": true,
+        "pub": "86ab3e17475f99a444d1d6eec21ef65f0eb44c1f8f46236b69b036f3cf2422b4253a2eb70c52f79420b564237a479ad6a2cf8293d25a2f7600097834265c178b42a5880ab540d00f8e8845ecb1d24be393f0df43da3e9e90849573e4bfc214580d2efaacaf111f264a335af96b0c050f22ce79e67a768625b547f5bee8c1c9a356ea25f4cffbf7e1c10e64937d97c832c68efbabf310b466f8cff224dfcffa0e37177fd1c06b35b57297ef62667414c7c5b27c44f5d3b74138ccd632be7f390fa7056ac63ef8735348abadc93ab80e56791ec14acb074a1095b69fc7f64f31cd62fd0d1a817f432f5bbe01e5f3cbd6035e9035b17976705590935da115253b275b8eb3e3b9e86101a3a93f6629e979e5abbe0406830cbd9e15a02785faed49eb1a6df7bf30b100ed5ff8f996ec697fc583e06486cfe31192a898d870c5b991b610bd82f838786fdd0e8904c249841ecd6377d4c646365f62830c7f66a5ef9a5e47f550378620d79ad95c369de23b576987386b090115450a1e8eca9b66e8be9d",
+        "pub_is_sentinel": false,
+        "pub_present": true,
+        "rc": 1
+      },
+      "case": "ffdhe3072/nid/priv_preset_pub_present/long_2400bit",
+      "combo": "priv_preset_pub_present",
+      "diffs": [],
+      "equal": true,
+      "group": "ffdhe3072",
+      "nid": 1127,
+      "old": {
+        "case": "ffdhe3072/nid/priv_preset_pub_present/long_2400bit",
+        "crash": false,
+        "errs": [
+          [
+            42467331,
+            5,
+            524291
+          ]
+        ],
+        "exit": 0,
+        "priv_present_after": true,
+        "pub": "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002",
+        "pub_is_sentinel": true,
+        "pub_present": true,
+        "rc": 0
+      },
+      "old_diffs": [
+        "rc: cand=0 auth=1",
+        "pub_is_sentinel: cand=True auth=False",
+        "errs: cand=[[42467331, 5, 524291]] auth=[]",
+        "pub: cand='000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002' auth='86ab3e17475f99a444d1d6eec21ef65f0eb44c1f8f46236b69b036f3cf2422b4253a2eb70c52f79420b564237a479ad6a2cf8293d25a2f7600097834265c178b42a5880ab540d00f8e8845ecb1d24be393f0df43da3e9e90849573e4bfc214580d2efaacaf111f264a335af96b0c050f22ce79e67a768625b547f5bee8c1c9a356ea25f4cffbf7e1c10e64937d97c832c68efbabf310b466f8cff224dfcffa0e37177fd1c06b35b57297ef62667414c7c5b27c44f5d3b74138ccd632be7f390fa7056ac63ef8735348abadc93ab80e56791ec14acb074a1095b69fc7f64f31cd62fd0d1a817f432f5bbe01e5f3cbd6035e9035b17976705590935da115253b275b8eb3e3b9e86101a3a93f6629e979e5abbe0406830cbd9e15a02785faed49eb1a6df7bf30b100ed5ff8f996ec697fc583e06486cfe31192a898d870c5b991b610bd82f838786fdd0e8904c249841ecd6377d4c646365f62830c7f66a5ef9a5e47f550378620d79ad95c369de23b576987386b090115450a1e8eca9b66e8be9d'"
+      ],
+      "old_equal": false,
+      "preset": "long_2400bit",
+      "pub_comparable": true
+    },
+    {
+      "auth": {
+        "case": "modp2048/nid/priv_absent_pub_absent",
+        "crash": false,
+        "errs": [],
+        "exit": 0,
+        "priv_present_after": true,
+        "pub": "589580ac04e23f87c7d8de26d3bb2ada86bff0fb2b2850d56244efb8f10005e7f131e252c389879b9c842744728a63ccc47b44a88f22ce1c557a010e28a8903b4504f81b33b9e35e2337025993758f122520dc41272002f731091e379d72be3b052b89f1f887dc2a06edfa51a3f832abfa8eed6d0356c187f653025e463a873197b6bd81e75d02e757c56521cdfc9614ad7f9747b5072b2d2ae0cafcf960c09986dd7b791b0ba7c3ffa5e62c51ca76f0fe4f9a2bc245fb03440e5af6f88209b9b8b2b41934958199b5d4b91e84f817ac3aca9bdff65a97050cfaefd830553c96b5dd9ba7db42b09499f87755f72e178f051b2a1ac3668bc4f08098966d5a7657",
+        "pub_is_sentinel": false,
+        "pub_present": true,
+        "rc": 1
+      },
+      "cand": {
+        "case": "modp2048/nid/priv_absent_pub_absent",
+        "crash": false,
+        "errs": [],
+        "exit": 0,
+        "priv_present_after": true,
+        "pub": "77b52d69bd2c36b01d3675ef807914cc1be7d06f231ef3868e4dc33de7e7d202d43af351449f5a8707a4a80a93bbe7720aa0b784b410dedcea6c00982288e88f2ed5ac6dfdc6f12cb3d401ff28e5b1cf6bd804293a36304ab91afb302aed3907d559ebffaff3edb7b4117af62546a0558d40627f8fc953c2d38e23fb0c16e8201d2e6c5b0a5e2864f6f3b95737b360d9fb879e3e6a52a647b8bfc5eb7c708489da2a5f05ad2141a92495a9d9eec4e9e5bb5489685eed098d1b19bc49a3dd425e8a6f09039cca2876c3b5be15550e69632952d3a09e3a9e815bb9d15a4350c26e5a9c0c9391f2ca58e37060d34a2e3e9c402cf3fa09f5f784dbb8fae9d420ded3",
+        "pub_is_sentinel": false,
+        "pub_present": true,
+        "rc": 1
+      },
+      "case": "modp2048/nid/priv_absent_pub_absent",
+      "combo": "priv_absent_pub_absent",
+      "diffs": [],
+      "equal": true,
+      "group": "modp2048",
+      "nid": 1213,
+      "old": {
+        "case": "modp2048/nid/priv_absent_pub_absent",
+        "crash": false,
+        "errs": [],
+        "exit": 0,
+        "priv_present_after": true,
+        "pub": "183b32e79a539053e22c8071c0eaed2be7c6fa126f1cf7133ced9d4e7e00fa91cd19220418b7ba56d084454c3778d2388e9f7d45034f0cddd3aa0104be709507bc740a95de2501fd3ce593bb71ecccce85a59010aaf1a30b0b318544dd0bbe637842ccb9bfa1ec3865ac0854c754db0b25d9f9796a1524089a732aac62b903e700402f821464665e756ce52a149ab648e2b844c85830adc1522057f6fd0bb9b4efb4f51b980d75699904474ccd44517560f6ccd06ce57cbf9f7e93dc96dc5fdf915a8f9d9972fa9c843bbc0f386f0d051387caefc4638c5b07d4c7688eca5c0bd7cd2503786aaa7bb7ff3d7c388511e04d8235e6f304204637bb4160c58c483f",
+        "pub_is_sentinel": false,
+        "pub_present": true,
+        "rc": 1
+      },
+      "old_diffs": [],
+      "old_equal": true,
+      "preset": "none",
+      "pub_comparable": false
+    },
+    {
+      "auth": {
+        "case": "modp2048/nid/priv_preset_pub_absent/in_bound_225",
+        "crash": false,
+        "errs": [],
+        "exit": 0,
+        "priv_present_after": true,
+        "pub": "39c0f02ec8b01f08879396d9f12ac5cf6e66992500ac76f453a01655e8a3b0028fa8ddaf7a5491c2a0a0d20c7c10d3734c2ff0c2cdaeb54a2646425b92b16200f44845f48aafca41006c1cfc72b476bfc8b1398964b73c1fe6ad3cbe293c835f985101606539ade3bde48b6430ce59774f1c137f2e466cad16c2ebeb40a497ea8cbe66f58b5322e14bdacfecb84e6b59e5dc1e2421aa4a01616aee3ac9b1a675e7b71f2e7ed92fb717f9b47a8d852c4de6812d253deeef77e05eecf9417f65793c2cf24d4c7503f98b4ce5fa3e7395b50010bbd1362f05266a6192b44680b6d0a3c77b0fc794702f4a2e3f6679dc7d62a0e47d91d4ba8c404337a646ae24c725",
+        "pub_is_sentinel": false,
+        "pub_present": true,
+        "rc": 1
+      },
+      "cand": {
+        "case": "modp2048/nid/priv_preset_pub_absent/in_bound_225",
+        "crash": false,
+        "errs": [],
+        "exit": 0,
+        "priv_present_after": true,
+        "pub": "39c0f02ec8b01f08879396d9f12ac5cf6e66992500ac76f453a01655e8a3b0028fa8ddaf7a5491c2a0a0d20c7c10d3734c2ff0c2cdaeb54a2646425b92b16200f44845f48aafca41006c1cfc72b476bfc8b1398964b73c1fe6ad3cbe293c835f985101606539ade3bde48b6430ce59774f1c137f2e466cad16c2ebeb40a497ea8cbe66f58b5322e14bdacfecb84e6b59e5dc1e2421aa4a01616aee3ac9b1a675e7b71f2e7ed92fb717f9b47a8d852c4de6812d253deeef77e05eecf9417f65793c2cf24d4c7503f98b4ce5fa3e7395b50010bbd1362f05266a6192b44680b6d0a3c77b0fc794702f4a2e3f6679dc7d62a0e47d91d4ba8c404337a646ae24c725",
+        "pub_is_sentinel": false,
+        "pub_present": true,
+        "rc": 1
+      },
+      "case": "modp2048/nid/priv_preset_pub_absent/in_bound_225",
+      "combo": "priv_preset_pub_absent",
+      "diffs": [],
+      "equal": true,
+      "group": "modp2048",
+      "nid": 1213,
+      "old": {
+        "case": "modp2048/nid/priv_preset_pub_absent/in_bound_225",
+        "crash": false,
+        "errs": [
+          [
+            42467331,
+            5,
+            524291
+          ]
+        ],
+        "exit": 0,
+        "priv_present_after": true,
+        "pub": null,
+        "pub_is_sentinel": false,
+        "pub_present": false,
+        "rc": 0
+      },
+      "old_diffs": [
+        "rc: cand=0 auth=1",
+        "pub_present: cand=False auth=True",
+        "errs: cand=[[42467331, 5, 524291]] auth=[]",
+        "pub: cand=None auth='39c0f02ec8b01f08879396d9f12ac5cf6e66992500ac76f453a01655e8a3b0028fa8ddaf7a5491c2a0a0d20c7c10d3734c2ff0c2cdaeb54a2646425b92b16200f44845f48aafca41006c1cfc72b476bfc8b1398964b73c1fe6ad3cbe293c835f985101606539ade3bde48b6430ce59774f1c137f2e466cad16c2ebeb40a497ea8cbe66f58b5322e14bdacfecb84e6b59e5dc1e2421aa4a01616aee3ac9b1a675e7b71f2e7ed92fb717f9b47a8d852c4de6812d253deeef77e05eecf9417f65793c2cf24d4c7503f98b4ce5fa3e7395b50010bbd1362f05266a6192b44680b6d0a3c77b0fc794702f4a2e3f6679dc7d62a0e47d91d4ba8c404337a646ae24c725'"
+      ],
+      "old_equal": false,
+      "preset": "in_bound_225",
+      "pub_comparable": true
+    },
+    {
+      "auth": {
+        "case": "modp2048/nid/priv_preset_pub_absent/short_1bit",
+        "crash": false,
+        "errs": [],
+        "exit": 0,
+        "priv_present_after": true,
+        "pub": "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002",
+        "pub_is_sentinel": false,
+        "pub_present": true,
+        "rc": 1
+      },
+      "cand": {
+        "case": "modp2048/nid/priv_preset_pub_absent/short_1bit",
+        "crash": false,
+        "errs": [],
+        "exit": 0,
+        "priv_present_after": true,
+        "pub": "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002",
+        "pub_is_sentinel": false,
+        "pub_present": true,
+        "rc": 1
+      },
+      "case": "modp2048/nid/priv_preset_pub_absent/short_1bit",
+      "combo": "priv_preset_pub_absent",
+      "diffs": [],
+      "equal": true,
+      "group": "modp2048",
+      "nid": 1213,
+      "old": {
+        "case": "modp2048/nid/priv_preset_pub_absent/short_1bit",
+        "crash": false,
+        "errs": [
+          [
+            42467331,
+            5,
+            524291
+          ]
+        ],
+        "exit": 0,
+        "priv_present_after": true,
+        "pub": null,
+        "pub_is_sentinel": false,
+        "pub_present": false,
+        "rc": 0
+      },
+      "old_diffs": [
+        "rc: cand=0 auth=1",
+        "pub_present: cand=False auth=True",
+        "errs: cand=[[42467331, 5, 524291]] auth=[]",
+        "pub: cand=None auth='00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002'"
+      ],
+      "old_equal": false,
+      "preset": "short_1bit",
+      "pub_comparable": true
+    },
+    {
+      "auth": {
+        "case": "modp2048/nid/priv_preset_pub_absent/long_modulus_2048",
+        "crash": false,
+        "errs": [],
+        "exit": 0,
+        "priv_present_after": true,
+        "pub": "a3fca3d05b33d1badacd750056a4035f2bbc135e37871a531a201d0a86bc645b7692931053221fac0658db48f84f8a5e224b09302fb9d80a5dcd88c7d031eb7f5705a17ee24103a6244a687553cdfef2552009ca3315078ff96e4140985c5d5ec61d76909ea7be64a244e49f00c2e2d5e2edf696bba97a738c9dcac76531ac64a6dcc95bd691a2f101075a978db9d626836cc62de9dcc497df563cd0c8344dbb0b1c44b50d7ea00e5795a414c12eae5a88f222d114475e657e251e17a7f19cfb1a0adac6a751eaf3d5b2baf6fe120a1ba9406e7bc477dabd20a6477a514813a126cecda84c1e6892a7ff8a8ad1ff2c433cf147f706528c7ca43ea93b017b9db1",
+        "pub_is_sentinel": false,
+        "pub_present": true,
+        "rc": 1
+      },
+      "cand": {
+        "case": "modp2048/nid/priv_preset_pub_absent/long_modulus_2048",
+        "crash": false,
+        "errs": [],
+        "exit": 0,
+        "priv_present_after": true,
+        "pub": "a3fca3d05b33d1badacd750056a4035f2bbc135e37871a531a201d0a86bc645b7692931053221fac0658db48f84f8a5e224b09302fb9d80a5dcd88c7d031eb7f5705a17ee24103a6244a687553cdfef2552009ca3315078ff96e4140985c5d5ec61d76909ea7be64a244e49f00c2e2d5e2edf696bba97a738c9dcac76531ac64a6dcc95bd691a2f101075a978db9d626836cc62de9dcc497df563cd0c8344dbb0b1c44b50d7ea00e5795a414c12eae5a88f222d114475e657e251e17a7f19cfb1a0adac6a751eaf3d5b2baf6fe120a1ba9406e7bc477dabd20a6477a514813a126cecda84c1e6892a7ff8a8ad1ff2c433cf147f706528c7ca43ea93b017b9db1",
+        "pub_is_sentinel": false,
+        "pub_present": true,
+        "rc": 1
+      },
+      "case": "modp2048/nid/priv_preset_pub_absent/long_modulus_2048",
+      "combo": "priv_preset_pub_absent",
+      "diffs": [],
+      "equal": true,
+      "group": "modp2048",
+      "nid": 1213,
+      "old": {
+        "case": "modp2048/nid/priv_preset_pub_absent/long_modulus_2048",
+        "crash": false,
+        "errs": [
+          [
+            42467331,
+            5,
+            524291
+          ]
+        ],
+        "exit": 0,
+        "priv_present_after": true,
+        "pub": null,
+        "pub_is_sentinel": false,
+        "pub_present": false,
+        "rc": 0
+      },
+      "old_diffs": [
+        "rc: cand=0 auth=1",
+        "pub_present: cand=False auth=True",
+        "errs: cand=[[42467331, 5, 524291]] auth=[]",
+        "pub: cand=None auth='a3fca3d05b33d1badacd750056a4035f2bbc135e37871a531a201d0a86bc645b7692931053221fac0658db48f84f8a5e224b09302fb9d80a5dcd88c7d031eb7f5705a17ee24103a6244a687553cdfef2552009ca3315078ff96e4140985c5d5ec61d76909ea7be64a244e49f00c2e2d5e2edf696bba97a738c9dcac76531ac64a6dcc95bd691a2f101075a978db9d626836cc62de9dcc497df563cd0c8344dbb0b1c44b50d7ea00e5795a414c12eae5a88f222d114475e657e251e17a7f19cfb1a0adac6a751eaf3d5b2baf6fe120a1ba9406e7bc477dabd20a6477a514813a126cecda84c1e6892a7ff8a8ad1ff2c433cf147f706528c7ca43ea93b017b9db1'"
+      ],
+      "old_equal": false,
+      "preset": "long_modulus_2048",
+      "pub_comparable": true
+    },
+    {
+      "auth": {
+        "case": "modp2048/nid/priv_preset_pub_absent/long_2400bit",
+        "crash": false,
+        "errs": [],
+        "exit": 0,
+        "priv_present_after": true,
+        "pub": "e502a073f06a94507c53c162a9485016a3b8f89cf96a23619f7bea62f15eb445a6b5482f58e6a5acd4858aff9bdcf98e7369e3892a56aaa01bde9ea302a5fa5a025e500b2f9e5359358eb03ff21fd2e3c9fe008c582e67a3d2574bf8844606122413c275af27dfae73f4d87291d212cd66af109641c754f05c7a3577903b5a749c7f422cf3c258dc8f16c9f2ee9b0535a400dba53f157b5b4bd65f59b394f36695e0bda73a2b6c534a8e22114e10921446c4703343d14d6a121286f1184014378a5a553ce18e66b035c45cd06f2295e8a7ab983d19f19b04da44dc36ed59f4d9f22aa73ec821eaefc0f04f4a1c7b4b8c85d2e69e2d599dbf83fed242cfcca430",
+        "pub_is_sentinel": false,
+        "pub_present": true,
+        "rc": 1
+      },
+      "cand": {
+        "case": "modp2048/nid/priv_preset_pub_absent/long_2400bit",
+        "crash": false,
+        "errs": [
+          [
+            42467331,
+            5,
+            524291
+          ]
+        ],
+        "exit": 0,
+        "priv_present_after": true,
+        "pub": null,
+        "pub_is_sentinel": false,
+        "pub_present": false,
+        "rc": 0
+      },
+      "case": "modp2048/nid/priv_preset_pub_absent/long_2400bit",
+      "combo": "priv_preset_pub_absent",
+      "diffs": [
+        "rc: cand=0 auth=1",
+        "pub_present: cand=False auth=True",
+        "errs: cand=[[42467331, 5, 524291]] auth=[]",
+        "pub: cand=None auth='e502a073f06a94507c53c162a9485016a3b8f89cf96a23619f7bea62f15eb445a6b5482f58e6a5acd4858aff9bdcf98e7369e3892a56aaa01bde9ea302a5fa5a025e500b2f9e5359358eb03ff21fd2e3c9fe008c582e67a3d2574bf8844606122413c275af27dfae73f4d87291d212cd66af109641c754f05c7a3577903b5a749c7f422cf3c258dc8f16c9f2ee9b0535a400dba53f157b5b4bd65f59b394f36695e0bda73a2b6c534a8e22114e10921446c4703343d14d6a121286f1184014378a5a553ce18e66b035c45cd06f2295e8a7ab983d19f19b04da44dc36ed59f4d9f22aa73ec821eaefc0f04f4a1c7b4b8c85d2e69e2d599dbf83fed242cfcca430'"
+      ],
+      "equal": false,
+      "group": "modp2048",
+      "nid": 1213,
+      "old": {
+        "case": "modp2048/nid/priv_preset_pub_absent/long_2400bit",
+        "crash": false,
+        "errs": [
+          [
+            42467331,
+            5,
+            524291
+          ]
+        ],
+        "exit": 0,
+        "priv_present_after": true,
+        "pub": null,
+        "pub_is_sentinel": false,
+        "pub_present": false,
+        "rc": 0
+      },
+      "old_diffs": [],
+      "old_equal": true,
+      "preset": "long_2400bit",
+      "pub_comparable": true
+    },
+    {
+      "auth": {
+        "case": "modp2048/nid/priv_absent_pub_present",
+        "crash": false,
+        "errs": [],
+        "exit": 0,
+        "priv_present_after": true,
+        "pub": "63cb238b9ee7350e15ad85dbcc0fb99bc24aef04baf9fbf6e6a412c99a74b193018f71563adb62cd486cd3b099ac9739d33c2e17ab3d26473b1ff63c04f17f32f16ff347cbbb5a28d2846c4ca785ad517a92e0c56d05192c9335ca188ec678b91c05b9c434a0b05d837824fb1723f0e5148218efa790e88ed4329e79449bf500d0f19b1f98f17adbc3cd4ee2fcc8a0437097cf0b1017ba774210a65a9c49d3175a300c94c2184c3648183aee267e10afe00adc78aacc281bc7cf6a918b9f579e0bbec7216e9ade4fa3f4135a0b6bc8d5fa394cd116b5d84b9be24777ef345282d0562a5cb886e75d4002d8b3024f7555fd91b5c15ac9e07ec55df2348e160e94",
+        "pub_is_sentinel": false,
+        "pub_present": true,
+        "rc": 1
+      },
+      "cand": {
+        "case": "modp2048/nid/priv_absent_pub_present",
+        "crash": false,
+        "errs": [],
+        "exit": 0,
+        "priv_present_after": true,
+        "pub": "ea5dc567d2ad0ff2ee8f0f6c20a14bb26a8d7348aa11f17f99e46ae78961ca567efc3959e212cf0f1639863566c25d37e1a3c9711022ca96aa3b0b30db2dd77f0c0e25bb5b37c7d353139e48a2a225e2b780f452b871855e7d480e5addf14763917c4a51b3cb8b258e34bcff970410285797730b101705b5f711509986b48ca949d1dce72840ac5a27569287708ceb48f35c3d03a0dff0c2299d642f1c0466d1a664d4eda670ab09a9e8abdadcc6d9f4fc0dbed3db9956416c2945fe187880f15a17aa1f031dc9949ae8086d9ac8a25597e715b34e995accc7e4a637d64e9bba85dc1de723bf848c307e990277d6e1c81dfad9b4e868b7b484b1d52f340c36b6",
+        "pub_is_sentinel": false,
+        "pub_present": true,
+        "rc": 1
+      },
+      "case": "modp2048/nid/priv_absent_pub_present",
+      "combo": "priv_absent_pub_present",
+      "diffs": [],
+      "equal": true,
+      "group": "modp2048",
+      "nid": 1213,
+      "old": {
+        "case": "modp2048/nid/priv_absent_pub_present",
+        "crash": false,
+        "errs": [],
+        "exit": 0,
+        "priv_present_after": true,
+        "pub": "930142de58b7dd8b8f31bd077f44cd0186540a16da26e34f7ac79d2e10a880e1aca01774b7f295674a299d1f54442f51384c5e77f5bf63071f72578ed7087551e6465a047d132ba876c3deb1ec4f2e0fabf54fd964b46b3c1b87190efe675cff1c2037b0ab2af83582dd847e182af1bb619afb00ec04c59183d49bcee91dbba9746ea81416f037c9d05b0d7dde69ae675498181c200aba9d48851d16866e52dac7dd75dcd1994f4aa6f29671fa782a478da69cec60d2e659e6801e8e29a197954f3154d80c49297e4bbcdd0e0f612e600e1cb30e7ae7b42adccab2cdd207543d47a142c599800d9abaadf2c401b2f76b99f22a3cc36795df25542a06d0869c10",
+        "pub_is_sentinel": false,
+        "pub_present": true,
+        "rc": 1
+      },
+      "old_diffs": [],
+      "old_equal": true,
+      "preset": "none",
+      "pub_comparable": false
+    },
+    {
+      "auth": {
+        "case": "modp2048/nid/priv_preset_pub_present/in_bound_225",
+        "crash": false,
+        "errs": [],
+        "exit": 0,
+        "priv_present_after": true,
+        "pub": "39c0f02ec8b01f08879396d9f12ac5cf6e66992500ac76f453a01655e8a3b0028fa8ddaf7a5491c2a0a0d20c7c10d3734c2ff0c2cdaeb54a2646425b92b16200f44845f48aafca41006c1cfc72b476bfc8b1398964b73c1fe6ad3cbe293c835f985101606539ade3bde48b6430ce59774f1c137f2e466cad16c2ebeb40a497ea8cbe66f58b5322e14bdacfecb84e6b59e5dc1e2421aa4a01616aee3ac9b1a675e7b71f2e7ed92fb717f9b47a8d852c4de6812d253deeef77e05eecf9417f65793c2cf24d4c7503f98b4ce5fa3e7395b50010bbd1362f05266a6192b44680b6d0a3c77b0fc794702f4a2e3f6679dc7d62a0e47d91d4ba8c404337a646ae24c725",
+        "pub_is_sentinel": false,
+        "pub_present": true,
+        "rc": 1
+      },
+      "cand": {
+        "case": "modp2048/nid/priv_preset_pub_present/in_bound_225",
+        "crash": false,
+        "errs": [],
+        "exit": 0,
+        "priv_present_after": true,
+        "pub": "39c0f02ec8b01f08879396d9f12ac5cf6e66992500ac76f453a01655e8a3b0028fa8ddaf7a5491c2a0a0d20c7c10d3734c2ff0c2cdaeb54a2646425b92b16200f44845f48aafca41006c1cfc72b476bfc8b1398964b73c1fe6ad3cbe293c835f985101606539ade3bde48b6430ce59774f1c137f2e466cad16c2ebeb40a497ea8cbe66f58b5322e14bdacfecb84e6b59e5dc1e2421aa4a01616aee3ac9b1a675e7b71f2e7ed92fb717f9b47a8d852c4de6812d253deeef77e05eecf9417f65793c2cf24d4c7503f98b4ce5fa3e7395b50010bbd1362f05266a6192b44680b6d0a3c77b0fc794702f4a2e3f6679dc7d62a0e47d91d4ba8c404337a646ae24c725",
+        "pub_is_sentinel": false,
+        "pub_present": true,
+        "rc": 1
+      },
+      "case": "modp2048/nid/priv_preset_pub_present/in_bound_225",
+      "combo": "priv_preset_pub_present",
+      "diffs": [],
+      "equal": true,
+      "group": "modp2048",
+      "nid": 1213,
+      "old": {
+        "case": "modp2048/nid/priv_preset_pub_present/in_bound_225",
+        "crash": false,
+        "errs": [
+          [
+            42467331,
+            5,
+            524291
+          ]
+        ],
+        "exit": 0,
+        "priv_present_after": true,
+        "pub": "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002",
+        "pub_is_sentinel": true,
+        "pub_present": true,
+        "rc": 0
+      },
+      "old_diffs": [
+        "rc: cand=0 auth=1",
+        "pub_is_sentinel: cand=True auth=False",
+        "errs: cand=[[42467331, 5, 524291]] auth=[]",
+        "pub: cand='00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002' auth='39c0f02ec8b01f08879396d9f12ac5cf6e66992500ac76f453a01655e8a3b0028fa8ddaf7a5491c2a0a0d20c7c10d3734c2ff0c2cdaeb54a2646425b92b16200f44845f48aafca41006c1cfc72b476bfc8b1398964b73c1fe6ad3cbe293c835f985101606539ade3bde48b6430ce59774f1c137f2e466cad16c2ebeb40a497ea8cbe66f58b5322e14bdacfecb84e6b59e5dc1e2421aa4a01616aee3ac9b1a675e7b71f2e7ed92fb717f9b47a8d852c4de6812d253deeef77e05eecf9417f65793c2cf24d4c7503f98b4ce5fa3e7395b50010bbd1362f05266a6192b44680b6d0a3c77b0fc794702f4a2e3f6679dc7d62a0e47d91d4ba8c404337a646ae24c725'"
+      ],
+      "old_equal": false,
+      "preset": "in_bound_225",
+      "pub_comparable": true
+    },
+    {
+      "auth": {
+        "case": "modp2048/nid/priv_preset_pub_present/short_1bit",
+        "crash": false,
+        "errs": [],
+        "exit": 0,
+        "priv_present_after": true,
+        "pub": "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002",
+        "pub_is_sentinel": true,
+        "pub_present": true,
+        "rc": 1
+      },
+      "cand": {
+        "case": "modp2048/nid/priv_preset_pub_present/short_1bit",
+        "crash": false,
+        "errs": [],
+        "exit": 0,
+        "priv_present_after": true,
+        "pub": "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002",
+        "pub_is_sentinel": true,
+        "pub_present": true,
+        "rc": 1
+      },
+      "case": "modp2048/nid/priv_preset_pub_present/short_1bit",
+      "combo": "priv_preset_pub_present",
+      "diffs": [],
+      "equal": true,
+      "group": "modp2048",
+      "nid": 1213,
+      "old": {
+        "case": "modp2048/nid/priv_preset_pub_present/short_1bit",
+        "crash": false,
+        "errs": [
+          [
+            42467331,
+            5,
+            524291
+          ]
+        ],
+        "exit": 0,
+        "priv_present_after": true,
+        "pub": "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002",
+        "pub_is_sentinel": true,
+        "pub_present": true,
+        "rc": 0
+      },
+      "old_diffs": [
+        "rc: cand=0 auth=1",
+        "errs: cand=[[42467331, 5, 524291]] auth=[]"
+      ],
+      "old_equal": false,
+      "preset": "short_1bit",
+      "pub_comparable": true
+    },
+    {
+      "auth": {
+        "case": "modp2048/nid/priv_preset_pub_present/long_modulus_2048",
+        "crash": false,
+        "errs": [],
+        "exit": 0,
+        "priv_present_after": true,
+        "pub": "a3fca3d05b33d1badacd750056a4035f2bbc135e37871a531a201d0a86bc645b7692931053221fac0658db48f84f8a5e224b09302fb9d80a5dcd88c7d031eb7f5705a17ee24103a6244a687553cdfef2552009ca3315078ff96e4140985c5d5ec61d76909ea7be64a244e49f00c2e2d5e2edf696bba97a738c9dcac76531ac64a6dcc95bd691a2f101075a978db9d626836cc62de9dcc497df563cd0c8344dbb0b1c44b50d7ea00e5795a414c12eae5a88f222d114475e657e251e17a7f19cfb1a0adac6a751eaf3d5b2baf6fe120a1ba9406e7bc477dabd20a6477a514813a126cecda84c1e6892a7ff8a8ad1ff2c433cf147f706528c7ca43ea93b017b9db1",
+        "pub_is_sentinel": false,
+        "pub_present": true,
+        "rc": 1
+      },
+      "cand": {
+        "case": "modp2048/nid/priv_preset_pub_present/long_modulus_2048",
+        "crash": false,
+        "errs": [],
+        "exit": 0,
+        "priv_present_after": true,
+        "pub": "a3fca3d05b33d1badacd750056a4035f2bbc135e37871a531a201d0a86bc645b7692931053221fac0658db48f84f8a5e224b09302fb9d80a5dcd88c7d031eb7f5705a17ee24103a6244a687553cdfef2552009ca3315078ff96e4140985c5d5ec61d76909ea7be64a244e49f00c2e2d5e2edf696bba97a738c9dcac76531ac64a6dcc95bd691a2f101075a978db9d626836cc62de9dcc497df563cd0c8344dbb0b1c44b50d7ea00e5795a414c12eae5a88f222d114475e657e251e17a7f19cfb1a0adac6a751eaf3d5b2baf6fe120a1ba9406e7bc477dabd20a6477a514813a126cecda84c1e6892a7ff8a8ad1ff2c433cf147f706528c7ca43ea93b017b9db1",
+        "pub_is_sentinel": false,
+        "pub_present": true,
+        "rc": 1
+      },
+      "case": "modp2048/nid/priv_preset_pub_present/long_modulus_2048",
+      "combo": "priv_preset_pub_present",
+      "diffs": [],
+      "equal": true,
+      "group": "modp2048",
+      "nid": 1213,
+      "old": {
+        "case": "modp2048/nid/priv_preset_pub_present/long_modulus_2048",
+        "crash": false,
+        "errs": [
+          [
+            42467331,
+            5,
+            524291
+          ]
+        ],
+        "exit": 0,
+        "priv_present_after": true,
+        "pub": "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002",
+        "pub_is_sentinel": true,
+        "pub_present": true,
+        "rc": 0
+      },
+      "old_diffs": [
+        "rc: cand=0 auth=1",
+        "pub_is_sentinel: cand=True auth=False",
+        "errs: cand=[[42467331, 5, 524291]] auth=[]",
+        "pub: cand='00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002' auth='a3fca3d05b33d1badacd750056a4035f2bbc135e37871a531a201d0a86bc645b7692931053221fac0658db48f84f8a5e224b09302fb9d80a5dcd88c7d031eb7f5705a17ee24103a6244a687553cdfef2552009ca3315078ff96e4140985c5d5ec61d76909ea7be64a244e49f00c2e2d5e2edf696bba97a738c9dcac76531ac64a6dcc95bd691a2f101075a978db9d626836cc62de9dcc497df563cd0c8344dbb0b1c44b50d7ea00e5795a414c12eae5a88f222d114475e657e251e17a7f19cfb1a0adac6a751eaf3d5b2baf6fe120a1ba9406e7bc477dabd20a6477a514813a126cecda84c1e6892a7ff8a8ad1ff2c433cf147f706528c7ca43ea93b017b9db1'"
+      ],
+      "old_equal": false,
+      "preset": "long_modulus_2048",
+      "pub_comparable": true
+    },
+    {
+      "auth": {
+        "case": "modp2048/nid/priv_preset_pub_present/long_2400bit",
+        "crash": false,
+        "errs": [],
+        "exit": 0,
+        "priv_present_after": true,
+        "pub": "e502a073f06a94507c53c162a9485016a3b8f89cf96a23619f7bea62f15eb445a6b5482f58e6a5acd4858aff9bdcf98e7369e3892a56aaa01bde9ea302a5fa5a025e500b2f9e5359358eb03ff21fd2e3c9fe008c582e67a3d2574bf8844606122413c275af27dfae73f4d87291d212cd66af109641c754f05c7a3577903b5a749c7f422cf3c258dc8f16c9f2ee9b0535a400dba53f157b5b4bd65f59b394f36695e0bda73a2b6c534a8e22114e10921446c4703343d14d6a121286f1184014378a5a553ce18e66b035c45cd06f2295e8a7ab983d19f19b04da44dc36ed59f4d9f22aa73ec821eaefc0f04f4a1c7b4b8c85d2e69e2d599dbf83fed242cfcca430",
+        "pub_is_sentinel": false,
+        "pub_present": true,
+        "rc": 1
+      },
+      "cand": {
+        "case": "modp2048/nid/priv_preset_pub_present/long_2400bit",
+        "crash": false,
+        "errs": [
+          [
+            42467331,
+            5,
+            524291
+          ]
+        ],
+        "exit": 0,
+        "priv_present_after": true,
+        "pub": "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002",
+        "pub_is_sentinel": true,
+        "pub_present": true,
+        "rc": 0
+      },
+      "case": "modp2048/nid/priv_preset_pub_present/long_2400bit",
+      "combo": "priv_preset_pub_present",
+      "diffs": [
+        "rc: cand=0 auth=1",
+        "pub_is_sentinel: cand=True auth=False",
+        "errs: cand=[[42467331, 5, 524291]] auth=[]",
+        "pub: cand='00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002' auth='e502a073f06a94507c53c162a9485016a3b8f89cf96a23619f7bea62f15eb445a6b5482f58e6a5acd4858aff9bdcf98e7369e3892a56aaa01bde9ea302a5fa5a025e500b2f9e5359358eb03ff21fd2e3c9fe008c582e67a3d2574bf8844606122413c275af27dfae73f4d87291d212cd66af109641c754f05c7a3577903b5a749c7f422cf3c258dc8f16c9f2ee9b0535a400dba53f157b5b4bd65f59b394f36695e0bda73a2b6c534a8e22114e10921446c4703343d14d6a121286f1184014378a5a553ce18e66b035c45cd06f2295e8a7ab983d19f19b04da44dc36ed59f4d9f22aa73ec821eaefc0f04f4a1c7b4b8c85d2e69e2d599dbf83fed242cfcca430'"
+      ],
+      "equal": false,
+      "group": "modp2048",
+      "nid": 1213,
+      "old": {
+        "case": "modp2048/nid/priv_preset_pub_present/long_2400bit",
+        "crash": false,
+        "errs": [
+          [
+            42467331,
+            5,
+            524291
+          ]
+        ],
+        "exit": 0,
+        "priv_present_after": true,
+        "pub": "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002",
+        "pub_is_sentinel": true,
+        "pub_present": true,
+        "rc": 0
+      },
+      "old_diffs": [],
+      "old_equal": true,
+      "preset": "long_2400bit",
+      "pub_comparable": true
+    }
+  ],
+  "mismatches": 4,
+  "old": "/work/court/tmp/pfp8-wp-build/cand/distribution/libcrypto.so.3",
+  "rows": 30
+}
