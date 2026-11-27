@@ -1,0 +1,9 @@
+    Finished `test` profile [unoptimized] target(s) in 0.00s
+     Running unittests src/lib.rs (court/tmp/ma1/test-target/debug/deps/openssl_rs-b4da7ea231465a25)
+
+running 1 test
+PFP-6 CIOS differential: exhaustive=3018 sampled=7890 mismatches=0
+test bn::arith::tests::pfp6_cios_matches_the_reference ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 2546 filtered out; finished in 0.03s
+

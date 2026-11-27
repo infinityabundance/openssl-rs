@@ -1,0 +1,1 @@
+no out-of-line mont_mul_cios_fixed symbol: all widths are inlined into mont_mul_ladder_into

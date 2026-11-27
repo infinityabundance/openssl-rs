@@ -1,0 +1,4 @@
+--- exponent_taint.log
+origins: none
+--- negative_control.log
+==261042== Conditional jump or move depends on uninitialised value(s)

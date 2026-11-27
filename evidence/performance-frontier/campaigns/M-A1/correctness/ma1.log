@@ -1,0 +1,20 @@
+   Compiling openssl-rs v0.0.49 (/work)
+    Finished `test` profile [unoptimized] target(s) in 16.43s
+     Running unittests src/lib.rs (court/tmp/ma1/test-target/debug/deps/openssl_rs-b4da7ea231465a25)
+
+running 2 tests
+M-A1 width n=4: pairs=882 mismatches=0
+M-A1 width n=6: pairs=1058 mismatches=0
+M-A1 width n=9: pairs=1352 mismatches=0
+M-A1 width n=16: pairs=2178 mismatches=0
+M-A1 fallback widths: pairs=4603 mismatches=0
+test bn::arith::tests::ma1_unspecialised_widths_use_the_generic_kernel ... ok
+M-A1 width n=32: pairs=968 mismatches=0
+M-A1 width n=48: pairs=968 mismatches=0
+M-A1 width n=64: pairs=392 mismatches=0
+M-A1 width n=128: pairs=392 mismatches=0
+M-A1 specialised differential: pairs=8190 mismatches=0
+test bn::arith::tests::ma1_specialised_widths_match_the_generic_kernel ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 2545 filtered out; finished in 0.40s
+

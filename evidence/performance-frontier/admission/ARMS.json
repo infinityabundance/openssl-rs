@@ -1275,6 +1275,99 @@
           }
         ]
       }
+    },
+    {
+      "arm_id": "M-A1",
+      "assurance": {
+        "safe_compatible": false,
+        "semantic_assurance": false
+      },
+      "candidate": {
+        "artefact": {
+          "label": "distribution-shaped libcrypto.so.3 from staging ff87f848 + uncommitted src/bn/arith.rs: const-generic CIOS kernels for 4/6/9/16/32/48/64/128 limbs dispatched by exact length from mont_mul_ladder_into; generic slice kernel retained as the differential reference and the fallback",
+          "sha256": "88c0c7e04d52a1bf84d665fdd691bddf2bbe700e35505d95bf145bfdc3774d87"
+        },
+        "build_profile": "release, x86_64-unknown-linux-gnu, rustc 1.98.1 (48a229cea); staging ff87f8488e206896ffdd82259af2fcf4ba269209 + uncommitted src/bn/arith.rs (arith sha256 b548ee1533f527366099d95b907bd20237bbcc2e8208966eb9a15cf11f09809f; src fingerprint 28bbd83eb9b57a6ba95ad3025778ccc7eaa482714079cf03f8c48a0acf7f9235, 887 files; build_relevant_clean=false); a second clean build reproduces DSO and archive byte for byte; the prev build from HEAD arith.rs reproduces the PFP-6 admitted DSO 6d002db2 exactly",
+        "source_commit": "ff87f8488e206896ffdd82259af2fcf4ba269209"
+      },
+      "constant_time_audit": {
+        "kind": "CTGRIND_PLUS_BRANCH_AUDIT",
+        "candidate_sha256": "88c0c7e04d52a1bf84d665fdd691bddf2bbe700e35505d95bf145bfdc3774d87",
+        "harness_kind": "classify_widths.py over disasm_sites.py from the declared digest objdump of mont_mul_ladder_into; every jcc/setcc/cmov enumerated, flag source and arithmetic consumer asserted per site; all eight widths are inlined into the one carrier",
+        "harness_sha256": "c0b6fe90318d465d86c2669fcf6c18ca3b0e93f1f7d61821c1077f8ef027d663",
+        "branch_audit": {
+          "path": "evidence/performance-frontier/campaigns/M-A1/raw/disasm/classification.md",
+          "present": true,
+          "sha256": "b1310b1e9db5e39759454f235e9b754d90c32e95486f8b84420ecb44811b7f09"
+        },
+        "reference": {
+          "path": "evidence/performance-frontier/campaigns/M-A1/raw/disasm/classification.md",
+          "present": true,
+          "sha256": "b1310b1e9db5e39759454f235e9b754d90c32e95486f8b84420ecb44811b7f09"
+        },
+        "ctgrind": {
+          "kind": "SOURCE_BOUND_EXPONENT_TAINT_PLUS_DSO_BASE_PROBE",
+          "errors": 0,
+          "contexts": 0,
+          "note": "bn::arith::tests::ctgrind_secret_exponent_window (four-limb modulus, so the width-4 specialised kernel) with the exponent limb bytes tainted: 0 errors / 0 contexts, origins none; negative control 4 errors / 1 context. DSO-bound pfp27 ladder probe (base tainted) on the candidate and the previous build: 0 contexts, 3 reps each. Not a constant-time proof; dynamic ctgrind covers width 4, the other widths are covered structurally by the branch audit."
+        },
+        "finding": "CIOS carrier mont_mul_ladder_into at 0x2fa7d0/0x2431: 40 jcc (40 public-bound, 0 secret-derived), 64 setcc (0 public geometry, 64 secret carry/borrow flags consumed arithmetically, none reaching control), 0 cmovcc. Secret-derived control transfers: none. Re-derived from 88c0c7e04d52a1bf84d665fdd691bddf2bbe700e35505d95bf145bfdc3774d87, not inherited."
+      },
+      "description": "Fixed-width native Rust specialisation of the admitted CIOS Montgomery kernel. Eight const-generic kernels (4/6/9/16/32/48/64/128 limbs) replace the runtime-length slice kernel on the ladder path only; the generic kernel remains the differential reference and the fallback. The CIOS schedule and its T_i < 2m accumulator bound are unchanged. All 8,190 per-width differential pairs and 4,603 fallback pairs match the generic kernel; the 161-line ABI transcript is identical to the authority. Paired against the previous (PFP-6) build, cand/prev is 0.9782 (modexp2048), 0.9996 (modexp8192), 0.8646 (rsa2048), 0.9776 (dh-ffdhe2048) and 0.9839 (ecdsa256): the 16-limb path wins clearly, 32 and 48 limbs win modestly, 4 limbs is diluted by elliptic-curve work, and 128 limbs is unchanged.",
+      "differential_courts": {
+        "candidate_sha256": "88c0c7e04d52a1bf84d665fdd691bddf2bbe700e35505d95bf145bfdc3774d87",
+        "reference": {
+          "path": "evidence/performance-frontier/campaigns/M-A1/differential/raw/summary.txt",
+          "present": true,
+          "sha256": "0e7fe643e0417c6fe7bf1e4ac6bf89f8f2b04b72b8646d3a55e5ceadc1cf364a"
+        },
+        "result": "PASS"
+      },
+      "measurement": {
+        "candidate_sha256": "88c0c7e04d52a1bf84d665fdd691bddf2bbe700e35505d95bf145bfdc3774d87",
+        "classification": "SCOPED_OBSERVATION",
+        "identity": {
+          "instrument": "wall-clock median_us per process; 15 interleaved repetitions, order rotated across three arms; median of paired per-repetition ratios; 95% percentile bootstrap (20,000 resamples, seed 0x50465036)",
+          "population": "e7f61248b37d850b145bc58677c2e2955f0feb318cf961a5e995e96ceffe9e80",
+          "source": "staging ff87f8488e206896ffdd82259af2fcf4ba269209 + the uncommitted fixed-width change; cand (specialised), prev (generic, byte-identical to the PFP-6 admitted DSO 6d002db2) and the 3.6.4 authority",
+          "target": "x86_64 i9-13900K, taskset -c 1, court openssl-rs-court-tools:1, rustc 1.98.1 release",
+          "tool": "bench_pfp5.c (ac605a5a...) + analyse_timing.py"
+        },
+        "population": {
+          "digest": "e7f61248b37d850b145bc58677c2e2955f0feb318cf961a5e995e96ceffe9e80",
+          "frozen_before_execution": true
+        },
+        "record": {
+          "path": "evidence/performance-frontier/campaigns/M-A1/timing/raw/timing-summary.json",
+          "present": true,
+          "sha256": "67916c5fc103b91ef578e0374ca78ffab2ff7d66aa144952d2ab4f024ab2d6d5"
+        }
+      },
+      "queue_item": "M-A1",
+      "reuse": null,
+      "shortcuts": [],
+      "status": "CANDIDATE",
+      "timing_obligations": {
+        "attempted_discharge": [],
+        "none_open_because": null,
+        "open": [
+          {
+            "id": "MA1-DIRTY-CANDIDATE",
+            "description": "The candidate is an uncommitted worktree state (staging ff87f848 + the fixed-width change); two clean builds reproduce DSO 88c0c7e0 byte for byte, but it is not reproducible from a commit.",
+            "discharged": false
+          },
+          {
+            "id": "MA1-AUDIT-SCOPE",
+            "description": "The branch audit is an enumeration and local dataflow review of one artefact, not a secret-independence proof. Dynamic ctgrind covers the width-4 path; the other seven widths rest on the structural audit and are not independently tainted.",
+            "discharged": false
+          },
+          {
+            "id": "MA1-SAFE-COMPATIBLE",
+            "description": "This arm is a performance candidate, not SAFE_COMPATIBLE; no safety or compatibility conclusion is asserted beyond the same-digest transcript.",
+            "discharged": false
+          }
+        ]
+      }
     }
   ],
   "author": {
@@ -1477,8 +1570,7 @@
         "path": "evidence/performance-frontier/campaigns/PFP-2/dso-differential/DOMAIN-553e1b8c.md",
         "present": true,
         "sha256": "01f77f28736e6c597ed7bd1be9f6632640691f49b89b218c4ca0aee3d1ee0432"
-      }
-,
+      },
       {
         "path": "evidence/performance-frontier/campaigns/PFP-7/BOUND.md",
         "present": true,
@@ -1583,6 +1675,76 @@
         "path": "evidence/performance-frontier/campaigns/PFP-7/raw/suite/full.log",
         "present": true,
         "sha256": "b10dd6d2da8a2c6c6002f9b08f677857b062cf341147d21265c0cb2ee2956bad"
+      },
+      {
+        "path": "evidence/performance-frontier/campaigns/M-A1/classify_widths.py",
+        "present": true,
+        "sha256": "c0b6fe90318d465d86c2669fcf6c18ca3b0e93f1f7d61821c1077f8ef027d663"
+      },
+      {
+        "path": "evidence/performance-frontier/campaigns/M-A1/raw/disasm/classification.md",
+        "present": true,
+        "sha256": "b1310b1e9db5e39759454f235e9b754d90c32e95486f8b84420ecb44811b7f09"
+      },
+      {
+        "path": "evidence/performance-frontier/campaigns/M-A1/differential/raw/summary.txt",
+        "present": true,
+        "sha256": "0e7fe643e0417c6fe7bf1e4ac6bf89f8f2b04b72b8646d3a55e5ceadc1cf364a"
+      },
+      {
+        "path": "evidence/performance-frontier/campaigns/M-A1/ctgrind/summary.txt",
+        "present": true,
+        "sha256": "56ec8681a90f8fa14d2587c088d7d59a5b6b0738ab37d66d64133cf1d80124af"
+      },
+      {
+        "path": "evidence/performance-frontier/campaigns/M-A1/dso-probe/raw/valgrind.tsv",
+        "present": true,
+        "sha256": "7b9d3b695670d4a46185c74669947727e7fbb0383af8bdc16ab45b48c013e713"
+      },
+      {
+        "path": "evidence/performance-frontier/campaigns/M-A1/timing/raw/timing-summary.json",
+        "present": true,
+        "sha256": "67916c5fc103b91ef578e0374ca78ffab2ff7d66aa144952d2ab4f024ab2d6d5"
+      },
+      {
+        "path": "evidence/performance-frontier/campaigns/M-A1/population.json",
+        "present": true,
+        "sha256": "e7f61248b37d850b145bc58677c2e2955f0feb318cf961a5e995e96ceffe9e80"
+      },
+      {
+        "path": "evidence/performance-frontier/campaigns/M-A1/raw/build-inputs.txt",
+        "present": true,
+        "sha256": "f24f6bf6e35048b6731d00577bc3b05c282403133c2bbdaa5359b82edddd805a"
+      },
+      {
+        "path": "evidence/performance-frontier/campaigns/M-A1/raw/variants.txt",
+        "present": true,
+        "sha256": "775dbed8d4c89c493f1b518fee2d48c588caad656c1ab36caa17c6be395eb74f"
+      },
+      {
+        "path": "evidence/performance-frontier/campaigns/M-A1/correctness/ma1.log",
+        "present": true,
+        "sha256": "3150c216b973fbea280bf6eae46d7010a9b883262a08cf1f0d9e9cacf5b3f951"
+      },
+      {
+        "path": "evidence/performance-frontier/campaigns/M-A1/correctness/bn.log",
+        "present": true,
+        "sha256": "27d9d5f64f33d4015866f967449312803c575daebd99ce5b2aaf1bc747618f54"
+      },
+      {
+        "path": "evidence/performance-frontier/campaigns/M-A1/correctness/suite.log",
+        "present": true,
+        "sha256": "09f536360c6e9d71c0cc00afdf6b4b5b221e054d8f9e142f0f86dff3387b53d8"
+      },
+      {
+        "path": "evidence/performance-frontier/campaigns/M-A1/correctness/fmt.log",
+        "present": true,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "path": "evidence/performance-frontier/campaigns/M-A1/correctness/clippy.log",
+        "present": true,
+        "sha256": "b7fdf6070e0696b9300b0bc237f857b675ee6e18d808269b040e7289746c7598"
       }
     ],
     "limits": [

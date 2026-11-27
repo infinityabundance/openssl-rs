@@ -1917,6 +1917,134 @@ fn mont_mul_cios_into(
     true
 }
 
+/// CIOS Montgomery multiplication specialised to a compile-time limb count.
+///
+/// The body is [`mont_mul_cios_into`] with the runtime `n` replaced by the const
+/// parameter `N`, so every loop bound, array extent and index is a compile-time
+/// constant and the compiler can unroll the fixed trip counts and drop the
+/// bounds checks it cannot prove for a runtime length. `a`, `b`, `out`, `m` and
+/// `diff` are exactly `N` limbs; the accumulator is the first `ACC` limbs of `t`,
+/// with `ACC == N + 2` at every call site (the CIOS accumulator size). `ACC` is a
+/// second const parameter only because `N + 2` is not a stable const-generic
+/// expression.
+///
+/// **The accumulator bound is inherited, not re-derived.** The product row, the
+/// reduction row and the masked final subtraction are the same operations in the
+/// same order as [`mont_mul_cios_into`], and the accumulator is the same `N + 2`
+/// limbs, so the `T_i < 2m` invariant argument there applies verbatim with
+/// `n := N`. No schedule, window, squaring or conversion step is changed.
+///
+/// Returns `false` on any geometry mismatch (a public length check), writing
+/// nothing.
+#[inline]
+fn mont_mul_cios_fixed<const N: usize, const ACC: usize>(
+    a: &[Limb],
+    b: &[Limb],
+    out: &mut [Limb],
+    m: &[Limb],
+    n0: Limb,
+    t: &mut [Limb],
+    diff: &mut [Limb],
+) -> bool {
+    if N == 0 || ACC < N + 2 || t.len() < ACC {
+        return false;
+    }
+    let (Ok(a), Ok(b), Ok(m)) = (
+        <&[Limb; N]>::try_from(a),
+        <&[Limb; N]>::try_from(b),
+        <&[Limb; N]>::try_from(m),
+    ) else {
+        return false;
+    };
+    let (Ok(out), Ok(diff), Ok(acc)) = (
+        <&mut [Limb; N]>::try_from(out),
+        <&mut [Limb; N]>::try_from(diff),
+        <&mut [Limb; ACC]>::try_from(&mut t[..ACC]),
+    ) else {
+        return false;
+    };
+
+    acc.fill(0);
+
+    for &bi in b {
+        // acc += a * b[i]
+        let mut carry = 0u64;
+        for j in 0..N {
+            let v = mul_add_carry(a[j], bi, acc[j], carry);
+            acc[j] = v as u64;
+            carry = (v >> 64) as u64;
+        }
+        let (hi, overflow) = acc[N].overflowing_add(carry);
+        acc[N] = hi;
+        acc[N + 1] = u64::from(overflow);
+
+        // acc += u * m, with `u` chosen so the low limb becomes zero. The low
+        // limb of `u * m[0] + acc[0]` is zero by construction, so it is dropped.
+        let u = acc[0].wrapping_mul(n0);
+        let v = mul_add_carry(u, m[0], acc[0], 0);
+        let mut carry = (v >> 64) as u64;
+        for j in 1..N {
+            let v = mul_add_carry(u, m[j], acc[j], carry);
+            acc[j - 1] = v as u64;
+            carry = (v >> 64) as u64;
+        }
+        let (lo, overflow) = acc[N].overflowing_add(carry);
+        acc[N - 1] = lo;
+        acc[N] = acc[N + 1].wrapping_add(u64::from(overflow));
+    }
+
+    // The same single masked conditional subtraction as the generic kernel.
+    let high = acc[N];
+    let mut borrow = 0u64;
+    for j in 0..N {
+        let (d1, b1) = acc[j].overflowing_sub(m[j]);
+        let (d2, b2) = d1.overflowing_sub(borrow);
+        diff[j] = d2;
+        borrow = u64::from(b1) | u64::from(b2);
+    }
+    let keep = high | (borrow ^ 1);
+    let mask = 0u64.wrapping_sub(keep);
+    for j in 0..N {
+        out[j] = constant_time_select(mask as usize, diff[j] as usize, acc[j] as usize) as Limb;
+    }
+    true
+}
+
+/// Dispatch a CIOS multiply to the compile-time-width kernel when the modulus'
+/// limb count is one of the specialised widths, and to the generic slice kernel
+/// for everything else.
+///
+/// The choice is on the **public** limb count, exactly as [`mont_geometry_ok`]
+/// is. The generic [`mont_mul_cios_into`] is retained unchanged as both the
+/// differential reference (`mont_mul_fallible_with`) and the fallback, so a
+/// width that is not listed here keeps the previous code exactly. The widths are
+/// the RSA/DH limb counts (16, 32, 48, 64, 128) and the two EC order widths that
+/// the ladder reaches (4 for P-256, 6 for P-384, 9 for P-521).
+fn mont_mul_cios_dispatch(
+    a: &[Limb],
+    b: &[Limb],
+    out: &mut [Limb],
+    m: &[Limb],
+    n0: Limb,
+    t: &mut [Limb],
+    diff: &mut [Limb],
+) -> bool {
+    if !mont_geometry_ok(a, b, out, diff, m, t) {
+        return false;
+    }
+    match m.len() {
+        4 => mont_mul_cios_fixed::<4, 6>(a, b, out, m, n0, t, diff),
+        6 => mont_mul_cios_fixed::<6, 8>(a, b, out, m, n0, t, diff),
+        9 => mont_mul_cios_fixed::<9, 11>(a, b, out, m, n0, t, diff),
+        16 => mont_mul_cios_fixed::<16, 18>(a, b, out, m, n0, t, diff),
+        32 => mont_mul_cios_fixed::<32, 34>(a, b, out, m, n0, t, diff),
+        48 => mont_mul_cios_fixed::<48, 50>(a, b, out, m, n0, t, diff),
+        64 => mont_mul_cios_fixed::<64, 66>(a, b, out, m, n0, t, diff),
+        128 => mont_mul_cios_fixed::<128, 130>(a, b, out, m, n0, t, diff),
+        _ => mont_mul_cios_into(a, b, out, m, n0, t, diff),
+    }
+}
+
 /// Dedicated squaring: a Comba product from the operand's symmetry (each
 /// unordered pair `i < j` contributes twice, the diagonal once), then the same
 /// REDC pass as the reference.
@@ -1991,7 +2119,7 @@ fn mont_mul_ladder_into(
 ) -> bool {
     match LADDER_SCHEDULE {
         MontSchedule::Sos => mont_mul_sos_into(a, b, out, m, n0, t, diff),
-        MontSchedule::Cios => mont_mul_cios_into(a, b, out, m, n0, t, diff),
+        MontSchedule::Cios => mont_mul_cios_dispatch(a, b, out, m, n0, t, diff),
     }
 }
 
@@ -4587,5 +4715,152 @@ mod tests {
             &mut t,
             &mut diff
         ));
+    }
+
+    // ------------------------------------------------------------------
+    // M-A1: per-width differential of the compile-time CIOS kernels against
+    // the generic slice kernel. The generic kernel is the reference; a
+    // mismatch at any width is a STOP.
+    // ------------------------------------------------------------------
+
+    /// An odd `n`-limb modulus with a non-zero top limb. `kind` selects the
+    /// pseudorandom shape or the all-ones modulus (`R - 1`), so the population
+    /// includes a maximal top limb and a maximally dense modulus.
+    fn ma1_modulus(n: usize, kind: u64) -> Vec<u64> {
+        if kind == 0 {
+            return vec![u64::MAX; n];
+        }
+        let mut state = kind | 1;
+        let mut m: Vec<u64> = (0..n).map(|_| pfp6_xorshift(&mut state)).collect();
+        m[0] |= 1;
+        m[n - 1] |= 1 << 63;
+        m
+    }
+
+    /// The PFP-6 operand population, specialised to a given width: `0`, `1`,
+    /// `m-1`, `m-2`, a one-limb value, every single-non-zero-limb value (all
+    /// positions for `n <= 16`, a boundary/midpoint sample otherwise), the
+    /// all-ones vector where it is below `m`, and a deterministic random sweep
+    /// reduced into `[0, m)`.
+    fn ma1_operands(m: &[u64]) -> Vec<Vec<u64>> {
+        let n = m.len();
+        let mut values: Vec<Vec<u64>> = Vec::new();
+        let mut push = |v: Vec<u64>| {
+            let p = pfp6_pad(&v, n);
+            if limbs::cmp(&p, m) == core::cmp::Ordering::Less && !values.contains(&p) {
+                values.push(p);
+            }
+        };
+        push(Vec::new());
+        push(vec![1]);
+        push(limbs::sub(m, &[1]));
+        push(limbs::sub(m, &[2]));
+        push(vec![u64::MAX]);
+        push(vec![u64::MAX; n]);
+        let positions: Vec<usize> = if n <= 16 {
+            (0..n).collect()
+        } else {
+            vec![0, 1, n / 2, n - 2, n - 1]
+        };
+        for &pos in &positions {
+            let mut v = vec![0u64; n];
+            v[pos] = 1;
+            push(v);
+            if pos == n - 1 {
+                let mut top = vec![0u64; n];
+                top[pos] = 1 << 63;
+                push(top);
+            }
+        }
+        let mut state = {
+            let mut s = 0x9e37_79b9_7f4a_7c15u64;
+            for &l in m {
+                s ^= l;
+                s = s.wrapping_mul(0x100_0000_01b3);
+            }
+            s | 1
+        };
+        let random = if n >= 64 { 4 } else { 12 };
+        for _ in 0..random {
+            let raw: Vec<u64> = (0..n).map(|_| pfp6_xorshift(&mut state)).collect();
+            let Some(reduced) = limbs::rem_fallible(&raw, m) else {
+                unreachable!("a remainder succeeds")
+            };
+            push(reduced);
+        }
+        values
+    }
+
+    fn ma1_specialised_widths() -> [usize; 8] {
+        [4, 6, 9, 16, 32, 48, 64, 128]
+    }
+
+    /// Run one multiply through the dispatch boundary and through the generic
+    /// slice kernel, assert bit equality, and check the defining congruence.
+    fn ma1_check_pair(m: &[u64], a: &[u64], b: &[u64], n0: u64) -> bool {
+        let n = m.len();
+        let Some(generic) = mont_mul_fallible_with(MontSchedule::Cios, a, b, m, n0) else {
+            unreachable!("allocation succeeds")
+        };
+        let mut out = vec![0u64; n];
+        let mut t = vec![0u64; n * 2 + 1];
+        let mut diff = vec![0u64; n];
+        assert!(
+            mont_mul_cios_dispatch(a, b, &mut out, m, n0, &mut t, &mut diff),
+            "dispatch refused the geometry"
+        );
+        assert_eq!(
+            out, generic,
+            "specialised != generic at n={n}, m={m:?}, a={a:?}, b={b:?}"
+        );
+        pfp6_assert_congruent(&out, a, b, m, "M-A1 fixed");
+        true
+    }
+
+    /// Every specialised width must equal the generic slice kernel over the
+    /// PFP-6 population, at two modulus shapes. One mismatch stops the test.
+    #[test]
+    fn ma1_specialised_widths_match_the_generic_kernel() {
+        let mut total = 0usize;
+        for n in ma1_specialised_widths() {
+            let mut cases = 0usize;
+            for kind in [0x0123_4567_89ab_cdefu64, 0] {
+                let m = ma1_modulus(n, kind);
+                assert!(m[0] & 1 == 1 && m[n - 1] != 0);
+                let n0 = mont_n0(m[0]);
+                let values = ma1_operands(&m);
+                for a in &values {
+                    for b in &values {
+                        assert!(ma1_check_pair(&m, a, b, n0));
+                        cases += 1;
+                    }
+                }
+            }
+            eprintln!("M-A1 width n={n}: pairs={cases} mismatches=0");
+            assert!(cases > 0);
+            total += cases;
+        }
+        eprintln!("M-A1 specialised differential: pairs={total} mismatches=0");
+    }
+
+    /// Widths outside the specialised set must fall back to the generic slice
+    /// kernel and still agree with it (the fallback is the reference itself, so
+    /// this checks the dispatch boundary, not a second implementation).
+    #[test]
+    fn ma1_unspecialised_widths_use_the_generic_kernel() {
+        let mut cases = 0usize;
+        for n in [1, 2, 3, 5, 7, 8, 13, 17, 33] {
+            let m = ma1_modulus(n, 0xdead_beef_0bad_f00du64);
+            let n0 = mont_n0(m[0]);
+            let values = ma1_operands(&m);
+            for a in &values {
+                for b in &values {
+                    assert!(ma1_check_pair(&m, a, b, n0));
+                    cases += 1;
+                }
+            }
+        }
+        eprintln!("M-A1 fallback widths: pairs={cases} mismatches=0");
+        assert!(cases > 0);
     }
 }

@@ -1,0 +1,21 @@
+==261094== Memcheck, a memory error detector
+==261094== Copyright (C) 2002-2022, and GNU GPL'd, by Julian Seward et al.
+==261094== Using Valgrind-3.19.0 and LibVEX; rerun with -h for copyright info
+==261094== Command: /work/court/tmp/ma1/pfp27_ladder_probe --lib /work/court/tmp/ma1/cand/distribution/libcrypto.so.3 --mode control
+==261094== Parent PID: 261066
+==261094== 
+==261094== 
+==261094== HEAP SUMMARY:
+==261094==     in use at exit: 4,541 bytes in 18 blocks
+==261094==   total heap usage: 44 allocs, 26 frees, 14,285 bytes allocated
+==261094== 
+==261094== LEAK SUMMARY:
+==261094==    definitely lost: 200 bytes in 5 blocks
+==261094==    indirectly lost: 280 bytes in 5 blocks
+==261094==      possibly lost: 0 bytes in 0 blocks
+==261094==    still reachable: 4,061 bytes in 8 blocks
+==261094==         suppressed: 0 bytes in 0 blocks
+==261094== Rerun with --leak-check=full to see details of leaked memory
+==261094== 
+==261094== For lists of detected and suppressed errors, rerun with: -s
+==261094== ERROR SUMMARY: 0 errors from 0 contexts (suppressed: 0 from 0)

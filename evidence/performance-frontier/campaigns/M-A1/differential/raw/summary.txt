@@ -1,0 +1,2 @@
+cand lines=161 authority_lines=161 result=IDENTICAL MX=150 RSA=8 DH=2
+prev lines=161 authority_lines=161 result=IDENTICAL MX=150 RSA=8 DH=2
