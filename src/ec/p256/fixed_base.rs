@@ -453,7 +453,7 @@ const P_MINUS_2: [Limb; LIMBS] = [
 /// The exponent is a compile-time constant, so the branch on its bits carries no
 /// secret; the base is secret and only ever feeds field multiplications. `a = 0`
 /// maps to `0`, which is what the infinity export relies on.
-fn invert<K: FieldKernel<FieldDomain>>(k: &K, a: &P256Field<K>) -> P256Field<K> {
+pub(crate) fn invert<K: FieldKernel<FieldDomain>>(k: &K, a: &P256Field<K>) -> P256Field<K> {
     let mut result = one(k);
     let mut bit = 256;
     while bit > 0 {
