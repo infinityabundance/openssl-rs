@@ -478,87 +478,87 @@
       },
       "candidate": {
         "artefact": {
-          "label": "distribution-shaped libcrypto.so.3 from staging 76652a46d + uncommitted src/bn/arith.rs documentation correction (PFP-6 re-evaluation default A: window=5, SOS, dedicated squaring off)",
-          "sha256": "661384603e0b661af384997676d8e88843f2b307b6abf73f56d472b03d888630"
+          "label": "distribution-shaped libcrypto.so.3 from staging dedb67a5f + uncommitted src/bn/arith.rs with LADDER_SCHEDULE = MontSchedule::Cios (window=5, SOS retained as reference/fallback, dedicated squaring off)",
+          "sha256": "6d002db20c815e252d1672a72b654f40844c2a1b24400cfbdfce5d1eaf828f39"
         },
-        "build_profile": "release, x86_64-unknown-linux-gnu, rustc 1.98.1; staging 76652a46d + an uncommitted src/bn/arith.rs documentation correction (source fingerprint 52671fca04e1a4e2054fd830dd123d1b8b89180939e791e990801a6009c41a65, 887 files; build_relevant_clean=false); A2 reproduces A byte for byte (archive identical)",
-        "source_commit": "76652a46dcfb388656d964010268685ca032dff1"
+        "build_profile": "release, x86_64-unknown-linux-gnu, rustc 1.98.1 (48a229cea); staging dedb67a5fe7d567a046def6402388d043b50d571 + an uncommitted one-constant src/bn/arith.rs change (arith sha256 3e8127cb1eb816b9db066eb52ce1535620aa9c812bec0b441c627fdb9100aea1; src fingerprint 7428126955278fe950c1a19066e0f22c6d7f1647740d0c74c0b1f7273c37c819, 887 files; build_relevant_clean=false); a second clean build reproduces DSO and archive byte for byte",
+        "source_commit": "dedb67a5fe7d567a046def6402388d043b50d571"
       },
       "constant_time_audit": {
-        "kind": "BINARY_BRANCH_AUDIT",
-        "candidate_sha256": "661384603e0b661af384997676d8e88843f2b307b6abf73f56d472b03d888630",
-        "harness_kind": "binary_branch_audit.py with the PFP-5 targets (run_mont_ladder, mont_mul_sos_into); every jcc/div/cmov/setcc counted, per-branch provenance listed",
-        "harness_sha256": "5d54f3a1995263032fbdd23f9ccd533b50fa53b283199b2e1f43a3002cd1dfd4",
-        "reference": {
-          "path": "evidence/performance-frontier/campaigns/PFP-6/reeval-2026-11-27/audit/branch-audit.md",
+        "kind": "CTGRIND_PLUS_BRANCH_AUDIT",
+        "candidate_sha256": "6d002db20c815e252d1672a72b654f40844c2a1b24400cfbdfce5d1eaf828f39",
+        "harness_kind": "classify_cios.py over disasm_sites.py from the declared digest's objdump of mont_mul_ladder_into; every jcc/setcc/cmov enumerated, flag source and arithmetic consumer asserted per site",
+        "harness_sha256": "8928184c50885b451aee32d46cf00650fe6253b93c41e30d5b372cf71a328762",
+        "branch_audit": {
+          "path": "evidence/performance-frontier/campaigns/PFP-6/admission-2026-11-27/raw/disasm/classification.md",
           "present": true,
-          "sha256": "4f29b3c1b2e9a80e5d222941cec2945973d21aacc8e064c5ea99e51b3428ff2f"
+          "sha256": "0f8cc7971fe9f313b7f27dac5d4f0b3913550441653483d2faa45d3fe35dd770"
+        },
+        "reference": {
+          "path": "evidence/performance-frontier/campaigns/PFP-6/admission-2026-11-27/raw/disasm/classification.md",
+          "present": true,
+          "sha256": "0f8cc7971fe9f313b7f27dac5d4f0b3913550441653483d2faa45d3fe35dd770"
         },
         "ctgrind": {
-          "kind": "SOURCE_BOUND_DEBUG_TEST",
+          "kind": "SOURCE_BOUND_EXPONENT_TAINT_PLUS_DSO_BASE_PROBE",
           "errors": 0,
           "contexts": 0,
-          "note": "bn::arith::tests::ctgrind_secret_exponent_window, exponent limb bytes tainted, valgrind memcheck 0 errors/0 contexts; debug test binary, not the DSO; the DSO-bound taint at this digest was not run"
+          "note": "bn::arith::tests::ctgrind_secret_exponent_window with the exponent limb bytes tainted: 0 errors / 0 contexts, origins none; negative control 4 errors / 1 context. DSO-bound pfp27 ladder probe (base tainted) on the admitted DSO: 0 contexts, 3 reps. Neither is a constant-time proof"
         },
-        "finding": "no secret-derived transfer in run_mont_ladder or mont_mul_sos_into at 66138460; 100 jcc/2 cmov/18 setcc and 19 jcc/0 cmov/10 setcc, all public-bound or data-only carry/borrow flags"
+        "finding": "CIOS carrier mont_mul_ladder_into at 0x58ce60/0x36c: 14 jcc (14 public-bound, 0 secret-derived), 18 setcc (3 public geometry, 15 secret carry/borrow flags consumed arithmetically, none reaching control), 0 cmovcc. Secret-derived control transfers: none. Re-derived from 6d002db2, not inherited from the earlier digest"
       },
-      "description": "Integrated Montgomery multiply and squaring: SOS reference, CIOS and dedicated-squaring kernels in the crate. Re-evaluated at the PFP-5 five-bit window composition (83.33 % squarings): dedicated squaring loses to both SOS and CIOS (B/A 1.0822 at 2048, 1.0048 at 8192; D/C 1.2628/1.1323), so LADDER_DEDICATED_SQUARING remains false. CIOS is 0.8274/0.8379 of the SOS operation and is the next measured default decision, not admitted here.",
+      "description": "Integrated Montgomery multiply and squaring: SOS reference, CIOS and dedicated-squaring kernels in the crate. Dedicated squaring stays off (it loses to both SOS and CIOS at the five-bit-window mix). CIOS is now the ladder default: at the admitted digest it measures 0.8267/0.8375/0.8357/0.8272 of the SOS operation (modexp2048/modexp8192/rsa2048/dh-ffdhe2048), matching the 0.827-0.838 the selection comparison predicted. The 161-line ABI transcript, the per-kernel differential, the exponent taint and a fresh branch audit all pass at the same digest.",
       "differential_courts": {
-        "candidate_sha256": "661384603e0b661af384997676d8e88843f2b307b6abf73f56d472b03d888630",
+        "candidate_sha256": "6d002db20c815e252d1672a72b654f40844c2a1b24400cfbdfce5d1eaf828f39",
         "reference": {
-          "path": "evidence/performance-frontier/campaigns/PFP-6/reeval-2026-11-27/differential/raw/summary.txt",
+          "path": "evidence/performance-frontier/campaigns/PFP-6/admission-2026-11-27/differential/raw/summary.txt",
           "present": true,
-          "sha256": "932ea1f840f4d061b16ffd1b2391f90904dc08cba9890744cf3b64bdf209fd7b"
+          "sha256": "defbaeb0fdc78426e114c4aaab98a6f6bdc12ebba03c930a6b1cee57f9c29062"
         },
         "result": "PASS"
       },
       "measurement": {
-        "candidate_sha256": "661384603e0b661af384997676d8e88843f2b307b6abf73f56d472b03d888630",
+        "candidate_sha256": "6d002db20c815e252d1672a72b654f40844c2a1b24400cfbdfce5d1eaf828f39",
         "classification": "SCOPED_OBSERVATION",
         "identity": {
-          "instrument": "wall-clock median_us per process; 15 interleaved repetitions; median of paired per-repetition ratios; 95% percentile bootstrap (20,000 resamples, seed 0x50465036)",
-          "population": "543f3e742b4232b9f8c996ee0549f55f0acfb54893ff681fc87ec0f917757620",
-          "source": "staging 76652a46dcfb388656d964010268685ca032dff1 + uncommitted src/bn/arith.rs documentation correction (66bd6c4c...); four DSOs A/B/C/D from that source",
+          "instrument": "wall-clock median_us per process; 15 interleaved repetitions, order rotated across three arms; median of paired per-repetition ratios; 95% percentile bootstrap (20,000 resamples, seed 0x50465036)",
+          "population": "4b8d401bb047063c1f5422adb269fac5e687cfd2b0dc6c376bc38f32e7233ddb",
+          "source": "staging dedb67a5fe7d567a046def6402388d043b50d571 + the uncommitted CIOS-default change; cand (CIOS), ref (SOS twin) and the 3.6.4 authority",
           "target": "x86_64 i9-13900K, taskset -c 1, court openssl-rs-court-tools:1, rustc 1.98.1 release",
-          "tool": "bench_pfp5.c (ac605a5a...) + analyse_variants.py"
+          "tool": "bench_pfp5.c (ac605a5a...) + analyse_admission.py"
         },
         "population": {
-          "digest": "543f3e742b4232b9f8c996ee0549f55f0acfb54893ff681fc87ec0f917757620",
+          "digest": "4b8d401bb047063c1f5422adb269fac5e687cfd2b0dc6c376bc38f32e7233ddb",
           "frozen_before_execution": true
         },
         "record": {
-          "path": "evidence/performance-frontier/campaigns/PFP-6/reeval-2026-11-27/timing/raw/timing-summary.json",
+          "path": "evidence/performance-frontier/campaigns/PFP-6/admission-2026-11-27/timing/raw/timing-summary.json",
           "present": true,
-          "sha256": "4a78d5c3a12cc0a19076dcefdbe1a816da7c5c754603002be89c090d336797f3"
+          "sha256": "dfcec98e9c27cc4ddcc6536a3a5e8f8f48c67b3ad0ffcc0a2cd01ac0cb5bc749"
         }
       },
       "queue_item": "PFP-6",
       "reuse": null,
       "shortcuts": [],
-      "status": "EXPERIMENT",
+      "status": "CANDIDATE",
       "timing_obligations": {
         "attempted_discharge": [],
         "none_open_because": null,
         "open": [
           {
-            "description": "FIOS and almost-Montgomery schedules were neither implemented nor compared; the reason for not evaluating them at this composition is recorded in REEVALUATION.md section 9.",
+            "description": "FIOS and almost-Montgomery remain unmeasured; the reason is recorded in REEVALUATION.md section 9 (FIOS is a smaller expected delta over the now-admitted CIOS and needs its own bound proof, per-kernel differential and branch audit; almost-Montgomery changes the canonicality contract and the window induction).",
             "discharged": false,
             "id": "PFP6-FIOS-ALMOST-MONT"
           },
           {
-            "description": "The candidate is an uncommitted worktree state (staging 76652a46d + src/bn/arith.rs documentation correction); A/A2 reproduce it, but it is not reproducible from a commit.",
+            "description": "The candidate is an uncommitted worktree state (staging dedb67a5f + the CIOS-default change); two clean builds reproduce DSO 6d002db2 byte for byte, but it is not reproducible from a commit.",
             "discharged": false,
             "id": "PFP6-DIRTY-CANDIDATE"
           },
           {
-            "description": "There is no DSO-bound ctgrind at 66138460; the 0-error taint is source-bound to a debug test binary, and PFP-27's DSO-bound result is at a different digest (5e75b694).",
+            "description": "This arm is a performance candidate, not SAFE_COMPATIBLE; no safety or compatibility conclusion is asserted.",
             "discharged": false,
-            "id": "PFP6-DSO-BOUND-TAINT"
-          },
-          {
-            "description": "CIOS measured 0.8274/0.8379 of the SOS operation at the new mix but is not admitted; admission requires a window-aware CIOS branch audit and a DSO-bound taint at its own digest.",
-            "discharged": false,
-            "id": "PFP6-CIOS-NOT-ADMITTED"
+            "id": "PFP6-SAFE-COMPATIBLE"
           }
         ]
       }

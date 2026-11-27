@@ -1,0 +1,33 @@
+symbol	addr	kind	insn	operand	class	sub	depends_on	note	flag_source	consumed
+mont_mul_ladder_into	58ce93	jcc	jne	58d089	a	a-geom	mont_geometry_ok: xor/or of the five length words	early return false; public lengths only	or %r9,%rax	-
+mont_mul_ladder_into	58cea9	setcc	sete	%al	a	a-geom	t.len == 2n+1	geometry flag (public lengths)	cmp %rax,0x80(%rsp)	-
+mont_mul_ladder_into	58ceac	setcc	setne	%cl	a	a-geom	t.len != 2n+1	geometry flag ORed into the early-return test	cmp %rax,0x80(%rsp)	-
+mont_mul_ladder_into	58ceb2	setcc	sete	%dl	a	a-geom	n == 0	geometry flag ORed into the early-return test	test %rsi,%rsi	-
+mont_mul_ladder_into	58ceb7	jcc	jne	58d1bd	a	a-geom	!(t.len == 2n+1) || n == 0	early return true; public lengths only	or %cl,%dl	-
+mont_mul_ladder_into	58cef7	jcc	jb	58d090	a	a-loop	n < 2	one-limb modulus specialisation	cmp $0x2,%r13	-
+mont_mul_ladder_into	58cf3d	setcc	setb	%sil	b	b-flag	carry of acc[j] + a[j]*b[i]	setb %sil -> adc %rdx,%rsi; data	add (%rbx,%r9,8),%rcx	58cf44:adc    %rdx,%rsi
+mont_mul_ladder_into	58cf6e	jcc	je	58d0e7	a	a-loop	outer loop over b's n limbs (pointer vs b_end)	fixed trip count = b.len()	cmp 0x20(%rsp),%r14	-
+mont_mul_ladder_into	58cf83	jcc	je	58cfd9	a	a-loop	n - 1 == 0	no inner product iteration for n == 1	test %rax,%rax	-
+mont_mul_ladder_into	58cf9e	setcc	setb	%r10b	b	b-flag	carry of the product row	setb %r10b -> adc %rdx,%r10; data	add (%rbx,%r9,8),%rsi	58cfa5:adc    %rdx,%r10
+mont_mul_ladder_into	58cfbb	setcc	setb	%sil	b	b-flag	carry of the second product-row limb	setb %sil -> adc %rdx,%rsi; data	add 0x8(%rbx,%r9,8),%r10	58cfcb:adc    %rdx,%rsi
+mont_mul_ladder_into	58cfd1	jcc	jne	58cf90	a	a-loop	j < n & ~1	unrolled-by-2 product loop	cmp %r9,%r13	-
+mont_mul_ladder_into	58cfd7	jcc	je	58cff6	a	a-loop	n odd	remaining product limb, public parity	test $0x1,%dil	-
+mont_mul_ladder_into	58cfe6	setcc	setb	%cl	b	b-flag	carry of the tail product limb	setb %cl -> adc %rdx,%rcx; data	add (%rbx,%r9,8),%rsi	58cfec:adc    %rdx,%rcx
+mont_mul_ladder_into	58cffc	setcc	setb	%al	b	b-flag	carry into acc[n+1]	setb %al -> store as acc[n+1]; data	add %rsi,(%rbx,%rdi,8)	58cfff:mov    %rax,0x8(%rbx,%rdi,8)
+mont_mul_ladder_into	58d02a	jcc	je	58cf30	a	a-loop	n == 2	reduction specialisation, public n	cmp $0x2,%rdi	-
+mont_mul_ladder_into	58d03e	setcc	setb	%r10b	b	b-flag	carry of the reduction row	setb %r10b -> adc %rdx,%r10; data	add (%rbx,%r9,8),%rcx	58d045:adc    %rdx,%r10
+mont_mul_ladder_into	58d05c	setcc	setb	%cl	b	b-flag	carry of the second reduction-row limb	setb %cl -> adc %rdx,%rcx; data	add 0x8(%rbx,%r9,8),%r10	58d06f:adc    %rdx,%rcx
+mont_mul_ladder_into	58d076	jcc	jne	58d030	a	a-loop	reduction-loop count from n	unrolled-by-2 reduction loop	cmp $0x1,%rax	-
+mont_mul_ladder_into	58d07e	jcc	jne	58cf30	a	a-loop	n - 1 odd	remaining reduction limb, public parity	test $0x1,%al	-
+mont_mul_ladder_into	58d0a5	setcc	setb	%sil	b	b-flag	carry of acc[n] += carry (n == 1 path)	setb %sil -> add $0xff,%sil; data	adc (%rbx,%rdi,8),%rcx	58d0d6:add    $0xff,%sil
+mont_mul_ladder_into	58d0a9	setcc	setb	%al	b	b-flag	same carry, second read (n == 1 path)	setb %al -> movzbl/store acc[n+1]; data	adc (%rbx,%rdi,8),%rcx	58d0b0:movzbl %al,%eax
+mont_mul_ladder_into	58d0cb	setcc	setb	%al	b	b-flag	carry of u*m[0] + acc[0] (n == 1 path)	setb %al -> movzbl/add 0xff/adc; data	adc %rcx,%rdx	58d0d3:movzbl %al,%edx
+mont_mul_ladder_into	58d0f3	jcc	jne	58d0fb	a	a-loop	n == 1	conditional-subtraction specialisation	cmp $0x1,%rdi	-
+mont_mul_ladder_into	58d118	setcc	setb	%r11b	b	b-flag	borrow of acc[j] - m[j]	setb %r11b -> or %r11b,%cl; data	sub (%r12,%rsi,8),%r10	58d126:or     %r11b,%cl
+mont_mul_ladder_into	58d11f	setcc	setb	%cl	b	b-flag	borrow of (d1 - borrow)	setb %cl -> add $0xff,%cl; data	sub %rcx,%r10	58d12e:add    $0xff,%cl
+mont_mul_ladder_into	58d13f	setcc	setb	%cl	b	b-flag	borrow of the sbb pair	setb %cl -> movzbl; data	sbb 0x8(%r12,%rsi,8),%r10	58d142:movzbl %cl,%ecx
+mont_mul_ladder_into	58d148	jcc	jne	58d110	a	a-loop	j < n & ~1	unrolled-by-2 subtraction loop	cmp %rsi,%r9	-
+mont_mul_ladder_into	58d14e	jcc	je	58d16c	a	a-loop	n odd	remaining subtraction limb, public parity	test $0x1,%dil	-
+mont_mul_ladder_into	58d158	setcc	setb	%r10b	b	b-flag	borrow of the tail limb	setb %r10b -> or %r10b,%cl; data	sub (%r12,%rsi,8),%r9	58d166:or     %r10b,%cl
+mont_mul_ladder_into	58d15f	setcc	setb	%cl	b	b-flag	borrow of the tail limb, second read	setb %cl -> movzbl; data	sub %rcx,%r9	58d169:movzbl %cl,%ecx
+mont_mul_ladder_into	58d1b9	jcc	jne	58d190	a	a-loop	j < n	final mask-select loop, public bound	cmp %r9,%rdi	-

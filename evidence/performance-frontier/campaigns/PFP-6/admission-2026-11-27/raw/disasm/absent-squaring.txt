@@ -1,0 +1,2 @@
+cand absent (LADDER_DEDICATED_SQUARING = false; no symbol, no body)
+ref absent (LADDER_DEDICATED_SQUARING = false; no symbol, no body)

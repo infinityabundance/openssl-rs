@@ -1,0 +1,6 @@
+LOADED realpath=/work/court/tmp/pfp6-admission/cand/distribution/libcrypto.so.3 dev=57 ino=2076521 size=17118904
+MAPS realpath=/work/court/tmp/pfp6-admission/cand/distribution/libcrypto.so.3 entries=5
+FOREIGN libcrypto=0
+HARNESS mode=ladder iters=1
+TAINT what=base limbs=4
+RESULT mode=ladder ok=1 marked=1

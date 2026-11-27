@@ -1642,8 +1642,10 @@ fn fixed_width_exponent(pd: &[Limb], width: usize) -> Option<SecretLimbs> {
 /// The schedule an integrated Montgomery multiply uses.
 ///
 /// Both schedules compute the same function, `a * b * R^-1 mod m`, and are
-/// differentially verified against each other bit for bit. The reference is the
-/// default so a schedule change is an explicit, measured decision.
+/// differentially verified against each other bit for bit. `Sos` is the
+/// reference; `Cios` is the admitted ladder default, selected through the named
+/// constant [`LADDER_SCHEDULE`] so a schedule change stays an explicit, measured
+/// decision.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub(crate) enum MontSchedule {
     /// Reference: separated operand scanning (SOS) — the full schoolbook
@@ -1653,21 +1655,23 @@ pub(crate) enum MontSchedule {
     /// as it is produced, so only `n + 2` limbs of accumulator are needed and
     /// the product's low half is never stored.
     ///
-    /// Constructed by the PFP-6 differential court and by a caller that selects
-    /// it through [`mont_mul_fallible_with`]; the default ladder constant picks
-    /// `Sos`, so a plain `cargo check` sees no construction. That is a statement
-    /// about the selected default, not a licence to leave an unreachable kernel.
-    #[cfg_attr(not(test), allow(dead_code))]
+    /// The admitted ladder default ([`LADDER_SCHEDULE`]); also constructible by
+    /// a caller through [`mont_mul_fallible_with`] and by the PFP-6 differential
+    /// court.
     Cios,
 }
 
 /// The schedule the constant-time ladder uses.
 ///
-/// `Sos` is the reference kernel PFP-6 differentially verified. CIOS is measured
-/// in the PFP-6 campaign; selecting it here is a default change and requires the
-/// affected API performance rows to be re-run at the same digest
-/// (`docs/PERFORMANCE-FRONTIER-TODO.md`, PFP-6).
-const LADDER_SCHEDULE: MontSchedule = MontSchedule::Sos;
+/// `Cios` is the admitted default: at the PFP-5 five-bit-window composition it
+/// measured 0.8274× the SOS operation at 2048 bits and 0.8379× at 8192 bits, and
+/// the CIOS carrier was branch-audited at its own digests (PFP-6
+/// `evidence/performance-frontier/campaigns/PFP-6/ADMISSION.md`). `Sos` remains
+/// the reference kernel, selected through [`mont_mul_fallible`] /
+/// [`MontSchedule::Sos`] for the differential court and available as the
+/// fallback. Switching this constant is the whole schedule change; the window,
+/// the squaring path and the conversions are untouched.
+const LADDER_SCHEDULE: MontSchedule = MontSchedule::Cios;
 
 /// Whether the ladder uses the dedicated squaring kernel.
 ///
@@ -1991,7 +1995,7 @@ fn mont_mul_ladder_into(
     }
 }
 
-/// Reference Montgomery multiplication, kept as the named default used by
+/// Reference Montgomery multiplication, kept as the named SOS path used by
 /// [`mont_mul_fallible`]. See [`mont_mul_sos_into`]; returns `false` on a
 /// geometry violation.
 fn mont_mul_into(

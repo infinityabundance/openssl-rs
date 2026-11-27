@@ -1,0 +1,11 @@
+--- /work/court/tmp/pfp6-admission/arith.cand.rs	2026-11-27 12:22:26.104068260 +0000
++++ src/bn/arith.rs	2026-11-27 12:23:10.704646418 +0000
+@@ -1671,7 +1671,7 @@
+ /// [`MontSchedule::Sos`] for the differential court and available as the
+ /// fallback. Switching this constant is the whole schedule change; the window,
+ /// the squaring path and the conversions are untouched.
+-const LADDER_SCHEDULE: MontSchedule = MontSchedule::Cios;
++const LADDER_SCHEDULE: MontSchedule = MontSchedule::Sos;
+ 
+ /// Whether the ladder uses the dedicated squaring kernel.
+ ///

@@ -1,0 +1,256 @@
+
+/work/court/tmp/pfp6-admission/ref/distribution/libcrypto.so.3:     file format elf64-x86-64
+
+
+Disassembly of section .text:
+
+000000000058c870 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith17mont_mul_sos_into>:
+  58c870:	push   %rbp
+  58c871:	push   %r15
+  58c873:	push   %r14
+  58c875:	push   %r13
+  58c877:	push   %r12
+  58c879:	push   %rbx
+  58c87a:	sub    $0x38,%rsp
+  58c87e:	mov    %rdx,%r15
+  58c881:	mov    0x78(%rsp),%rax
+  58c886:	mov    %rsi,%rdx
+  58c889:	xor    %rax,%rdx
+  58c88c:	xor    %rax,%rcx
+  58c88f:	or     %rdx,%rcx
+  58c892:	xor    %rax,%r9
+  58c895:	or     %rcx,%r9
+  58c898:	xor    0xa0(%rsp),%rax
+  58c8a0:	or     %r9,%rax
+  58c8a3:	jne    58c9c0 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith17mont_mul_sos_into+0x150>
+  58c8a9:	mov    0x90(%rsp),%rcx
+  58c8b1:	lea    0x1(,%rsi,2),%rax
+  58c8b9:	cmp    %rax,%rcx
+  58c8bc:	jne    58c9c0 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith17mont_mul_sos_into+0x150>
+  58c8c2:	mov    %rdi,%r12
+  58c8c5:	mov    %r8,0x10(%rsp)
+  58c8ca:	mov    0x88(%rsp),%rbx
+  58c8d2:	lea    0x0(,%rcx,8),%rdx
+  58c8da:	mov    %rbx,%rdi
+  58c8dd:	mov    %rsi,%r14
+  58c8e0:	xor    %esi,%esi
+  58c8e2:	call   *0x343f80(%rip)        # 8d0868 <memset@GLIBC_2.2.5>
+  58c8e8:	mov    $0x1,%al
+  58c8ea:	test   %r14,%r14
+  58c8ed:	je     58c9c2 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith17mont_mul_sos_into+0x152>
+  58c8f3:	mov    %r14,%rdi
+  58c8f6:	mov    0x70(%rsp),%r10
+  58c8fb:	movabs $0xffffffffffffffe,%r13
+  58c905:	lea    (%rbx,%r14,8),%r14
+  58c909:	and    %rdi,%r13
+  58c90c:	lea    0x8(%rbx),%rsi
+  58c910:	xor    %ebp,%ebp
+  58c912:	jmp    58c953 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith17mont_mul_sos_into+0xe3>
+  58c914:	data16 data16 cs nopw 0x0(%rax,%rax,1)
+  58c920:	mov    %rcx,%rax
+  58c923:	mulq   (%r15,%r8,8)
+  58c927:	lea    (%rbx,%rbp,8),%rcx
+  58c92b:	xor    %r11d,%r11d
+  58c92e:	add    (%rcx,%r8,8),%r9
+  58c932:	setb   %r11b
+  58c936:	add    %rax,%r9
+  58c939:	adc    %rdx,%r11
+  58c93c:	mov    %r9,(%rcx,%r8,8)
+  58c940:	mov    %r11,%r9
+  58c943:	mov    %r9,(%r14,%rbp,8)
+  58c947:	inc    %rbp
+  58c94a:	add    $0x8,%rsi
+  58c94e:	cmp    %rdi,%rbp
+  58c951:	je     58c9d1 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith17mont_mul_sos_into+0x161>
+  58c953:	mov    (%r12,%rbp,8),%rcx
+  58c957:	lea    -0x1(%rdi),%rax
+  58c95b:	xor    %r8d,%r8d
+  58c95e:	xor    %r9d,%r9d
+  58c961:	test   %rax,%rax
+  58c964:	je     58c920 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith17mont_mul_sos_into+0xb0>
+  58c966:	cs nopw 0x0(%rax,%rax,1)
+  58c970:	mov    %rcx,%rax
+  58c973:	mulq   (%r15,%r8,8)
+  58c977:	xor    %r11d,%r11d
+  58c97a:	add    -0x8(%rsi,%r8,8),%r9
+  58c97f:	setb   %r11b
+  58c983:	add    %rax,%r9
+  58c986:	adc    %rdx,%r11
+  58c989:	mov    %r9,-0x8(%rsi,%r8,8)
+  58c98e:	mov    %rcx,%rax
+  58c991:	mulq   0x8(%r15,%r8,8)
+  58c996:	xor    %r9d,%r9d
+  58c999:	add    (%rsi,%r8,8),%r11
+  58c99d:	setb   %r9b
+  58c9a1:	add    %rax,%r11
+  58c9a4:	mov    %r11,(%rsi,%r8,8)
+  58c9a8:	lea    0x2(%r8),%r8
+  58c9ac:	adc    %rdx,%r9
+  58c9af:	cmp    %r8,%r13
+  58c9b2:	jne    58c970 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith17mont_mul_sos_into+0x100>
+  58c9b4:	test   $0x1,%dil
+  58c9b8:	jne    58c920 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith17mont_mul_sos_into+0xb0>
+  58c9be:	jmp    58c943 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith17mont_mul_sos_into+0xd3>
+  58c9c0:	xor    %eax,%eax
+  58c9c2:	add    $0x38,%rsp
+  58c9c6:	pop    %rbx
+  58c9c7:	pop    %r12
+  58c9c9:	pop    %r13
+  58c9cb:	pop    %r14
+  58c9cd:	pop    %r15
+  58c9cf:	pop    %rbp
+  58c9d0:	ret
+  58c9d1:	mov    %rdi,%rax
+  58c9d4:	shl    $0x4,%rax
+  58c9d8:	mov    %rax,0x20(%rsp)
+  58c9dd:	add    $0x8,%rax
+  58c9e1:	mov    %rax,0x28(%rsp)
+  58c9e6:	lea    0x8(,%rdi,8),%rbp
+  58c9ee:	xor    %r9d,%r9d
+  58c9f1:	mov    %r14,0x18(%rsp)
+  58c9f6:	mov    %r14,%r11
+  58c9f9:	mov    %rbx,%r14
+  58c9fc:	xor    %r15d,%r15d
+  58c9ff:	mov    0x90(%rsp),%rbx
+  58ca07:	jmp    58ca33 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith17mont_mul_sos_into+0x1c3>
+  58ca09:	nopl   0x0(%rax)
+  58ca10:	dec    %rbx
+  58ca13:	dec    %r15
+  58ca16:	add    $0x8,%r14
+  58ca1a:	add    $0x8,%r11
+  58ca1e:	add    $0xfffffffffffffff8,%rbp
+  58ca22:	mov    0x30(%rsp),%rax
+  58ca27:	mov    %rax,%r9
+  58ca2a:	cmp    %rdi,%rax
+  58ca2d:	je     58cada <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith17mont_mul_sos_into+0x26a>
+  58ca33:	cmp    0x90(%rsp),%r9
+  58ca3b:	je     58cc2a <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith17mont_mul_sos_into+0x3ba>
+  58ca41:	lea    0x1(%r9),%rax
+  58ca45:	mov    %rax,0x30(%rsp)
+  58ca4a:	mov    0x88(%rsp),%rax
+  58ca52:	mov    (%rax,%r9,8),%rcx
+  58ca56:	imul   0x80(%rsp),%rcx
+  58ca5f:	xor    %esi,%esi
+  58ca61:	xor    %r12d,%r12d
+  58ca64:	data16 data16 cs nopw 0x0(%rax,%rax,1)
+  58ca70:	cmp    %rsi,%rbx
+  58ca73:	je     58cc0f <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith17mont_mul_sos_into+0x39f>
+  58ca79:	mov    %rcx,%rax
+  58ca7c:	mulq   (%r10,%rsi,8)
+  58ca80:	xor    %r8d,%r8d
+  58ca83:	add    (%r14,%rsi,8),%r12
+  58ca87:	setb   %r8b
+  58ca8b:	add    %rax,%r12
+  58ca8e:	mov    %r12,(%r14,%rsi,8)
+  58ca92:	lea    0x1(%rsi),%rsi
+  58ca96:	mov    %r8,%r12
+  58ca99:	adc    %rdx,%r12
+  58ca9c:	cmp    %rsi,%rdi
+  58ca9f:	jne    58ca70 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith17mont_mul_sos_into+0x200>
+  58caa1:	add    %rdi,%r9
+  58caa4:	shl    $0x3,%r9
+  58caa8:	cmp    0x28(%rsp),%r9
+  58caad:	je     58ca10 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith17mont_mul_sos_into+0x1a0>
+  58cab3:	xor    %eax,%eax
+  58cab5:	data16 cs nopw 0x0(%rax,%rax,1)
+  58cac0:	xor    %ecx,%ecx
+  58cac2:	add    %r12,(%r11,%rax,1)
+  58cac6:	setb   %cl
+  58cac9:	add    $0x8,%rax
+  58cacd:	mov    %rcx,%r12
+  58cad0:	cmp    %rax,%rbp
+  58cad3:	jne    58cac0 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith17mont_mul_sos_into+0x250>
+  58cad5:	jmp    58ca10 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith17mont_mul_sos_into+0x1a0>
+  58cada:	mov    0x88(%rsp),%rax
+  58cae2:	mov    0x20(%rsp),%rcx
+  58cae7:	mov    (%rax,%rcx,1),%rcx
+  58caeb:	lea    -0x1(%rdi),%rdx
+  58caef:	test   %rdx,%rdx
+  58caf2:	je     58cb62 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith17mont_mul_sos_into+0x2f2>
+  58caf4:	lea    (%rax,%rdi,8),%r8
+  58caf8:	add    $0x8,%r8
+  58cafc:	xor    %esi,%esi
+  58cafe:	xor    %edx,%edx
+  58cb00:	mov    $0x1,%al
+  58cb02:	mov    0x90(%rsp),%r14
+  58cb0a:	mov    0x98(%rsp),%r15
+  58cb12:	mov    0x10(%rsp),%r12
+  58cb17:	nopw   0x0(%rax,%rax,1)
+  58cb20:	mov    -0x8(%r8,%rsi,8),%r9
+  58cb25:	sub    (%r10,%rsi,8),%r9
+  58cb29:	setb   %r11b
+  58cb2d:	sub    %rdx,%r9
+  58cb30:	setb   %dl
+  58cb33:	mov    %r9,(%r15,%rsi,8)
+  58cb37:	or     %r11b,%dl
+  58cb3a:	mov    (%r8,%rsi,8),%r9
+  58cb3e:	add    $0xff,%dl
+  58cb41:	sbb    0x8(%r10,%rsi,8),%r9
+  58cb46:	mov    %r9,0x8(%r15,%rsi,8)
+  58cb4b:	lea    0x2(%rsi),%rsi
+  58cb4f:	setb   %dl
+  58cb52:	movzbl %dl,%edx
+  58cb55:	cmp    %rsi,%r13
+  58cb58:	jne    58cb20 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith17mont_mul_sos_into+0x2b0>
+  58cb5a:	test   $0x1,%dil
+  58cb5e:	jne    58cb7d <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith17mont_mul_sos_into+0x30d>
+  58cb60:	jmp    58cb9e <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith17mont_mul_sos_into+0x32e>
+  58cb62:	xor    %esi,%esi
+  58cb64:	xor    %edx,%edx
+  58cb66:	mov    $0x1,%al
+  58cb68:	mov    0x90(%rsp),%r14
+  58cb70:	mov    0x98(%rsp),%r15
+  58cb78:	mov    0x10(%rsp),%r12
+  58cb7d:	mov    0x18(%rsp),%r8
+  58cb82:	mov    (%r8,%rsi,8),%r8
+  58cb86:	sub    (%r10,%rsi,8),%r8
+  58cb8a:	setb   %r9b
+  58cb8e:	sub    %rdx,%r8
+  58cb91:	setb   %dl
+  58cb94:	mov    %r8,(%r15,%rsi,8)
+  58cb98:	or     %r9b,%dl
+  58cb9b:	movzbl %dl,%edx
+  58cb9e:	not    %ecx
+  58cba0:	and    %ecx,%edx
+  58cba2:	mov    %rdx,%rsi
+  58cba5:	neg    %rsi
+  58cba8:	lea    0x0(,%rdi,8),%r8
+  58cbb0:	dec    %rdx
+  58cbb3:	mov    0x88(%rsp),%rcx
+  58cbbb:	lea    (%rcx,%rdi,8),%r9
+  58cbbf:	xor    %r10d,%r10d
+  58cbc2:	lea    0x8(%rsp),%r11
+  58cbc7:	nopw   0x0(%rax,%rax,1)
+  58cbd0:	lea    (%rdi,%r10,1),%rcx
+  58cbd4:	cmp    %r14,%rcx
+  58cbd7:	jae    58cc52 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith17mont_mul_sos_into+0x3e2>
+  58cbd9:	cmp    %r10,%rdi
+  58cbdc:	je     58cc42 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith17mont_mul_sos_into+0x3d2>
+  58cbde:	mov    (%r9,%r10,8),%rcx
+  58cbe2:	mov    (%r15,%r10,8),%rbx
+  58cbe6:	mov    %rsi,0x8(%rsp)
+  58cbeb:	and    0x8(%rsp),%rcx
+  58cbf0:	mov    %rdx,0x8(%rsp)
+  58cbf5:	and    0x8(%rsp),%rbx
+  58cbfa:	or     %rcx,%rbx
+  58cbfd:	mov    %rbx,(%r12,%r10,8)
+  58cc01:	inc    %r10
+  58cc04:	add    $0xfffffffffffffff8,%r8
+  58cc08:	jne    58cbd0 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith17mont_mul_sos_into+0x360>
+  58cc0a:	jmp    58c9c2 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5arith17mont_mul_sos_into+0x152>
+  58cc0f:	sub    %r15,%rsi
+  58cc12:	lea    0x338667(%rip),%rdx        # 8c5280 <anon.a9855ae6385f914349044369766744b4.419.llvm.15263738836812064724+0x630>
+  58cc19:	mov    %rsi,%rdi
+  58cc1c:	mov    0x90(%rsp),%rsi
+  58cc24:	call   *0x344ec6(%rip)        # 8d1af0 <_DYNAMIC+0x2870>
+  58cc2a:	lea    0x338637(%rip),%rdx        # 8c5268 <anon.a9855ae6385f914349044369766744b4.419.llvm.15263738836812064724+0x618>
+  58cc31:	mov    0x90(%rsp),%rdi
+  58cc39:	mov    %rdi,%rsi
+  58cc3c:	call   *0x344eae(%rip)        # 8d1af0 <_DYNAMIC+0x2870>
+  58cc42:	lea    0x338607(%rip),%rdx        # 8c5250 <anon.a9855ae6385f914349044369766744b4.419.llvm.15263738836812064724+0x600>
+  58cc49:	mov    %rdi,%rsi
+  58cc4c:	call   *0x344e9e(%rip)        # 8d1af0 <_DYNAMIC+0x2870>
+  58cc52:	lea    0x3385df(%rip),%rdx        # 8c5238 <anon.a9855ae6385f914349044369766744b4.419.llvm.15263738836812064724+0x5e8>
+  58cc59:	mov    %rcx,%rdi
+  58cc5c:	mov    %r14,%rsi
+  58cc5f:	call   *0x344e8b(%rip)        # 8d1af0 <_DYNAMIC+0x2870>

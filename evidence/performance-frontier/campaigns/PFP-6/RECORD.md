@@ -1,13 +1,17 @@
 # PFP-6 record — integrated Montgomery multiply and squaring
 
-**State: PARTIAL.** No commit was made (the task forbids it). Source identity is
+**State: CIOS ADMITTED (2026-11-27, DSO `6d002db2…`); see `ADMISSION.md`.**
+No commit was made (the task forbids it). Source identity is
 `staging` `c1d25e10d16bc197e03446619a5330842b411c5c` plus an uncommitted
 `src/bn/arith.rs` worktree change (687 insertions, 39 deletions). The previous
 attempt left that file modified and uncommitted; this record resumes it.
 
-**Current (2026-11-27):** the `src/bn/arith.rs` work is committed; the
-re-evaluation at the PFP-5 composition is in the section below, and the new
-default artefact is DSO `66138460…`. The state remains PARTIAL.
+**Current (2026-11-27):** CIOS is admitted as the constant-time ladder default at
+DSO `6d002db2…` (`LADDER_SCHEDULE = Cios`, SOS retained as the reference and
+fallback). `ADMISSION.md` carries the per-kernel differential, the 161-line ABI
+transcript, the exponent taint plus DSO-bound probe, the CIOS-carrier branch
+audit, and the paired timing. FIOS and almost-Montgomery remain open (§9 of
+`REEVALUATION.md`); the source change is an uncommitted worktree state.
 
 ## Committed-source identity supplement (added 2026-11-26, PFP-27/PFP-28)
 
@@ -49,6 +53,37 @@ mix; the two agree in direction, but the magnitudes do not transfer. CIOS is
 measured default decision; it is not enabled in this batch. New default DSO
 `66138460…`; A and A2 agree byte for byte. Evidence: `REEVALUATION.md`,
 `RECEIPT.md`, `reeval-2026-11-27/`.
+
+## CIOS admission (2026-11-27)
+
+The PFP-6 re-evaluation measured CIOS at **0.8274×** the SOS operation at 2048
+bits and **0.8379×** at 8192 (0.8356 RSA, ~0.827 DH) but did not admit it. This
+batch admits it: `LADDER_SCHEDULE` selects `MontSchedule::Cios`, and the SOS
+reference stays reachable through `mont_mul_fallible` / `MontSchedule::Sos`.
+
+At the admitted digest `6d002db2…` (two clean builds byte-identical; source
+`dedb67a5f` + the uncommitted one-constant change):
+
+* **Differential:** CIOS congruence 7,890 / 0 mismatches; CIOS vs SOS exhaustive
+  3,018 + sampled 7,890 / 0; SOS 7,890 and squaring 254 / 0. The 161-line ABI
+transcript is byte-identical to the 3.6.4 authority for both CIOS and SOS
+  (150 MX at 256–8192 bits, 8 RSA CRT/blinding/non-CRT, 2 DH).
+* **Gates:** `bn` 159/0; full suite **2,491 passed / 0 failed / 54 ignored**;
+  fmt and clippy clean.
+* **Taint:** secret-exponent ctgrind **0 errors / 0 contexts**, origins none;
+  negative control fires (4 errors / 1 context). DSO-bound base-taint probe
+  silent on CIOS and SOS (0 contexts, 3 reps each).
+* **Audit (new digest, not inherited):** CIOS carrier `mont_mul_ladder_into`
+  `0x58ce60`/`0x36c`: **14 jcc (14 public, 0 secret-derived), 18 setcc (3 public
+  geometry, 15 secret carry/borrow flags consumed arithmetically), 0 cmovcc**;
+  secret-derived control transfers: none.
+* **Timing:** `cand/ref` `modexp2048` **0.8267** [0.8242, 0.8292], `modexp8192`
+  **0.8375** [0.8371, 0.8379], `rsa2048` **0.8357**, `dh-ffdhe2048` **0.8272**,
+  `dh-modp2048` **0.8276**; `ecdsa256` control 1.0109. `cand/auth` moves to
+  2.0690 / 2.4516 / 2.4838 / 2.0709, exactly the PFP-5 ratios times the measured
+  factor. The predicted 0.827–0.838 is met.
+
+Evidence: `ADMISSION.md`, `admission-2026-11-27/`.
 
 ## What the uncommitted change was trying to do
 
@@ -161,6 +196,11 @@ The measured binary's SHA-256 is recorded in `ARMS.json`; the harness source is
 `bench_mont` build product is reproducible from that source and was not kept.
 
 ## What remains (why this is PARTIAL, not DONE)
+
+> **Superseded for the CIOS decision (2026-11-27):** the row is DONE for the CIOS
+> admission at `6d002db2`. Items 2–5 below are addressed by `ADMISSION.md`; item 1
+> (FIOS and almost-Montgomery) remains open, and the candidate is still an
+> uncommitted worktree state.
 
 1. **FIOS and almost-Montgomery were not implemented or compared.** The PFP-6
    item names them; the harness records the omission rather than implying a
