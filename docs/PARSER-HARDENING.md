@@ -186,7 +186,7 @@ its result says `population: LIVE` and is not comparable to a frozen record.
 
 Every examined record parses `STRICT_OK`; no tracked evidence record is refused
 at this bound. The 175 skipped files are the large records (the population is
-2,166,117,914 bytes; the largest single file is 15,629,485 bytes).
+2,166,119,842 bytes; the largest single file is 15,629,485 bytes).
 They are reported
 `SKIPPED_SIZE` with their size and are not parsed, because reading them into a
 pure-Python parser would be the denial-of-service surface this item exists to
@@ -195,16 +195,17 @@ bound; they are streamed in 1 MiB chunks only to bind their digest.
 `STRICT_OK` or `SKIPPED_SIZE`, and the SHA-256 of every member.
 
 The count is the member list's length at the declaration
-(`dc24cb4a86595436ddc6b370b8055f9109b14f8c`, the current candidate); it moves
+(`ceef3c6f33e2aee8b0fb8468b1c8599d95ea6fde`, the current candidate); it moves
 only through an explicit re-freeze (`build_evidence.py --freeze-population
-CANDIDATE`), never because another item landed. That declaration supersedes
-`fcc8409eb53cfaf9ee8c402062db70a6b6acadbe` and **grows the population from 599
-to 756**: 157 JSON records were added since the `fcc8409eb` declaration, so the
-count is 756, 581 examined, 581 `STRICT_OK`, 175 `SKIPPED_SIZE`, 0 refused, and
-the byte total is 2,166,117,914. The growth is explicit (the re-freeze took the
-current candidate's path set), not absorbed from a live glob. Seven members'
-content had moved since the `fcc8409eb` declaration, so the candidate and those
-digests were re-bound. The `fcc8409eb` declaration had itself superseded
+CANDIDATE`), never because another item landed. The current declaration
+supersedes `dc24cb4a` with **membership unchanged at 756** (none added, none
+removed) and the counts unchanged: 756 members, 581 examined, 581 `STRICT_OK`,
+175 `SKIPPED_SIZE`, 0 refused, and the byte total is 2,166,119,842. Five
+members' content had moved since the `dc24cb4a` declaration — the three A16
+records and the two b8 records — so those digests were re-bound. The `dc24cb4a`
+declaration had itself superseded `fcc8409eb` and **grown the population from 599
+to 756**: 157 JSON records were added since the `fcc8409eb` declaration, seven
+members re-bound. The `fcc8409eb` declaration had itself superseded
 `a99ddf9677229487e5cf4051031e886444a189b7` and grown the population from 529 to
 599 (C35 added 70 JSON records under
 `evidence/performance-frontier/campaigns/PFP-2/` and `PFP-6/`, five members
@@ -344,8 +345,8 @@ contracts are not changed by this reader.
 ## 10. Reproducing the evidence
 
 ```
-python3 evidence/a11/build_evidence.py --source-commit dc24cb4a86595436ddc6b370b8055f9109b14f8c
-python3 evidence/a11/build_evidence.py --freeze-population dc24cb4a86595436ddc6b370b8055f9109b14f8c
+python3 evidence/a11/build_evidence.py --source-commit ceef3c6f33e2aee8b0fb8468b1c8599d95ea6fde
+python3 evidence/a11/build_evidence.py --freeze-population ceef3c6f33e2aee8b0fb8468b1c8599d95ea6fde
 python3 forensics/tools/harden.py scan --frozen evidence/a11/SCAN.json
 python3 forensics/tools/harden.py scan 'evidence/*.json'
 python3 forensics/tools/harden.py parse evidence/a11/CONTROLS.json
