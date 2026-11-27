@@ -2,6 +2,21 @@
   "schema": "openssl-rs/performance/kernel-register/v1",
   "campaign": "PFP-9",
   "generated_by": "forensics/tools/kernel_verification.py",
+  "correction": {
+    "date": "2026-11-27",
+    "subject": "the p256::Arch attribution",
+    "superseded_fields": [
+      "provenance_decision.decision (the 'mulx/adcx' description and the 'lost to the portable Montgomery kernel' framing)",
+      "provenance_decision.rejected_arms[1].arm (the 'mulx/adcx' label)",
+      "kernels[id=p256-field-arch].label (the 'mulx/adcx' label)"
+    ],
+    "old_text_retained": true,
+    "text": "wide_mul_x86 is a schoolbook loop over _mulx_u64 and _addcarry_u64; it compiles to mulx + adc with zero adcx/adox, no inline assembly and no hand scheduling. The controlled comparison is Arch vs portable Solinas (mul 61.793 vs 82.885 ns, so mulx won 25.4%; ladder 422.821 vs 538.076 ns, 21.4%). The ~3x is Arch vs Mont (61.793 vs 20.662 ns, 2.991x) and belongs to the Solinas reduction, not to carry chains. A call to the out-of-line target-feature callee occurs once per field multiply. Hand-written ADX with paired adcx/adox carry chains has NOT been measured and is NOT_RUN. The mulx-plus-Montgomery-inlined experiment is already answered by PFP-48 (mulq 0, mulx 121, zero adcx/adox, every workload equal or slower); the hand-paired ADCX/ADOX question remains open.",
+    "authority": [
+      "docs/KERNEL-VERIFICATION.md 5.3.1",
+      "evidence/performance-frontier/campaigns/PFP-9/RECEIPT.md 3.1"
+    ]
+  },
   "hardware": {
     "machine": "x86_64",
     "cpu": "13th Gen Intel(R) Core(TM) i9-13900K",

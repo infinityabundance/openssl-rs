@@ -77,6 +77,11 @@ venue.
 | RSA CRT | two **sequential** constant-time exponentiations | scalar interleaving | PFP-7: fused 1.1132× [1.1102, 1.1151] slower per multiplication; attainable wall change 0.91×; refused (`RECEIPT.md`) |
 | RSA / BN IFMA | none | radix-2<sup>52</sup> AVX-512IFMA pairing | PFP-7: `NOT_APPLICABLE_HARDWARE` — no `avx512f`, no `avx512ifma` |
 
+> **Correction (2026-11-27).** The `Arch` cell above and the "lost to Mont"
+> framing are superseded by §5.3.1. The implementation uses `mulx` + `adc`
+> (not `adcx`), and the controlled comparison is `Arch` against portable
+> `Solinas`, not `Arch` against `Mont`. The old text is retained unchanged.
+
 ### 2.2 Relation to the §8 recommendation
 
 `docs/PERFORMANCE-FRONTIER.md` §8 recommends fiat-crypto Rust as the portable
@@ -244,6 +249,118 @@ on every platform the claim covers.
   window is 2.21 % faster, below the 10 % threshold; the shared secret is 0 %.
 * **AVX-512/IFMA pairing** — PFP-7 `BOUND.md`: `NOT_APPLICABLE_HARDWARE`, not a
   negative result.
+
+#### 5.3.1 Correction (2026-11-27) — the `p256::Arch` attribution
+
+The record carried this attribution:
+
+> `p256::Arch` is "the only direct measurement this project has of
+> hand-scheduled carry chains against safe Rust, and safe Rust won by about
+> three times".
+
+That sentence is **wrong in three independent ways**. It is quoted here rather
+than deleted; `docs/PERFORMANCE-FRONTIER-TODO.md` (PFP-50) records the same
+sentence as the claim under correction. The PFP-2 numbers themselves are not
+in dispute; what they are taken to mean was wrong.
+
+**(1) It is not hand-scheduled.** `src/ec/p256.rs:1046` `wide_mul_x86` is a
+Rust schoolbook double loop over two intrinsics:
+
+```rust
+out.fill(0);
+for i in 0..LIMBS {
+    let mut carry = 0u64;
+    for j in 0..LIMBS {
+        let mut hi = 0u64;
+        let lo = _mulx_u64(a[i], b[j], &mut hi);
+        let mut lo1 = 0u64;
+        let c1 = _addcarry_u64(0, lo, out[i + j], &mut lo1);
+        let mut lo2 = 0u64;
+        let c2 = _addcarry_u64(0, lo1, carry, &mut lo2);
+        out[i + j] = lo2;
+        let mut hi1 = 0u64;
+        let _ = _addcarry_u64(0, hi, c1 as u64, &mut hi1);
+        let mut hi2 = 0u64;
+        let _ = _addcarry_u64(0, hi1, c2 as u64, &mut hi2);
+        carry = hi2;
+    }
+    out[i + LIMBS] = carry;
+}
+```
+
+Two distinct intrinsics, five call sites: `_mulx_u64` once (line 1054) and
+`_addcarry_u64` four times (lines 1056, 1058, 1061, 1063). Each carry is the
+`u8` returned by `_addcarry_u64`, materialised and added back as a scalar
+(`c1 as u64`, `c2 as u64`). There is no `_addcarryx_u64`, no `adcx`/`adox`
+pairing, no inline assembly and no hand scheduling; LLVM schedules the loop.
+Disassembly of the release DSO `court/tmp/pfp4-a/distribution/libcrypto.so.3`
+shows `wide_mul_x86` containing **16 `mulx`, 15 `adc`, 0 `adcx` and 0 `adox`**.
+The `adx` target feature is declared on the function but is not exercised by
+the code. (The source doc comments at `src/ec/p256.rs:19`, `:946` and `:1033`
+still say `mulx`/`adcx` and "two `addcarry` chains"; they are inaccurate and
+are left unchanged because this batch makes no production source change.)
+
+**(2) It mixes two variables.** The table compares `Arch` (`mulx` **plus
+Solinas reduction**) with `Mont` (Montgomery multiplication and REDC). The
+controlled pair is `Arch` against portable `Solinas`, which shares the same
+reduction and differs only in the multiply:
+
+| pair | `mul` | ladder | ratio and direction |
+|---|---:|---:|---|
+| `Arch` / `Solinas` | 61.793 / 82.885 ns | 422.821 / 538.076 ns | `Arch` is **25.4 %** faster on `mul` (1.341×) and **21.4 %** faster on the ladder (1.273×) |
+| `Arch` / `Mont` | 61.793 / 20.662 ns | 422.821 / 224.423 ns | `Arch` is **2.991×** slower on `mul` and **1.884×** slower on the ladder |
+
+On the controlled pair the `mulx` multiply **won by about 25 %**. The ~3× loss
+belongs to the **Solinas reduction choice** (shared by `Arch` and `Solinas`,
+absent from `Mont`), not to carry chains.
+
+**(3) There is a per-call cost.** `wide_mul_x86` is
+`unsafe #[target_feature(enable = "bmi2,adx")]` (line 1045) and is called from
+`Arch::wide_mul_into` (line 970), a caller without those features; Rust does
+not inline such a callee into such a caller. In the same release DSO,
+`<Arch as FieldKernel<FieldDomain>>::mul` (`0x3c24d0`) and `::sqr` (`0x3c2b60`)
+each contain exactly one `call` to `wide_mul_x86` (symbol at `0x381000`), which
+is emitted out of line; the PFP-2 binary audit independently records that
+symbol as a 396-byte / 112-instruction function with no calls of its own. The
+call therefore occurs once per field multiply on a ~20 ns operation. This is
+**measured in the emitted code, not a hypothesis**. (The DSO is an existing
+release build of the same source range, `court/tmp/pfp4-a`, not a fresh HEAD
+rebuild; the no-inline rule is a language property and the symbol shape is
+also recorded by the PFP-2 audit.)
+
+**What remains unmeasured.** **Hand-written ADX with paired `adcx`/`adox`
+carry chains has NOT been measured. `NOT_RUN`.** The sentence as written would
+close off that untested route, which is why it is superseded rather than merely
+reworded.
+
+**The `mulx`-plus-Montgomery experiment is already answered by PFP-48.** The
+reviewer's requested experiment — "`mulx` plus Montgomery, inlined, against the
+current portable Montgomery kernel" — was run as **PFP-48**: the whole crate
+built with `-C target-feature=+bmi2`, so the CIOS Montgomery kernel inlines into
+`mont_mul_ladder_into`. Static disassembly: `mulq` **0**, `mulx` **121**,
+`adcx` **0**, `adox` **0** (1,911 instructions, −13.0 %). Timing: every workload
+equal or slower — `modexp-2048` ×1.0236/×1.0241, `modexp-8192` ×1.0163/×1.0164,
+RSA-2048 ×1.0036/×1.0020, DH shared ×1.0215/×1.0163, DH keygen ×1.0116/×1.0154.
+PFP-48 answers the **`mulx`-plus-Montgomery-inlined** question; it does **not**
+answer the hand-paired ADCX/ADOX question, which remains open (`NOT_RUN`). The
+experiment must not be duplicated.
+
+**Corrected interpretation.** The data supports: the ~3× loss in the P-256
+table belongs to the Solinas reduction choice, and on the controlled pair the
+`mulx` multiply won by about 25 %. It does not support any statement about
+hand-scheduled or paired carry chains.
+
+#### 5.3.2 PFP-41 denominator confirmation (2026-11-27)
+
+RSA-2048 CRT must be scored at the **1024-bit operand width (n = 16)**, because
+the two CRT halves operate on half-length operands; a full 2048-bit multiply is
+n = 32. `evidence/performance-frontier/campaigns/PFP-41/AUDIT.md` reports the
+two separately — n = 16: **4,679** instructions (9.14/product); n = 32:
+**21,163** instructions (10.33/product) — and its §2 records that the CRT halves
+take the n = 16 arm. The RSA-relevant figure is therefore the **n = 16** one.
+The audit's headline does not conflate them: it explicitly identifies the
+6,457-figure normalisation as "an n=16 count ÷ an n=32 product count" and calls
+the "2048-bit" attribution a category error.
 
 ### 5.4 Proof status
 

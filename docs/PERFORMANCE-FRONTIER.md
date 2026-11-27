@@ -195,6 +195,15 @@ Three candidate kernels, compared rather than assumed:
 | `P256-SOLINAS` | fixed-pattern reduction from `p = 2^256 − 2^224 + 2^192 + 2^96 − 1` | alternative; measure dependency chains, not assertion |
 | `P256-ARCH` | `mulx`/`adcx`/`adox` (x86) and `mul`/`umulh` (AArch64) | frontier candidate |
 
+> **Correction (2026-11-27).** The `P256-ARCH` row records the *design target*,
+> not the implementation that was measured. `wide_mul_x86`
+> (`src/ec/p256.rs`) uses `_mulx_u64` plus `_addcarry_u64`, which compiles to
+> `mulx` + `adc` (zero `adcx`/`adox`), with no hand scheduling or assembly. The
+> like-for-like comparison is `Arch` vs portable `Solinas` (61.793 vs
+> 82.885 ns, so `mulx` won ~25 %); the ~3× is `Arch` vs `Mont`, i.e. the
+> Solinas reduction. Hand-written ADX with paired carry chains is `NOT_RUN`.
+> See `docs/KERNEL-VERIFICATION.md` §5.3.1.
+
 Solinas is **not** assumed to beat Montgomery. The comparison is on dependency
 chains, instruction count, multiplication latency, register pressure and
 reduction cost per target. The precedent (fiat-crypto / BoringSSL) is that

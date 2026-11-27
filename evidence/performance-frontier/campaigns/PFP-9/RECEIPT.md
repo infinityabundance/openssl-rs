@@ -63,6 +63,48 @@ What invalidates the decision: a compiler change, a target or target-feature
 change, a new measurement or a regression, a source/owner/precondition change,
 a new backend or contract change, or an instrument change.
 
+### 3.1 Correction (2026-11-27) — the `p256::Arch` attribution
+
+The record carried this attribution:
+
+> `p256::Arch` is "the only direct measurement this project has of
+> hand-scheduled carry chains against safe Rust, and safe Rust won by about
+> three times".
+
+It is wrong in three independent ways; the text above is retained unchanged.
+
+1. **Not hand-scheduled.** `wide_mul_x86` (`src/ec/p256.rs:1046`) is a
+   schoolbook double loop over `_mulx_u64` (line 1054) and `_addcarry_u64`
+   (lines 1056, 1058, 1061, 1063). Each carry is a returned `u8` added back as
+   a scalar; there is no `_addcarryx_u64`, no `adcx`/`adox`, no assembly and
+   no hand scheduling. The release DSO `court/tmp/pfp4-a/distribution/
+   libcrypto.so.3` shows 16 `mulx`, 15 `adc`, 0 `adcx`, 0 `adox`. The
+   inventory label above ("`mulx`/`adcx`") is also wrong: it is
+   `mulx`/`adc`.
+2. **Mixed variables.** `Arch` is `mulx` **plus Solinas reduction**; the
+   portable winner is `Mont` (Montgomery). The controlled pair is `Arch` vs
+   portable `Solinas`: 61.793 vs 82.885 ns on `mul`, so `mulx` **won by
+   25.4 %** (ladder 422.821 vs 538.076, 21.4 %). The ~3× is `Arch` vs `Mont`
+   (61.793 vs 20.662 ns, 2.991×) and belongs to the Solinas reduction, not to
+   carry chains.
+3. **Per-call cost.** `wide_mul_x86` is `unsafe #[target_feature]` and cannot
+   inline into `Arch::wide_mul_into`; both `Arch::mul` and `::sqr` contain one
+   out-of-line `call` to it per field multiply (disassembly of the same
+   release DSO). This is measured, not a hypothesis.
+
+**Hand-written ADX with paired `adcx`/`adox` chains has NOT been measured;
+`NOT_RUN`.** The requested `mulx`-plus-Montgomery-inlined comparison is
+already answered by **PFP-48** (whole crate `+bmi2`, kernel inlined, `mulq` 0,
+`mulx` 121, 0 `adcx`/`adox`, every workload equal or slower, modexp-2048
+≈2.4 % slower). PFP-48 does not answer the hand-paired ADCX/ADOX question,
+which remains open. See `docs/KERNEL-VERIFICATION.md` §5.3.1 for the full
+record, including the PFP-41 n=16 confirmation. The
+`forensics/performance/KERNELS.json` descriptions in
+`provenance_decision.decision`, `provenance_decision.rejected_arms[1].arm` and
+the `p256-field-arch` kernel label carry the same old description; they are
+superseded by this section, and the register now carries a `correction` object
+that says so beside the retained old text.
+
 ## 4. The no-inheritance rule and its enforcement
 
 Rule: evidence for one target, profile, compiler or artefact never transfers to
