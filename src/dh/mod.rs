@@ -239,9 +239,11 @@ pub(crate) const DH_CHECK_PUBKEY_INVALID: c_int = 0x04;
 /// member in the test below. The first two members are the authority's own comment made concrete:
 /// `pad` is "used to pick up errors when a DH is passed instead of a EVP_PKEY" and `version` is the
 /// second, so both are plain `int`s at 0 and 4 and the embedded [`FfcParams`] starts eight-aligned
-/// at 8. `length` at 104 is a four-byte `int32_t`, so 108..112 is padding before `pub_key`; and
-/// `references` is a four-byte `_Atomic int` at 144, so `ex_data` is eight-aligned at 152 rather
-/// than adjacent.
+/// at 8. `length` at 104 is a four-byte `int32_t`, so 108..112 is padding in the authority before
+/// `pub_key`; this crate's [`Dh::priv_limbs`] (PFP-39, a Rust-side cache that is **not** part of
+/// `struct dh_st`) occupies those four padding bytes, so `pub_key` stays at 112 and the size stays
+/// 208. `references` is a four-byte `_Atomic int` at 144, so `ex_data` is eight-aligned at 152
+/// rather than adjacent.
 ///
 /// `ex_data` and `engine` are inside `#ifndef FIPS_MODULE` (`dh_local.h:31-34`), which holds on
 /// this profile, so both members are present and part of the layout. `dirty_cnt` is a `size_t`
@@ -258,6 +260,13 @@ pub struct Dh {
     pub(crate) params: FfcParams,
     /// `int32_t length` — the maximum generated private-key length; may be less than `len(q)`.
     pub(crate) length: i32,
+    /// The private key's normalised limb count, captured **once at ingestion** (PFP-39) and
+    /// refreshed on every replacement or clear. `0` means "no private key"; `u32::MAX` is the
+    /// saturation sentinel for a count that does not fit `u32` (unreachable for any allocatable
+    /// key) and the operation path refuses it rather than truncating. It lives in the four bytes
+    /// of padding the authority leaves at 108..112, so it adds no size and moves no asserted
+    /// offset. This is Rust-side state, not a member of `struct dh_st`.
+    pub(crate) priv_limbs: u32,
     /// `BIGNUM *pub_key` — `g^x mod p`.
     pub(crate) pub_key: *mut BigNum,
     /// `BIGNUM *priv_key` — `x`.
@@ -1064,6 +1073,9 @@ mod tests {
     /// before the pointer `pub_key` at 112 — and `ex_data` at 152, because `references` at 144 is
     /// a four-byte `_Atomic int`. The embedded `params` at 8 is `FFC_PARAMS`: if it moved, every
     /// member after it would move with it, which is why `src/ffc/mod.rs` pins its own 96.
+    ///
+    /// PFP-39's [`Dh::priv_limbs`] fills the 108..112 padding, so it is pinned at 108 and every
+    /// authority offset and the 208-byte size are unchanged.
     #[test]
     fn the_dh_object_is_the_authoritys_shape() {
         use core::mem::{align_of, offset_of, size_of};
@@ -1074,6 +1086,7 @@ mod tests {
         assert_eq!(offset_of!(Dh, version), 4);
         assert_eq!(offset_of!(Dh, params), 8);
         assert_eq!(offset_of!(Dh, length), 104);
+        assert_eq!(offset_of!(Dh, priv_limbs), 108);
         assert_eq!(offset_of!(Dh, pub_key), 112);
         assert_eq!(offset_of!(Dh, priv_key), 120);
         assert_eq!(offset_of!(Dh, flags), 128);
@@ -1103,6 +1116,7 @@ mod tests {
         unsafe {
             let dh = DH_new();
             assert!(!dh.is_null());
+            assert_eq!((*dh).priv_limbs, 0, "a fresh object has no private key");
             assert!(DH_get0_engine(dh).is_null());
             assert_ne!(DH_test_flags(dh, DH_FLAG_CACHE_MONT_P), 0);
             assert_eq!(DH_bits(dh), -1);

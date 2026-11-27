@@ -81,7 +81,7 @@ use core::ffi::{c_char, c_int, c_void};
 use core::ptr;
 use core::sync::atomic::Ordering;
 
-use crate::bn::bignum::{BN_clear_free, BN_num_bits, BN_security_bits, BigNum};
+use crate::bn::bignum::{magnitude, BN_clear_free, BN_num_bits, BN_security_bits, BigNum};
 use crate::dh::group_params::ossl_dh_cache_named_group;
 use crate::engine::eng_lib::Engine;
 use crate::ffc::params::{
@@ -112,6 +112,21 @@ const FILE_DH_LIB: *const c_char = c"../../src/openssl-3.6.4/crypto/dh/dh_lib.c"
 
 /// `__LINE__`, inert under `OPENSSL_NO_CRYPTO_MDEBUG`.
 const LINE: c_int = 0;
+
+/// The saturation sentinel [`Dh::priv_limbs`] carries when a key's normalised limb count does not
+/// fit in `u32` (PFP-39). Unreachable for any allocatable key; the operation path refuses it rather
+/// than truncating the width.
+pub(crate) const PRIV_LIMBS_SATURATED: u32 = u32::MAX;
+
+/// The private key's normalised limb count, saturated to [`PRIV_LIMBS_SATURATED`] rather than
+/// truncated when it does not fit `u32` (PFP-39).
+///
+/// A [`BigNum`]'s magnitude carries no trailing zero limbs (see `BigNum::d`'s contract and
+/// `src/bn/bignum.rs`'s note that a fixed top cannot be expressed), so its slice length is exactly
+/// the normalised limb count the ladder resolver consumes.
+pub(crate) fn priv_limb_count(priv_key: &BigNum) -> u32 {
+    u32::try_from(magnitude(Some(priv_key)).len()).unwrap_or(PRIV_LIMBS_SATURATED)
+}
 
 /// `int DH_set_method(DH *dh, const DH_METHOD *meth)` — `dh_lib.c:32-50`.
 ///
@@ -231,7 +246,12 @@ unsafe fn dh_new_intern(engine: *mut Engine, libctx: *mut c_void) -> *mut Dh {
     // SAFETY: `CRYPTO_THREAD_lock_new` reads no caller pointer.
     let lock = CRYPTO_THREAD_lock_new();
     // SAFETY: `ret` is this call's own allocation.
-    unsafe { (*ret).lock = lock };
+    unsafe {
+        (*ret).lock = lock;
+        // PFP-39: `OPENSSL_zalloc` already zeroes this cache, but the constructor states its
+        // postcondition explicitly: a fresh object has no private key, so the stored limb count is 0.
+        (*ret).priv_limbs = 0;
+    }
     if lock.is_null() {
         // SAFETY: a compile-time-constant site.
         unsafe { raise_site(&err_sites::DH_LIB_83) };
@@ -677,6 +697,16 @@ pub unsafe extern "C" fn DH_set0_key(
             BN_clear_free((*dh).priv_key);
             (*dh).priv_key = priv_key;
         }
+
+        // PFP-39: refresh from the slot the object actually holds, so a replacement updates the
+        // cache and a cleared slot (had one been reachable) would reset it to 0. The policy is not
+        // cached here: `DH_set_length`/`DH_set0_pqg` are read fresh by `dh_policy_limbs`.
+        let current_priv = (*dh).priv_key;
+        (*dh).priv_limbs = if current_priv.is_null() {
+            0
+        } else {
+            priv_limb_count(&*current_priv)
+        };
 
         (*dh).dirty_cnt += 1;
     }

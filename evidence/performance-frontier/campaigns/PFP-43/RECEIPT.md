@@ -281,3 +281,47 @@ competitive schedule, and it is proposed (not implemented) as PFP-45 in
   authority per bit).
 * It does not establish `SAFE_COMPATIBLE`; compatibility is confirmed against
   the exact `da47f650` DSO only.
+
+---
+
+## CORRECTION — PFP-39 (2026-11-27): the "`Dh` cannot take a field" claim was FALSE
+
+**This section supersedes §1's final paragraph, §1's "After" width snippet, and §9's
+`PFP43-DH-FIELD` row. The earlier text is preserved above rather than rewritten.**
+
+**The false claim.** §1 said:
+
+> `DH_set0_key`, `set_priv_key` and the decoders were **not** changed: `Dh` is
+> `#[repr(C)]` and its 208-byte layout is asserted member by member ... so it
+> cannot take a new field without an ABI change. ... The binding site is therefore
+> the bn operation boundary, not the object.
+
+That is wrong. It conflated "the authority's asserted offsets must not move" with
+"no byte may be used", and missed that `struct dh_st` contains four-byte padding.
+
+**What the independent adjudication found.** The authority's layout is: `pad` 0,
+`version` 4, `params` 8..104, `length` 104..108, `pub_key` 112, `priv_key` 120,
+`flags` 128, `method_mont_p` 136, `references` 144, `ex_data` 152, `engine` 168,
+`libctx` 176, `meth` 184, `lock` 192, `dirty_cnt` 200, total 208. The bytes
+`108..112`, `132..136` and `148..152` are padding. A `u32` inserted immediately
+after `length` lands at `108..112`, moves no asserted offset, and keeps
+`size_of::<Dh>() == 208`.
+
+**What replaced it (PFP-39).**
+
+* `src/dh/mod.rs` now has `pub(crate) priv_limbs: u32` immediately after `length`.
+  `the_dh_object_is_the_authoritys_shape` asserts `offset_of!(Dh, priv_limbs) == 108`
+  and still asserts `size_of::<Dh>() == 208` and every authority offset unchanged.
+* The private key's normalised limb count is captured once at ingestion —
+  `DH_new` (0), `DH_set0_key`, `generate_key`, and `ossl_dh_dup` — and refreshed on
+  replacement.
+* `src/bn/mont.rs` resolves the width from the stored count:
+  `resolve_ladder_width(policy, md.len(), stored_exponent_limbs)`. The §1 "After"
+  snippet's third argument `pd.len()` is therefore superseded; the resolver's
+  arithmetic (`base.max(exponent_limbs)`) is unchanged.
+* The 30-row court still reports `rows=30 mismatches=0` against the new exact DSO.
+
+**Consequence for §9.** `PFP43-DH-FIELD` is **superseded, not resolved-by-rejection**:
+the field was never rejected; it is carried in the authority's padding. PFP-39 is
+the binding-at-ingestion implementation. No constant-time claim is added or
+withdrawn by this correction.

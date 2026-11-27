@@ -2437,7 +2437,8 @@ fn mod_exp_core_consttime_staged(
 ///
 /// `policy_limbs` is the key object's declared public bound (`0` = none),
 /// `modulus_limbs` the modulus' public limb count, and `exponent_limbs` the
-/// supplied exponent's **normalised limb count** — a length, not a value.
+/// exponent's **normalised limb count**, captured once at ingestion by the key
+/// object (PFP-39) — a length, not its value.
 ///
 /// The formula is
 ///
@@ -2469,8 +2470,9 @@ pub(crate) fn resolve_ladder_width(
 ///
 /// `resolved_width` is produced once per operation by [`resolve_ladder_width`]
 /// at the C entry point in `bn::mont`, from the key object's declared public
-/// bound and the supplied exponent's normalised limb count. This function never
-/// derives a width from `pd`; it only stages the exponent into a buffer of
+/// bound and the exponent's normalised limb count, which the key object captured
+/// once at ingestion (PFP-39). This function never derives a width from `pd`; it
+/// only stages the exponent into a buffer of
 /// `resolved_width` limbs — allocation and write count fixed by that width — and
 /// runs the ladder for `64 * resolved_width` iterations. No iteration consults
 /// the exponent's value or its normalised length.

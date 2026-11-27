@@ -862,7 +862,7 @@ pub unsafe extern "C" fn BN_mod_exp_mont(
     in_mont: *mut MontCtx,
 ) -> c_int {
     // SAFETY: the caller's contract, forwarded unchanged.
-    unsafe { bn_mod_exp_mont_impl(r, a, p, m, in_mont, None) }
+    unsafe { bn_mod_exp_mont_impl(r, a, p, m, in_mont, None, 0) }
 }
 
 /// `BN_mod_exp_mont` with the constant-time ladder bounded by a **public policy
@@ -877,15 +877,19 @@ pub unsafe extern "C" fn BN_mod_exp_mont(
 ///
 /// **A caller-supplied exponent wider than the policy is not refused.** The
 /// operand slices are in hand at this entry point, so the resolved ladder width
-/// is bound once here (PFP-43): `max(policy, exponent.len())` when the exponent
-/// fits the modulus, and the exponent's own limb count when it does not. The
-/// exponent's normalised length is a declassified length, never its value;
-/// the in-policy path (`exponent.len() <= policy`) is computationally identical
-/// to the former policy ladder.
+/// is bound once here (PFP-43): `max(policy, stored_exponent_limbs)` when the
+/// exponent fits the modulus, and the stored count when it does not. The
+/// exponent's normalised limb count is captured once at ingestion (PFP-39) and
+/// passed in as `stored_exponent_limbs`; this entry point does not re-read `p`'s
+/// length to choose the width. The value is a declassified length, never the
+/// exponent's content; the in-policy path
+/// (`stored_exponent_limbs <= policy`) is computationally identical to the former
+/// policy ladder.
 ///
 /// # Safety
 ///
 /// As [`BN_mod_exp_mont`].
+#[allow(clippy::too_many_arguments)]
 pub(crate) unsafe fn bn_mod_exp_mont_policy(
     r: *mut BigNum,
     a: *const BigNum,
@@ -893,9 +897,20 @@ pub(crate) unsafe fn bn_mod_exp_mont_policy(
     m: *const BigNum,
     in_mont: *mut MontCtx,
     policy_limbs: usize,
+    stored_exponent_limbs: usize,
 ) -> c_int {
     // SAFETY: forwarded under this function's contract.
-    unsafe { bn_mod_exp_mont_impl(r, a, p, m, in_mont, Some(policy_limbs)) }
+    unsafe {
+        bn_mod_exp_mont_impl(
+            r,
+            a,
+            p,
+            m,
+            in_mont,
+            Some(policy_limbs),
+            stored_exponent_limbs,
+        )
+    }
 }
 
 /// [`BN_mod_exp_mont`]'s body, with an optional public **policy width** for the
@@ -903,6 +918,9 @@ pub(crate) unsafe fn bn_mod_exp_mont_policy(
 ///
 /// `policy_limbs` is consulted only on the constant-time path, exactly as
 /// `BN_FLG_CONSTTIME` is; the variable-time path is unchanged.
+/// `stored_exponent_limbs` is the exponent's normalised limb count, captured
+/// once by the key object at ingestion (PFP-39), and is used to resolve the
+/// ladder width instead of reading `p`'s length per operation.
 unsafe fn bn_mod_exp_mont_impl(
     r: *mut BigNum,
     a: *const BigNum,
@@ -910,6 +928,7 @@ unsafe fn bn_mod_exp_mont_impl(
     m: *const BigNum,
     in_mont: *mut MontCtx,
     policy_limbs: Option<usize>,
+    stored_exponent_limbs: usize,
 ) -> c_int {
     guard_ffi(0, || {
         // SAFETY: `a` is null-or-live per this function's `# Safety` section.
@@ -962,12 +981,16 @@ unsafe fn bn_mod_exp_mont_impl(
             // modulus' limb count — a public parameter — never the exponent's
             // normalised length. With one (the DH method), the ladder width is
             // resolved **once**, here, from that public bound and the exponent's
-            // normalised limb count (a length, PFP-43); the policy function never
-            // derives a width from the exponent. See
+            // normalised limb count — a length declassified at ingestion (PFP-43,
+            // PFP-39); the policy function never derives a width from the exponent.
+            // `pd.len()` is no longer read to choose the width; it survives only as
+            // the policy core's defensive refusal of an exponent wider than the
+            // resolved width (unreachable on every in-crate path, where the stored
+            // count was taken from this same key). See
             // [`mod_exp_core_consttime_policy`].
             match policy_limbs {
                 Some(policy) => {
-                    let width = resolve_ladder_width(policy, md.len(), pd.len());
+                    let width = resolve_ladder_width(policy, md.len(), stored_exponent_limbs);
                     mod_exp_core_consttime_policy(&ad, pd, &md, width, prepared.as_ref())
                 }
                 None => mod_exp_core_consttime_from_parts_prepared(

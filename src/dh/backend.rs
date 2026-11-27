@@ -50,8 +50,8 @@ use crate::dh::asn1::{d2i_DHparams, d2i_DHxparams};
 use crate::dh::group_params::ossl_dh_cache_named_group;
 use crate::dh::key::{DH_OpenSSL, DH_generate_key};
 use crate::dh::object::{
-    ossl_dh_get0_params, ossl_dh_get_method, ossl_dh_new_ex, DH_free, DH_get0_key, DH_get_length,
-    DH_set0_key, DH_set_length,
+    ossl_dh_get0_params, ossl_dh_get_method, ossl_dh_new_ex, priv_limb_count, DH_free, DH_get0_key,
+    DH_get_length, DH_set0_key, DH_set_length,
 };
 use crate::dh::Dh;
 use crate::evp::pkey::{OSSL_PKEY_PARAM_PRIV_KEY, OSSL_PKEY_PARAM_PUB_KEY};
@@ -382,6 +382,16 @@ pub(crate) unsafe fn ossl_dh_dup(dh: *const Dh, selection: c_int) -> *mut Dh {
             {
                 break 'build false;
             }
+
+            // PFP-39: mirror the private key the copy actually installed — which is absent under
+            // the authority's short-circuit selections — so the cached limb count never outlives
+            // its slot.
+            let copied_priv = (*dupkey).priv_key;
+            (*dupkey).priv_limbs = if copied_priv.is_null() {
+                0
+            } else {
+                priv_limb_count(&*copied_priv)
+            };
 
             if CRYPTO_dup_ex_data(CRYPTO_EX_INDEX_DH, &mut (*dupkey).ex_data, &(*dh).ex_data) == 0 {
                 break 'build false;

@@ -83,7 +83,7 @@ use crate::runtime::owned_buf::OwnedBuf;
 
 use super::check::ossl_dh_check_pub_key_partial;
 use super::group_params::DH_get_nid;
-use super::object::{DH_get0_key, DH_get0_pqg, DH_set0_key};
+use super::object::{priv_limb_count, DH_get0_key, DH_get0_pqg, DH_set0_key, PRIV_LIMBS_SATURATED};
 use super::{
     Dh, DhBnModExpFn, DhComputeKeyFn, DhGenerateKeyFn, DhLifecycleFn, DhMethod,
     DH_FLAG_CACHE_MONT_P, DH_FLAG_FIPS_METHOD, DH_GENERATOR_2, DH_MIN_MODULUS_BITS,
@@ -417,11 +417,25 @@ unsafe extern "C" fn dh_bn_mod_exp(
     _ctx: *mut BnCtx,
     m_ctx: *mut MontCtx,
 ) -> c_int {
+    // PFP-39: the exponent here is the object's private key, whose normalised limb count was
+    // captured once at ingestion. The policy and the stored count are read together in the one
+    // existing unsafe window; no per-operation limb-length read of `p` fixes the width.
+    //
     // SAFETY: `dh` is NULL or a live object per this entry point's contract.
-    let policy = unsafe { dh_policy_limbs(dh) };
+    let (policy, stored_priv_limbs) = unsafe {
+        let policy = dh_policy_limbs(dh);
+        let stored = if dh.is_null() { 0 } else { (*dh).priv_limbs };
+        (policy, stored)
+    };
+    // `PRIV_LIMBS_SATURATED` is the ingestion-time overflow sentinel; refuse it rather than
+    // truncate. A NULL `dh` carries no stored count and falls back to the policy/modulus width.
+    if stored_priv_limbs == PRIV_LIMBS_SATURATED {
+        return 0;
+    }
+    let stored_priv_limbs = stored_priv_limbs as usize;
     // SAFETY: forwarded under this function's contract. `ctx` is unused by the Montgomery
     // entry point here, exactly as it is in the authority's body.
-    unsafe { bn_mod_exp_mont_policy(r, a, p, m, m_ctx, policy) }
+    unsafe { bn_mod_exp_mont_policy(r, a, p, m, m_ctx, policy, stored_priv_limbs) }
 }
 
 /// The group's declared maximum private-key length, in 64-bit limbs.
@@ -770,6 +784,9 @@ unsafe extern "C" fn generate_key(dh: *mut Dh) -> c_int {
 
             (*dh).pub_key = pub_key;
             (*dh).priv_key = priv_key;
+            // PFP-39: the private key was just installed (generated or reused), so refresh the
+            // stored normalised limb count from it. `priv_key` is non-NULL on this path.
+            (*dh).priv_limbs = priv_limb_count(&*priv_key);
             (*dh).dirty_cnt += 1;
             ok = 1;
         }
@@ -1393,6 +1410,161 @@ mod tests {
 
             DH_free(a);
             DH_free(b);
+        }
+    }
+
+    /// PFP-39: ingestion captures the private key's normalised limb count **once**,
+    /// and the ladder width is resolved from that stored value rather than from a
+    /// per-operation length read.
+    ///
+    /// The exponent is 2400 bits of `0xab` against ffdhe2048: 38 limbs versus the
+    /// 32-limb modulus and the group's 4-limb declared policy, so
+    /// `resolve_ladder_width(policy, md.len(), stored) == 38`. The public key the
+    /// DH path stores is then checked against an independent in-crate
+    /// exponentiation over the same operands.
+    #[test]
+    fn ingestion_captures_an_out_of_policy_private_keys_limb_count() {
+        use crate::bn::arith::{mod_exp_core, resolve_ladder_width};
+        use crate::bn::bignum::{magnitude, BN_bin2bn};
+        use crate::dh::group_params::DH_new_by_nid;
+        use crate::dh::object::{DH_free, DH_get0_key, DH_set0_key};
+        use crate::runtime::obj::NID_ffdhe2048;
+
+        let wide = [0xabu8; 300];
+        // SAFETY: every object and buffer below is this test's own and live;
+        // `DH_set0_key` takes ownership of `priv_key` and `BN_bin2bn` copies the
+        // 300 bytes without retaining them.
+        unsafe {
+            let dh = DH_new_by_nid(NID_ffdhe2048);
+            assert!(!dh.is_null());
+            assert_eq!((*dh).priv_limbs, 0, "a fresh object stores no key");
+
+            let priv_key = BN_bin2bn(wide.as_ptr(), wide.len() as c_int, ptr::null_mut());
+            assert!(!priv_key.is_null());
+            assert_eq!(BN_num_bits(priv_key), 2400);
+            assert_eq!(DH_set0_key(dh, ptr::null_mut(), priv_key), 1);
+            assert_eq!((*dh).priv_limbs, 38, "2400 bits is 38 normalised limbs");
+
+            let md = magnitude(Some(&*(*dh).params.p));
+            assert_eq!(md.len(), 32, "ffdhe2048 is 2048 bits");
+            let policy = dh_policy_limbs(dh);
+            assert_eq!(policy, 4, "ffdhe2048 declares 225 private-key bits");
+            let width = resolve_ladder_width(policy, md.len(), (*dh).priv_limbs as usize);
+            assert_eq!(width, 38, "max(policy, modulus, stored) covers the key");
+            assert_eq!(width, policy.max(md.len()).max(38));
+
+            assert_eq!(DH_generate_key(dh), 1);
+            let mut pub_key: *const BigNum = ptr::null();
+            DH_get0_key(dh, &mut pub_key, ptr::null_mut());
+            assert!(!pub_key.is_null());
+            assert_eq!(
+                (*dh).priv_limbs,
+                38,
+                "the stored count is not re-derived per operation"
+            );
+
+            // Independent in-crate exponentiation: the variable-time core takes no
+            // policy width and widens for whatever exponent it is handed.
+            let ad = magnitude(Some(&*(*dh).params.g));
+            let pd = magnitude(Some(&*(*dh).priv_key));
+            let Some(mut expected) = mod_exp_core(ad, pd, md) else {
+                unreachable!("the independent core answers for a nonzero modulus")
+            };
+            crate::bn::limbs::normalise(&mut expected);
+            let mut got = magnitude(Some(&*pub_key)).to_vec();
+            crate::bn::limbs::normalise(&mut got);
+            assert_eq!(got, expected, "DH path == independent g^priv mod p");
+
+            DH_free(dh);
+        }
+    }
+
+    /// PFP-39: an in-policy key resolves to **exactly** the policy width. The
+    /// assertion is deterministic — it reads the stored limb count and the
+    /// resolver, not a clock — so it is stable under any machine load.
+    #[test]
+    fn an_in_policy_private_key_resolves_to_the_policy_width() {
+        use crate::bn::arith::resolve_ladder_width;
+        use crate::bn::bignum::{magnitude, BN_bin2bn};
+        use crate::dh::group_params::DH_new_by_nid;
+        use crate::dh::object::{DH_free, DH_set0_key};
+        use crate::runtime::obj::NID_ffdhe2048;
+
+        // 13 bytes of 0xff is 104 bits: 2 normalised limbs, well inside the policy.
+        let in_policy = [0xffu8; 13];
+        // SAFETY: every object and buffer below is this test's own and live.
+        unsafe {
+            let dh = DH_new_by_nid(NID_ffdhe2048);
+            assert!(!dh.is_null());
+            let priv_key = BN_bin2bn(
+                in_policy.as_ptr(),
+                in_policy.len() as c_int,
+                ptr::null_mut(),
+            );
+            assert!(!priv_key.is_null());
+            assert_eq!(DH_set0_key(dh, ptr::null_mut(), priv_key), 1);
+            assert_eq!((*dh).priv_limbs, 2, "104 bits is 2 limbs");
+
+            let md = magnitude(Some(&*(*dh).params.p));
+            let policy = dh_policy_limbs(dh);
+            assert_eq!(policy, 4);
+            let width = resolve_ladder_width(policy, md.len(), (*dh).priv_limbs as usize);
+            assert_eq!(width, policy, "an in-policy key must not widen the ladder");
+            assert!((*dh).priv_limbs as usize <= policy);
+            DH_free(dh);
+        }
+    }
+
+    /// PFP-39: replacing the private key refreshes the stored count, and the
+    /// rewrite is visible without any operation in between.
+    #[test]
+    fn replacing_the_private_key_refreshes_the_stored_limb_count() {
+        use crate::bn::bignum::BN_bin2bn;
+        use crate::dh::group_params::DH_new_by_nid;
+        use crate::dh::object::{DH_free, DH_set0_key};
+        use crate::runtime::obj::NID_ffdhe2048;
+
+        let small = [0xffu8; 13]; // 2 limbs
+        let wide = [0xabu8; 300]; // 38 limbs
+        let one = [0x01u8]; // 1 limb
+
+        // SAFETY: every object and buffer below is this test's own and live;
+        // `DH_set0_key` takes ownership of each `BIGNUM` exactly once.
+        unsafe {
+            let dh = DH_new_by_nid(NID_ffdhe2048);
+            assert!(!dh.is_null());
+
+            assert_eq!(
+                DH_set0_key(
+                    dh,
+                    ptr::null_mut(),
+                    BN_bin2bn(small.as_ptr(), small.len() as c_int, ptr::null_mut())
+                ),
+                1
+            );
+            assert_eq!((*dh).priv_limbs, 2);
+
+            assert_eq!(
+                DH_set0_key(
+                    dh,
+                    ptr::null_mut(),
+                    BN_bin2bn(wide.as_ptr(), wide.len() as c_int, ptr::null_mut())
+                ),
+                1
+            );
+            assert_eq!((*dh).priv_limbs, 38, "replacement updates the cache");
+
+            assert_eq!(
+                DH_set0_key(
+                    dh,
+                    ptr::null_mut(),
+                    BN_bin2bn(one.as_ptr(), one.len() as c_int, ptr::null_mut())
+                ),
+                1
+            );
+            assert_eq!((*dh).priv_limbs, 1, "replacement shrinks the cache too");
+
+            DH_free(dh);
         }
     }
 }
