@@ -39,11 +39,26 @@
   "rust_version": "1.98.1",
   "download_endpoint": "https://crates.io/api/v1/crates/openssl-rs/0.0.51/download",
   "download_sha256_recomputed": "b70f118cf999096ffdc4ebef438af83c4f837d43720e2353d644f53b82cd4d24",
-  "download_verification": "RUN \u2014 downloaded static.crates.io/crates/openssl-rs/openssl-rs-0.0.51.crate and recomputed sha256; matches checksum and crate_size 9196927"
+  "download_verification": "RUN at 2026-11-28T15:21:20Z: downloaded https://static.crates.io/crates/openssl-rs/openssl-rs-0.0.51.crate, recomputed sha256 b70f118cf999096f\u2026 over 9196927 bytes; matches the registry API checksum and size",
+  "verified_at": "2026-11-28T15:21:20Z",
+  "verified_by": "forensics/tools/verify_release_payloads.py (PFP-87)"
  },
  "container_package": {
-  "status": "PENDING",
-  "note": "No container image has been built or pushed for 0.0.51. No tag, digest or visibility is claimed."
+  "status": "PUSHED",
+  "registry": "ghcr.io",
+  "name": "ghcr.io/infinityabundance/openssl-rs",
+  "tags": [
+   "0.0.51",
+   "latest"
+  ],
+  "evidence": {
+   "workflow": "container.yml",
+   "run_id": 46152945416,
+   "conclusion": "success",
+   "head_sha": "a0aca565e99e095153358420f9f0008da46f6fc5",
+   "created_utc": "2026-11-28T14:06:31Z"
+  },
+  "note": "The release tag v0.0.51 resolves to a0aca565, and the container workflow for that commit completed successfully, pushing tags 0.0.51 and latest. The image index digest is absent from this receipt because it was not read back; the workflow conclusion is the evidence, and retrieving the digest remains PFP-90."
  },
  "evidence_position": {
   "closure": "Not re-measured at 0.0.51. The applied closure evidence is unchanged by a version bump; this receipt binds packaging identity only.",
@@ -55,7 +70,7 @@
   "both consumer closures (not re-measured at 0.0.51)",
   "ASan, TSan, dudect, authority differential, full forensic regeneration",
   "independent review of the release itself",
-  "crates.io upload and download-checksum verification (PENDING)"
+  "image index digest retrieval for the published container (workflow conclusion only)"
  ],
  "release_process": {
   "merge": "Performed. staging was force-promoted to main with branch protection temporarily lifted and then restored unchanged (three required status checks, enforce_admins true, force-push disabled). Branch HEAD after promotion: 5e265b0a.",
@@ -69,5 +84,18 @@
   "Publishing discharges no obligation and does not advance any mechanism to SAFETY_DISCHARGED.",
   "The checksum and file count record what the registry served; they are not evidence that the crate's contents were audited.",
   "The README embedded in the published crate was rendered before this receipt was completed, so it records the checksum as pending. That is a known artefact of completing a publish receipt after the upload, not a claim about the registry."
+ ],
+ "container_package_superseded": {
+  "value": {
+   "status": "PENDING",
+   "note": "No container image has been built or pushed for 0.0.51. No tag, digest or visibility is claimed."
+  },
+  "why": "Corrected 2026-11-28 under PFP-87: the statement was written before the event it described and was never removed after it. The superseded text is retained because the record of what was once believed is part of the evidence."
+ },
+ "instruments_not_run_at_this_identity_superseded": [
+  {
+   "value": "crates.io upload and download-checksum verification (PENDING)",
+   "why": "Corrected 2026-11-28 under PFP-87: the statement was written before the event it described and was never removed after it. The superseded text is retained because the record of what was once believed is part of the evidence."
+  }
  ]
 }

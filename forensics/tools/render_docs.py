@@ -987,8 +987,15 @@ class Evidence:
         and cannot be updated by it.  A block that asserted a publication status,
         a registry checksum or a served file count would therefore be false in
         the very artefact the upload produces.  The block instead names the
-        version, the source commit and the receipt that carries the payload
-        identity; every post-upload fact belongs to that receipt.
+        version and the two receipts that carry the identities; every
+        post-packaging fact belongs to those receipts.
+
+        It also names no commit.  The commit that will carry a release is not
+        knowable while the release is being packaged -- writing it here produced
+        exactly that drift in 0.0.52, where the tagged README named a commit and
+        the tag pointed at a different one.  The commit is a fact the build
+        receipt records and a verifier checks; it is not a sentence this file
+        may assert about itself.
         """
         libs = dict(self.build["libs"])
         install = (
@@ -1007,8 +1014,8 @@ class Evidence:
             else ""
         )
         return (
-            f"**Crate version `{self.publish['version']}`** from commit "
-            f"`{self.publish['commit']}`; payload identity recorded in "
+            f"**Crate version `{self.publish['version']}`**; build identity in "
+            f"`{self.build['source']}`, payload identity in "
             f"`{self.publish['source']}`. {install}.{payload}{previous}"
         )
 

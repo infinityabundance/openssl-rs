@@ -28,13 +28,19 @@
  },
  "registry_verification": {
   "status": "VERIFIED",
-  "note": "No registry payload has been observed for 0.0.52. This block is completed after the upload from the downloaded .crate, and only then may any checksum or served size be claimed.",
+  "note": "The payload was downloaded from static.crates.io/crates/openssl-rs/openssl-rs-0.0.52.crate and re-hashed on 2026-11-28; the recomputed sha256 matches the registry checksum and crate_size recorded here.",
   "checksum": "46fe9c1e9085e70879caa456bc231602b6d73423f04c7fd4b18d0b2285c52ed3",
   "checksum_prefix": "46fe9c1e",
   "crate_size": 9200366,
   "published_at": "2026-11-28",
   "download_sha256_recomputed": "46fe9c1e9085e70879caa456bc231602b6d73423f04c7fd4b18d0b2285c52ed3",
-  "download_verification": "RUN \u2014 downloaded static.crates.io/crates/openssl-rs/openssl-rs-0.0.52.crate and recomputed sha256; matches checksum and crate_size 9200366 over 1113 entries"
+  "download_verification": "RUN at 2026-11-28T15:21:20Z: downloaded https://static.crates.io/crates/openssl-rs/openssl-rs-0.0.52.crate, recomputed sha256 46fe9c1e9085e708\u2026 over 9200366 bytes; matches the registry API checksum and size",
+  "verified_at": "2026-11-28T15:21:20Z",
+  "verified_by": "forensics/tools/verify_release_payloads.py (PFP-87)",
+  "note_superseded": {
+   "value": "No registry payload has been observed for 0.0.52. This block is completed after the upload from the downloaded .crate, and only then may any checksum or served size be claimed.",
+   "why": "Corrected 2026-11-28 under PFP-87: the statement was written before the event it described and was never removed after it. The superseded text is retained because the record of what was once believed is part of the evidence."
+  }
  },
  "evidence_position": {
   "closure": "Not re-measured at 0.0.52. The applied closure evidence is unchanged by a version bump; this receipt binds packaging identity only.",
@@ -46,7 +52,7 @@
   "both consumer closures (not re-measured at 0.0.52)",
   "ASan, TSan, dudect, authority differential, full forensic regeneration",
   "independent review of the release itself",
-  "crates.io upload and download-checksum verification (not run; no upload performed)"
+  "independent re-verification of the served payload by a second instrument (this receipt records the download and recomputation; a separate tool and a second operator have not yet reproduced it)"
  ],
  "release_process": {
   "merge": "Performed. staging promoted to main with branch protection lifted and restored unchanged.",
@@ -59,5 +65,11 @@
   "The crate ships source and documentation only; no shared object is distributed.",
   "Publishing discharges no obligation and does not advance any mechanism to SAFETY_DISCHARGED.",
   "The checksum and file count record what the registry served; they are not evidence that the crate's contents were audited."
+ ],
+ "instruments_not_run_at_this_identity_superseded": [
+  {
+   "value": "crates.io upload and download-checksum verification (not run; no upload performed)",
+   "why": "Corrected 2026-11-28 under PFP-87: the statement was written before the event it described and was never removed after it. The superseded text is retained because the record of what was once believed is part of the evidence."
+  }
  ]
 }

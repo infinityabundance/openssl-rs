@@ -30,13 +30,22 @@
  },
  "registry_verification": {
   "endpoint": "https://crates.io/api/v1/crates/openssl-rs/0.0.45",
-  "checksum": "f4b8639a6a6ef87e2f34490bb740d65b41b1f2d80c6016bde16edeeb02f9a4b9",
-  "checksum_prefix": "f4b8639a",
-  "crate_size": 8990351,
+  "checksum": "507677029290954658464e0de40709063cae4320a719349f3908be566576ada0",
+  "checksum_prefix": "50767702",
+  "crate_size": 9154449,
   "published_at": "2026-10-30T20:56:16.047546Z",
   "yanked": false,
   "license": "Apache-2.0 OR MIT",
-  "documentation": "https://docs.rs/openssl-rs"
+  "documentation": "https://docs.rs/openssl-rs",
+  "checksum_superseded": {
+   "value": "f4b8639a6a6ef87e2f34490bb740d65b41b1f2d80c6016bde16edeeb02f9a4b9",
+   "recorded_on": "2026-11-17",
+   "why": "This digest is not the digest of the .crate the registry serves. It was corrected on 2026-11-28 by re-downloading the payload and recomputing its sha256; the superseded value is retained because the record of what was once believed is part of the evidence."
+  },
+  "download_sha256_recomputed": "507677029290954658464e0de40709063cae4320a719349f3908be566576ada0",
+  "download_verification": "RUN at 2026-11-28T15:21:20Z: downloaded https://static.crates.io/crates/openssl-rs/openssl-rs-0.0.47.crate, recomputed sha256 5076770292909546\u2026 over 9154449 bytes; matches the registry API checksum and size",
+  "verified_at": "2026-11-28T15:21:20Z",
+  "verified_by": "forensics/tools/verify_release_payloads.py (PFP-87)"
  },
  "evidence_position": {
   "closure": "The applied closure is measured at candidate v1u (9eccc7e9), not at this build: ACCEPTED, 314 obligations = 99 DISCHARGED / 215 BLOCKED / 0 UNKNOWN, 0 refusals (evidence/closure-ssh-v1u.json, evidence/inventory-sshd-v1u.json). It was not re-measured at 0.0.45.",

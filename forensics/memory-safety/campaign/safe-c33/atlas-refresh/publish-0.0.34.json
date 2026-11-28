@@ -30,7 +30,11 @@
     "checksum": "e1f553b3a57259ef8699bb0c2e91e4945f86e97ff25f870526b1e3e1a92ae15b",
     "checksum_prefix": "e1f553b3",
     "crate_size": 8791047,
-    "published_at": "2026-10-23T08:19:11Z"
+    "published_at": "2026-10-23T08:19:11Z",
+    "download_sha256_recomputed": "e1f553b3a57259ef8699bb0c2e91e4945f86e97ff25f870526b1e3e1a92ae15b",
+    "download_verification": "RUN at 2026-11-28T15:21:20Z: downloaded https://static.crates.io/crates/openssl-rs/openssl-rs-0.0.34.crate, recomputed sha256 e1f553b3a57259ef\u2026 over 8791047 bytes; matches the registry API checksum and size",
+    "verified_at": "2026-11-28T15:21:20Z",
+    "verified_by": "forensics/tools/verify_release_payloads.py (PFP-87)"
   },
   "evidence_shipped": {
     "library_tests": "2048 passed, 0 failed, 44 ignored (serial and parallel) at c911ca629",

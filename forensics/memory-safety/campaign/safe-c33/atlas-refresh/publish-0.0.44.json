@@ -39,7 +39,11 @@
     "published_at": "2026-10-30T09:57:39.743681Z",
     "yanked": false,
     "license": "Apache-2.0 OR MIT",
-    "documentation": "https://docs.rs/openssl-rs"
+    "documentation": "https://docs.rs/openssl-rs",
+    "download_sha256_recomputed": "ba87719cdfa6f094fadf486f2152567c903e098f8198741156276ad51c4a3238",
+    "download_verification": "RUN at 2026-11-28T15:21:20Z: downloaded https://static.crates.io/crates/openssl-rs/openssl-rs-0.0.44.crate, recomputed sha256 ba87719cdfa6f094\u2026 over 8976949 bytes; matches the registry API checksum and size",
+    "verified_at": "2026-11-28T15:21:20Z",
+    "verified_by": "forensics/tools/verify_release_payloads.py (PFP-87)"
   },
   "evidence_shipped": {
     "abi_courts": "11/11 passed on the S' install rebuild; export sets unchanged (libcrypto 5906, libssl 608)",

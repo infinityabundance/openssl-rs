@@ -28,7 +28,7 @@
    "path": "court/tmp/openssl-rs-0.0.49.crate",
    "sha256": "a5aa60cf677b596c332385268f0a9e777b85c4ced0279629082edc8931a64280",
    "size_bytes": 9154603,
-   "disposition": "NOT THE PUBLISHED PAYLOAD — superseded, not deleted from the record",
+   "disposition": "NOT THE PUBLISHED PAYLOAD \u2014 superseded, not deleted from the record",
    "why": "This pack was built by an explicit `cargo package` before the documentation regeneration and before the release commit. Unpacking it shows the pre-regeneration README.md (the 0.0.48 release row) and a .cargo_vcs_info.json recording sha1 a13b59b6c with dirty=true. It was never uploaded. The publish itself re-packed from the committed tree, so the registry payload carries the regenerated README and the release commit sha1. The two payloads differ in exactly README.md and .cargo_vcs_info.json; every source file is byte-identical."
   }
  },
@@ -45,7 +45,9 @@
   "documentation": "https://docs.rs/openssl-rs",
   "download_endpoint": "https://crates.io/api/v1/crates/openssl-rs/0.0.49/download",
   "download_sha256_recomputed": "4231962b1fcc54cb00983b299d78b986101c35675d583d4db9e2d8aafe507348",
-  "download_verification": "PASS — the bytes served by the registry hash to the registry's own checksum"
+  "download_verification": "RUN at 2026-11-28T15:21:20Z: downloaded https://static.crates.io/crates/openssl-rs/openssl-rs-0.0.49.crate, recomputed sha256 4231962b1fcc54cb\u2026 over 9154664 bytes; matches the registry API checksum and size",
+  "verified_at": "2026-11-28T15:21:20Z",
+  "verified_by": "forensics/tools/verify_release_payloads.py (PFP-87)"
  },
  "container_package": {
   "registry": "ghcr.io",
@@ -79,7 +81,7 @@
   "not_claimed": "A published image is a packaging artefact. It is not a safety, compatibility or cryptographic result, and pushing it discharges no obligation."
  },
  "evidence_position": {
-  "closure": "Not re-measured at 0.0.49. The applied closure evidence is unchanged by a version bump: no src/ file differs between the 0.0.48 tree and this one, which the identical build source-tree digest ca7d39b9… over the same eight hundred and eighty-eight entries establishes.",
+  "closure": "Not re-measured at 0.0.49. The applied closure evidence is unchanged by a version bump: no src/ file differs between the 0.0.48 tree and this one, which the identical build source-tree digest ca7d39b9\u2026 over the same eight hundred and eighty-eight entries establishes.",
   "safe_compatible": "1 of the 33 admitted cohort families: `openssh`, represented by its consumer binaries ssh and sshd, carries the principal's SAFE_COMPATIBLE verdict at candidate b85c (evidence/SAFE-COMPATIBLE-openssh-b85c.json). That record is the authority for the counter; this receipt neither re-adjudicates it nor extends it to any other family.",
   "mechanism_grade": "The b85c record states all seven mechanism groups SAFETY_DISCHARGED at the measured OpenSSH closure scope, and retracts the earlier 'five mechanisms remain below mechanism-wide grade' label as a scope expansion rather than a measurement. The independent adjudicator's NOT ESTABLISHED verdict (evidence/b85c-adjudication.json) is preserved there as history and is not reinterpreted here.",
   "boundary_seal": "BOUNDARY and SEAL gates remain NOT_RUN for the S16-S61 cluster. Publishing discharges nothing and is not a verification event."

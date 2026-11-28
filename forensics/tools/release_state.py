@@ -38,6 +38,15 @@ four contradiction classes, one stable code per class:
   recomputation field must name the released commit.
 * ``RS_DOC_CONTRADICTS_LIFECYCLE`` — README prose outside the generated blocks
   says a published version is unreleased, not pushed, or checksum-pending.
+* ``RS_LIFECYCLE_UNEARNED`` — the receipt declares a lifecycle state higher than
+  the events its own fields evidence.  ``PUBLISHED``/``RELEASED`` normalise to
+  ``VERIFIED``; each step needs the previous step's record, and a verified
+  download additionally needs a well-formed checksum and a matching recomputed
+  hash, so a claim cannot exceed its evidence.
+* ``RS_INSTRUMENT_DENIES_EVIDENCED_EVENT`` — an
+  ``instruments_not_run_at_this_identity`` entry denies an event (upload, or the
+  registry download check) that the same receipt evidences.  Before this code,
+  both 0.0.51 and 0.0.52 listed the upload as not run after it had run.
 
 The supersede rule (code 4)
 ---------------------------
@@ -94,12 +103,16 @@ RS_PUBLISHED_WITH_PREPUBLICATION_CLAIM = "RS_PUBLISHED_WITH_PREPUBLICATION_CLAIM
 RS_VERIFIED_WITHOUT_RECOMPUTED_HASH = "RS_VERIFIED_WITHOUT_RECOMPUTED_HASH"
 RS_TREE_EQUIVALENCE_UNPROVEN = "RS_TREE_EQUIVALENCE_UNPROVEN"
 RS_DOC_CONTRADICTS_LIFECYCLE = "RS_DOC_CONTRADICTS_LIFECYCLE"
+RS_LIFECYCLE_UNEARNED = "RS_LIFECYCLE_UNEARNED"
+RS_INSTRUMENT_DENIES_EVIDENCED_EVENT = "RS_INSTRUMENT_DENIES_EVIDENCED_EVENT"
 
 CODES: tuple[str, ...] = (
     RS_PUBLISHED_WITH_PREPUBLICATION_CLAIM,
     RS_VERIFIED_WITHOUT_RECOMPUTED_HASH,
     RS_TREE_EQUIVALENCE_UNPROVEN,
     RS_DOC_CONTRADICTS_LIFECYCLE,
+    RS_LIFECYCLE_UNEARNED,
+    RS_INSTRUMENT_DENIES_EVIDENCED_EVENT,
 )
 
 GENERATED_BEGIN = re.compile(r"<!--\s*BEGIN GENERATED\b.*?-->")
@@ -209,6 +222,18 @@ _PREPUBLICATION_PATTERNS: tuple[re.Pattern[str], ...] = (
     re.compile(r"\bchecksum\b[^.\n]{0,20}?\brecorded\s+as\s+(?:PENDING|pending)\b", re.I),
     re.compile(r"\bno\b[^.\n]{0,30}?\b(?:package|upload|publish)\b"
                r"[^.\n]{0,30}?\b(?:produced|created|uploaded|published|occurred)\b", re.I),
+    # A "VERIFIED" registry block that still says the payload was never seen is
+    # the 0.0.52 defect: the note predates the upload and the status postdates
+    # it.  Both statements are about the same event and cannot both be true.
+    re.compile(r"\bno\s+(?:registry\s+)?payload\b[^.\n]{0,40}?"
+               r"\b(?:observed|retrieved|downloaded|seen|available)\b", re.I),
+    re.compile(r"\b(?:not|never)\s+(?:yet\s+)?"
+               r"\b(?:observed|retrieved|downloaded|seen)\b", re.I),
+    # Container publication is a lifecycle event with the same shape.
+    re.compile(r"\bno\s+(?:container\s+)?image\b[^.\n]{0,40}?"
+               r"\b(?:built|pushed|published)\b", re.I),
+    re.compile(r"\b(?:image|container)\b[^.\n]{0,30}?"
+               r"\b(?:not|never)\s+(?:been\s+)?(?:built|pushed|published)\b", re.I),
 )
 
 
@@ -247,6 +272,26 @@ def _publish_text_fields(publish: dict) -> Iterable[tuple[str, str]]:
 
     for index, entry in enumerate(publish.get("non_claims") or []):
         yield f"non_claims[{index}]", _as_text(entry)
+
+    # The registry block's own prose is part of the claim.  A note describing a
+    # pre-upload state beside ``status: VERIFIED`` is a contradiction whether it
+    # lives in ``release_process`` or here.
+    verification = publish.get("registry_verification")
+    if isinstance(verification, dict):
+        for key, value in sorted(verification.items()):
+            if "superseded" in key.lower():
+                continue  # an explicitly marked correction is non-asserting
+            if "note" in key.lower() or "verification" in key.lower():
+                yield f"registry_verification.{key}", _as_text(value)
+
+    # Container publication, where recorded, follows the same rule.
+    container = publish.get("container_package")
+    if isinstance(container, dict):
+        for key, value in sorted(container.items()):
+            if "superseded" in key.lower():
+                continue
+            if "note" in key.lower() or "status" in key.lower():
+                yield f"container_package.{key}", _as_text(value)
 
 
 def _build_text_fields(build: dict) -> Iterable[tuple[str, str]]:
@@ -310,6 +355,13 @@ def _check_registry_verification(version: str, publish: dict) -> list[Finding]:
     download_text = _as_text(verification.get("download_verification"))
 
     if status == "VERIFIED":
+        if not _is_hex64(checksum):
+            findings.append(Finding(
+                RS_VERIFIED_WITHOUT_RECOMPUTED_HASH, version,
+                "registry_verification.checksum",
+                f"status is VERIFIED but the registry checksum {checksum!r} is not a "
+                "64-hex-digit SHA-256",
+            ))
         if not isinstance(recomputed, str) or not recomputed.strip():
             findings.append(Finding(
                 RS_VERIFIED_WITHOUT_RECOMPUTED_HASH, version,
@@ -321,6 +373,12 @@ def _check_registry_verification(version: str, publish: dict) -> list[Finding]:
                 RS_VERIFIED_WITHOUT_RECOMPUTED_HASH, version,
                 "registry_verification.download_sha256_recomputed",
                 f"status is VERIFIED but the recomputed hash is {recomputed!r}",
+            ))
+        elif not _is_hex64(recomputed):
+            findings.append(Finding(
+                RS_VERIFIED_WITHOUT_RECOMPUTED_HASH, version,
+                "registry_verification.download_sha256_recomputed",
+                f"the recomputed hash {recomputed!r} is not a 64-hex-digit SHA-256",
             ))
         elif not isinstance(checksum, str) or recomputed.strip().lower() != checksum.strip().lower():
             findings.append(Finding(
@@ -341,6 +399,147 @@ def _check_registry_verification(version: str, publish: dict) -> list[Finding]:
             "registry_verification.download_verification",
             f"download verification says {download_text!r}",
         ))
+    return findings
+
+
+# ---------------------------------------------------------------------------
+# A typed lifecycle: a claim may never exceed the events the receipt evidences
+# ---------------------------------------------------------------------------
+#
+# The contradiction classes above are the symptoms.  The defect is that a
+# receipt had no notion of a *state*, so a field written before an event could
+# survive beside a field written after it.  This section gives the receipt an
+# ordered lifecycle and requires the declared state to be earned:
+#
+#   PREPARED  ->  TAGGED  ->  UPLOADED  ->  VERIFIED
+#
+# A receipt may declare a state only when the evidence for every earlier state
+# is present and none of the prose denies it.  This is Article 1 of the earned
+# trust constitution (a claim may not exceed its evidence) applied to the
+# release record itself.
+
+LIFECYCLE_ORDER: tuple[str, ...] = ("PREPARED", "TAGGED", "UPLOADED", "VERIFIED")
+_RANK = {state: rank for rank, state in enumerate(LIFECYCLE_ORDER)}
+
+# "PUBLISHED" is the receipt's terminal claim; it is earned at VERIFIED, since
+# the only post-upload event the receipt can itself evidence is the verified
+# download.
+_DECLARED_ALIASES = {"PUBLISHED": "VERIFIED", "RELEASED": "VERIFIED"}
+
+_UPLOAD_NOT_RUN = re.compile(
+    r"\b(?:upload|publish)\b[^.;]{0,40}?\b(?:not[ _]run|PENDING|no\s+upload)\b"
+    r"|\bno\s+upload\b[^.;]{0,20}?\b(?:performed|occurred|run|done)\b",
+    re.IGNORECASE,
+)
+_REGISTRY_NOT_RUN = re.compile(
+    r"\b(?:registry|download|checksum)\b[^.;]{0,50}?"
+    r"\b(?:not[ _]run|PENDING|not\s+performed|not\s+verified)\b",
+    re.IGNORECASE,
+)
+
+
+def declared_lifecycle(publish: dict) -> str:
+    """The state the receipt asserts, normalised to the ordered vocabulary."""
+    explicit = str(publish.get("lifecycle", "")).upper()
+    if explicit in _RANK:
+        return explicit
+    status = str(publish.get("status", "")).upper()
+    if status in _RANK:
+        return status
+    return _DECLARED_ALIASES.get(status, "PREPARED")
+
+
+def evidenced_lifecycle(publish: dict) -> str:
+    """The highest state the receipt's own fields *evidence*.
+
+    This is deliberately conservative: an event counts only when its record is
+    present and the surrounding prose does not deny it.
+    """
+    state = "PREPARED"
+    process = publish.get("release_process")
+    process = process if isinstance(process, dict) else {}
+    source = publish.get("source_identity")
+    source = source if isinstance(source, dict) else {}
+    verification = publish.get("registry_verification")
+    verification = verification if isinstance(verification, dict) else {}
+    packaging = publish.get("packaging")
+    packaging = packaging if isinstance(packaging, dict) else {}
+
+    # TAGGED: a tag is named.  Older receipts carry it on the source identity.
+    tag = _as_text(process.get("tag")) or _as_text(source.get("tag"))
+    if tag.strip() and not _NOT_RUN.search(tag):
+        state = "TAGGED"
+
+    # UPLOADED: the registry records the version, or the receipt records an
+    # upload.  A registry ``published_at``/``checksum`` for this version is
+    # stronger evidence than a prose claim, so either suffices.
+    upload = _as_text(process.get("upload"))
+    uploaded = bool(verification.get("published_at")) or _is_hex64(
+        verification.get("checksum")
+    ) or _is_hex64(packaging.get("crate_sha256"))
+    if (upload and not _UPLOAD_NOT_RUN.search(upload)) or uploaded:
+        state = "UPLOADED"
+
+    # VERIFIED: a registry checksum and a downloaded payload that was re-hashed
+    # to the same value and not reported as not-run.  The ``status`` field is
+    # optional in the older schema; the hashes are what carry the evidence.
+    recomputed = verification.get("download_sha256_recomputed")
+    download_text = _as_text(verification.get("download_verification"))
+    declared_status = str(verification.get("status", "")).upper()
+    if (
+        declared_status in {"", "VERIFIED"}
+        and _is_hex64(verification.get("checksum"))
+        and _is_hex64(recomputed)
+        and str(recomputed).strip().lower() == str(verification.get("checksum")).strip().lower()
+        and download_text
+        and not _NOT_RUN.search(download_text)
+    ):
+        state = "VERIFIED"
+    return state
+
+
+def _check_lifecycle_evidence(version: str, publish: dict) -> list[Finding]:
+    """Refuse a declared state that the receipt has not earned."""
+    declared = declared_lifecycle(publish)
+    evidenced = evidenced_lifecycle(publish)
+    if _RANK[declared] <= _RANK[evidenced]:
+        return []
+    return [Finding(
+        RS_LIFECYCLE_UNEARNED, version,
+        "lifecycle",
+        f"declared state {declared} exceeds the evidenced state {evidenced}",
+    )]
+
+
+def _check_instrument_ledger(version: str, publish: dict) -> list[Finding]:
+    """An ``instruments_not_run`` entry may not deny an evidenced event.
+
+    ``instruments_not_run_at_this_identity`` is a list of things that were not
+    done.  It is a *claim* like any other, and it is exactly where 0.0.51 and
+    0.0.52 kept saying the upload had not run after it had.
+    """
+    entries = publish.get("instruments_not_run_at_this_identity") or []
+    if not isinstance(entries, list):
+        return []
+    evidenced = _RANK[evidenced_lifecycle(publish)]
+    findings: list[Finding] = []
+    for index, entry in enumerate(entries):
+        text = _as_text(entry)
+        if any(is_correction_marker(sentence) for sentence in _sentences(text)):
+            continue
+        if evidenced >= _RANK["UPLOADED"] and _UPLOAD_NOT_RUN.search(text):
+            findings.append(Finding(
+                RS_INSTRUMENT_DENIES_EVIDENCED_EVENT, version,
+                f"instruments_not_run_at_this_identity[{index}]",
+                f"the receipt evidences an upload but the entry says {_snippet(text)!r}",
+            ))
+        if evidenced >= _RANK["VERIFIED"] and _REGISTRY_NOT_RUN.search(text):
+            findings.append(Finding(
+                RS_INSTRUMENT_DENIES_EVIDENCED_EVENT, version,
+                f"instruments_not_run_at_this_identity[{index}]",
+                f"the receipt evidences a verified download but the entry says "
+                f"{_snippet(text)!r}",
+            ))
     return findings
 
 
@@ -621,6 +820,8 @@ def check_version(
     findings: list[Finding] = []
     findings.extend(_check_published_prepublication(version, publish, build))
     findings.extend(_check_registry_verification(version, publish))
+    findings.extend(_check_lifecycle_evidence(version, publish))
+    findings.extend(_check_instrument_ledger(version, publish))
     findings.extend(_check_tree_equivalence(version, publish, build, baseline))
     findings.extend(_check_readme(version, publish, readme_prose(readme)))
     return findings

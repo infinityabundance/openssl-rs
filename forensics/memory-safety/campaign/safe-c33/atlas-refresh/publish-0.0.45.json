@@ -38,7 +38,11 @@
     "published_at": "2026-10-30T20:56:16.047546Z",
     "yanked": false,
     "license": "Apache-2.0 OR MIT",
-    "documentation": "https://docs.rs/openssl-rs"
+    "documentation": "https://docs.rs/openssl-rs",
+    "download_sha256_recomputed": "f4b8639a6a6ef87e2f34490bb740d65b41b1f2d80c6016bde16edeeb02f9a4b9",
+    "download_verification": "RUN at 2026-11-28T15:21:20Z: downloaded https://static.crates.io/crates/openssl-rs/openssl-rs-0.0.45.crate, recomputed sha256 f4b8639a6a6ef87e\u2026 over 8990351 bytes; matches the registry API checksum and size",
+    "verified_at": "2026-11-28T15:21:20Z",
+    "verified_by": "forensics/tools/verify_release_payloads.py (PFP-87)"
   },
   "evidence_position": {
     "closure": "The applied closure is measured at candidate v1u (9eccc7e9), not at this build: ACCEPTED, 314 obligations = 99 DISCHARGED / 215 BLOCKED / 0 UNKNOWN, 0 refusals (evidence/closure-ssh-v1u.json, evidence/inventory-sshd-v1u.json). It was not re-measured at 0.0.45.",
@@ -66,7 +70,14 @@
     },
     "debt_characterisation": {
       "prerequisite_findings_total": 892,
-      "by_owner_phase": {"14": 674, "17": 111, "5": 53, "3": 27, "4": 25, "16": 2},
+      "by_owner_phase": {
+        "14": 674,
+        "17": 111,
+        "5": 53,
+        "3": 27,
+        "4": 25,
+        "16": 2
+      },
       "meaning": "An authority-internal function that a transcribed unit calls, where the crate has a module for the defining unit, that module does not mention the name, and the defining unit's stratum is in-progress. Each must be wired or covered by a divergence record naming exactly that name with an evidence citation.",
       "not_a_verdict": "These are not 892 memory-safety defects; they are unproved dependency edges concentrated in phase 14 (TLS) and phase 17.",
       "gate_was_not_weakened": "No threshold, rule or exclusion was changed in this release."

@@ -18,6 +18,7 @@ import copy
 import importlib.util
 import io
 import json
+import re
 import sys
 import unittest
 from pathlib import Path
@@ -29,7 +30,10 @@ sys.path.insert(0, str(TOOLS))
 import release_state as rs  # noqa: E402
 
 ATLAS = ROOT / "forensics/memory-safety/campaign/safe-c33/atlas-refresh"
-VERSION = "0.0.51"
+# The tests must describe the newest release, not a pinned one: the baseline is a
+# single current record, and `check_root` applies it only to the newest version.
+# Pinning a version made these tests stale the moment the next release shipped.
+VERSION = rs.versions(ROOT)[-1]
 
 
 def load(name: str) -> dict:
@@ -69,9 +73,9 @@ class PositiveControl(unittest.TestCase):
     def test_every_committed_receipt_passes(self) -> None:
         self.assertEqual(rs.check_root(ROOT), [])
 
-    def test_the_four_codes_are_distinct(self) -> None:
-        self.assertEqual(len(rs.CODES), 4)
-        self.assertEqual(len(set(rs.CODES)), 4)
+    def test_the_six_codes_are_distinct(self) -> None:
+        self.assertEqual(len(rs.CODES), 6)
+        self.assertEqual(len(set(rs.CODES)), 6)
 
 
 class NegativeControls(unittest.TestCase):
@@ -94,10 +98,13 @@ class NegativeControls(unittest.TestCase):
     def test_code_1_stale_build_receipt_still_says_pending_publish(self) -> None:
         build = copy.deepcopy(real_build())
         build["status"] = "BUILT (pending publish)"
-        build["published_as"] = "pending: atlas-refresh/publish-0.0.51.json (checksum PENDING)"
+        build["release_commit"] = "a" * 40  # claim a released identity
+        build["published_as"] = (
+            f"pending: atlas-refresh/publish-{VERSION}.json (checksum PENDING)"
+        )
         build["crate_package"] = {
             "status": "PENDING",
-            "note": "No crate package was produced or uploaded for 0.0.51.",
+            "note": f"No crate package was produced or uploaded for {VERSION}.",
         }
         self.assertIn(rs.RS_PUBLISHED_WITH_PREPUBLICATION_CLAIM,
                       codes(run(real_publish(), build, real_baseline(), real_readme())))
@@ -153,24 +160,67 @@ class NegativeControls(unittest.TestCase):
 
     def test_code_4_readme_asserts_a_published_version_is_unreleased(self) -> None:
         readme = (
-            "**Release position.** 0.0.51 is published on crates.io. "
-            "No 0.0.51 release push or upload has occurred and the checksum was "
+            f"**Release position.** {VERSION} is published on crates.io. "
+            f"No {VERSION} release push or upload has occurred and the checksum was "
             "PENDING.\n"
         )
         self.assertIn(rs.RS_DOC_CONTRADICTS_LIFECYCLE,
                       codes(run(real_publish(), real_build(), real_baseline(), readme)))
+
+    def test_code_5_declared_lifecycle_exceeds_evidence(self) -> None:
+        publish = real_publish()
+        del publish["registry_verification"]["download_sha256_recomputed"]
+        del publish["registry_verification"]["download_verification"]
+        self.assertIn(rs.RS_LIFECYCLE_UNEARNED,
+                      codes(run(publish, real_build(), real_baseline(), real_readme())))
+
+    def test_code_5_a_well_formed_digest_is_required(self) -> None:
+        publish = real_publish()
+        publish["registry_verification"]["checksum"] = "matching-but-not-a-sha256"
+        publish["registry_verification"]["download_sha256_recomputed"] = (
+            "matching-but-not-a-sha256"
+        )
+        found = codes(run(publish, real_build(), real_baseline(), real_readme()))
+        self.assertTrue(
+            rs.RS_LIFECYCLE_UNEARNED in found
+            or rs.RS_VERIFIED_WITHOUT_RECOMPUTED_HASH in found
+        )
+
+    def test_code_6_instrument_ledger_denies_an_evidenced_upload(self) -> None:
+        publish = real_publish()
+        publish["instruments_not_run_at_this_identity"].append(
+            "crates.io upload and download-checksum verification (not run; no upload performed)"
+        )
+        self.assertIn(rs.RS_INSTRUMENT_DENIES_EVIDENCED_EVENT,
+                      codes(run(publish, real_build(), real_baseline(), real_readme())))
+
+    def test_code_6_a_marked_correction_entry_is_non_asserting(self) -> None:
+        publish = real_publish()
+        publish["instruments_not_run_at_this_identity"].append(
+            "Superseded: crates.io upload was not run"
+        )
+        findings = codes(run(publish, real_build(), real_baseline(), real_readme()))
+        self.assertNotIn(rs.RS_INSTRUMENT_DENIES_EVIDENCED_EVENT, findings)
+
+    def test_registry_note_denying_observation_is_refused(self) -> None:
+        publish = real_publish()
+        publish["registry_verification"]["note"] = (
+            "No registry payload has been observed for 0.0.51."
+        )
+        self.assertIn(rs.RS_PUBLISHED_WITH_PREPUBLICATION_CLAIM,
+                      codes(run(publish, real_build(), real_baseline(), real_readme())))
 
 
 class SupersedeRule(unittest.TestCase):
     """A marked correction is non-asserting; the unqualified claim is refused."""
 
     ASSERTION = (
-        "0.0.51 has not been pushed and the checksum was PENDING."
+        f"{VERSION} has not been pushed and the checksum was PENDING."
     )
 
     def test_superseded_claim_passes(self) -> None:
         readme = (
-            "0.0.51 is published on crates.io.\n\n"
+            f"{VERSION} is published on crates.io.\n\n"
             f"*Superseded text (2026-11-28): {self.ASSERTION} That was true when "
             "written and is false now.*\n"
         )
@@ -178,13 +228,13 @@ class SupersedeRule(unittest.TestCase):
         self.assertEqual(findings, [])
 
     def test_unqualified_identical_claim_fails(self) -> None:
-        readme = f"0.0.51 is published on crates.io. {self.ASSERTION}\n"
+        readme = f"{VERSION} is published on crates.io. {self.ASSERTION}\n"
         findings = run(real_publish(), real_build(), real_baseline(), readme)
         self.assertIn(rs.RS_DOC_CONTRADICTS_LIFECYCLE, codes(findings))
 
     def test_marked_paragraph_is_non_asserting(self) -> None:
         readme = (
-            "0.0.51 is published on crates.io.\n\n"
+            f"{VERSION} is published on crates.io.\n\n"
             f"> **Superseded 2026-11-28.** {self.ASSERTION} The old text is kept "
             "as a correction record.\n"
         )
@@ -192,12 +242,36 @@ class SupersedeRule(unittest.TestCase):
 
     def test_generated_block_is_not_prose(self) -> None:
         readme = (
-            "0.0.51 is published on crates.io.\n"
+            f"{VERSION} is published on crates.io.\n"
             "<!-- BEGIN GENERATED: release -->\n"
-            f"0.0.51 is unreleased and the checksum is PENDING.\n"
+            f"{VERSION} is unreleased and the checksum is PENDING.\n"
             "<!-- END GENERATED: release -->\n"
         )
         self.assertEqual(run(real_publish(), real_build(), real_baseline(), readme), [])
+
+
+class ReleaseBlockSelfReference(unittest.TestCase):
+    """The rendered Release row may not name a commit or a checksum.
+
+    A release commit cannot be known while the release is being packaged, and a
+    checksum is computed over the bytes that contain the sentence.  Both are
+    post-packaging facts and belong in the receipts.
+    """
+
+    def test_release_row_names_no_commit_and_no_checksum(self) -> None:
+        spec = importlib.util.spec_from_file_location(
+            "render_docs_under_test", TOOLS / "render_docs.py"
+        )
+        module = importlib.util.module_from_spec(spec)
+        assert spec.loader is not None
+        sys.modules[spec.name] = module
+        spec.loader.exec_module(module)
+        text = module.Evidence(ROOT).release_text()
+        self.assertIsNone(re.search(r"\b[0-9a-fA-F]{40}\b", text), text)
+        self.assertIsNone(re.search(r"\b[0-9a-fA-F]{64}\b", text), text)
+        self.assertNotIn("from commit", text.lower())
+        self.assertIn("build-", text)
+        self.assertIn("publish-", text)
 
 
 class Wiring(unittest.TestCase):

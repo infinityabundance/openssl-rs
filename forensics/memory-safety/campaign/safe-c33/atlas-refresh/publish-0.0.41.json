@@ -31,7 +31,11 @@
   "published_at": "UNKNOWN: the version endpoint returned published_at null at 2026-10-27T11:40:55Z; crates.io reported 'Published openssl-rs v0.0.41 at registry crates-io' and the version document is readable",
   "yanked": false,
   "num_versions": 41,
-  "note": "the earlier 403 was a missing User-Agent on the client, not absent network. Queried with -A openssl-rs-release/0.0.41."
+  "note": "the earlier 403 was a missing User-Agent on the client, not absent network. Queried with -A openssl-rs-release/0.0.41.",
+  "download_sha256_recomputed": "0d32b7093225aa91db1afb609e93fadd2dd9b91443fbf0d241c242d6132dfd92",
+  "download_verification": "RUN at 2026-11-28T15:21:20Z: downloaded https://static.crates.io/crates/openssl-rs/openssl-rs-0.0.41.crate, recomputed sha256 0d32b7093225aa91\u2026 over 8951096 bytes; matches the registry API checksum and size",
+  "verified_at": "2026-11-28T15:21:20Z",
+  "verified_by": "forensics/tools/verify_release_payloads.py (PFP-87)"
  },
  "provider_verification": {
   "runpath": "$ORIGIN/.. on install/lib/ossl-modules/legacy.so",

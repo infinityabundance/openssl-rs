@@ -29,7 +29,11 @@
     "checksum": "85a644a2b0ca43fd3b2e160f55dd62c031a74e0ed9339825de8171d910998a70",
     "checksum_prefix": "85a644a2",
     "crate_size": 8836242,
-    "published_at": "2026-10-24T07:48:51Z"
+    "published_at": "2026-10-24T07:48:51Z",
+    "download_sha256_recomputed": "85a644a2b0ca43fd3b2e160f55dd62c031a74e0ed9339825de8171d910998a70",
+    "download_verification": "RUN at 2026-11-28T15:21:20Z: downloaded https://static.crates.io/crates/openssl-rs/openssl-rs-0.0.36.crate, recomputed sha256 85a644a2b0ca43fd\u2026 over 8836242 bytes; matches the registry API checksum and size",
+    "verified_at": "2026-11-28T15:21:20Z",
+    "verified_by": "forensics/tools/verify_release_payloads.py (PFP-87)"
   },
   "provider_verification": {
     "runpath": "$ORIGIN/.. on install/lib/ossl-modules/legacy.so",

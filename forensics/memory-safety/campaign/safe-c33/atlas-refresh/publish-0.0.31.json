@@ -27,7 +27,12 @@
     "default_version": "0.0.31",
     "checksum_prefix": "d574588e",
     "crate_size": 8637979,
-    "published_at": "2026-10-22T04:42:02Z"
+    "published_at": "2026-10-22T04:42:02Z",
+    "checksum": "d574588ef6bd05c39411f5501d00f01ad436f7424826de759d22c11ca842c8ec",
+    "download_sha256_recomputed": "d574588ef6bd05c39411f5501d00f01ad436f7424826de759d22c11ca842c8ec",
+    "download_verification": "RUN at 2026-11-28T15:21:20Z: downloaded https://static.crates.io/crates/openssl-rs/openssl-rs-0.0.31.crate, recomputed sha256 d574588ef6bd05c3\u2026 over 8637979 bytes; matches the registry API checksum and size",
+    "verified_at": "2026-11-28T15:21:20Z",
+    "verified_by": "forensics/tools/verify_release_payloads.py (PFP-87)"
   },
   "content_delta_since_0_0_30": [
     "README leads with generated achievement, L7 family and memory-safety blocks",
