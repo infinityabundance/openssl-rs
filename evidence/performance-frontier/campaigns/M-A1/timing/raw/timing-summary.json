@@ -1,288 +1,343 @@
 {
   "arms": {
+    "auth": "openssl-3.6.4-production authority",
     "cand": "candidate (compile-time width CIOS kernels)",
-    "prev": "previous build (generic slice kernel; PFP-6 admitted DSO)",
-    "auth": "openssl-3.6.4-production authority"
+    "prev": "previous build (generic slice kernel; PFP-6 admitted DSO)"
   },
   "repetitions": 15,
   "workloads": {
     "dh-ffdhe2048": {
       "absolute_us": {
+        "auth": 1191.833,
         "cand": 2411.201,
-        "prev": 2467.467,
-        "auth": 1191.833
-      },
-      "cand_over_prev": {
-        "median_ratio": 0.9776057776469053,
-        "ci95": [
-          0.977118048072233,
-          0.9779554525901492
-        ],
-        "n": 15
+        "prev": 2467.467
       },
       "cand_over_auth": {
-        "median_ratio": 2.0226686552482693,
         "ci95": [
           2.022168609611179,
           2.025224635400273
         ],
+        "median_ratio": 2.0226686552482693,
+        "n": 15
+      },
+      "cand_over_prev": {
+        "ci95": [
+          0.977118048072233,
+          0.9779554525901492
+        ],
+        "median_ratio": 0.9776057776469053,
         "n": 15
       },
       "prev_over_auth": {
-        "median_ratio": 2.071108593012276,
         "ci95": [
           2.068613050513761,
           2.0719527600693324
         ],
+        "median_ratio": 2.071108593012276,
         "n": 15
+      },
+      "workload_identity": {
+        "timed_operations": [
+          "DH_compute_key"
+        ],
+        "workload_id": "dh-ffdhe2048"
       }
     },
     "dh-ffdhe3072": {
       "absolute_us": {
+        "auth": 3954.046,
         "cand": 8420.0,
-        "prev": 8481.942,
-        "auth": 3954.046
-      },
-      "cand_over_prev": {
-        "median_ratio": 0.9923261677573367,
-        "ci95": [
-          0.9917331836509724,
-          0.9933939303630854
-        ],
-        "n": 15
+        "prev": 8481.942
       },
       "cand_over_auth": {
-        "median_ratio": 2.1303821452760037,
         "ci95": [
           2.124918813049306,
           2.134281173432558
         ],
+        "median_ratio": 2.1303821452760037,
+        "n": 15
+      },
+      "cand_over_prev": {
+        "ci95": [
+          0.9917331836509724,
+          0.9933939303630854
+        ],
+        "median_ratio": 0.9923261677573367,
         "n": 15
       },
       "prev_over_auth": {
-        "median_ratio": 2.1499015276520996,
         "ci95": [
           2.141243425916734,
           2.151085317325679
         ],
+        "median_ratio": 2.1499015276520996,
         "n": 15
+      },
+      "workload_identity": {
+        "timed_operations": [
+          "DH_compute_key"
+        ],
+        "workload_id": "dh-ffdhe3072"
       }
     },
     "dh-modp2048": {
       "absolute_us": {
+        "auth": 1191.878,
         "cand": 2411.488,
-        "prev": 2467.948,
-        "auth": 1191.878
-      },
-      "cand_over_prev": {
-        "median_ratio": 0.9767150685508771,
-        "ci95": [
-          0.9760012666931777,
-          0.977768059901781
-        ],
-        "n": 15
+        "prev": 2467.948
       },
       "cand_over_auth": {
-        "median_ratio": 2.0230035552780268,
         "ci95": [
           2.0202695678128384,
           2.0243903667410654
         ],
+        "median_ratio": 2.0230035552780268,
+        "n": 15
+      },
+      "cand_over_prev": {
+        "ci95": [
+          0.9760012666931777,
+          0.977768059901781
+        ],
+        "median_ratio": 0.9767150685508771,
         "n": 15
       },
       "prev_over_auth": {
-        "median_ratio": 2.0705911964460255,
         "ci95": [
           2.068582622445588,
           2.072326869852587
         ],
+        "median_ratio": 2.0705911964460255,
         "n": 15
+      },
+      "workload_identity": {
+        "timed_operations": [
+          "DH_compute_key"
+        ],
+        "workload_id": "dh-modp2048"
       }
     },
     "dh-synth2048": {
       "absolute_us": {
+        "auth": 1192.642,
         "cand": 2413.687,
-        "prev": 2468.108,
-        "auth": 1192.642
-      },
-      "cand_over_prev": {
-        "median_ratio": 0.9780693908132564,
-        "ci95": [
-          0.9769938488868162,
-          0.9786189112700632
-        ],
-        "n": 15
+        "prev": 2468.108
       },
       "cand_over_auth": {
-        "median_ratio": 2.0241644748157377,
         "ci95": [
           2.020897591492443,
           2.0252323848005718
         ],
+        "median_ratio": 2.0241644748157377,
+        "n": 15
+      },
+      "cand_over_prev": {
+        "ci95": [
+          0.9769938488868162,
+          0.9786189112700632
+        ],
+        "median_ratio": 0.9780693908132564,
         "n": 15
       },
       "prev_over_auth": {
-        "median_ratio": 2.069003965880175,
         "ci95": [
           2.0676430263516488,
           2.070950443848994
         ],
+        "median_ratio": 2.069003965880175,
         "n": 15
+      },
+      "workload_identity": {
+        "timed_operations": [
+          "DH_compute_key"
+        ],
+        "workload_id": "dh-synth2048"
       }
     },
     "dh-synth3072": {
       "absolute_us": {
+        "auth": 3952.278,
         "cand": 8421.409,
-        "prev": 8481.549,
-        "auth": 3952.278
-      },
-      "cand_over_prev": {
-        "median_ratio": 0.992724858989973,
-        "ci95": [
-          0.9923032209746293,
-          0.9929187052033696
-        ],
-        "n": 15
+        "prev": 8481.549
       },
       "cand_over_auth": {
-        "median_ratio": 2.1315013771804514,
         "ci95": [
           2.1267655893362316,
           2.1375841235046154
         ],
+        "median_ratio": 2.1315013771804514,
+        "n": 15
+      },
+      "cand_over_prev": {
+        "ci95": [
+          0.9923032209746293,
+          0.9929187052033696
+        ],
+        "median_ratio": 0.992724858989973,
         "n": 15
       },
       "prev_over_auth": {
-        "median_ratio": 2.1500009381429135,
         "ci95": [
           2.141861055631564,
           2.1530054436701627
         ],
+        "median_ratio": 2.1500009381429135,
         "n": 15
+      },
+      "workload_identity": {
+        "timed_operations": [
+          "DH_compute_key"
+        ],
+        "workload_id": "dh-synth3072"
       }
     },
     "ecdsa256": {
       "absolute_us": {
+        "auth": 12.738,
         "cand": 129.829,
-        "prev": 131.904,
-        "auth": 12.738
-      },
-      "cand_over_prev": {
-        "median_ratio": 0.9839284901279347,
-        "ci95": [
-          0.9818478852786349,
-          0.9904644141342113
-        ],
-        "n": 15
+        "prev": 131.904
       },
       "cand_over_auth": {
-        "median_ratio": 10.201238632800251,
         "ci95": [
           10.187048665620093,
           10.252453867294857
         ],
+        "median_ratio": 10.201238632800251,
+        "n": 15
+      },
+      "cand_over_prev": {
+        "ci95": [
+          0.9818478852786349,
+          0.9904644141342113
+        ],
+        "median_ratio": 0.9839284901279347,
         "n": 15
       },
       "prev_over_auth": {
-        "median_ratio": 10.353135313531352,
         "ci95": [
           10.343056535717086,
           10.383655204898728
         ],
+        "median_ratio": 10.353135313531352,
         "n": 15
+      },
+      "workload_identity": {
+        "description": "ECDSA_do_sign on P-256, timed alone; verification is run once outside the timed region (bench_pfp5.c ec_step, 15 interleaved --prepared reps)",
+        "timed_operations": [
+          "ECDSA_do_sign"
+        ],
+        "workload_id": "ecdsa256"
       }
     },
     "modexp2048": {
       "absolute_us": {
+        "auth": 1192.553,
         "cand": 2413.735,
-        "prev": 2467.269,
-        "auth": 1192.553
-      },
-      "cand_over_prev": {
-        "median_ratio": 0.9781827331326115,
-        "ci95": [
-          0.9765874669157524,
-          0.9792384805960909
-        ],
-        "n": 15
+        "prev": 2467.269
       },
       "cand_over_auth": {
-        "median_ratio": 2.0226112222819297,
         "ci95": [
           2.020914747664492,
           2.0349585646134503
         ],
+        "median_ratio": 2.0226112222819297,
+        "n": 15
+      },
+      "cand_over_prev": {
+        "ci95": [
+          0.9765874669157524,
+          0.9792384805960909
+        ],
+        "median_ratio": 0.9781827331326115,
         "n": 15
       },
       "prev_over_auth": {
-        "median_ratio": 2.068251094489534,
         "ci95": [
           2.0648172571362537,
           2.0705600373156865
         ],
+        "median_ratio": 2.068251094489534,
         "n": 15
+      },
+      "workload_identity": {
+        "timed_operations": [
+          "BN_mod_exp_mont_consttime"
+        ],
+        "workload_id": "modexp2048"
       }
     },
     "modexp8192": {
       "absolute_us": {
+        "auth": 73880.497,
         "cand": 180810.943,
-        "prev": 180875.925,
-        "auth": 73880.497
-      },
-      "cand_over_prev": {
-        "median_ratio": 0.9996326682852033,
-        "ci95": [
-          0.9982279765455283,
-          1.0030795275005604
-        ],
-        "n": 15
+        "prev": 180875.925
       },
       "cand_over_auth": {
-        "median_ratio": 2.446989717608222,
         "ci95": [
           2.4447123202875387,
           2.454136691865592
         ],
+        "median_ratio": 2.446989717608222,
+        "n": 15
+      },
+      "cand_over_prev": {
+        "ci95": [
+          0.9982279765455283,
+          1.0030795275005604
+        ],
+        "median_ratio": 0.9996326682852033,
         "n": 15
       },
       "prev_over_auth": {
-        "median_ratio": 2.448780651431125,
         "ci95": [
           2.447826721510175,
           2.45121554816882
         ],
+        "median_ratio": 2.448780651431125,
         "n": 15
+      },
+      "workload_identity": {
+        "timed_operations": [
+          "BN_mod_exp_mont_consttime"
+        ],
+        "workload_id": "modexp8192"
       }
     },
     "rsa2048": {
       "absolute_us": {
+        "auth": 350.749,
         "cand": 753.82,
-        "prev": 872.784,
-        "auth": 350.749
-      },
-      "cand_over_prev": {
-        "median_ratio": 0.8645545677209945,
-        "ci95": [
-          0.8604326389015351,
-          0.8671160145237421
-        ],
-        "n": 15
+        "prev": 872.784
       },
       "cand_over_auth": {
-        "median_ratio": 2.149833714582347,
         "ci95": [
           2.144321573058071,
           2.158645042413732
         ],
+        "median_ratio": 2.149833714582347,
+        "n": 15
+      },
+      "cand_over_prev": {
+        "ci95": [
+          0.8604326389015351,
+          0.8671160145237421
+        ],
+        "median_ratio": 0.8645545677209945,
         "n": 15
       },
       "prev_over_auth": {
-        "median_ratio": 2.486534589078214,
         "ci95": [
           2.4835146062297135,
           2.4952012564812254
         ],
+        "median_ratio": 2.486534589078214,
         "n": 15
+      },
+      "workload_identity": {
+        "timed_operations": [
+          "RSA_private_encrypt"
+        ],
+        "workload_id": "rsa2048"
       }
     }
   }

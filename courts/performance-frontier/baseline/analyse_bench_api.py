@@ -19,6 +19,8 @@ Every refusal names a stable rule identifier and the specific gap:
     declared workload check exactly the declared number of times;
   * `PFP_CROSS_POPULATION`     the cross-verification rows are not exactly the
     declared (repetition, signer, verifier) tuples;
+  * `PFP_WORKLOAD_IDENTITY`    a workload has no non-empty `timed_operations`
+    list, so its benchmark row has no machine-readable operation identity;
   * `PFP_JSON_DUPLICATE_KEY` / `PFP_JSON_NON_FINITE`  a campaign or workload
     document is ambiguous or carries a non-finite number.
 
@@ -609,6 +611,19 @@ def analyse(args: argparse.Namespace) -> dict:
     workloads_doc = load_json_strict(args.workloads)
     workloads = {item["id"]: item for item in workloads_doc["workloads"]}
     expected = sorted(workloads)
+    # PFP-66: a benchmark row without a machine-readable operation set cannot be
+    # compared safely. Refuse rather than infer an identity from the row's name.
+    for name in expected:
+        operations = workloads[name].get("timed_operations")
+        if (
+            not isinstance(operations, list)
+            or not operations
+            or not all(isinstance(op, str) and op for op in operations)
+        ):
+            raise CampaignRefusal(
+                "PFP_WORKLOAD_IDENTITY",
+                f"workload {name!r} has no non-empty timed_operations list",
+            )
     check_counts = expected_check_counts(workloads_doc)
     build_identity = load_json_strict(work / "build-identity.json")
     preregistration = load_json_strict(work / "preregistration.json")
@@ -774,6 +789,14 @@ def analyse(args: argparse.Namespace) -> dict:
             "paired_ratio_ci_familywise": list(ci_family),
             "ratio_of_medians": median(cand) / median(auth),
             "sign_test_p_two_sided": p_value,
+            # The identity names the operations inside the timed region. It is
+            # emitted as data so a reader can refuse a cross-row trend whose
+            # operation sets differ (PFP-66). The registry's declaration is
+            # `forensics/performance/WORKLOADS.json`'s `workload_identity_schema`.
+            "workload_identity": {
+                "workload_id": name,
+                "timed_operations": workloads[name]["timed_operations"],
+            },
         }
 
     adjusted = holm(p_values)

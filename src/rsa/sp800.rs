@@ -587,6 +587,7 @@ pub(crate) unsafe fn ossl_rsa_sp800_56b_pairwise_test(rsa: *mut Rsa, ctx: *mut B
                         (*rsa).n,
                         core::ptr::null_mut(),
                         LadderWidth::PublicExponent,
+                        None,
                     ) != 0
                     && BN_mod_exp(tmp, tmp, (*rsa).d, (*rsa).n, ctx) != 0
                     && BN_cmp(k, tmp) == 0,
@@ -743,7 +744,8 @@ mod tests {
                         (*rsa).e,
                         (*rsa).n,
                         core::ptr::null_mut(),
-                        LadderWidth::PublicExponent
+                        LadderWidth::PublicExponent,
+                        None
                     ),
                     1
                 );

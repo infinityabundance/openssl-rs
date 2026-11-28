@@ -82,7 +82,7 @@ use crate::runtime::obj::NID_undef;
 use crate::runtime::owned_buf::OwnedBuf;
 
 use super::check::ossl_dh_check_pub_key_partial;
-use super::group_params::DH_get_nid;
+use super::group_params::{ossl_dh_is_named_safe_prime_group, DH_get_nid};
 use super::object::{priv_limb_count, DH_get0_key, DH_get0_pqg, DH_set0_key, PRIV_LIMBS_SATURATED};
 use super::{
     Dh, DhBnModExpFn, DhComputeKeyFn, DhGenerateKeyFn, DhLifecycleFn, DhMethod,
@@ -421,11 +421,14 @@ unsafe extern "C" fn dh_bn_mod_exp(
     // captured once at ingestion. The policy and the stored count are read together in the one
     // existing unsafe window; no per-operation limb-length read of `p` fixes the width.
     //
+    // PFP-45 adds the public reduction gate in the same window: the order `q` is supplied only
+    // when the key is a named safe-prime group (see `dh_reduction_order`).
+    //
     // SAFETY: `dh` is NULL or a live object per this entry point's contract.
-    let (policy, stored_priv_limbs) = unsafe {
+    let (policy, stored_priv_limbs, order) = unsafe {
         let policy = dh_policy_limbs(dh);
         let stored = if dh.is_null() { 0 } else { (*dh).priv_limbs };
-        (policy, stored)
+        (policy, stored, dh_reduction_order(dh))
     };
     // `PRIV_LIMBS_SATURATED` is the ingestion-time overflow sentinel; refuse it rather than
     // truncate. A NULL `dh` carries no stored count and falls back to the policy/modulus width.
@@ -433,9 +436,47 @@ unsafe extern "C" fn dh_bn_mod_exp(
         return 0;
     }
     let stored_priv_limbs = stored_priv_limbs as usize;
+    let reduce = order.is_some();
+    let order = order.unwrap_or(ptr::null());
     // SAFETY: forwarded under this function's contract. `ctx` is unused by the Montgomery
-    // entry point here, exactly as it is in the authority's body.
-    unsafe { bn_mod_exp_mont_policy(r, a, p, m, m_ctx, policy, stored_priv_limbs) }
+    // entry point here, exactly as it is in the authority's body. `order` is null or the
+    // key's own `q`.
+    unsafe { bn_mod_exp_mont_policy(r, a, p, m, m_ctx, policy, stored_priv_limbs, order, reduce) }
+}
+
+/// The public gate for PFP-45's exponent reduction: return the subgroup order `q`
+/// only when `ord(g) | q` is established by the group's **canonical** parameters.
+///
+/// `ossl_dh_is_named_safe_prime_group` is `DH_get_nid(dh) > 3`. `DH_get_nid` is a
+/// cache, but every public mutation of the parameters recomputes it from the
+/// actual `p`, `q` and `g`: [`super::object::DH_set0_pqg`] and the decoder's
+/// `dh_cb` both call `ossl_dh_cache_named_group`, which flushes the cached value
+/// and re-derives it with `ossl_ffc_numbers_to_dh_named_group`. A key whose `p`,
+/// `q` or `g` are not an RFC 7919 / RFC 3526 safe-prime set therefore answers
+/// `NID_undef` here, so this predicate tests the parameters, not a stale label.
+///
+/// For those groups `q = (p - 1) / 2` and `g` generates the order-`q` subgroup,
+/// so `g^q == 1 (mod p)` (`DH_check`'s own suitability test) and
+/// `g^x == g^(x mod q)` for every non-negative `x`. A failure returns `None`:
+/// the caller then takes the PFP-43 widening path and never silently reduces.
+///
+/// # Safety
+///
+/// `dh` is NULL or a live object.
+unsafe fn dh_reduction_order(dh: *const Dh) -> Option<*const BigNum> {
+    if dh.is_null() {
+        return None;
+    }
+    // SAFETY: `dh` is live per the contract; `params.q` is its own BIGNUM.
+    let order = unsafe { (*dh).params.q };
+    if order.is_null() {
+        return None;
+    }
+    // SAFETY: `dh` is live per the contract.
+    if unsafe { ossl_dh_is_named_safe_prime_group(dh) } == 0 {
+        return None;
+    }
+    Some(order)
 }
 
 /// The group's declared maximum private-key length, in 64-bit limbs.
@@ -1475,6 +1516,121 @@ mod tests {
             crate::bn::limbs::normalise(&mut got);
             assert_eq!(got, expected, "DH path == independent g^priv mod p");
 
+            DH_free(dh);
+        }
+    }
+
+    /// PFP-45: the reduction gate is the group's canonical named safe-prime
+    /// parameters. It accepts ffdhe2048 and rejects an explicit group even when
+    /// its parameters would happen to make the reduction valid, because the gate
+    /// is a public predicate on identity, not a per-value guess.
+    #[test]
+    fn pfp45_gate_requires_canonical_safe_prime_parameters() {
+        use crate::bn::bignum::{BN_new, BN_set_word};
+        use crate::dh::group_params::DH_new_by_nid;
+        use crate::dh::object::{DH_free, DH_new, DH_set0_pqg};
+        use crate::runtime::obj::NID_ffdhe2048;
+
+        // SAFETY: every object below is this test's own and live at each use.
+        unsafe {
+            let named = DH_new_by_nid(NID_ffdhe2048);
+            assert!(!named.is_null());
+            assert_eq!(DH_get_nid(named), NID_ffdhe2048);
+            assert!(
+                dh_reduction_order(named).is_some(),
+                "a canonical safe-prime group must pass the gate"
+            );
+            DH_free(named);
+
+            let explicit = DH_new();
+            assert!(!explicit.is_null());
+            let p = BN_new();
+            let q = BN_new();
+            let g = BN_new();
+            assert!(!p.is_null() && !q.is_null() && !g.is_null());
+            assert_eq!(BN_set_word(p, 0xFFFF_FFFF_FFFF_FFC5), 1);
+            assert_eq!(BN_set_word(q, 0x7FFF_FFFF_FFFF_FFFF), 1);
+            assert_eq!(BN_set_word(g, 5), 1);
+            assert_eq!(DH_set0_pqg(explicit, p, q, g), 1);
+            assert_eq!(DH_get_nid(explicit), NID_undef);
+            assert!(
+                dh_reduction_order(explicit).is_none(),
+                "a non-canonical group must not reduce"
+            );
+            DH_free(explicit);
+        }
+    }
+
+    /// PFP-45 on the gate's failure arm: an out-of-policy exponent for a group
+    /// that is not a canonical named safe-prime set takes the PFP-43 widening
+    /// path and still computes `g^x mod p`.
+    #[test]
+    fn pfp45_non_conforming_group_falls_back_and_still_computes() {
+        use crate::bn::bignum::{magnitude, BN_bin2bn, BN_bn2binpad, BN_new, BN_set_word};
+        use crate::dh::group_params::DH_new_by_nid;
+        use crate::dh::object::{
+            DH_free, DH_get0_key, DH_new, DH_set0_key, DH_set0_pqg, DH_set_length,
+        };
+        use crate::runtime::obj::NID_ffdhe2048;
+
+        // SAFETY: every pointer below is read from a live object or is this test's
+        // own allocation; `bn_copy_of` duplicates into fresh storage.
+        unsafe fn bn_copy_of(src: *const BigNum) -> *mut BigNum {
+            // SAFETY: `src` is a live BIGNUM per the caller's contract.
+            unsafe {
+                let len = ((BN_num_bits(src) + 7) / 8) as usize;
+                let mut buf = vec![0u8; len];
+                assert_eq!(
+                    BN_bn2binpad(src, buf.as_mut_ptr(), len as c_int),
+                    len as c_int
+                );
+                let out = BN_bin2bn(buf.as_ptr(), len as c_int, ptr::null_mut());
+                assert!(!out.is_null());
+                out
+            }
+        }
+
+        // 2400-bit exponent, as in the out-of-policy preset.
+        let x = [0xabu8; 300];
+        // SAFETY: every object and buffer below is this test's own and live.
+        unsafe {
+            let named = DH_new_by_nid(NID_ffdhe2048);
+            assert!(!named.is_null());
+            // Explicit 2048-bit p and q copied from the canonical group, with a
+            // non-canonical generator: `DH_set0_pqg` re-derives the nid from the
+            // actual parameters, so this object is `NID_undef` and must not reduce.
+            let p = bn_copy_of((*named).params.p);
+            let q = bn_copy_of((*named).params.q);
+            DH_free(named);
+            let dh = DH_new();
+            assert!(!dh.is_null());
+            let g = BN_new();
+            assert!(!g.is_null());
+            assert_eq!(BN_set_word(g, 5), 1);
+            assert_eq!(DH_set0_pqg(dh, p, q, g), 1);
+            assert_eq!(DH_get_nid(dh), NID_undef);
+            assert!(dh_reduction_order(dh).is_none(), "gate must refuse");
+            assert_eq!(DH_set_length(dh, 64), 1);
+            let priv_key = BN_bin2bn(x.as_ptr(), x.len() as c_int, ptr::null_mut());
+            assert!(!priv_key.is_null());
+            assert_eq!(DH_set0_key(dh, ptr::null_mut(), priv_key), 1);
+            assert_eq!((*dh).priv_limbs, 38);
+
+            assert_eq!(DH_generate_key(dh), 1);
+            let mut pub_key: *const BigNum = ptr::null();
+            DH_get0_key(dh, &mut pub_key, ptr::null_mut());
+            assert!(!pub_key.is_null());
+
+            let md = magnitude(Some(&*(*dh).params.p));
+            let ad = magnitude(Some(&*(*dh).params.g));
+            let pd = magnitude(Some(&*(*dh).priv_key));
+            let Some(mut expected) = crate::bn::arith::mod_exp_core(ad, pd, md) else {
+                unreachable!("the independent core answers for a nonzero modulus")
+            };
+            crate::bn::limbs::normalise(&mut expected);
+            let mut got = magnitude(Some(&*pub_key)).to_vec();
+            crate::bn::limbs::normalise(&mut got);
+            assert_eq!(got, expected, "fallback path == independent g^priv mod p");
             DH_free(dh);
         }
     }

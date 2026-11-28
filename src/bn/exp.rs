@@ -236,4 +236,38 @@ mod tests {
             }
         }
     }
+
+    /// PFP-56: the fixed-top entry point used by EC's field/order inversion keeps
+    /// the modulus width. Its exponent is `p - 2` / `order - 2`, so that width is
+    /// also the exponent's own length: the site is correct as written and is
+    /// pinned here so the classification cannot drift.
+    #[test]
+    fn the_ec_inversion_entry_keeps_the_modulus_width() {
+        use crate::bn::arith::ladder_probe;
+
+        // A two-limb odd modulus and the full-width exponent `m - 2`.
+        let m_limbs = vec![0xffff_ffff_ffff_fffd, 0x0123_4567_89ab_cdef];
+        let e_limbs = vec![m_limbs[0] - 2, m_limbs[1]];
+        // SAFETY: the test owns every object it passes.
+        unsafe {
+            let a = new_owned(vec![2], 0);
+            let m = new_owned(m_limbs, 0);
+            let e = new_owned(e_limbs, 0);
+            let r = new_owned(vec![0], 0);
+            ladder_probe::reset();
+            assert_eq!(
+                bn_mod_exp_mont_fixed_top(r, a, e, m, core::ptr::null_mut(), core::ptr::null_mut()),
+                1
+            );
+            assert_eq!(
+                ladder_probe::ladder_bits(),
+                vec![128],
+                "two-limb modulus, full-width public exponent"
+            );
+            assert_eq!(ladder_probe::vartime_bits(), Vec::<usize>::new());
+            for b in [a, m, e, r] {
+                BN_free(b);
+            }
+        }
+    }
 }

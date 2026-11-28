@@ -1,0 +1,5 @@
+test_binary_sha256=1dee0f6b694f51742176b88176d14b4831e7e2a442d3a7a8579967c20506163a
+limbs_sha256=89111cefec140af7df951e59dd9fe535a0550d2203608ace2aaacd5de194d86d
+test_profile=debug, CARGO_PROFILE_TEST_DEBUG=0
+valgrind=valgrind-3.19.0
+note=source-bound, not DSO-bound; a schedule observation, not a proof

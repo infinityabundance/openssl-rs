@@ -1500,6 +1500,46 @@ pub unsafe extern "C" fn BN_mod_exp(
     })
 }
 
+/// Test-only observation of the exponentiation schedule each entry point selects.
+///
+/// The production code calls this nowhere; `#[cfg(test)]` removes it from every
+/// non-test build. A thread-local record keeps parallel tests independent, and
+/// the values are iteration counts (`64 * width` for the fixed-pattern ladder,
+/// `bit_len(exponent)` for the variable-time core), never wall-clock times.
+#[cfg(test)]
+pub(crate) mod ladder_probe {
+    use core::cell::RefCell;
+
+    thread_local! {
+        static LADDER_BITS: RefCell<Vec<usize>> = const { RefCell::new(Vec::new()) };
+        static VARTIME_BITS: RefCell<Vec<usize>> = const { RefCell::new(Vec::new()) };
+    }
+
+    /// Start a fresh observation on this thread.
+    pub(crate) fn reset() {
+        LADDER_BITS.with(|v| v.borrow_mut().clear());
+        VARTIME_BITS.with(|v| v.borrow_mut().clear());
+    }
+
+    pub(crate) fn record_ladder(bits: usize) {
+        LADDER_BITS.with(|v| v.borrow_mut().push(bits));
+    }
+
+    pub(crate) fn record_vartime(bits: usize) {
+        VARTIME_BITS.with(|v| v.borrow_mut().push(bits));
+    }
+
+    /// Every fixed-pattern ladder executed on this thread since [`reset`].
+    pub(crate) fn ladder_bits() -> Vec<usize> {
+        LADDER_BITS.with(|v| v.borrow().clone())
+    }
+
+    /// Every variable-time core execution on this thread since [`reset`].
+    pub(crate) fn vartime_bits() -> Vec<usize> {
+        VARTIME_BITS.with(|v| v.borrow().clone())
+    }
+}
+
 /// The shared modular-exponentiation ladder: `a^|p| mod m`.
 ///
 /// The exponent's sign is ignored because the authority's ladder is driven by
@@ -1513,6 +1553,8 @@ pub(crate) fn mod_exp_core(ad: &[Limb], pd: &[Limb], md: &[Limb]) -> Option<Vec<
     if md.is_empty() {
         return None;
     }
+    #[cfg(test)]
+    ladder_probe::record_vartime(limbs::bit_len(pd));
     // `x**0 mod 1` and `x**0 mod -1` are zero, and every other zero exponent gives
     // one — the authority states this rule explicitly, and the naive loop gets the
     // `|m| == 1` case wrong by answering one.
@@ -2635,6 +2677,8 @@ fn run_mont_ladder(
     // ownership or cleansing claim.
     let exponent = SecretRef::new(exponent);
     let bits = width.checked_mul(64)?;
+    #[cfg(test)]
+    ladder_probe::record_ladder(bits);
     let t_len = n.checked_mul(2)?.checked_add(1)?;
 
     // Base reduction. The EC reaches this with a secret base: the nonce through

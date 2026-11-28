@@ -1,0 +1,382 @@
+
+court/tmp/pfp45/after/distribution/libcrypto.so.3:     file format elf64-x86-64
+
+
+Disassembly of section .text:
+
+0000000000280b70 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5limbs13rem_consttime>:
+  280b70:	55                   	push   %rbp
+  280b71:	41 57                	push   %r15
+  280b73:	41 56                	push   %r14
+  280b75:	41 55                	push   %r13
+  280b77:	41 54                	push   %r12
+  280b79:	53                   	push   %rbx
+  280b7a:	48 83 ec 58          	sub    $0x58,%rsp
+  280b7e:	49 89 ff             	mov    %rdi,%r15
+  280b81:	4d 85 c0             	test   %r8,%r8
+  280b84:	74 42                	je     280bc8 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5limbs13rem_consttime+0x58>
+  280b86:	48 89 d0             	mov    %rdx,%rax
+  280b89:	48 c1 e8 3a          	shr    $0x3a,%rax
+  280b8d:	75 39                	jne    280bc8 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5limbs13rem_consttime+0x58>
+  280b8f:	48 89 f5             	mov    %rsi,%rbp
+  280b92:	48 89 cb             	mov    %rcx,%rbx
+  280b95:	49 89 d4             	mov    %rdx,%r12
+  280b98:	4c 89 44 24 10       	mov    %r8,0x10(%rsp)
+  280b9d:	4d 8d 70 01          	lea    0x1(%r8),%r14
+  280ba1:	48 8d 7c 24 30       	lea    0x30(%rsp),%rdi
+  280ba6:	ba 08 00 00 00       	mov    $0x8,%edx
+  280bab:	41 b8 08 00 00 00    	mov    $0x8,%r8d
+  280bb1:	41 b9 08 00 00 00    	mov    $0x8,%r9d
+  280bb7:	31 f6                	xor    %esi,%esi
+  280bb9:	4c 89 f1             	mov    %r14,%rcx
+  280bbc:	e8 6f 44 ee ff       	call   165030 <_RNvMs5_NtCs6i54tJFfzR_5alloc7raw_vecNtB5_11RawVecInner11finish_growCsfBoMNNx3tZr_10openssl_rs.llvm.14000549118628003122>
+  280bc1:	80 7c 24 30 00       	cmpb   $0x0,0x30(%rsp)
+  280bc6:	74 19                	je     280be1 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5limbs13rem_consttime+0x71>
+  280bc8:	49 c7 07 ff ff ff ff 	movq   $0xffffffffffffffff,(%r15)
+  280bcf:	4c 89 f8             	mov    %r15,%rax
+  280bd2:	48 83 c4 58          	add    $0x58,%rsp
+  280bd6:	5b                   	pop    %rbx
+  280bd7:	41 5c                	pop    %r12
+  280bd9:	41 5d                	pop    %r13
+  280bdb:	41 5e                	pop    %r14
+  280bdd:	41 5f                	pop    %r15
+  280bdf:	5d                   	pop    %rbp
+  280be0:	c3                   	ret
+  280be1:	4c 89 7c 24 18       	mov    %r15,0x18(%rsp)
+  280be6:	4c 8b 7c 24 38       	mov    0x38(%rsp),%r15
+  280beb:	4c 8b 6c 24 10       	mov    0x10(%rsp),%r13
+  280bf0:	4a 8d 14 ed 00 00 00 	lea    0x0(,%r13,8),%rdx
+  280bf7:	00 
+  280bf8:	4c 89 ff             	mov    %r15,%rdi
+  280bfb:	31 f6                	xor    %esi,%esi
+  280bfd:	48 89 54 24 08       	mov    %rdx,0x8(%rsp)
+  280c02:	ff 15 e0 0c 66 00    	call   *0x660ce0(%rip)        # 8e18e8 <memset@GLIBC_2.2.5>
+  280c08:	4b c7 04 ef 00 00 00 	movq   $0x0,(%r15,%r13,8)
+  280c0f:	00 
+  280c10:	48 8d 7c 24 30       	lea    0x30(%rsp),%rdi
+  280c15:	ba 08 00 00 00       	mov    $0x8,%edx
+  280c1a:	41 b8 08 00 00 00    	mov    $0x8,%r8d
+  280c20:	41 b9 08 00 00 00    	mov    $0x8,%r9d
+  280c26:	31 f6                	xor    %esi,%esi
+  280c28:	4c 89 f1             	mov    %r14,%rcx
+  280c2b:	e8 00 44 ee ff       	call   165030 <_RNvMs5_NtCs6i54tJFfzR_5alloc7raw_vecNtB5_11RawVecInner11finish_growCsfBoMNNx3tZr_10openssl_rs.llvm.14000549118628003122>
+  280c30:	80 7c 24 30 00       	cmpb   $0x0,0x30(%rsp)
+  280c35:	74 6a                	je     280ca1 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5limbs13rem_consttime+0x131>
+  280c37:	48 8b 5c 24 18       	mov    0x18(%rsp),%rbx
+  280c3c:	48 c7 03 ff ff ff ff 	movq   $0xffffffffffffffff,(%rbx)
+  280c43:	49 c1 e6 03          	shl    $0x3,%r14
+  280c47:	31 c0                	xor    %eax,%eax
+  280c49:	0f 1f 80 00 00 00 00 	nopl   0x0(%rax)
+  280c50:	41 c6 04 07 00       	movb   $0x0,(%r15,%rax,1)
+  280c55:	41 c6 44 07 01 00    	movb   $0x0,0x1(%r15,%rax,1)
+  280c5b:	41 c6 44 07 02 00    	movb   $0x0,0x2(%r15,%rax,1)
+  280c61:	41 c6 44 07 03 00    	movb   $0x0,0x3(%r15,%rax,1)
+  280c67:	41 c6 44 07 04 00    	movb   $0x0,0x4(%r15,%rax,1)
+  280c6d:	41 c6 44 07 05 00    	movb   $0x0,0x5(%r15,%rax,1)
+  280c73:	41 c6 44 07 06 00    	movb   $0x0,0x6(%r15,%rax,1)
+  280c79:	41 c6 44 07 07 00    	movb   $0x0,0x7(%r15,%rax,1)
+  280c7f:	48 83 c0 08          	add    $0x8,%rax
+  280c83:	49 39 c6             	cmp    %rax,%r14
+  280c86:	75 c8                	jne    280c50 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5limbs13rem_consttime+0xe0>
+  280c88:	ba 08 00 00 00       	mov    $0x8,%edx
+  280c8d:	4c 89 ff             	mov    %r15,%rdi
+  280c90:	4c 89 f6             	mov    %r14,%rsi
+  280c93:	ff 15 2f 0c 66 00    	call   *0x660c2f(%rip)        # 8e18c8 <_DYNAMIC+0x1598>
+  280c99:	48 89 d8             	mov    %rbx,%rax
+  280c9c:	e9 31 ff ff ff       	jmp    280bd2 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5limbs13rem_consttime+0x62>
+  280ca1:	4d 89 e5             	mov    %r12,%r13
+  280ca4:	4c 89 64 24 20       	mov    %r12,0x20(%rsp)
+  280ca9:	49 c1 e5 06          	shl    $0x6,%r13
+  280cad:	4c 8b 64 24 38       	mov    0x38(%rsp),%r12
+  280cb2:	4c 89 e7             	mov    %r12,%rdi
+  280cb5:	31 f6                	xor    %esi,%esi
+  280cb7:	48 8b 54 24 08       	mov    0x8(%rsp),%rdx
+  280cbc:	ff 15 26 0c 66 00    	call   *0x660c26(%rip)        # 8e18e8 <memset@GLIBC_2.2.5>
+  280cc2:	48 8b 44 24 08       	mov    0x8(%rsp),%rax
+  280cc7:	49 c7 04 04 00 00 00 	movq   $0x0,(%r12,%rax,1)
+  280cce:	00 
+  280ccf:	4d 85 ed             	test   %r13,%r13
+  280cd2:	48 8b 4c 24 10       	mov    0x10(%rsp),%rcx
+  280cd7:	48 89 6c 24 50       	mov    %rbp,0x50(%rsp)
+  280cdc:	0f 85 88 00 00 00    	jne    280d6a <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5limbs13rem_consttime+0x1fa>
+  280ce2:	48 8d 7c 24 30       	lea    0x30(%rsp),%rdi
+  280ce7:	ba 08 00 00 00       	mov    $0x8,%edx
+  280cec:	41 b8 08 00 00 00    	mov    $0x8,%r8d
+  280cf2:	41 b9 08 00 00 00    	mov    $0x8,%r9d
+  280cf8:	31 f6                	xor    %esi,%esi
+  280cfa:	e8 31 43 ee ff       	call   165030 <_RNvMs5_NtCs6i54tJFfzR_5alloc7raw_vecNtB5_11RawVecInner11finish_growCsfBoMNNx3tZr_10openssl_rs.llvm.14000549118628003122>
+  280cff:	80 7c 24 30 00       	cmpb   $0x0,0x30(%rsp)
+  280d04:	0f 84 1a 03 00 00    	je     281024 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5limbs13rem_consttime+0x4b4>
+  280d0a:	48 8b 5c 24 18       	mov    0x18(%rsp),%rbx
+  280d0f:	48 c7 03 ff ff ff ff 	movq   $0xffffffffffffffff,(%rbx)
+  280d16:	49 c1 e6 03          	shl    $0x3,%r14
+  280d1a:	31 c0                	xor    %eax,%eax
+  280d1c:	41 c6 04 04 00       	movb   $0x0,(%r12,%rax,1)
+  280d21:	41 c6 44 04 01 00    	movb   $0x0,0x1(%r12,%rax,1)
+  280d27:	41 c6 44 04 02 00    	movb   $0x0,0x2(%r12,%rax,1)
+  280d2d:	41 c6 44 04 03 00    	movb   $0x0,0x3(%r12,%rax,1)
+  280d33:	41 c6 44 04 04 00    	movb   $0x0,0x4(%r12,%rax,1)
+  280d39:	41 c6 44 04 05 00    	movb   $0x0,0x5(%r12,%rax,1)
+  280d3f:	41 c6 44 04 06 00    	movb   $0x0,0x6(%r12,%rax,1)
+  280d45:	41 c6 44 04 07 00    	movb   $0x0,0x7(%r12,%rax,1)
+  280d4b:	48 83 c0 08          	add    $0x8,%rax
+  280d4f:	49 39 c6             	cmp    %rax,%r14
+  280d52:	75 c8                	jne    280d1c <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5limbs13rem_consttime+0x1ac>
+  280d54:	ba 08 00 00 00       	mov    $0x8,%edx
+  280d59:	4c 89 e7             	mov    %r12,%rdi
+  280d5c:	4c 89 f6             	mov    %r14,%rsi
+  280d5f:	ff 15 63 0b 66 00    	call   *0x660b63(%rip)        # 8e18c8 <_DYNAMIC+0x1598>
+  280d65:	e9 dd fe ff ff       	jmp    280c47 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5limbs13rem_consttime+0xd7>
+  280d6a:	48 89 d8             	mov    %rbx,%rax
+  280d6d:	4f 8d 04 f7          	lea    (%r15,%r14,8),%r8
+  280d71:	4c 89 fa             	mov    %r15,%rdx
+  280d74:	4c 29 e2             	sub    %r12,%rdx
+  280d77:	45 89 f1             	mov    %r14d,%r9d
+  280d7a:	41 83 e1 03          	and    $0x3,%r9d
+  280d7e:	49 ba fc ff ff ff ff 	movabs $0x1ffffffffffffffc,%r10
+  280d85:	ff ff 1f 
+  280d88:	4d 8d 5a 02          	lea    0x2(%r10),%r11
+  280d8c:	4d 21 f3             	and    %r14,%r11
+  280d8f:	48 83 f9 03          	cmp    $0x3,%rcx
+  280d93:	40 0f 92 c6          	setb   %sil
+  280d97:	48 83 fa 20          	cmp    $0x20,%rdx
+  280d9b:	0f 92 c2             	setb   %dl
+  280d9e:	40 08 f2             	or     %sil,%dl
+  280da1:	88 54 24 07          	mov    %dl,0x7(%rsp)
+  280da5:	4d 21 f2             	and    %r14,%r10
+  280da8:	89 ca                	mov    %ecx,%edx
+  280daa:	83 e2 03             	and    $0x3,%edx
+  280dad:	48 89 54 24 48       	mov    %rdx,0x48(%rsp)
+  280db2:	4c 89 4c 24 28       	mov    %r9,0x28(%rsp)
+  280db7:	eb 15                	jmp    280dce <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5limbs13rem_consttime+0x25e>
+  280db9:	0f 1f 80 00 00 00 00 	nopl   0x0(%rax)
+  280dc0:	4d 85 ed             	test   %r13,%r13
+  280dc3:	4c 8b 4c 24 28       	mov    0x28(%rsp),%r9
+  280dc8:	0f 84 14 ff ff ff    	je     280ce2 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5limbs13rem_consttime+0x172>
+  280dce:	49 ff cd             	dec    %r13
+  280dd1:	4c 89 ef             	mov    %r13,%rdi
+  280dd4:	48 c1 ef 06          	shr    $0x6,%rdi
+  280dd8:	48 3b 7c 24 20       	cmp    0x20(%rsp),%rdi
+  280ddd:	0f 83 2c 03 00 00    	jae    28110f <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5limbs13rem_consttime+0x59f>
+  280de3:	48 8b 54 24 50       	mov    0x50(%rsp),%rdx
+  280de8:	48 8b 14 fa          	mov    (%rdx,%rdi,8),%rdx
+  280dec:	31 ed                	xor    %ebp,%ebp
+  280dee:	4c 0f a3 ea          	bt     %r13,%rdx
+  280df2:	40 0f 92 c5          	setb   %bpl
+  280df6:	4d 85 c9             	test   %r9,%r9
+  280df9:	0f 84 21 01 00 00    	je     280f20 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5limbs13rem_consttime+0x3b0>
+  280dff:	4c 89 ca             	mov    %r9,%rdx
+  280e02:	4c 89 ff             	mov    %r15,%rdi
+  280e05:	66 66 2e 0f 1f 84 00 	data16 cs nopw 0x0(%rax,%rax,1)
+  280e0c:	00 00 00 00 
+  280e10:	48 8b 1f             	mov    (%rdi),%rbx
+  280e13:	48 8d 34 5d 00 00 00 	lea    0x0(,%rbx,2),%rsi
+  280e1a:	00 
+  280e1b:	48 01 ee             	add    %rbp,%rsi
+  280e1e:	48 89 37             	mov    %rsi,(%rdi)
+  280e21:	48 83 c7 08          	add    $0x8,%rdi
+  280e25:	48 c1 eb 3f          	shr    $0x3f,%rbx
+  280e29:	48 89 dd             	mov    %rbx,%rbp
+  280e2c:	48 ff ca             	dec    %rdx
+  280e2f:	75 df                	jne    280e10 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5limbs13rem_consttime+0x2a0>
+  280e31:	48 83 f9 03          	cmp    $0x3,%rcx
+  280e35:	72 47                	jb     280e7e <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5limbs13rem_consttime+0x30e>
+  280e37:	66 0f 1f 84 00 00 00 	nopw   0x0(%rax,%rax,1)
+  280e3e:	00 00 
+  280e40:	48 8b 17             	mov    (%rdi),%rdx
+  280e43:	48 8b 77 08          	mov    0x8(%rdi),%rsi
+  280e47:	4c 8d 0c 53          	lea    (%rbx,%rdx,2),%r9
+  280e4b:	4c 89 0f             	mov    %r9,(%rdi)
+  280e4e:	48 0f ac f2 3f       	shrd   $0x3f,%rsi,%rdx
+  280e53:	48 89 57 08          	mov    %rdx,0x8(%rdi)
+  280e57:	48 8b 57 10          	mov    0x10(%rdi),%rdx
+  280e5b:	48 0f ac d6 3f       	shrd   $0x3f,%rdx,%rsi
+  280e60:	48 89 77 10          	mov    %rsi,0x10(%rdi)
+  280e64:	48 8b 5f 18          	mov    0x18(%rdi),%rbx
+  280e68:	48 0f ac da 3f       	shrd   $0x3f,%rbx,%rdx
+  280e6d:	48 89 57 18          	mov    %rdx,0x18(%rdi)
+  280e71:	48 83 c7 20          	add    $0x20,%rdi
+  280e75:	48 c1 eb 3f          	shr    $0x3f,%rbx
+  280e79:	4c 39 c7             	cmp    %r8,%rdi
+  280e7c:	75 c2                	jne    280e40 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5limbs13rem_consttime+0x2d0>
+  280e7e:	31 db                	xor    %ebx,%ebx
+  280e80:	31 ed                	xor    %ebp,%ebp
+  280e82:	eb 37                	jmp    280ebb <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5limbs13rem_consttime+0x34b>
+  280e84:	66 66 66 2e 0f 1f 84 	data16 data16 cs nopw 0x0(%rax,%rax,1)
+  280e8b:	00 00 00 00 00 
+  280e90:	4c 8b 4c f8 08       	mov    0x8(%rax,%rdi,8),%r9
+  280e95:	40 08 f2             	or     %sil,%dl
+  280e98:	0f b6 d2             	movzbl %dl,%edx
+  280e9b:	4c 29 cb             	sub    %r9,%rbx
+  280e9e:	40 0f 92 c6          	setb   %sil
+  280ea2:	48 29 d3             	sub    %rdx,%rbx
+  280ea5:	0f 92 c2             	setb   %dl
+  280ea8:	49 89 5c fc 08       	mov    %rbx,0x8(%r12,%rdi,8)
+  280ead:	40 08 f2             	or     %sil,%dl
+  280eb0:	0f b6 da             	movzbl %dl,%ebx
+  280eb3:	48 ff c5             	inc    %rbp
+  280eb6:	4c 39 dd             	cmp    %r11,%rbp
+  280eb9:	74 45                	je     280f00 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5limbs13rem_consttime+0x390>
+  280ebb:	48 89 ef             	mov    %rbp,%rdi
+  280ebe:	49 8b 2c ef          	mov    (%r15,%rbp,8),%rbp
+  280ec2:	48 39 cf             	cmp    %rcx,%rdi
+  280ec5:	73 09                	jae    280ed0 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5limbs13rem_consttime+0x360>
+  280ec7:	48 8b 14 f8          	mov    (%rax,%rdi,8),%rdx
+  280ecb:	eb 05                	jmp    280ed2 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5limbs13rem_consttime+0x362>
+  280ecd:	0f 1f 00             	nopl   (%rax)
+  280ed0:	31 d2                	xor    %edx,%edx
+  280ed2:	48 29 d5             	sub    %rdx,%rbp
+  280ed5:	0f 92 c2             	setb   %dl
+  280ed8:	48 29 dd             	sub    %rbx,%rbp
+  280edb:	40 0f 92 c6          	setb   %sil
+  280edf:	49 89 2c fc          	mov    %rbp,(%r12,%rdi,8)
+  280ee3:	49 8b 5c ff 08       	mov    0x8(%r15,%rdi,8),%rbx
+  280ee8:	48 8d 6f 01          	lea    0x1(%rdi),%rbp
+  280eec:	48 39 cd             	cmp    %rcx,%rbp
+  280eef:	72 9f                	jb     280e90 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5limbs13rem_consttime+0x320>
+  280ef1:	45 31 c9             	xor    %r9d,%r9d
+  280ef4:	eb 9f                	jmp    280e95 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5limbs13rem_consttime+0x325>
+  280ef6:	66 2e 0f 1f 84 00 00 	cs nopw 0x0(%rax,%rax,1)
+  280efd:	00 00 00 
+  280f00:	41 f6 c6 01          	test   $0x1,%r14b
+  280f04:	74 4b                	je     280f51 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5limbs13rem_consttime+0x3e1>
+  280f06:	48 8d 57 02          	lea    0x2(%rdi),%rdx
+  280f0a:	48 39 ca             	cmp    %rcx,%rdx
+  280f0d:	73 26                	jae    280f35 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5limbs13rem_consttime+0x3c5>
+  280f0f:	48 8b 54 f8 10       	mov    0x10(%rax,%rdi,8),%rdx
+  280f14:	eb 21                	jmp    280f37 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5limbs13rem_consttime+0x3c7>
+  280f16:	66 2e 0f 1f 84 00 00 	cs nopw 0x0(%rax,%rax,1)
+  280f1d:	00 00 00 
+  280f20:	4c 89 ff             	mov    %r15,%rdi
+  280f23:	48 89 eb             	mov    %rbp,%rbx
+  280f26:	48 83 f9 03          	cmp    $0x3,%rcx
+  280f2a:	0f 83 10 ff ff ff    	jae    280e40 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5limbs13rem_consttime+0x2d0>
+  280f30:	e9 49 ff ff ff       	jmp    280e7e <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5limbs13rem_consttime+0x30e>
+  280f35:	31 d2                	xor    %edx,%edx
+  280f37:	49 8b 74 ff 10       	mov    0x10(%r15,%rdi,8),%rsi
+  280f3c:	48 29 d6             	sub    %rdx,%rsi
+  280f3f:	41 0f 92 c1          	setb   %r9b
+  280f43:	48 29 de             	sub    %rbx,%rsi
+  280f46:	0f 92 c2             	setb   %dl
+  280f49:	49 89 74 fc 10       	mov    %rsi,0x10(%r12,%rdi,8)
+  280f4e:	44 08 ca             	or     %r9b,%dl
+  280f51:	84 d2                	test   %dl,%dl
+  280f53:	0f 85 67 fe ff ff    	jne    280dc0 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5limbs13rem_consttime+0x250>
+  280f59:	80 7c 24 07 00       	cmpb   $0x0,0x7(%rsp)
+  280f5e:	74 04                	je     280f64 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5limbs13rem_consttime+0x3f4>
+  280f60:	31 ff                	xor    %edi,%edi
+  280f62:	eb 37                	jmp    280f9b <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5limbs13rem_consttime+0x42b>
+  280f64:	31 d2                	xor    %edx,%edx
+  280f66:	66 2e 0f 1f 84 00 00 	cs nopw 0x0(%rax,%rax,1)
+  280f6d:	00 00 00 
+  280f70:	41 0f 10 04 d4       	movups (%r12,%rdx,8),%xmm0
+  280f75:	41 0f 10 4c d4 10    	movups 0x10(%r12,%rdx,8),%xmm1
+  280f7b:	41 0f 11 04 d7       	movups %xmm0,(%r15,%rdx,8)
+  280f80:	41 0f 11 4c d7 10    	movups %xmm1,0x10(%r15,%rdx,8)
+  280f86:	48 83 c2 04          	add    $0x4,%rdx
+  280f8a:	49 39 d2             	cmp    %rdx,%r10
+  280f8d:	75 e1                	jne    280f70 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5limbs13rem_consttime+0x400>
+  280f8f:	4c 89 d7             	mov    %r10,%rdi
+  280f92:	4d 39 d6             	cmp    %r10,%r14
+  280f95:	0f 84 25 fe ff ff    	je     280dc0 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5limbs13rem_consttime+0x250>
+  280f9b:	48 89 fa             	mov    %rdi,%rdx
+  280f9e:	83 7c 24 48 03       	cmpl   $0x3,0x48(%rsp)
+  280fa3:	74 1b                	je     280fc0 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5limbs13rem_consttime+0x450>
+  280fa5:	48 8b 74 24 28       	mov    0x28(%rsp),%rsi
+  280faa:	48 89 fa             	mov    %rdi,%rdx
+  280fad:	0f 1f 00             	nopl   (%rax)
+  280fb0:	4d 8b 0c d4          	mov    (%r12,%rdx,8),%r9
+  280fb4:	4d 89 0c d7          	mov    %r9,(%r15,%rdx,8)
+  280fb8:	48 ff c2             	inc    %rdx
+  280fbb:	48 ff ce             	dec    %rsi
+  280fbe:	75 f0                	jne    280fb0 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5limbs13rem_consttime+0x440>
+  280fc0:	48 89 ce             	mov    %rcx,%rsi
+  280fc3:	48 29 fe             	sub    %rdi,%rsi
+  280fc6:	48 83 fe 03          	cmp    $0x3,%rsi
+  280fca:	0f 82 f0 fd ff ff    	jb     280dc0 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5limbs13rem_consttime+0x250>
+  280fd0:	48 89 cf             	mov    %rcx,%rdi
+  280fd3:	48 29 d7             	sub    %rdx,%rdi
+  280fd6:	49 8d 74 24 18       	lea    0x18(%r12),%rsi
+  280fdb:	48 8d 1c d6          	lea    (%rsi,%rdx,8),%rbx
+  280fdf:	49 8d 77 18          	lea    0x18(%r15),%rsi
+  280fe3:	48 8d 14 d6          	lea    (%rsi,%rdx,8),%rdx
+  280fe7:	48 c7 c5 ff ff ff ff 	mov    $0xffffffffffffffff,%rbp
+  280fee:	66 90                	xchg   %ax,%ax
+  280ff0:	48 8b 74 eb f0       	mov    -0x10(%rbx,%rbp,8),%rsi
+  280ff5:	48 89 74 ea f0       	mov    %rsi,-0x10(%rdx,%rbp,8)
+  280ffa:	48 8b 74 eb f8       	mov    -0x8(%rbx,%rbp,8),%rsi
+  280fff:	48 89 74 ea f8       	mov    %rsi,-0x8(%rdx,%rbp,8)
+  281004:	48 8b 34 eb          	mov    (%rbx,%rbp,8),%rsi
+  281008:	48 89 34 ea          	mov    %rsi,(%rdx,%rbp,8)
+  28100c:	48 8b 74 eb 08       	mov    0x8(%rbx,%rbp,8),%rsi
+  281011:	48 89 74 ea 08       	mov    %rsi,0x8(%rdx,%rbp,8)
+  281016:	48 83 c5 04          	add    $0x4,%rbp
+  28101a:	48 39 ef             	cmp    %rbp,%rdi
+  28101d:	75 d1                	jne    280ff0 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5limbs13rem_consttime+0x480>
+  28101f:	e9 9c fd ff ff       	jmp    280dc0 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5limbs13rem_consttime+0x250>
+  281024:	48 8b 6c 24 38       	mov    0x38(%rsp),%rbp
+  281029:	48 83 7c 24 10 01    	cmpq   $0x1,0x10(%rsp)
+  28102f:	48 8b 5c 24 18       	mov    0x18(%rsp),%rbx
+  281034:	75 0f                	jne    281045 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5limbs13rem_consttime+0x4d5>
+  281036:	48 c7 45 00 00 00 00 	movq   $0x0,0x0(%rbp)
+  28103d:	00 
+  28103e:	48 8b 54 24 08       	mov    0x8(%rsp),%rdx
+  281043:	eb 20                	jmp    281065 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5limbs13rem_consttime+0x4f5>
+  281045:	4c 8b 6c 24 08       	mov    0x8(%rsp),%r13
+  28104a:	49 8d 55 f8          	lea    -0x8(%r13),%rdx
+  28104e:	48 89 ef             	mov    %rbp,%rdi
+  281051:	31 f6                	xor    %esi,%esi
+  281053:	ff 15 8f 08 66 00    	call   *0x66088f(%rip)        # 8e18e8 <memset@GLIBC_2.2.5>
+  281059:	4c 89 ea             	mov    %r13,%rdx
+  28105c:	4a c7 44 2d f8 00 00 	movq   $0x0,-0x8(%rbp,%r13,1)
+  281063:	00 00 
+  281065:	48 89 ef             	mov    %rbp,%rdi
+  281068:	4c 89 fe             	mov    %r15,%rsi
+  28106b:	ff 15 57 14 66 00    	call   *0x661457(%rip)        # 8e24c8 <memcpy@GLIBC_2.14>
+  281071:	48 8b 44 24 10       	mov    0x10(%rsp),%rax
+  281076:	48 89 03             	mov    %rax,(%rbx)
+  281079:	48 89 6b 08          	mov    %rbp,0x8(%rbx)
+  28107d:	48 89 43 10          	mov    %rax,0x10(%rbx)
+  281081:	49 c1 e6 03          	shl    $0x3,%r14
+  281085:	31 c0                	xor    %eax,%eax
+  281087:	41 c6 04 04 00       	movb   $0x0,(%r12,%rax,1)
+  28108c:	41 c6 44 04 01 00    	movb   $0x0,0x1(%r12,%rax,1)
+  281092:	41 c6 44 04 02 00    	movb   $0x0,0x2(%r12,%rax,1)
+  281098:	41 c6 44 04 03 00    	movb   $0x0,0x3(%r12,%rax,1)
+  28109e:	41 c6 44 04 04 00    	movb   $0x0,0x4(%r12,%rax,1)
+  2810a4:	41 c6 44 04 05 00    	movb   $0x0,0x5(%r12,%rax,1)
+  2810aa:	41 c6 44 04 06 00    	movb   $0x0,0x6(%r12,%rax,1)
+  2810b0:	41 c6 44 04 07 00    	movb   $0x0,0x7(%r12,%rax,1)
+  2810b6:	48 83 c0 08          	add    $0x8,%rax
+  2810ba:	49 39 c6             	cmp    %rax,%r14
+  2810bd:	75 c8                	jne    281087 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5limbs13rem_consttime+0x517>
+  2810bf:	ba 08 00 00 00       	mov    $0x8,%edx
+  2810c4:	4c 89 e7             	mov    %r12,%rdi
+  2810c7:	4c 89 f6             	mov    %r14,%rsi
+  2810ca:	ff 15 f8 07 66 00    	call   *0x6607f8(%rip)        # 8e18c8 <_DYNAMIC+0x1598>
+  2810d0:	31 c0                	xor    %eax,%eax
+  2810d2:	41 c6 04 07 00       	movb   $0x0,(%r15,%rax,1)
+  2810d7:	41 c6 44 07 01 00    	movb   $0x0,0x1(%r15,%rax,1)
+  2810dd:	41 c6 44 07 02 00    	movb   $0x0,0x2(%r15,%rax,1)
+  2810e3:	41 c6 44 07 03 00    	movb   $0x0,0x3(%r15,%rax,1)
+  2810e9:	41 c6 44 07 04 00    	movb   $0x0,0x4(%r15,%rax,1)
+  2810ef:	41 c6 44 07 05 00    	movb   $0x0,0x5(%r15,%rax,1)
+  2810f5:	41 c6 44 07 06 00    	movb   $0x0,0x6(%r15,%rax,1)
+  2810fb:	41 c6 44 07 07 00    	movb   $0x0,0x7(%r15,%rax,1)
+  281101:	48 83 c0 08          	add    $0x8,%rax
+  281105:	49 39 c6             	cmp    %rax,%r14
+  281108:	75 c8                	jne    2810d2 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5limbs13rem_consttime+0x562>
+  28110a:	e9 79 fb ff ff       	jmp    280c88 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn5limbs13rem_consttime+0x118>
+  28110f:	48 8d 15 7a 55 5c 00 	lea    0x5c557a(%rip),%rdx        # 846690 <anon.b4fe26f7c8f66b24db3a74553d4b97ee.446.llvm.1610333874385035047+0x18>
+  281116:	48 8b 74 24 20       	mov    0x20(%rsp),%rsi
+  28111b:	ff 15 4f 1a 66 00    	call   *0x661a4f(%rip)        # 8e2b70 <_DYNAMIC+0x2840>
+  281121:	0f 0b                	ud2
+  281123:	48 89 c3             	mov    %rax,%rbx
+  281126:	4c 89 f7             	mov    %r14,%rdi
+  281129:	4c 89 e6             	mov    %r12,%rsi
+  28112c:	e8 4f a2 ff ff       	call   27b380 <_RINvNtCsgxBkk5gSRhY_4core3ptr9drop_glueINtNtNtCsfBoMNNx3tZr_10openssl_rs7runtime6secret9SecretBufyEEBI_>
+  281131:	4c 89 f7             	mov    %r14,%rdi
+  281134:	4c 89 fe             	mov    %r15,%rsi
+  281137:	e8 44 a2 ff ff       	call   27b380 <_RINvNtCsgxBkk5gSRhY_4core3ptr9drop_glueINtNtNtCsfBoMNNx3tZr_10openssl_rs7runtime6secret9SecretBufyEEBI_>
+  28113c:	48 89 df             	mov    %rbx,%rdi
+  28113f:	e8 5c 0f ee ff       	call   1620a0 <_Unwind_Resume@plt>

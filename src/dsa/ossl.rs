@@ -1070,4 +1070,104 @@ mod tests {
             DSA_free(d);
         }
     }
+
+    /// PFP-56: `dsa_mod_inverse_fermat` raises the secret nonce to the public
+    /// exponent `q - 2`. The ladder width is the modulus `q`'s limb count (4 for a
+    /// 256-bit q), which equals the public exponent's length, so the site keeps
+    /// modulus width with no waste and no secret-length channel.
+    #[test]
+    fn fermat_inverse_uses_the_group_order_width() {
+        use crate::bn::arith::ladder_probe;
+        use crate::bn::arith::{BN_add_word, BN_mod_exp, BN_sub_word, BN_ucmp};
+        use crate::bn::bignum::{BN_dup, BN_set_bit};
+        use crate::bn::ctx::BN_CTX_new;
+
+        // SAFETY: every object below is this test's own and live.
+        unsafe {
+            let q = BN_new();
+            let k = BN_new();
+            assert!(!q.is_null() && !k.is_null());
+            assert_eq!(BN_set_bit(q, 255), 1);
+            assert_eq!(BN_add_word(q, 19), 1); // 2^255 + 19: odd, four limbs
+            assert_eq!(BN_set_word(k, 2), 1);
+            BN_set_flags(k, BN_FLG_CONSTTIME);
+            let ctx = BN_CTX_new();
+            assert!(!ctx.is_null());
+
+            ladder_probe::reset();
+            let inv = dsa_mod_inverse_fermat(k, q, ctx);
+            assert!(!inv.is_null());
+            assert_eq!(ladder_probe::ladder_bits(), vec![256]);
+            assert_eq!(ladder_probe::vartime_bits(), Vec::<usize>::new());
+
+            // The answer is `k^(q-2) mod q`; compare it with the variable-time
+            // core over the same operands. (`q` need not be prime here: the width
+            // classification does not depend on Pratt/Fermat, and using a
+            // non-prime keeps the test cheap and deterministic.)
+            let e = BN_dup(q);
+            let expect = BN_new();
+            assert!(!e.is_null() && !expect.is_null());
+            assert_eq!(BN_sub_word(e, 2), 1);
+            assert_eq!(BN_mod_exp(expect, k, e, q, ctx), 1);
+            assert_eq!(BN_ucmp(inv, expect), 0);
+
+            BN_free(expect);
+            BN_free(e);
+            BN_free(inv);
+            BN_free(k);
+            BN_free(q);
+            BN_CTX_free(ctx);
+        }
+    }
+
+    /// PFP-56: DSA verification's paired exponentiation is on public exponents
+    /// (`u1`, `u2`), so it stays on the variable-time core and each loop bound is
+    /// its own exponent's bit length; no fixed-pattern ladder is entered.
+    #[test]
+    fn dsa_verify_pair_uses_the_public_exponents_bit_lengths() {
+        use crate::bn::arith::ladder_probe;
+        use crate::bn::arith::BN_add_word;
+        use crate::bn::bignum::BN_set_bit;
+        use crate::bn::mont::BN_mod_exp2_mont;
+
+        // SAFETY: every object below is this test's own and live.
+        unsafe {
+            let m = BN_new();
+            let a1 = BN_new();
+            let a2 = BN_new();
+            let p1 = BN_new();
+            let p2 = BN_new();
+            let out = BN_new();
+            assert!(
+                !m.is_null()
+                    && !a1.is_null()
+                    && !a2.is_null()
+                    && !p1.is_null()
+                    && !p2.is_null()
+                    && !out.is_null()
+            );
+            assert_eq!(BN_set_bit(m, 255), 1);
+            assert_eq!(BN_add_word(m, 19), 1);
+            assert_eq!(BN_set_word(a1, 2), 1);
+            assert_eq!(BN_set_word(a2, 3), 1);
+            assert_eq!(BN_set_word(p1, 0x1234), 1); // 13 bits
+            assert_eq!(BN_set_bit(p2, 255), 1);
+            assert_eq!(BN_add_word(p2, 1), 1); // 256 bits
+
+            ladder_probe::reset();
+            assert_eq!(
+                BN_mod_exp2_mont(out, a1, p1, a2, p2, m, ptr::null_mut(), ptr::null_mut()),
+                1
+            );
+            assert_eq!(ladder_probe::ladder_bits(), Vec::<usize>::new());
+            assert_eq!(ladder_probe::vartime_bits(), vec![13, 256]);
+
+            BN_free(out);
+            BN_free(p2);
+            BN_free(p1);
+            BN_free(a2);
+            BN_free(a1);
+            BN_free(m);
+        }
+    }
 }

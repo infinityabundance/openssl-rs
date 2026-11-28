@@ -1,0 +1,25 @@
+PFP47 bits=256 limbs=4 iters=30000 reps=15
+RESULT bits=256 sqr_ns=18.3916 mul_ns=18.4828
+RATIO bits=256 mul_over_sqr=1.003160 ci95=[0.984960,1.004797]
+CHECK equal
+SINK 0
+PFP47 bits=1024 limbs=16 iters=30000 reps=15
+RESULT bits=1024 sqr_ns=125.6629 mul_ns=162.6336
+RATIO bits=1024 mul_over_sqr=1.298985 ci95=[1.280230,1.374983]
+CHECK equal
+SINK 0
+PFP47 bits=2048 limbs=32 iters=30000 reps=15
+RESULT bits=2048 sqr_ns=449.1973 mul_ns=631.2365
+RATIO bits=2048 mul_over_sqr=1.401462 ci95=[1.360497,1.410368]
+CHECK equal
+SINK 0
+PFP47 bits=3072 limbs=48 iters=30000 reps=15
+RESULT bits=3072 sqr_ns=990.3194 mul_ns=1426.8632
+RATIO bits=3072 mul_over_sqr=1.437887 ci95=[1.436352,1.458083]
+CHECK equal
+SINK 0
+PFP47 bits=4096 limbs=64 iters=30000 reps=15
+RESULT bits=4096 sqr_ns=1737.6189 mul_ns=2547.9518
+RATIO bits=4096 mul_over_sqr=1.466835 ci95=[1.465354,1.478599]
+CHECK equal
+SINK 0

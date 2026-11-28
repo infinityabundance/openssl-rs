@@ -982,7 +982,7 @@ pub unsafe extern "C" fn BN_mod_exp_mont(
     in_mont: *mut MontCtx,
 ) -> c_int {
     // SAFETY: the caller's contract, forwarded unchanged.
-    unsafe { bn_mod_exp_mont_impl(r, a, p, m, in_mont, LadderWidth::Modulus) }
+    unsafe { bn_mod_exp_mont_impl(r, a, p, m, in_mont, LadderWidth::Modulus, None) }
 }
 
 /// `BN_mod_exp_mont` with the constant-time ladder bounded by a **public policy
@@ -1006,9 +1006,22 @@ pub unsafe extern "C" fn BN_mod_exp_mont(
 /// (`stored_exponent_limbs <= policy`) is computationally identical to the former
 /// policy ladder.
 ///
+/// As [`BN_mod_exp_mont`], plus an optional publicly gated subgroup-order
+/// reduction (PFP-45).
+///
+/// `order` is the key object's `q` and `reduce` is the result of the caller's
+/// **public** predicate that `ord(g)` divides `q` (the DH layer requires a named
+/// safe-prime group, whose cached nid is derived from the actual `p`, `q` and `g`).
+/// When both hold and the stored exponent is wider than the policy, `x` is
+/// reduced modulo `q` by [`limbs::rem_consttime`] before the ladder; the ladder
+/// width is then `max(policy, len(q))`, a public count independent of `x`'s value.
+/// If either does not hold the call is exactly the PFP-43 widening path. A gate
+/// failure never reduces.
+///
 /// # Safety
 ///
-/// As [`BN_mod_exp_mont`].
+/// As [`BN_mod_exp_mont`]. `order` must be null or a live `BIGNUM`; it is read
+/// only when `reduce` is true.
 #[allow(clippy::too_many_arguments)]
 pub(crate) unsafe fn bn_mod_exp_mont_policy(
     r: *mut BigNum,
@@ -1018,6 +1031,8 @@ pub(crate) unsafe fn bn_mod_exp_mont_policy(
     in_mont: *mut MontCtx,
     policy_limbs: usize,
     stored_exponent_limbs: usize,
+    order: *const BigNum,
+    reduce: bool,
 ) -> c_int {
     // SAFETY: forwarded under this function's contract.
     unsafe {
@@ -1031,6 +1046,7 @@ pub(crate) unsafe fn bn_mod_exp_mont_policy(
                 policy_limbs,
                 stored_exponent_limbs,
             },
+            if reduce { Some(order) } else { None },
         )
     }
 }
@@ -1095,6 +1111,7 @@ pub(crate) unsafe fn bn_mod_exp_mont_impl(
     m: *const BigNum,
     in_mont: *mut MontCtx,
     width: LadderWidth,
+    reduction: Option<*const BigNum>,
 ) -> c_int {
     guard_ffi(0, || {
         // SAFETY: `a` is null-or-live per this function's `# Safety` section.
@@ -1162,8 +1179,39 @@ pub(crate) unsafe fn bn_mod_exp_mont_impl(
                     policy_limbs,
                     stored_exponent_limbs,
                 } => {
-                    let width = resolve_ladder_width(policy_limbs, md.len(), stored_exponent_limbs);
-                    mod_exp_core_consttime_policy(&ad, pd, &md, width, prepared.as_ref())
+                    // PFP-45: the caller has already evaluated the public gate
+                    // `ord(g) | q`; it supplies the order only when that gate
+                    // passed. Reduce only an exponent the policy does not cover,
+                    // so the in-policy schedule is exactly PFP-43's.
+                    let reduced = match reduction {
+                        Some(order) if policy_limbs > 0 && stored_exponent_limbs > policy_limbs => {
+                            // SAFETY: `order` is null or a live BIGNUM per this
+                            // function's contract, and is only supplied after the
+                            // caller's public gate.
+                            let q = unsafe { as_ref(order) };
+                            let ql = magnitude(q);
+                            if ql.is_empty() {
+                                return 0;
+                            }
+                            match limbs::rem_consttime(pd, ql) {
+                                // The width is public geometry: the declared policy
+                                // and the order's limb count, never `pd`'s.
+                                Some(r) => Some((r, policy_limbs.max(ql.len()))),
+                                None => return 0,
+                            }
+                        }
+                        _ => None,
+                    };
+                    match reduced {
+                        Some((r, w)) => {
+                            mod_exp_core_consttime_policy(&ad, &r[..], &md, w, prepared.as_ref())
+                        }
+                        None => {
+                            let width =
+                                resolve_ladder_width(policy_limbs, md.len(), stored_exponent_limbs);
+                            mod_exp_core_consttime_policy(&ad, pd, &md, width, prepared.as_ref())
+                        }
+                    }
                 }
                 LadderWidth::Modulus => mod_exp_core_consttime_from_parts_prepared(
                     &ad,
@@ -2260,6 +2308,7 @@ mod tests {
                                     m,
                                     mont,
                                     LadderWidth::PublicExponent,
+                                    None,
                                 ),
                                 1,
                                 "public-exponent ladder m={m_limbs:?} e_width={e_width}"
@@ -2485,7 +2534,7 @@ mod tests {
                 ladder_probe::reset();
                 let r = BN_new();
                 assert_eq!(
-                    bn_mod_exp_mont_impl(r, a, e, m, core::ptr::null_mut(), width),
+                    bn_mod_exp_mont_impl(r, a, e, m, core::ptr::null_mut(), width, None),
                     1
                 );
                 BN_free(r);

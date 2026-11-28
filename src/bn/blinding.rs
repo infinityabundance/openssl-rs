@@ -1055,6 +1055,7 @@ unsafe fn create_param_impl(
                         (*ret).mod_,
                         mctx_eff,
                         LadderWidth::PublicExponent,
+                        None,
                     )
                 } else {
                     // SAFETY: the pointer was installed by the caller, whose
