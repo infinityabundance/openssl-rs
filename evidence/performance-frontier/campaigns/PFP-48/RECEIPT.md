@@ -155,10 +155,31 @@ disassembly still shows `mulx` feeding `add`/`adc`/`setb`). Together with
 PFP-46's dispatched result, the "the call ate the gain" alternative is now
 closed: neither the dispatched form nor the inline whole-crate form helps.
 
+> **PFP-57 SUPERSEDE — 2026-11-27. The measurement stands; the causal
+> explanation is withdrawn to a hypothesis.** The sentences above are retained
+> verbatim. Instruction count is still not the lever, and the call-overhead
+> alternative is still closed. But "the loop is bound by the single `add`/`adc`
+> carry dependency chain" is a **hypothesis, not a finding**. Its explicit
+> counterpart is `M-A7` (`evidence/performance-frontier/campaigns/M-A7/RECEIPT.md`),
+> which measured that reducing dependency depth with a carry-save accumulator
+> made the same kernel **2.5–2.8× slower** and concluded that **throughput, not
+> latency, binds**. Both cannot be the cause, and neither explains the data
+> cleanly: this receipt cut 13% of the instructions and every workload got
+> slower; M-A7 reduced dependency depth and got 2.5–2.8× slower. What would
+> discriminate the two is hardware performance counters — **port utilisation, a
+> top-down stall breakdown, and dependent-chain occupancy** — and this venue has
+> none, which is why the question is open. Until a counter-enabled or bare-metal
+> venue exists, **no bound in `M-A3` to `M-A6` may rest on either explanation.**
+
 **Implication for M-A3..M-A7.** They are the only remaining route, and they must
 attack the **carry chain**, not the multiply encoding: only an ADX double-chain
 kernel (`adcx`+`adox`, requiring `+adx` and hand-structured carry separation)
 changes the dependency graph. Any such work is a per-target artefact.
+
+> **PFP-57 note (2026-11-27).** This implication is itself derived from the
+> carry-chain hypothesis above and is therefore a hypothesis, not a finding. It
+> is the unresolved counterpart of `M-A7`'s throughput conclusion; neither may
+> be used as a bound in `M-A3` to `M-A6` until hardware counters exist.
 
 ## 6. Scope — per-target artefact
 

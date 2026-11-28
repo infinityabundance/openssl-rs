@@ -1,0 +1,8 @@
+source_head=89490a1aa5c60a5eb602c409f4936608a5bd5e27
+dso_path=court/tmp/pfp68/final/libcrypto.so.3
+dso_sha256=f53e2622112379f9a74b584a336b52cf282b7b38c83949efacb3a1a33c9ad926
+dso_size=17185416
+authority_dso_sha256=611e511db4273c4b6b522031fd171efce71b80661bb8310c2a21dfd18ec0efd2
+authority_static_archive=forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.a
+binding=This is the PFP-68 final distribution-shaped DSO (evidence/performance-frontier/campaigns/PFP-68/raw/identity.txt, same sha256). HEAD 89490a1a is the commit of the PFP-68 source; PFP-64 changed no source, so this remains the shipped DSO.
+candidate_copy_for_ct=cp of the same bytes to court/tmp/pfp64/candidate/libcrypto.so.3 (sha256 verified in raw/ct-cipher-gcm-siv.json by the record's path).

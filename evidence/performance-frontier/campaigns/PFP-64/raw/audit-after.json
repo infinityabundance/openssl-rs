@@ -1,0 +1,886 @@
+{
+  "dso": "court/tmp/pfp68/final/libcrypto.so.3",
+  "functions": {
+    "openssl_rs::modes::gcm::gf_mul_clmul": {
+      "calls": [],
+      "cmov": [],
+      "crypto_instructions": [
+        {
+          "at": "0x40e4cc",
+          "mnemonic": "pclmullqlqdq"
+        },
+        {
+          "at": "0x40e4d6",
+          "mnemonic": "pclmulhqlqdq"
+        },
+        {
+          "at": "0x40e4e0",
+          "mnemonic": "pclmullqhqdq"
+        },
+        {
+          "at": "0x40e4ea",
+          "mnemonic": "pclmulhqhqdq"
+        }
+      ],
+      "indexed_lea_arithmetic": [],
+      "indexed_memory_operands": [],
+      "jcc": [],
+      "n_insns": 53,
+      "range": [
+        "0x40e480",
+        "0x40e572"
+      ],
+      "setcc": [],
+      "status": "PRESENT"
+    },
+    "openssl_rs::modes::gcm::gf_mul_portable": {
+      "calls": [],
+      "cmov": [
+        {
+          "at": "0x40e8a0",
+          "context": "xor r15,r12 ; test cl,0x40",
+          "mnemonic": "cmovne",
+          "operands": "r13,rbp"
+        },
+        {
+          "at": "0x40e8a4",
+          "context": "test cl,0x40 ; cmovne r13,rbp",
+          "mnemonic": "cmovne",
+          "operands": "rbp,r10"
+        },
+        {
+          "at": "0x40e8b1",
+          "context": "and rbp,rdi ; or rbp,r13",
+          "mnemonic": "cmove",
+          "operands": "rdx,r10"
+        },
+        {
+          "at": "0x40e8b5",
+          "context": "or rbp,r13 ; cmove rdx,r10",
+          "mnemonic": "cmove",
+          "operands": "r8,r10"
+        }
+      ],
+      "crypto_instructions": [],
+      "indexed_lea_arithmetic": [],
+      "indexed_memory_operands": [],
+      "jcc": [
+        {
+          "at": "0x40e8c8",
+          "context": "mov r8,r15 ; add ecx,0xffffffff",
+          "mnemonic": "jb",
+          "operands": "40e870 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs5modes3gcm15gf_mul_portable+0x30>"
+        }
+      ],
+      "n_insns": 50,
+      "range": [
+        "0x40e840",
+        "0x40e8d8"
+      ],
+      "setcc": [],
+      "status": "PRESENT"
+    },
+    "openssl_rs::provider::cipher::aes_gcm_siv_decrypt": {
+      "calls": [
+        "0x41a42c 418750 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher17aes_gcm_siv_ctr32>",
+        "0x41a496 41a050 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher18polyval_ghash_hash>",
+        "0x41a4c1 41a050 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher18polyval_ghash_hash>",
+        "0x41a50e QWORD PTR [rip+0x4c23dc]        # 8dc8f0 <memset@GLIBC_2.2.5>",
+        "0x41a51f QWORD PTR [rip+0x4c2fb3]        # 8dd4d8 <memcpy@GLIBC_2.14>",
+        "0x41a548 41a050 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher18polyval_ghash_hash>",
+        "0x41a57b 41a050 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher18polyval_ghash_hash>",
+        "0x41a5c7 QWORD PTR [rip+0x4c3a03]        # 8ddfd0 <EVP_EncryptUpdate@@OPENSSL_3.0.0+0x4444d0>",
+        "0x41a60f QWORD PTR [rip+0x4c2d9b]        # 8dd3b0 <_DYNAMIC+0x20b0>"
+      ],
+      "cmov": [],
+      "crypto_instructions": [],
+      "indexed_lea_arithmetic": [
+        {
+          "at": "0x41a4d8",
+          "mnemonic": "lea",
+          "operands": "rax,[r14*8+0x0]"
+        },
+        {
+          "at": "0x41a4f6",
+          "mnemonic": "lea",
+          "operands": "rax,[rsp+r14*1]"
+        }
+      ],
+      "indexed_memory_operands": [],
+      "jcc": [
+        {
+          "at": "0x41a407",
+          "context": "xor eax,eax ; or sil,dl",
+          "mnemonic": "jne",
+          "operands": "41a5f9 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_decrypt+0x239>"
+        },
+        {
+          "at": "0x41a47f",
+          "context": "mov QWORD PTR [rbx+0xc0],rsi ; test rcx,rcx",
+          "mnemonic": "je",
+          "operands": "41a4a9 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_decrypt+0xe9>"
+        },
+        {
+          "at": "0x41a485",
+          "context": "je 41a4a9 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_decrypt+0xe9> ; cmp rbp,0xfffffffffffffff0",
+          "mnemonic": "ja",
+          "operands": "41a608 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_decrypt+0x248>"
+        },
+        {
+          "at": "0x41a4b6",
+          "context": "movabs r12,0x1ffffffff0 ; and r12,r14",
+          "mnemonic": "je",
+          "operands": "41a4d4 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_decrypt+0x114>"
+        },
+        {
+          "at": "0x41a4e4",
+          "context": "lea rax,[r14*8+0x0] ; and r14,0xf",
+          "mnemonic": "je",
+          "operands": "41a560 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_decrypt+0x1a0>"
+        },
+        {
+          "at": "0x41a5d5",
+          "context": "mov ecx,DWORD PTR [rbx+0x1b8] ; test eax,eax",
+          "mnemonic": "je",
+          "operands": "41a5e6 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_decrypt+0x226>"
+        },
+        {
+          "at": "0x41a5da",
+          "context": "je 41a5e6 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_decrypt+0x226> ; test r13d,r13d",
+          "mnemonic": "je",
+          "operands": "41a5eb <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_decrypt+0x22b>"
+        }
+      ],
+      "n_insns": 145,
+      "range": [
+        "0x41a3c0",
+        "0x41a615"
+      ],
+      "setcc": [
+        {
+          "at": "0x41a3ee",
+          "context": "and eax,0x30 ; cmp eax,0x10",
+          "mnemonic": "sete",
+          "operands": "dl"
+        },
+        {
+          "at": "0x41a3fe",
+          "context": "movabs rax,0x1000000000 ; cmp r14,rax",
+          "mnemonic": "seta",
+          "operands": "sil"
+        }
+      ],
+      "status": "PRESENT"
+    },
+    "openssl_rs::provider::cipher::aes_gcm_siv_encrypt": {
+      "calls": [
+        "0x41a784 41a050 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher18polyval_ghash_hash>",
+        "0x41a7af 41a050 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher18polyval_ghash_hash>",
+        "0x41a7fc QWORD PTR [rip+0x4c20ee]        # 8dc8f0 <memset@GLIBC_2.2.5>",
+        "0x41a80d QWORD PTR [rip+0x4c2cc5]        # 8dd4d8 <memcpy@GLIBC_2.14>",
+        "0x41a82e 41a050 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher18polyval_ghash_hash>",
+        "0x41a864 41a050 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher18polyval_ghash_hash>",
+        "0x41a8b0 QWORD PTR [rip+0x4c371a]        # 8ddfd0 <EVP_EncryptUpdate@@OPENSSL_3.0.0+0x4444d0>",
+        "0x41a8dc 418750 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher17aes_gcm_siv_ctr32>",
+        "0x41a921 QWORD PTR [rip+0x4c2a89]        # 8dd3b0 <_DYNAMIC+0x20b0>"
+      ],
+      "cmov": [],
+      "crypto_instructions": [],
+      "indexed_lea_arithmetic": [
+        {
+          "at": "0x41a7c6",
+          "mnemonic": "lea",
+          "operands": "rax,[r14*8+0x0]"
+        },
+        {
+          "at": "0x41a7e2",
+          "mnemonic": "lea",
+          "operands": "rax,[rsp+rbp*1]"
+        },
+        {
+          "at": "0x41a833",
+          "mnemonic": "lea",
+          "operands": "rax,[r14*8+0x0]"
+        },
+        {
+          "at": "0x41a8f5",
+          "mnemonic": "lea",
+          "operands": "ecx,[rcx+rax*4]"
+        }
+      ],
+      "indexed_memory_operands": [],
+      "jcc": [
+        {
+          "at": "0x41a714",
+          "context": "xor eax,eax ; or sil,cl",
+          "mnemonic": "jne",
+          "operands": "41a90b <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_encrypt+0x23b>"
+        },
+        {
+          "at": "0x41a76d",
+          "context": "test rcx,rcx ; mov QWORD PTR [rsp+0x38],rdx",
+          "mnemonic": "je",
+          "operands": "41a797 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_encrypt+0xc7>"
+        },
+        {
+          "at": "0x41a773",
+          "context": "je 41a797 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_encrypt+0xc7> ; cmp r15,0xfffffffffffffff0",
+          "mnemonic": "ja",
+          "operands": "41a91a <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_encrypt+0x24a>"
+        },
+        {
+          "at": "0x41a7a4",
+          "context": "movabs r13,0x1ffffffff0 ; and r13,r14",
+          "mnemonic": "je",
+          "operands": "41a7c2 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_encrypt+0xf2>"
+        },
+        {
+          "at": "0x41a7d5",
+          "context": "mov rbp,r14 ; and rbp,0xf",
+          "mnemonic": "je",
+          "operands": "41a849 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_encrypt+0x179>"
+        },
+        {
+          "at": "0x41a8e9",
+          "context": "mov ecx,DWORD PTR [rbx+0x1b8] ; test eax,eax",
+          "mnemonic": "je",
+          "operands": "41a8fd <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_encrypt+0x22d>"
+        }
+      ],
+      "n_insns": 145,
+      "range": [
+        "0x41a6d0",
+        "0x41a927"
+      ],
+      "setcc": [
+        {
+          "at": "0x41a6fb",
+          "context": "and eax,0x28 ; cmp eax,0x8",
+          "mnemonic": "sete",
+          "operands": "cl"
+        },
+        {
+          "at": "0x41a70b",
+          "context": "movabs rax,0x1000000000 ; cmp r14,rax",
+          "mnemonic": "seta",
+          "operands": "sil"
+        },
+        {
+          "at": "0x41a8ef",
+          "context": "xor eax,eax ; test ebp,ebp",
+          "mnemonic": "setne",
+          "operands": "al"
+        }
+      ],
+      "status": "PRESENT"
+    },
+    "openssl_rs::provider::cipher::aes_gcm_siv_initkey": {
+      "calls": [
+        "0x41a9cd 2e57b0 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs3evp5fetch23inner_evp_generic_fetch.llvm.11763120979207154723>",
+        "0x41a9e3 1a3ee0 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8property5store22ossl_method_store_free>",
+        "0x41aa01 QWORD PTR [rip+0x4c2789]        # 8dd190 <CRYPTO_zalloc@@OPENSSL_3.0.0+0x64b450>",
+        "0x41aa33 4ac600 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs3evp10cipher_ctx24evp_cipher_init_internal.llvm.6471542228366918689>",
+        "0x41aa98 QWORD PTR [rip+0x4c3532]        # 8ddfd0 <EVP_EncryptUpdate@@OPENSSL_3.0.0+0x4444d0>",
+        "0x41aad7 QWORD PTR [rip+0x4c34f3]        # 8ddfd0 <EVP_EncryptUpdate@@OPENSSL_3.0.0+0x4444d0>",
+        "0x41ab40 r15",
+        "0x41ab82 4ac600 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs3evp10cipher_ctx24evp_cipher_init_internal.llvm.6471542228366918689>",
+        "0x41abcb QWORD PTR [rip+0x4c1e77]        # 8dca48 <EVP_CIPHER_CTX_reset@@OPENSSL_3.0.0+0x445a68>",
+        "0x41abf5 rcx",
+        "0x41ac86 QWORD PTR [rip+0x4c1dbc]        # 8dca48 <EVP_CIPHER_CTX_reset@@OPENSSL_3.0.0+0x445a68>",
+        "0x41acb0 rcx",
+        "0x41acce QWORD PTR [rip+0x4c1d74]        # 8dca48 <EVP_CIPHER_CTX_reset@@OPENSSL_3.0.0+0x445a68>",
+        "0x41acf8 rcx",
+        "0x41ad8e rcx",
+        "0x41ad94 2de840 <_RNvNtCsfBoMNNx3tZr_10openssl_rs8provider18ossl_provider_free>",
+        "0x41ae8a rcx",
+        "0x41ae90 2de840 <_RNvNtCsfBoMNNx3tZr_10openssl_rs8provider18ossl_provider_free>",
+        "0x41aeb9 rcx",
+        "0x41aef4 rcx",
+        "0x41aefa 2de840 <_RNvNtCsfBoMNNx3tZr_10openssl_rs8provider18ossl_provider_free>",
+        "0x41af35 rcx",
+        "0x41af3b 2de840 <_RNvNtCsfBoMNNx3tZr_10openssl_rs8provider18ossl_provider_free>",
+        "0x41af70 QWORD PTR [rip+0x4c243a]        # 8dd3b0 <_DYNAMIC+0x20b0>",
+        "0x41af78 QWORD PTR [rip+0x4c28c2]        # 8dd840 <_DYNAMIC+0x2540>",
+        "0x41af7e QWORD PTR [rip+0x4c28bc]        # 8dd840 <_DYNAMIC+0x2540>",
+        "0x41af84 QWORD PTR [rip+0x4c28b6]        # 8dd840 <_DYNAMIC+0x2540>",
+        "0x41af8a QWORD PTR [rip+0x4c28b0]        # 8dd840 <_DYNAMIC+0x2540>",
+        "0x41af90 QWORD PTR [rip+0x4c28aa]        # 8dd840 <_DYNAMIC+0x2540>",
+        "0x41af96 QWORD PTR [rip+0x4c28a4]        # 8dd840 <_DYNAMIC+0x2540>",
+        "0x41af9c QWORD PTR [rip+0x4c289e]        # 8dd840 <_DYNAMIC+0x2540>",
+        "0x41afa2 QWORD PTR [rip+0x4c2898]        # 8dd840 <_DYNAMIC+0x2540>"
+      ],
+      "cmov": [
+        {
+          "at": "0x41abe2",
+          "context": "test rax,rax ; lea rcx,[rip+0xffffffffffe9d30e]        # 2b7ef0 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs7runtime3mem12default_free.llvm.268972770624961581>",
+          "mnemonic": "cmovne",
+          "operands": "rcx,rax"
+        },
+        {
+          "at": "0x41ac9d",
+          "context": "test rax,rax ; lea rcx,[rip+0xffffffffffe9d253]        # 2b7ef0 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs7runtime3mem12default_free.llvm.268972770624961581>",
+          "mnemonic": "cmovne",
+          "operands": "rcx,rax"
+        },
+        {
+          "at": "0x41ace5",
+          "context": "test rax,rax ; lea rcx,[rip+0xffffffffffe9d20b]        # 2b7ef0 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs7runtime3mem12default_free.llvm.268972770624961581>",
+          "mnemonic": "cmovne",
+          "operands": "rcx,rax"
+        },
+        {
+          "at": "0x41ad7e",
+          "context": "test rax,rax ; lea rcx,[rip+0xffffffffffe9d172]        # 2b7ef0 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs7runtime3mem12default_free.llvm.268972770624961581>",
+          "mnemonic": "cmovne",
+          "operands": "rcx,rax"
+        },
+        {
+          "at": "0x41ae7a",
+          "context": "test rax,rax ; lea rcx,[rip+0xffffffffffe9d076]        # 2b7ef0 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs7runtime3mem12default_free.llvm.268972770624961581>",
+          "mnemonic": "cmovne",
+          "operands": "rcx,rax"
+        },
+        {
+          "at": "0x41aea6",
+          "context": "test rax,rax ; lea rcx,[rip+0xffffffffffe9d04a]        # 2b7ef0 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs7runtime3mem12default_free.llvm.268972770624961581>",
+          "mnemonic": "cmovne",
+          "operands": "rcx,rax"
+        },
+        {
+          "at": "0x41aee4",
+          "context": "test rax,rax ; lea rcx,[rip+0xffffffffffe9d00c]        # 2b7ef0 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs7runtime3mem12default_free.llvm.268972770624961581>",
+          "mnemonic": "cmovne",
+          "operands": "rcx,rax"
+        },
+        {
+          "at": "0x41af25",
+          "context": "test rax,rax ; lea rcx,[rip+0xffffffffffe9cfcb]        # 2b7ef0 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs7runtime3mem12default_free.llvm.268972770624961581>",
+          "mnemonic": "cmovne",
+          "operands": "rcx,rax"
+        },
+        {
+          "at": "0x41af51",
+          "context": "test rax,rax ; lea rcx,[rip+0xffffffffffe9cf9f]        # 2b7ef0 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs7runtime3mem12default_free.llvm.268972770624961581>",
+          "mnemonic": "cmovne",
+          "operands": "rcx,rax"
+        }
+      ],
+      "crypto_instructions": [],
+      "indexed_lea_arithmetic": [
+        {
+          "at": "0x41ab11",
+          "mnemonic": "data16",
+          "operands": "data16 data16 data16 data16 cs nop WORD PTR [rax+rax*1+0x0]"
+        },
+        {
+          "at": "0x41ad24",
+          "mnemonic": "data16",
+          "operands": "data16 cs nop WORD PTR [rax+rax*1+0x0]"
+        }
+      ],
+      "indexed_memory_operands": [
+        {
+          "at": "0x41ab4c",
+          "mnemonic": "mov",
+          "operands": "QWORD PTR [rbx+r14*1+0x58],rax"
+        },
+        {
+          "at": "0x41ac26",
+          "mnemonic": "cs",
+          "operands": "nop WORD PTR [rax+rax*1+0x0]"
+        }
+      ],
+      "jcc": [
+        {
+          "at": "0x41a951",
+          "context": "mov rax,QWORD PTR [rdi+0x30] ; cmp rax,0x10",
+          "mnemonic": "je",
+          "operands": "41a975 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x45>"
+        },
+        {
+          "at": "0x41a957",
+          "context": "je 41a975 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x45> ; cmp rax,0x18",
+          "mnemonic": "je",
+          "operands": "41a96c <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x3c>"
+        },
+        {
+          "at": "0x41a95d",
+          "context": "je 41a96c <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x3c> ; cmp rax,0x20",
+          "mnemonic": "jne",
+          "operands": "41ac6b <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x33b>"
+        },
+        {
+          "at": "0x41a9e1",
+          "context": "mov rdi,QWORD PTR [rsp+0x40] ; test rdi,rdi",
+          "mnemonic": "je",
+          "operands": "41a9e8 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0xb8>"
+        },
+        {
+          "at": "0x41a9ee",
+          "context": "mov rdi,QWORD PTR [rbx] ; test rdi,rdi",
+          "mnemonic": "jne",
+          "operands": "41aa1d <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0xed>"
+        },
+        {
+          "at": "0x41aa0a",
+          "context": "call QWORD PTR [rip+0x4c2789]        # 8dd190 <CRYPTO_zalloc@@OPENSSL_3.0.0+0x64b450> ; test rax,rax",
+          "mnemonic": "je",
+          "operands": "41ad9e <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x46e>"
+        },
+        {
+          "at": "0x41aa3e",
+          "context": "add rsp,0x10 ; test eax,eax",
+          "mnemonic": "je",
+          "operands": "41acb7 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x387>"
+        },
+        {
+          "at": "0x41aaa0",
+          "context": "call QWORD PTR [rip+0x4c3532]        # 8ddfd0 <EVP_EncryptUpdate@@OPENSSL_3.0.0+0x4444d0> ; test eax,eax",
+          "mnemonic": "je",
+          "operands": "41abb4 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x284>"
+        },
+        {
+          "at": "0x41aadf",
+          "context": "call QWORD PTR [rip+0x4c34f3]        # 8ddfd0 <EVP_EncryptUpdate@@OPENSSL_3.0.0+0x4444d0> ; test eax,eax",
+          "mnemonic": "je",
+          "operands": "41abb4 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x284>"
+        },
+        {
+          "at": "0x41aaf6",
+          "context": "mov QWORD PTR [rbx+0x80],rax ; cmp QWORD PTR [rbx+0x30],0x0",
+          "mnemonic": "je",
+          "operands": "41ab67 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x237>"
+        },
+        {
+          "at": "0x41ab45",
+          "context": "call r15 ; test eax,eax",
+          "mnemonic": "je",
+          "operands": "41abb4 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x284>"
+        },
+        {
+          "at": "0x41ab55",
+          "context": "mov QWORD PTR [rbx+r14*1+0x58],rax ; cmp r14,0xfffffffffffffff8",
+          "mnemonic": "je",
+          "operands": "41af69 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x639>"
+        },
+        {
+          "at": "0x41ab65",
+          "context": "inc ebp ; cmp r14,QWORD PTR [rbx+0x30]",
+          "mnemonic": "jb",
+          "operands": "41ab20 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x1f0>"
+        },
+        {
+          "at": "0x41ab8d",
+          "context": "add rsp,0x10 ; test eax,eax",
+          "mnemonic": "je",
+          "operands": "41abb4 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x284>"
+        },
+        {
+          "at": "0x41ab9e",
+          "context": "mov rbx,QWORD PTR [rsp+0x8] ; test rbx,rbx",
+          "mnemonic": "je",
+          "operands": "41abaa <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x27a>"
+        },
+        {
+          "at": "0x41aba4",
+          "context": "je 41abaa <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x27a> ; cmp DWORD PTR [rbx+0x18],0x0",
+          "mnemonic": "je",
+          "operands": "41ae0f <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x4df>"
+        },
+        {
+          "at": "0x41abc6",
+          "context": "sete cl ; or cl,al",
+          "mnemonic": "jne",
+          "operands": "41abf7 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x2c7>"
+        },
+        {
+          "at": "0x41abff",
+          "context": "mov r14,QWORD PTR [rsp+0x8] ; test r14,r14",
+          "mnemonic": "je",
+          "operands": "41adb1 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x481>"
+        },
+        {
+          "at": "0x41ac0a",
+          "context": "je 41adb1 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x481> ; cmp DWORD PTR [r14+0x18],0x0",
+          "mnemonic": "jne",
+          "operands": "41adb1 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x481>"
+        },
+        {
+          "at": "0x41ac19",
+          "context": "mov eax,DWORD PTR [r14+0x80] ; test eax,eax",
+          "mnemonic": "jle",
+          "operands": "41adb1 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x481>"
+        },
+        {
+          "at": "0x41ac3e",
+          "context": "mov eax,0x1 ; lock cmpxchg DWORD PTR [r14+0x80],ecx",
+          "mnemonic": "je",
+          "operands": "41aec0 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x590>"
+        },
+        {
+          "at": "0x41ac4d",
+          "context": "mov eax,DWORD PTR [r14+0x80] ; test eax,eax",
+          "mnemonic": "jle",
+          "operands": "41adb1 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x481>"
+        },
+        {
+          "at": "0x41ac56",
+          "context": "jle 41adb1 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x481> ; cmp eax,0x1",
+          "mnemonic": "je",
+          "operands": "41ac30 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x300>"
+        },
+        {
+          "at": "0x41ac64",
+          "context": "lea edx,[rax-0x1] ; lock cmpxchg DWORD PTR [r14+0x80],edx",
+          "mnemonic": "jne",
+          "operands": "41ac44 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x314>"
+        },
+        {
+          "at": "0x41ac7d",
+          "context": "sete cl ; or cl,al",
+          "mnemonic": "jne",
+          "operands": "41adb1 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x481>"
+        },
+        {
+          "at": "0x41acc9",
+          "context": "sete cl ; or cl,al",
+          "mnemonic": "jne",
+          "operands": "41acfa <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x3ca>"
+        },
+        {
+          "at": "0x41acfd",
+          "context": "call rcx ; test r14,r14",
+          "mnemonic": "je",
+          "operands": "41adb1 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x481>"
+        },
+        {
+          "at": "0x41ad08",
+          "context": "je 41adb1 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x481> ; cmp DWORD PTR [r14+0x18],0x0",
+          "mnemonic": "jne",
+          "operands": "41adb1 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x481>"
+        },
+        {
+          "at": "0x41ad17",
+          "context": "mov eax,DWORD PTR [r14+0x80] ; test eax,eax",
+          "mnemonic": "jle",
+          "operands": "41adb1 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x481>"
+        },
+        {
+          "at": "0x41ad3c",
+          "context": "lea edx,[rax-0x1] ; lock cmpxchg DWORD PTR [r14+0x80],edx",
+          "mnemonic": "je",
+          "operands": "41adb1 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x481>"
+        },
+        {
+          "at": "0x41ad47",
+          "context": "mov eax,DWORD PTR [r14+0x80] ; test eax,eax",
+          "mnemonic": "jle",
+          "operands": "41adb1 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x481>"
+        },
+        {
+          "at": "0x41ad4c",
+          "context": "jle 41adb1 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x481> ; cmp eax,0x1",
+          "mnemonic": "jne",
+          "operands": "41ad30 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x400>"
+        },
+        {
+          "at": "0x41ad5c",
+          "context": "mov eax,0x1 ; lock cmpxchg DWORD PTR [r14+0x80],ecx",
+          "mnemonic": "jne",
+          "operands": "41ad3e <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x40e>"
+        },
+        {
+          "at": "0x41ad62",
+          "context": "jne 41ad3e <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x40e> ; test r14b,0x7",
+          "mnemonic": "jne",
+          "operands": "41adb1 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x481>"
+        },
+        {
+          "at": "0x41ad6b",
+          "context": "mov rdi,QWORD PTR [r14+0x68] ; test rdi,rdi",
+          "mnemonic": "je",
+          "operands": "41ad90 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x460>"
+        },
+        {
+          "at": "0x41ada8",
+          "context": "mov QWORD PTR [rbx],0x0 ; test r14,r14",
+          "mnemonic": "je",
+          "operands": "41adb1 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x481>"
+        },
+        {
+          "at": "0x41adaf",
+          "context": "je 41adb1 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x481> ; cmp DWORD PTR [r14+0x18],0x0",
+          "mnemonic": "je",
+          "operands": "41adc9 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x499>"
+        },
+        {
+          "at": "0x41add2",
+          "context": "mov eax,DWORD PTR [r14+0x80] ; test eax,eax",
+          "mnemonic": "jle",
+          "operands": "41adb1 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x481>"
+        },
+        {
+          "at": "0x41ade9",
+          "context": "mov eax,0x1 ; lock cmpxchg DWORD PTR [r14+0x80],ecx",
+          "mnemonic": "je",
+          "operands": "41af01 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x5d1>"
+        },
+        {
+          "at": "0x41adf8",
+          "context": "mov eax,DWORD PTR [r14+0x80] ; test eax,eax",
+          "mnemonic": "jle",
+          "operands": "41adb1 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x481>"
+        },
+        {
+          "at": "0x41adfd",
+          "context": "jle 41adb1 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x481> ; cmp eax,0x1",
+          "mnemonic": "je",
+          "operands": "41addb <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x4ab>"
+        },
+        {
+          "at": "0x41ae0b",
+          "context": "lea edx,[rax-0x1] ; lock cmpxchg DWORD PTR [r14+0x80],edx",
+          "mnemonic": "jne",
+          "operands": "41adef <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x4bf>"
+        },
+        {
+          "at": "0x41ae17",
+          "context": "mov eax,DWORD PTR [rbx+0x80] ; test eax,eax",
+          "mnemonic": "jle",
+          "operands": "41abaa <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x27a>"
+        },
+        {
+          "at": "0x41ae2f",
+          "context": "lea edx,[rax-0x1] ; lock cmpxchg DWORD PTR [rbx+0x80],edx",
+          "mnemonic": "je",
+          "operands": "41abaa <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x27a>"
+        },
+        {
+          "at": "0x41ae3d",
+          "context": "mov eax,DWORD PTR [rbx+0x80] ; test eax,eax",
+          "mnemonic": "jle",
+          "operands": "41abaa <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x27a>"
+        },
+        {
+          "at": "0x41ae46",
+          "context": "jle 41abaa <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x27a> ; cmp eax,0x1",
+          "mnemonic": "jne",
+          "operands": "41ae24 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x4f4>"
+        },
+        {
+          "at": "0x41ae55",
+          "context": "mov eax,0x1 ; lock cmpxchg DWORD PTR [rbx+0x80],ecx",
+          "mnemonic": "jne",
+          "operands": "41ae35 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x505>"
+        },
+        {
+          "at": "0x41ae5a",
+          "context": "jne 41ae35 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x505> ; test bl,0x7",
+          "mnemonic": "jne",
+          "operands": "41abaa <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x27a>"
+        },
+        {
+          "at": "0x41ae67",
+          "context": "mov rdi,QWORD PTR [rbx+0x68] ; test rdi,rdi",
+          "mnemonic": "je",
+          "operands": "41ae8c <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x55c>"
+        },
+        {
+          "at": "0x41aec4",
+          "context": "jmp 41abaa <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x27a> ; test r14b,0x7",
+          "mnemonic": "jne",
+          "operands": "41adb1 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x481>"
+        },
+        {
+          "at": "0x41aed1",
+          "context": "mov rdi,QWORD PTR [r14+0x68] ; test rdi,rdi",
+          "mnemonic": "je",
+          "operands": "41aef6 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x5c6>"
+        },
+        {
+          "at": "0x41af05",
+          "context": "jmp 41af40 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x610> ; test r14b,0x7",
+          "mnemonic": "jne",
+          "operands": "41adb1 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x481>"
+        },
+        {
+          "at": "0x41af12",
+          "context": "mov rdi,QWORD PTR [r14+0x68] ; test rdi,rdi",
+          "mnemonic": "je",
+          "operands": "41af37 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x607>"
+        }
+      ],
+      "n_insns": 377,
+      "range": [
+        "0x41a930",
+        "0x41afa8"
+      ],
+      "setcc": [
+        {
+          "at": "0x41abbb",
+          "context": "mov r15,QWORD PTR [rbx] ; test r15b,0x7",
+          "mnemonic": "setne",
+          "operands": "al"
+        },
+        {
+          "at": "0x41abc1",
+          "context": "setne al ; test r15,r15",
+          "mnemonic": "sete",
+          "operands": "cl"
+        },
+        {
+          "at": "0x41ac72",
+          "context": "mov r14,QWORD PTR [rbx] ; test r14b,0x7",
+          "mnemonic": "setne",
+          "operands": "al"
+        },
+        {
+          "at": "0x41ac78",
+          "context": "setne al ; test r14,r14",
+          "mnemonic": "sete",
+          "operands": "cl"
+        },
+        {
+          "at": "0x41acbe",
+          "context": "mov r15,QWORD PTR [rbx] ; test r15b,0x7",
+          "mnemonic": "setne",
+          "operands": "al"
+        },
+        {
+          "at": "0x41acc4",
+          "context": "setne al ; test r15,r15",
+          "mnemonic": "sete",
+          "operands": "cl"
+        }
+      ],
+      "status": "PRESENT"
+    },
+    "openssl_rs::provider::cipher::polyval_ghash_hash": {
+      "calls": [
+        "0x41a16c 40e840 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs5modes3gcm15gf_mul_portable>",
+        "0x41a260 40e480 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs5modes3gcm12gf_mul_clmul>",
+        "0x41a279 QWORD PTR [rip+0x4c57c1]        # 8dfa40 <_DYNAMIC+0x4740>",
+        "0x41a2a1 165594 <_RINvMNtNtCs9k3SxhrAWiO_3std4sync9once_lockINtB3_8OnceLockANtNtNtCsfBoMNNx3tZr_10openssl_rs7runtime3cpu8Decisionj5_E10initializeNCINvB2_11get_or_initNCNvBW_9decisions0E0zEB10_>"
+      ],
+      "cmov": [],
+      "crypto_instructions": [],
+      "indexed_lea_arithmetic": [],
+      "indexed_memory_operands": [
+        {
+          "at": "0x41a17e",
+          "mnemonic": "movzx",
+          "operands": "esi,BYTE PTR [r15+rbx*1-0x8]"
+        },
+        {
+          "at": "0x41a184",
+          "mnemonic": "movzx",
+          "operands": "edi,BYTE PTR [r15+rbx*1-0x7]"
+        },
+        {
+          "at": "0x41a18a",
+          "mnemonic": "movzx",
+          "operands": "r8d,BYTE PTR [r15+rbx*1-0x6]"
+        },
+        {
+          "at": "0x41a190",
+          "mnemonic": "movzx",
+          "operands": "r9d,BYTE PTR [r15+rbx*1-0x5]"
+        },
+        {
+          "at": "0x41a196",
+          "mnemonic": "movzx",
+          "operands": "r10d,BYTE PTR [r15+rbx*1-0x4]"
+        },
+        {
+          "at": "0x41a19c",
+          "mnemonic": "movzx",
+          "operands": "ecx,BYTE PTR [r15+rbx*1-0x3]"
+        },
+        {
+          "at": "0x41a1a2",
+          "mnemonic": "movzx",
+          "operands": "ebp,BYTE PTR [r15+rbx*1-0x2]"
+        },
+        {
+          "at": "0x41a1a8",
+          "mnemonic": "movzx",
+          "operands": "r11d,BYTE PTR [r15+rbx*1-0x1]"
+        },
+        {
+          "at": "0x41a1e3",
+          "mnemonic": "xor",
+          "operands": "rax,QWORD PTR [r15+rbx*1-0x10]"
+        },
+        {
+          "at": "0x41a223",
+          "mnemonic": "movsxd",
+          "operands": "rdx,DWORD PTR [rsi+rdx*4]"
+        }
+      ],
+      "jcc": [
+        {
+          "at": "0x41a131",
+          "context": "or rax,r8 ; cmp r14,0x10",
+          "mnemonic": "jae",
+          "operands": "41a152 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher18polyval_ghash_hash+0x102>"
+        },
+        {
+          "at": "0x41a178",
+          "context": "add rbx,0x10 ; cmp rbx,r14",
+          "mnemonic": "ja",
+          "operands": "41a2b0 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher18polyval_ghash_hash+0x260>"
+        },
+        {
+          "at": "0x41a1f5",
+          "context": "mov rcx,QWORD PTR [rcx] ; test rcx,rcx",
+          "mnemonic": "je",
+          "operands": "41a274 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher18polyval_ghash_hash+0x224>"
+        },
+        {
+          "at": "0x41a1fa",
+          "context": "je 41a274 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher18polyval_ghash_hash+0x224> ; test cl,0x2",
+          "mnemonic": "je",
+          "operands": "41a160 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher18polyval_ghash_hash+0x110>"
+        },
+        {
+          "at": "0x41a208",
+          "context": "mov ecx,DWORD PTR [rip+0x4cb68a]        # 8e5890 <_RNvNvNtNtCsfBoMNNx3tZr_10openssl_rs7runtime3cpu9decisions9DECISIONS.llvm.13890692917714197310+0x50> ; test ecx,ecx",
+          "mnemonic": "jne",
+          "operands": "41a295 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher18polyval_ghash_hash+0x245>"
+        },
+        {
+          "at": "0x41a239",
+          "context": "movabs rdx,0x200000000 ; test rcx,rdx",
+          "mnemonic": "jne",
+          "operands": "41a160 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher18polyval_ghash_hash+0x110>"
+        },
+        {
+          "at": "0x41a24e",
+          "context": "movabs rdx,0x200000000 ; test rcx,rdx",
+          "mnemonic": "je",
+          "operands": "41a160 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher18polyval_ghash_hash+0x110>"
+        },
+        {
+          "at": "0x41a26c",
+          "context": "add rbx,0x10 ; cmp rbx,r14",
+          "mnemonic": "jbe",
+          "operands": "41a17e <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher18polyval_ghash_hash+0x12e>"
+        },
+        {
+          "at": "0x41a28a",
+          "context": "mov rax,QWORD PTR [rsp+0x8] ; test cl,0x2",
+          "mnemonic": "je",
+          "operands": "41a160 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher18polyval_ghash_hash+0x110>"
+        }
+      ],
+      "n_insns": 227,
+      "range": [
+        "0x41a050",
+        "0x41a3bf"
+      ],
+      "setcc": [],
+      "status": "PRESENT"
+    }
+  },
+  "label": "pfp64-polyval"
+}

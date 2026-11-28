@@ -53,6 +53,11 @@ the `u128` accumulator's read-modify-write traffic and lower throughput at 256
 bits, and — at 1024 bits — the same extra products with the 64-bit kernel's long
 carry chain partly offsetting them. The settling shift is not dominant.
 
+> **PFP-57 note (2026-11-27).** The attribution above (64-bit latency-bound vs
+> reduced-radix throughput-bound) is a hypothesis, not a finding, and its
+> counterpart is `PFP-48`'s carry-chain conclusion. No bound in `M-A3` to `M-A6`
+> may rest on either until hardware performance counters exist.
+
 ## 2. Correctness first
 
 | width | pairs | oracle checks | mismatches | non-canonical |

@@ -67,7 +67,15 @@
         "head": 707.427
       },
       "n_pairs": 11,
-      "status": "OK"
+      "status": "OK",
+      "workload_identity": {
+        "description": "sign-then-verify: ECDSA_do_sign and the ECDSA_do_verify correctness guard are both inside the timed loop (bench_p256.c:104-121)",
+        "timed_operations": [
+          "ECDSA_do_sign",
+          "ECDSA_do_verify"
+        ],
+        "workload_id": "ecdsa256"
+      }
     }
   },
   "p521": {
@@ -138,7 +146,13 @@
         "head": 2506.543
       },
       "n_pairs": 11,
-      "status": "OK"
+      "status": "OK",
+      "workload_identity": {
+        "timed_operations": [
+          "ECDSA_do_sign"
+        ],
+        "workload_id": "ecdsa-sign-p521"
+      }
     },
     "ecdsa-verify-p521": {
       "cand_auth": {
@@ -207,7 +221,13 @@
         "head": 1773.286
       },
       "n_pairs": 11,
-      "status": "OK"
+      "status": "OK",
+      "workload_identity": {
+        "timed_operations": [
+          "ECDSA_do_verify"
+        ],
+        "workload_id": "ecdsa-verify-p521"
+      }
     }
   },
   "ratio_direction": "num/den (>1 = numerator slower)"

@@ -63,6 +63,11 @@ loss at 256 bits; the carry chain was already overlapped well enough that
 removing it does not pay for the redundant accumulator's extra additions and
 memory traffic.
 
+> **PFP-57 note (2026-11-27).** "The carry chain was already overlapped well
+> enough" is a hypothesis, not a finding; its counterpart is `PFP-48`'s
+> carry-chain conclusion. No bound in `M-A3` to `M-A6` may rest on either until
+> hardware performance counters exist.
+
 **This is not M-A2.** M-A2 changed the digit width to 52 bits (an extra limb,
 56.25 % more limb products, 3.4x loss at 256 bits). M-A7 keeps `n` limbs and
 exactly `2n^2` limb products; it changes only when carries are propagated. The
@@ -99,6 +104,11 @@ numbers. In summary:
 The redundant design replaces the carry chain with 4-6 independent 128-bit adds
 per position (two product rows folded into one pass in the measured prototype),
 so its work floor is *higher* than CIOS's. That is the mechanism of the refusal.
+
+> **PFP-57 note (2026-11-27).** "That is the mechanism of the refusal" states a
+> causal hypothesis; the measured refusal stands, but the mechanism is one of
+> two unresolved explanations (`PFP-48` is the other) and may not bound `M-A3`
+> to `M-A6` until counters exist.
 
 Literature is cited in `BOUNDS.md` §6, technique only: Koç/Acar/Kaliski
 (CIOS/SOS taxonomy, IEEE Micro 1996), Tenca–Koç (carry-save Montgomery, CHES
@@ -197,6 +207,22 @@ throughput floor, not latency, binds), and the redundant accumulator pays 4-6
 out-of-order core was already hiding. This is consistent with PFP-46/PFP-48: the
 authority's advantage is the two independent `adcx`/`adox` chains, which is a
 codegen organisation, not an accumulation scheme reachable from safe Rust.
+
+> **PFP-57 SUPERSEDE — 2026-11-27. The measurement stands; the causal
+> explanation is withdrawn to a hypothesis.** The sentences above are retained
+> verbatim. Carry-save is still 2.5–2.8× slower and is still refused. But
+> "the CIOS carry chain is not the dominant cost … the throughput floor, not
+> latency, binds" is a **hypothesis, not a finding**. Its explicit counterpart
+> is `PFP-48` (`evidence/performance-frontier/campaigns/PFP-48/RECEIPT.md`),
+> which concluded the single `add`/`adc` carry dependency chain is the critical
+> path. Both cannot be the cause, and neither fits the data cleanly: PFP-48 cut
+> 13% of the instructions and every workload got slower; M-A7 reduced dependency
+> depth and got 2.5–2.8× slower. What would discriminate the two is hardware
+> performance counters — **port utilisation, a top-down stall breakdown, and
+> dependent-chain occupancy** — and this venue has none, which is why the
+> question is open. The "consistent with PFP-46/PFP-48" sentence is likewise a
+> hypothesis, not a finding. Until a counter-enabled or bare-metal venue exists,
+> **no bound in `M-A3` to `M-A6` may rest on either explanation.**
 
 No integration is proposed. Had it won, integration would still owe: a branch
 audit under the release profile, ctgrind/dudect for secret-dependent flow and

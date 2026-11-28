@@ -342,11 +342,13 @@ def write_campaign(root: Path) -> tuple[Path, Path, Path]:
                 "workloads": [
                     {
                         "id": "alpha",
+                        "timed_operations": ["alpha_op"],
                         "check_line_count_per_process": 1,
                         "result_line_count_per_process": 1,
                     },
                     {
                         "id": "beta",
+                        "timed_operations": ["beta_op"],
                         "check_line_count_per_process": 1,
                         "result_line_count_per_process": 1,
                     },
@@ -482,6 +484,17 @@ class CampaignCliControls(unittest.TestCase):
         self.assertEqual(completed.returncode, 1)
         self.assertIn(rule, completed.stderr)
         self.assertIn(fragment, completed.stderr)
+
+    def test_cli_refuses_missing_workload_identity(self) -> None:
+        def mutate(work: Path, root: Path) -> None:
+            path = root / "workloads.json"
+            document = json.loads(path.read_text(encoding="utf-8"))
+            del document["workloads"][0]["timed_operations"]
+            path.write_text(json.dumps(document), encoding="utf-8")
+
+        self._assert_failure(
+            self._run(mutate), "PFP_WORKLOAD_IDENTITY", "timed_operations"
+        )
 
     def test_cli_refuses_duplicated_identity(self) -> None:
         def mutate(work: Path, root: Path) -> None:

@@ -160,6 +160,13 @@ Attribution (measured, plus inference where labelled):
    dedicated-squaring precedent: an operation-count argument (fewer carries) did
    not survive measurement.
 
+> **PFP-57 note (2026-11-27).** Bullets 2 and 3 attribute the loss to the 64-bit
+> kernel being "latency-bound" and the reduced-radix kernel being
+> "throughput/store-bound". That is one of two unresolved causal hypotheses
+> (`PFP-48` is its counterpart); the measured ratios stand, but no bound in
+> `M-A3` to `M-A6` may rest on either explanation until hardware performance
+> counters exist.
+
 ## 5. Consequence and next step
 
 The measured, useful signal is not the radix but the gap between the two 64-bit

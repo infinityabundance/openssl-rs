@@ -1,0 +1,1085 @@
+### openssl_rs::provider::cipher::polyval_ghash_hash  0x41a050..0x41a3bf
+
+court/tmp/pfp68/final/libcrypto.so.3:     file format elf64-x86-64
+
+
+Disassembly of section .text:
+
+000000000041a050 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher18polyval_ghash_hash>:
+  41a050:	55                   	push   rbp
+  41a051:	41 57                	push   r15
+  41a053:	41 56                	push   r14
+  41a055:	41 55                	push   r13
+  41a057:	41 54                	push   r12
+  41a059:	53                   	push   rbx
+  41a05a:	48 83 ec 18          	sub    rsp,0x18
+  41a05e:	4d 89 c6             	mov    r14,r8
+  41a061:	49 89 cf             	mov    r15,rcx
+  41a064:	48 89 d3             	mov    rbx,rdx
+  41a067:	49 89 f4             	mov    r12,rsi
+  41a06a:	49 89 fd             	mov    r13,rdi
+  41a06d:	44 0f b6 52 0f       	movzx  r10d,BYTE PTR [rdx+0xf]
+  41a072:	0f b6 4a 0e          	movzx  ecx,BYTE PTR [rdx+0xe]
+  41a076:	0f b6 72 0d          	movzx  esi,BYTE PTR [rdx+0xd]
+  41a07a:	0f b6 7a 0b          	movzx  edi,BYTE PTR [rdx+0xb]
+  41a07e:	0f b6 42 0a          	movzx  eax,BYTE PTR [rdx+0xa]
+  41a082:	0f b6 52 09          	movzx  edx,BYTE PTR [rdx+0x9]
+  41a086:	44 0f b6 5b 06       	movzx  r11d,BYTE PTR [rbx+0x6]
+  41a08b:	0f b6 6b 04          	movzx  ebp,BYTE PTR [rbx+0x4]
+  41a08f:	44 0f b6 43 02       	movzx  r8d,BYTE PTR [rbx+0x2]
+  41a094:	44 0f b6 4b 01       	movzx  r9d,BYTE PTR [rbx+0x1]
+  41a099:	49 c1 e1 30          	shl    r9,0x30
+  41a09d:	49 c1 e0 28          	shl    r8,0x28
+  41a0a1:	4d 09 c8             	or     r8,r9
+  41a0a4:	44 0f b6 4b 03       	movzx  r9d,BYTE PTR [rbx+0x3]
+  41a0a9:	49 c1 e1 20          	shl    r9,0x20
+  41a0ad:	c1 e5 18             	shl    ebp,0x18
+  41a0b0:	4c 09 cd             	or     rbp,r9
+  41a0b3:	44 0f b6 4b 05       	movzx  r9d,BYTE PTR [rbx+0x5]
+  41a0b8:	41 c1 e1 10          	shl    r9d,0x10
+  41a0bc:	41 c1 e3 08          	shl    r11d,0x8
+  41a0c0:	45 09 cb             	or     r11d,r9d
+  41a0c3:	48 c1 e2 30          	shl    rdx,0x30
+  41a0c7:	48 c1 e0 28          	shl    rax,0x28
+  41a0cb:	48 09 d0             	or     rax,rdx
+  41a0ce:	48 89 74 24 08       	mov    QWORD PTR [rsp+0x8],rsi
+  41a0d3:	41 89 f1             	mov    r9d,esi
+  41a0d6:	41 c1 e1 10          	shl    r9d,0x10
+  41a0da:	48 89 ce             	mov    rsi,rcx
+  41a0dd:	89 ca                	mov    edx,ecx
+  41a0df:	c1 e2 08             	shl    edx,0x8
+  41a0e2:	4c 89 d1             	mov    rcx,r10
+  41a0e5:	4d 09 d1             	or     r9,r10
+  41a0e8:	49 09 d1             	or     r9,rdx
+  41a0eb:	48 89 fa             	mov    rdx,rdi
+  41a0ee:	48 c1 e2 20          	shl    rdx,0x20
+  41a0f2:	49 09 d1             	or     r9,rdx
+  41a0f5:	44 0f b6 53 0c       	movzx  r10d,BYTE PTR [rbx+0xc]
+  41a0fa:	44 89 d2             	mov    edx,r10d
+  41a0fd:	c1 e2 18             	shl    edx,0x18
+  41a100:	49 09 d1             	or     r9,rdx
+  41a103:	49 09 c1             	or     r9,rax
+  41a106:	0f b6 03             	movzx  eax,BYTE PTR [rbx]
+  41a109:	48 c1 e0 38          	shl    rax,0x38
+  41a10d:	0f b6 53 08          	movzx  edx,BYTE PTR [rbx+0x8]
+  41a111:	48 c1 e2 38          	shl    rdx,0x38
+  41a115:	4c 09 ca             	or     rdx,r9
+  41a118:	48 89 5c 24 10       	mov    QWORD PTR [rsp+0x10],rbx
+  41a11d:	0f b6 5b 07          	movzx  ebx,BYTE PTR [rbx+0x7]
+  41a121:	49 09 db             	or     r11,rbx
+  41a124:	4c 09 dd             	or     rbp,r11
+  41a127:	49 09 e8             	or     r8,rbp
+  41a12a:	4c 09 c0             	or     rax,r8
+  41a12d:	49 83 fe 10          	cmp    r14,0x10
+  41a131:	73 1f                	jae    41a152 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher18polyval_ghash_hash+0x102>
+  41a133:	4d 89 ce             	mov    r14,r9
+  41a136:	49 c1 ee 28          	shr    r14,0x28
+  41a13a:	49 c1 e9 30          	shr    r9,0x30
+  41a13e:	48 c1 ea 38          	shr    rdx,0x38
+  41a142:	49 89 cf             	mov    r15,rcx
+  41a145:	48 89 f1             	mov    rcx,rsi
+  41a148:	48 8b 74 24 08       	mov    rsi,QWORD PTR [rsp+0x8]
+  41a14d:	e9 9d 01 00 00       	jmp    41a2ef <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher18polyval_ghash_hash+0x29f>
+  41a152:	48 0f ca             	bswap  rdx
+  41a155:	48 0f c8             	bswap  rax
+  41a158:	bb 10 00 00 00       	mov    ebx,0x10
+  41a15d:	eb 1f                	jmp    41a17e <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher18polyval_ghash_hash+0x12e>
+  41a15f:	90                   	nop
+  41a160:	48 89 c7             	mov    rdi,rax
+  41a163:	48 89 ee             	mov    rsi,rbp
+  41a166:	4c 89 e2             	mov    rdx,r12
+  41a169:	4c 89 e9             	mov    rcx,r13
+  41a16c:	e8 cf 46 ff ff       	call   40e840 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs5modes3gcm15gf_mul_portable>
+  41a171:	48 83 c3 10          	add    rbx,0x10
+  41a175:	4c 39 f3             	cmp    rbx,r14
+  41a178:	0f 87 32 01 00 00    	ja     41a2b0 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher18polyval_ghash_hash+0x260>
+  41a17e:	41 0f b6 74 1f f8    	movzx  esi,BYTE PTR [r15+rbx*1-0x8]
+  41a184:	41 0f b6 7c 1f f9    	movzx  edi,BYTE PTR [r15+rbx*1-0x7]
+  41a18a:	45 0f b6 44 1f fa    	movzx  r8d,BYTE PTR [r15+rbx*1-0x6]
+  41a190:	45 0f b6 4c 1f fb    	movzx  r9d,BYTE PTR [r15+rbx*1-0x5]
+  41a196:	45 0f b6 54 1f fc    	movzx  r10d,BYTE PTR [r15+rbx*1-0x4]
+  41a19c:	41 0f b6 4c 1f fd    	movzx  ecx,BYTE PTR [r15+rbx*1-0x3]
+  41a1a2:	41 0f b6 6c 1f fe    	movzx  ebp,BYTE PTR [r15+rbx*1-0x2]
+  41a1a8:	45 0f b6 5c 1f ff    	movzx  r11d,BYTE PTR [r15+rbx*1-0x1]
+  41a1ae:	48 c1 e6 38          	shl    rsi,0x38
+  41a1b2:	48 c1 e7 30          	shl    rdi,0x30
+  41a1b6:	48 09 f7             	or     rdi,rsi
+  41a1b9:	49 c1 e0 28          	shl    r8,0x28
+  41a1bd:	49 09 f8             	or     r8,rdi
+  41a1c0:	49 c1 e1 20          	shl    r9,0x20
+  41a1c4:	4d 09 c1             	or     r9,r8
+  41a1c7:	41 c1 e2 18          	shl    r10d,0x18
+  41a1cb:	4d 09 ca             	or     r10,r9
+  41a1ce:	c1 e1 10             	shl    ecx,0x10
+  41a1d1:	4c 09 d1             	or     rcx,r10
+  41a1d4:	4c 09 d9             	or     rcx,r11
+  41a1d7:	c1 e5 08             	shl    ebp,0x8
+  41a1da:	48 09 cd             	or     rbp,rcx
+  41a1dd:	48 0f cd             	bswap  rbp
+  41a1e0:	48 31 d5             	xor    rbp,rdx
+  41a1e3:	49 33 44 1f f0       	xor    rax,QWORD PTR [r15+rbx*1-0x10]
+  41a1e8:	48 8d 0d 81 64 4d 00 	lea    rcx,[rip+0x4d6481]        # 8f0670 <_RNvNtNtCszeWvcdrjDC_10std_detect6detect5cache5CACHE>
+  41a1ef:	48 8b 09             	mov    rcx,QWORD PTR [rcx]
+  41a1f2:	48 85 c9             	test   rcx,rcx
+  41a1f5:	74 7d                	je     41a274 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher18polyval_ghash_hash+0x224>
+  41a1f7:	f6 c1 02             	test   cl,0x2
+  41a1fa:	0f 84 60 ff ff ff    	je     41a160 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher18polyval_ghash_hash+0x110>
+  41a200:	8b 0d 8a b6 4c 00    	mov    ecx,DWORD PTR [rip+0x4cb68a]        # 8e5890 <_RNvNvNtNtCsfBoMNNx3tZr_10openssl_rs7runtime3cpu9decisions9DECISIONS.llvm.13890692917714197310+0x50>
+  41a206:	85 c9                	test   ecx,ecx
+  41a208:	0f 85 87 00 00 00    	jne    41a295 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher18polyval_ghash_hash+0x245>
+  41a20e:	48 8b 15 2b b6 4c 00 	mov    rdx,QWORD PTR [rip+0x4cb62b]        # 8e5840 <_RNvNvNtNtCsfBoMNNx3tZr_10openssl_rs7runtime3cpu9decisions9DECISIONS.llvm.13890692917714197310>
+  41a215:	48 8b 0d 2c b6 4c 00 	mov    rcx,QWORD PTR [rip+0x4cb62c]        # 8e5848 <_RNvNvNtNtCsfBoMNNx3tZr_10openssl_rs7runtime3cpu9decisions9DECISIONS.llvm.13890692917714197310+0x8>
+  41a21c:	48 8d 35 0d fe 29 00 	lea    rsi,[rip+0x29fe0d]        # 6ba030 <anon.b5dd76f310ac8a723a28ac08030ae087.1044.llvm.18350548062124029524+0x736>
+  41a223:	48 63 14 96          	movsxd rdx,DWORD PTR [rsi+rdx*4]
+  41a227:	48 01 f2             	add    rdx,rsi
+  41a22a:	ff e2                	jmp    rdx
+  41a22c:	48 ba 00 00 00 00 02 	movabs rdx,0x200000000
+  41a233:	00 00 00 
+  41a236:	48 85 d1             	test   rcx,rdx
+  41a239:	0f 85 21 ff ff ff    	jne    41a160 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher18polyval_ghash_hash+0x110>
+  41a23f:	eb 13                	jmp    41a254 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher18polyval_ghash_hash+0x204>
+  41a241:	48 ba 00 00 00 00 02 	movabs rdx,0x200000000
+  41a248:	00 00 00 
+  41a24b:	48 85 d1             	test   rcx,rdx
+  41a24e:	0f 84 0c ff ff ff    	je     41a160 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher18polyval_ghash_hash+0x110>
+  41a254:	48 89 c7             	mov    rdi,rax
+  41a257:	48 89 ee             	mov    rsi,rbp
+  41a25a:	4c 89 e2             	mov    rdx,r12
+  41a25d:	4c 89 e9             	mov    rcx,r13
+  41a260:	e8 1b 42 ff ff       	call   40e480 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs5modes3gcm12gf_mul_clmul>
+  41a265:	48 83 c3 10          	add    rbx,0x10
+  41a269:	4c 39 f3             	cmp    rbx,r14
+  41a26c:	0f 86 0c ff ff ff    	jbe    41a17e <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher18polyval_ghash_hash+0x12e>
+  41a272:	eb 3c                	jmp    41a2b0 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher18polyval_ghash_hash+0x260>
+  41a274:	48 89 44 24 08       	mov    QWORD PTR [rsp+0x8],rax
+  41a279:	ff 15 c1 57 4c 00    	call   QWORD PTR [rip+0x4c57c1]        # 8dfa40 <_DYNAMIC+0x4740>
+  41a27f:	48 89 c1             	mov    rcx,rax
+  41a282:	48 8b 44 24 08       	mov    rax,QWORD PTR [rsp+0x8]
+  41a287:	f6 c1 02             	test   cl,0x2
+  41a28a:	0f 84 d0 fe ff ff    	je     41a160 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher18polyval_ghash_hash+0x110>
+  41a290:	e9 6b ff ff ff       	jmp    41a200 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher18polyval_ghash_hash+0x1b0>
+  41a295:	48 8d 3d a4 b5 4c 00 	lea    rdi,[rip+0x4cb5a4]        # 8e5840 <_RNvNvNtNtCsfBoMNNx3tZr_10openssl_rs7runtime3cpu9decisions9DECISIONS.llvm.13890692917714197310>
+  41a29c:	48 89 44 24 08       	mov    QWORD PTR [rsp+0x8],rax
+  41a2a1:	e8 ee b2 d4 ff       	call   165594 <_RINvMNtNtCs9k3SxhrAWiO_3std4sync9once_lockINtB3_8OnceLockANtNtNtCsfBoMNNx3tZr_10openssl_rs7runtime3cpu8Decisionj5_E10initializeNCINvB2_11get_or_initNCNvBW_9decisions0E0zEB10_>
+  41a2a6:	48 8b 44 24 08       	mov    rax,QWORD PTR [rsp+0x8]
+  41a2ab:	e9 5e ff ff ff       	jmp    41a20e <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher18polyval_ghash_hash+0x1be>
+  41a2b0:	48 0f c8             	bswap  rax
+  41a2b3:	48 0f ca             	bswap  rdx
+  41a2b6:	89 d1                	mov    ecx,edx
+  41a2b8:	c1 e9 08             	shr    ecx,0x8
+  41a2bb:	89 d6                	mov    esi,edx
+  41a2bd:	c1 ee 10             	shr    esi,0x10
+  41a2c0:	41 89 d2             	mov    r10d,edx
+  41a2c3:	41 c1 ea 18          	shr    r10d,0x18
+  41a2c7:	48 89 d7             	mov    rdi,rdx
+  41a2ca:	48 c1 ef 20          	shr    rdi,0x20
+  41a2ce:	49 89 d6             	mov    r14,rdx
+  41a2d1:	49 c1 ee 28          	shr    r14,0x28
+  41a2d5:	49 89 d1             	mov    r9,rdx
+  41a2d8:	49 c1 e9 30          	shr    r9,0x30
+  41a2dc:	41 89 d7             	mov    r15d,edx
+  41a2df:	48 c1 ea 38          	shr    rdx,0x38
+  41a2e3:	49 89 c0             	mov    r8,rax
+  41a2e6:	48 89 c5             	mov    rbp,rax
+  41a2e9:	49 89 c3             	mov    r11,rax
+  41a2ec:	48 89 c3             	mov    rbx,rax
+  41a2ef:	48 c1 e8 38          	shr    rax,0x38
+  41a2f3:	66 0f 6e c0          	movd   xmm0,eax
+  41a2f7:	4c 89 c0             	mov    rax,r8
+  41a2fa:	49 c1 e8 30          	shr    r8,0x30
+  41a2fe:	66 41 0f 6e c8       	movd   xmm1,r8d
+  41a303:	48 c1 e8 28          	shr    rax,0x28
+  41a307:	66 0f 6e d0          	movd   xmm2,eax
+  41a30b:	48 89 e8             	mov    rax,rbp
+  41a30e:	48 c1 e8 20          	shr    rax,0x20
+  41a312:	66 0f 6e d8          	movd   xmm3,eax
+  41a316:	66 48 0f 6e e5       	movq   xmm4,rbp
+  41a31b:	66 49 0f 6e eb       	movq   xmm5,r11
+  41a320:	66 49 0f 6e f3       	movq   xmm6,r11
+  41a325:	66 48 0f 6e fb       	movq   xmm7,rbx
+  41a32a:	66 0f 60 c1          	punpcklbw xmm0,xmm1
+  41a32e:	66 0f 60 d3          	punpcklbw xmm2,xmm3
+  41a332:	66 0f 6f 0d c6 7a 28 	movdqa xmm1,XMMWORD PTR [rip+0x287ac6]        # 6a1e00 <_RNvNtCsfBoMNNx3tZr_10openssl_rs13cipher_tables11DES_SPTRANS+0x920>
+  41a339:	00 
+  41a33a:	66 0f db c1          	pand   xmm0,xmm1
+  41a33e:	66 0f 72 f2 10       	pslld  xmm2,0x10
+  41a343:	66 0f df ca          	pandn  xmm1,xmm2
+  41a347:	66 0f eb c8          	por    xmm1,xmm0
+  41a34b:	66 0f 73 d4 18       	psrlq  xmm4,0x18
+  41a350:	66 0f 73 d5 10       	psrlq  xmm5,0x10
+  41a355:	66 0f 60 e5          	punpcklbw xmm4,xmm5
+  41a359:	66 0f 70 c4 50       	pshufd xmm0,xmm4,0x50
+  41a35e:	66 0f 6f 15 aa 7a 28 	movdqa xmm2,XMMWORD PTR [rip+0x287aaa]        # 6a1e10 <_RNvNtCsfBoMNNx3tZr_10openssl_rs13cipher_tables11DES_SPTRANS+0x930>
+  41a365:	00 
+  41a366:	66 0f db c2          	pand   xmm0,xmm2
+  41a36a:	66 0f 73 d6 08       	psrlq  xmm6,0x8
+  41a36f:	66 0f 60 f7          	punpcklbw xmm6,xmm7
+  41a373:	66 0f 73 f6 30       	psllq  xmm6,0x30
+  41a378:	66 0f df d6          	pandn  xmm2,xmm6
+  41a37c:	66 0f eb d0          	por    xmm2,xmm0
+  41a380:	66 0f 70 c2 55       	pshufd xmm0,xmm2,0x55
+  41a385:	66 0f 62 c8          	punpckldq xmm1,xmm0
+  41a389:	48 8b 44 24 10       	mov    rax,QWORD PTR [rsp+0x10]
+  41a38e:	66 0f d6 08          	movq   QWORD PTR [rax],xmm1
+  41a392:	88 50 08             	mov    BYTE PTR [rax+0x8],dl
+  41a395:	44 88 48 09          	mov    BYTE PTR [rax+0x9],r9b
+  41a399:	44 88 70 0a          	mov    BYTE PTR [rax+0xa],r14b
+  41a39d:	40 88 78 0b          	mov    BYTE PTR [rax+0xb],dil
+  41a3a1:	44 88 50 0c          	mov    BYTE PTR [rax+0xc],r10b
+  41a3a5:	40 88 70 0d          	mov    BYTE PTR [rax+0xd],sil
+  41a3a9:	88 48 0e             	mov    BYTE PTR [rax+0xe],cl
+  41a3ac:	44 88 78 0f          	mov    BYTE PTR [rax+0xf],r15b
+  41a3b0:	48 83 c4 18          	add    rsp,0x18
+  41a3b4:	5b                   	pop    rbx
+  41a3b5:	41 5c                	pop    r12
+  41a3b7:	41 5d                	pop    r13
+  41a3b9:	41 5e                	pop    r14
+  41a3bb:	41 5f                	pop    r15
+  41a3bd:	5d                   	pop    rbp
+  41a3be:	c3                   	ret
+
+### openssl_rs::modes::gcm::gf_mul_clmul  0x40e480..0x40e572
+
+court/tmp/pfp68/final/libcrypto.so.3:     file format elf64-x86-64
+
+
+Disassembly of section .text:
+
+000000000040e480 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs5modes3gcm12gf_mul_clmul>:
+  40e480:	66 48 0f 6e c6       	movq   xmm0,rsi
+  40e485:	66 48 0f 6e cf       	movq   xmm1,rdi
+  40e48a:	66 0f 6c c8          	punpcklqdq xmm1,xmm0
+  40e48e:	66 48 0f 6e c1       	movq   xmm0,rcx
+  40e493:	66 48 0f 6e d2       	movq   xmm2,rdx
+  40e498:	66 0f 6f da          	movdqa xmm3,xmm2
+  40e49c:	66 0f 6c d8          	punpcklqdq xmm3,xmm0
+  40e4a0:	66 0f 70 c3 ff       	pshufd xmm0,xmm3,0xff
+  40e4a5:	66 0f d4 db          	paddq  xmm3,xmm3
+  40e4a9:	66 0f 73 d2 3f       	psrlq  xmm2,0x3f
+  40e4ae:	66 0f 73 fa 08       	pslldq xmm2,0x8
+  40e4b3:	66 0f eb d3          	por    xmm2,xmm3
+  40e4b7:	66 0f 72 e0 1f       	psrad  xmm0,0x1f
+  40e4bc:	66 0f db 05 ec b5 2a 	pand   xmm0,XMMWORD PTR [rip+0x2ab5ec]        # 6b9ab0 <anon.b5dd76f310ac8a723a28ac08030ae087.1044.llvm.18350548062124029524+0x1b6>
+  40e4c3:	00 
+  40e4c4:	66 0f ef c2          	pxor   xmm0,xmm2
+  40e4c8:	66 0f 6f d1          	movdqa xmm2,xmm1
+  40e4cc:	66 0f 3a 44 d0 00    	pclmullqlqdq xmm2,xmm0
+  40e4d2:	66 0f 6f d9          	movdqa xmm3,xmm1
+  40e4d6:	66 0f 3a 44 d8 01    	pclmulhqlqdq xmm3,xmm0
+  40e4dc:	66 0f 6f e1          	movdqa xmm4,xmm1
+  40e4e0:	66 0f 3a 44 e0 10    	pclmullqhqdq xmm4,xmm0
+  40e4e6:	66 0f ef e3          	pxor   xmm4,xmm3
+  40e4ea:	66 0f 3a 44 c1 11    	pclmulhqhqdq xmm0,xmm1
+  40e4f0:	66 0f 6f cc          	movdqa xmm1,xmm4
+  40e4f4:	66 0f 73 f9 08       	pslldq xmm1,0x8
+  40e4f9:	66 0f ef ca          	pxor   xmm1,xmm2
+  40e4fd:	66 0f 73 dc 08       	psrldq xmm4,0x8
+  40e502:	66 0f ef e0          	pxor   xmm4,xmm0
+  40e506:	66 0f 6f c1          	movdqa xmm0,xmm1
+  40e50a:	66 0f 73 f0 05       	psllq  xmm0,0x5
+  40e50f:	66 0f 6f d1          	movdqa xmm2,xmm1
+  40e513:	66 0f 73 f2 06       	psllq  xmm2,0x6
+  40e518:	66 0f ef d0          	pxor   xmm2,xmm0
+  40e51c:	66 0f ef d1          	pxor   xmm2,xmm1
+  40e520:	66 0f 73 f2 39       	psllq  xmm2,0x39
+  40e525:	66 0f 6f c2          	movdqa xmm0,xmm2
+  40e529:	66 0f 73 f8 08       	pslldq xmm0,0x8
+  40e52e:	66 0f 73 da 08       	psrldq xmm2,0x8
+  40e533:	66 0f ef d4          	pxor   xmm2,xmm4
+  40e537:	66 0f ef c1          	pxor   xmm0,xmm1
+  40e53b:	66 0f 6f c8          	movdqa xmm1,xmm0
+  40e53f:	66 0f 73 d1 01       	psrlq  xmm1,0x1
+  40e544:	66 0f 6f d8          	movdqa xmm3,xmm0
+  40e548:	66 0f 73 d3 06       	psrlq  xmm3,0x6
+  40e54d:	66 0f ef d9          	pxor   xmm3,xmm1
+  40e551:	66 0f ef d8          	pxor   xmm3,xmm0
+  40e555:	66 0f 73 d3 01       	psrlq  xmm3,0x1
+  40e55a:	66 0f ef c2          	pxor   xmm0,xmm2
+  40e55e:	66 0f ef c3          	pxor   xmm0,xmm3
+  40e562:	66 48 0f 7e c0       	movq   rax,xmm0
+  40e567:	66 0f 70 c0 ee       	pshufd xmm0,xmm0,0xee
+  40e56c:	66 48 0f 7e c2       	movq   rdx,xmm0
+  40e571:	c3                   	ret
+
+### openssl_rs::modes::gcm::gf_mul_portable  0x40e840..0x40e8d8
+
+court/tmp/pfp68/final/libcrypto.so.3:     file format elf64-x86-64
+
+
+Disassembly of section .text:
+
+000000000040e840 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs5modes3gcm15gf_mul_portable>:
+  40e840:	55                   	push   rbp
+  40e841:	41 57                	push   r15
+  40e843:	41 56                	push   r14
+  40e845:	41 55                	push   r13
+  40e847:	41 54                	push   r12
+  40e849:	53                   	push   rbx
+  40e84a:	49 89 c8             	mov    r8,rcx
+  40e84d:	b9 7f 00 00 00       	mov    ecx,0x7f
+  40e852:	45 31 d2             	xor    r10d,r10d
+  40e855:	49 bb 00 00 00 00 00 	movabs r11,0xe100000000000000
+  40e85c:	00 00 e1 
+  40e85f:	bb 01 00 00 00       	mov    ebx,0x1
+  40e864:	31 c0                	xor    eax,eax
+  40e866:	45 31 c9             	xor    r9d,r9d
+  40e869:	0f 1f 80 00 00 00 00 	nop    DWORD PTR [rax+0x0]
+  40e870:	4d 89 c6             	mov    r14,r8
+  40e873:	49 0f a4 d6 3f       	shld   r14,rdx,0x3f
+  40e878:	4d 89 c4             	mov    r12,r8
+  40e87b:	49 d1 ec             	shr    r12,1
+  40e87e:	41 89 d7             	mov    r15d,edx
+  40e881:	45 31 ed             	xor    r13d,r13d
+  40e884:	49 0f a5 dd          	shld   r13,rbx,cl
+  40e888:	41 83 e7 01          	and    r15d,0x1
+  40e88c:	49 f7 df             	neg    r15
+  40e88f:	4d 21 df             	and    r15,r11
+  40e892:	bd 01 00 00 00       	mov    ebp,0x1
+  40e897:	48 d3 e5             	shl    rbp,cl
+  40e89a:	4d 31 e7             	xor    r15,r12
+  40e89d:	f6 c1 40             	test   cl,0x40
+  40e8a0:	4c 0f 45 ed          	cmovne r13,rbp
+  40e8a4:	49 0f 45 ea          	cmovne rbp,r10
+  40e8a8:	49 21 f5             	and    r13,rsi
+  40e8ab:	48 21 fd             	and    rbp,rdi
+  40e8ae:	4c 09 ed             	or     rbp,r13
+  40e8b1:	49 0f 44 d2          	cmove  rdx,r10
+  40e8b5:	4d 0f 44 c2          	cmove  r8,r10
+  40e8b9:	4d 31 c1             	xor    r9,r8
+  40e8bc:	48 31 d0             	xor    rax,rdx
+  40e8bf:	4c 89 f2             	mov    rdx,r14
+  40e8c2:	4d 89 f8             	mov    r8,r15
+  40e8c5:	83 c1 ff             	add    ecx,0xffffffff
+  40e8c8:	72 a6                	jb     40e870 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs5modes3gcm15gf_mul_portable+0x30>
+  40e8ca:	4c 89 ca             	mov    rdx,r9
+  40e8cd:	5b                   	pop    rbx
+  40e8ce:	41 5c                	pop    r12
+  40e8d0:	41 5d                	pop    r13
+  40e8d2:	41 5e                	pop    r14
+  40e8d4:	41 5f                	pop    r15
+  40e8d6:	5d                   	pop    rbp
+  40e8d7:	c3                   	ret
+
+### openssl_rs::provider::cipher::aes_gcm_siv_encrypt  0x41a6d0..0x41a927
+
+court/tmp/pfp68/final/libcrypto.so.3:     file format elf64-x86-64
+
+
+Disassembly of section .text:
+
+000000000041a6d0 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_encrypt>:
+  41a6d0:	55                   	push   rbp
+  41a6d1:	41 57                	push   r15
+  41a6d3:	41 56                	push   r14
+  41a6d5:	41 55                	push   r13
+  41a6d7:	41 54                	push   r12
+  41a6d9:	53                   	push   rbx
+  41a6da:	48 83 ec 58          	sub    rsp,0x58
+  41a6de:	49 89 ce             	mov    r14,rcx
+  41a6e1:	49 89 f4             	mov    r12,rsi
+  41a6e4:	8b 87 b8 01 00 00    	mov    eax,DWORD PTR [rdi+0x1b8]
+  41a6ea:	89 c1                	mov    ecx,eax
+  41a6ec:	83 e1 fb             	and    ecx,0xfffffffb
+  41a6ef:	89 8f b8 01 00 00    	mov    DWORD PTR [rdi+0x1b8],ecx
+  41a6f5:	83 e0 28             	and    eax,0x28
+  41a6f8:	83 f8 08             	cmp    eax,0x8
+  41a6fb:	0f 94 c1             	sete   cl
+  41a6fe:	48 b8 00 00 00 00 10 	movabs rax,0x1000000000
+  41a705:	00 00 00 
+  41a708:	49 39 c6             	cmp    r14,rax
+  41a70b:	40 0f 97 c6          	seta   sil
+  41a70f:	31 c0                	xor    eax,eax
+  41a711:	40 08 ce             	or     sil,cl
+  41a714:	0f 85 f1 01 00 00    	jne    41a90b <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_encrypt+0x23b>
+  41a71a:	48 89 fb             	mov    rbx,rdi
+  41a71d:	4c 8b 7f 28          	mov    r15,QWORD PTR [rdi+0x28]
+  41a721:	0f 57 c0             	xorps  xmm0,xmm0
+  41a724:	0f 29 04 24          	movaps XMMWORD PTR [rsp],xmm0
+  41a728:	48 8b 4f 10          	mov    rcx,QWORD PTR [rdi+0x10]
+  41a72c:	48 8b 77 78          	mov    rsi,QWORD PTR [rdi+0x78]
+  41a730:	89 f0                	mov    eax,esi
+  41a732:	83 e0 01             	and    eax,0x1
+  41a735:	48 f7 d8             	neg    rax
+  41a738:	49 b8 00 00 00 00 00 	movabs r8,0xe100000000000000
+  41a73f:	00 00 e1 
+  41a742:	49 21 c0             	and    r8,rax
+  41a745:	48 8b bf 80 00 00 00 	mov    rdi,QWORD PTR [rdi+0x80]
+  41a74c:	48 0f ac fe 01       	shrd   rsi,rdi,0x1
+  41a751:	48 d1 ef             	shr    rdi,1
+  41a754:	4c 31 c7             	xor    rdi,r8
+  41a757:	48 89 bb b8 00 00 00 	mov    QWORD PTR [rbx+0xb8],rdi
+  41a75e:	48 89 b3 c0 00 00 00 	mov    QWORD PTR [rbx+0xc0],rsi
+  41a765:	48 85 c9             	test   rcx,rcx
+  41a768:	48 89 54 24 38       	mov    QWORD PTR [rsp+0x38],rdx
+  41a76d:	74 28                	je     41a797 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_encrypt+0xc7>
+  41a76f:	49 83 ff f0          	cmp    r15,0xfffffffffffffff0
+  41a773:	0f 87 a1 01 00 00    	ja     41a91a <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_encrypt+0x24a>
+  41a779:	4d 8d 47 0f          	lea    r8,[r15+0xf]
+  41a77d:	49 83 e0 f0          	and    r8,0xfffffffffffffff0
+  41a781:	48 89 e2             	mov    rdx,rsp
+  41a784:	e8 c7 f8 ff ff       	call   41a050 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher18polyval_ghash_hash>
+  41a789:	48 8b bb b8 00 00 00 	mov    rdi,QWORD PTR [rbx+0xb8]
+  41a790:	48 8b b3 c0 00 00 00 	mov    rsi,QWORD PTR [rbx+0xc0]
+  41a797:	49 bd f0 ff ff ff 1f 	movabs r13,0x1ffffffff0
+  41a79e:	00 00 00 
+  41a7a1:	4d 21 f5             	and    r13,r14
+  41a7a4:	74 1c                	je     41a7c2 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_encrypt+0xf2>
+  41a7a6:	48 89 e2             	mov    rdx,rsp
+  41a7a9:	4c 89 e1             	mov    rcx,r12
+  41a7ac:	4d 89 e8             	mov    r8,r13
+  41a7af:	e8 9c f8 ff ff       	call   41a050 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher18polyval_ghash_hash>
+  41a7b4:	48 8b bb b8 00 00 00 	mov    rdi,QWORD PTR [rbx+0xb8]
+  41a7bb:	48 8b b3 c0 00 00 00 	mov    rsi,QWORD PTR [rbx+0xc0]
+  41a7c2:	49 c1 e7 03          	shl    r15,0x3
+  41a7c6:	4a 8d 04 f5 00 00 00 	lea    rax,[r14*8+0x0]
+  41a7cd:	00 
+  41a7ce:	4c 89 f5             	mov    rbp,r14
+  41a7d1:	48 83 e5 0f          	and    rbp,0xf
+  41a7d5:	74 72                	je     41a849 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_encrypt+0x179>
+  41a7d7:	4d 01 e5             	add    r13,r12
+  41a7da:	ba 10 00 00 00       	mov    edx,0x10
+  41a7df:	48 29 ea             	sub    rdx,rbp
+  41a7e2:	48 8d 04 2c          	lea    rax,[rsp+rbp*1]
+  41a7e6:	48 83 c0 18          	add    rax,0x18
+  41a7ea:	4c 89 64 24 30       	mov    QWORD PTR [rsp+0x30],r12
+  41a7ef:	49 89 fc             	mov    r12,rdi
+  41a7f2:	48 89 c7             	mov    rdi,rax
+  41a7f5:	48 89 74 24 28       	mov    QWORD PTR [rsp+0x28],rsi
+  41a7fa:	31 f6                	xor    esi,esi
+  41a7fc:	ff 15 ee 20 4c 00    	call   QWORD PTR [rip+0x4c20ee]        # 8dc8f0 <memset@GLIBC_2.2.5>
+  41a802:	48 8d 7c 24 18       	lea    rdi,[rsp+0x18]
+  41a807:	4c 89 ee             	mov    rsi,r13
+  41a80a:	48 89 ea             	mov    rdx,rbp
+  41a80d:	ff 15 c5 2c 4c 00    	call   QWORD PTR [rip+0x4c2cc5]        # 8dd4d8 <memcpy@GLIBC_2.14>
+  41a813:	48 89 e2             	mov    rdx,rsp
+  41a816:	41 b8 10 00 00 00    	mov    r8d,0x10
+  41a81c:	4c 89 e7             	mov    rdi,r12
+  41a81f:	4c 8b 64 24 30       	mov    r12,QWORD PTR [rsp+0x30]
+  41a824:	48 8b 74 24 28       	mov    rsi,QWORD PTR [rsp+0x28]
+  41a829:	48 8d 4c 24 18       	lea    rcx,[rsp+0x18]
+  41a82e:	e8 1d f8 ff ff       	call   41a050 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher18polyval_ghash_hash>
+  41a833:	4a 8d 04 f5 00 00 00 	lea    rax,[r14*8+0x0]
+  41a83a:	00 
+  41a83b:	48 8b bb b8 00 00 00 	mov    rdi,QWORD PTR [rbx+0xb8]
+  41a842:	48 8b b3 c0 00 00 00 	mov    rsi,QWORD PTR [rbx+0xc0]
+  41a849:	4c 89 7c 24 18       	mov    QWORD PTR [rsp+0x18],r15
+  41a84e:	48 89 44 24 20       	mov    QWORD PTR [rsp+0x20],rax
+  41a853:	49 89 e5             	mov    r13,rsp
+  41a856:	48 8d 4c 24 18       	lea    rcx,[rsp+0x18]
+  41a85b:	41 b8 10 00 00 00    	mov    r8d,0x10
+  41a861:	4c 89 ea             	mov    rdx,r13
+  41a864:	e8 e7 f7 ff ff       	call   41a050 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher18polyval_ghash_hash>
+  41a869:	48 8b 83 a8 00 00 00 	mov    rax,QWORD PTR [rbx+0xa8]
+  41a870:	48 31 04 24          	xor    QWORD PTR [rsp],rax
+  41a874:	f3 0f 10 83 b0 00 00 	movss  xmm0,DWORD PTR [rbx+0xb0]
+  41a87b:	00 
+  41a87c:	f2 0f 10 4c 24 08    	movsd  xmm1,QWORD PTR [rsp+0x8]
+  41a882:	0f 57 c8             	xorps  xmm1,xmm0
+  41a885:	f3 0f 11 4c 24 08    	movss  DWORD PTR [rsp+0x8],xmm1
+  41a88b:	80 64 24 0f 7f       	and    BYTE PTR [rsp+0xf],0x7f
+  41a890:	c7 44 24 14 10 00 00 	mov    DWORD PTR [rsp+0x14],0x10
+  41a897:	00 
+  41a898:	48 8b 3b             	mov    rdi,QWORD PTR [rbx]
+  41a89b:	48 8d b3 88 00 00 00 	lea    rsi,[rbx+0x88]
+  41a8a2:	48 8d 54 24 14       	lea    rdx,[rsp+0x14]
+  41a8a7:	4c 89 e9             	mov    rcx,r13
+  41a8aa:	41 b8 10 00 00 00    	mov    r8d,0x10
+  41a8b0:	ff 15 1a 37 4c 00    	call   QWORD PTR [rip+0x4c371a]        # 8ddfd0 <EVP_EncryptUpdate@@OPENSSL_3.0.0+0x4444d0>
+  41a8b6:	89 c5                	mov    ebp,eax
+  41a8b8:	0f 10 83 88 00 00 00 	movups xmm0,XMMWORD PTR [rbx+0x88]
+  41a8bf:	0f 29 44 24 40       	movaps XMMWORD PTR [rsp+0x40],xmm0
+  41a8c4:	80 4c 24 4f 80       	or     BYTE PTR [rsp+0x4f],0x80
+  41a8c9:	48 8d 74 24 40       	lea    rsi,[rsp+0x40]
+  41a8ce:	48 89 df             	mov    rdi,rbx
+  41a8d1:	48 8b 54 24 38       	mov    rdx,QWORD PTR [rsp+0x38]
+  41a8d6:	4c 89 e1             	mov    rcx,r12
+  41a8d9:	4d 89 f0             	mov    r8,r14
+  41a8dc:	e8 6f de ff ff       	call   418750 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher17aes_gcm_siv_ctr32>
+  41a8e1:	8b 8b b8 01 00 00    	mov    ecx,DWORD PTR [rbx+0x1b8]
+  41a8e7:	85 c0                	test   eax,eax
+  41a8e9:	74 12                	je     41a8fd <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_encrypt+0x22d>
+  41a8eb:	31 c0                	xor    eax,eax
+  41a8ed:	85 ed                	test   ebp,ebp
+  41a8ef:	0f 95 c0             	setne  al
+  41a8f2:	83 e1 f3             	and    ecx,0xfffffff3
+  41a8f5:	8d 0c 81             	lea    ecx,[rcx+rax*4]
+  41a8f8:	83 c1 08             	add    ecx,0x8
+  41a8fb:	eb 08                	jmp    41a905 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_encrypt+0x235>
+  41a8fd:	83 e1 f3             	and    ecx,0xfffffff3
+  41a900:	83 c9 08             	or     ecx,0x8
+  41a903:	31 c0                	xor    eax,eax
+  41a905:	89 8b b8 01 00 00    	mov    DWORD PTR [rbx+0x1b8],ecx
+  41a90b:	48 83 c4 58          	add    rsp,0x58
+  41a90f:	5b                   	pop    rbx
+  41a910:	41 5c                	pop    r12
+  41a912:	41 5d                	pop    r13
+  41a914:	41 5e                	pop    r14
+  41a916:	41 5f                	pop    r15
+  41a918:	5d                   	pop    rbp
+  41a919:	c3                   	ret
+  41a91a:	48 8d 3d 37 c3 45 00 	lea    rdi,[rip+0x45c337]        # 876c58 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher15CAMELLIA_OFB_HW+0x30>
+  41a921:	ff 15 89 2a 4c 00    	call   QWORD PTR [rip+0x4c2a89]        # 8dd3b0 <_DYNAMIC+0x20b0>
+
+### openssl_rs::provider::cipher::aes_gcm_siv_decrypt  0x41a3c0..0x41a615
+
+court/tmp/pfp68/final/libcrypto.so.3:     file format elf64-x86-64
+
+
+Disassembly of section .text:
+
+000000000041a3c0 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_decrypt>:
+  41a3c0:	55                   	push   rbp
+  41a3c1:	41 57                	push   r15
+  41a3c3:	41 56                	push   r14
+  41a3c5:	41 55                	push   r13
+  41a3c7:	41 54                	push   r12
+  41a3c9:	53                   	push   rbx
+  41a3ca:	48 83 ec 68          	sub    rsp,0x68
+  41a3ce:	49 89 ce             	mov    r14,rcx
+  41a3d1:	49 89 d7             	mov    r15,rdx
+  41a3d4:	48 89 f1             	mov    rcx,rsi
+  41a3d7:	8b 87 b8 01 00 00    	mov    eax,DWORD PTR [rdi+0x1b8]
+  41a3dd:	89 c2                	mov    edx,eax
+  41a3df:	83 e2 fb             	and    edx,0xfffffffb
+  41a3e2:	89 97 b8 01 00 00    	mov    DWORD PTR [rdi+0x1b8],edx
+  41a3e8:	83 e0 30             	and    eax,0x30
+  41a3eb:	83 f8 10             	cmp    eax,0x10
+  41a3ee:	0f 94 c2             	sete   dl
+  41a3f1:	48 b8 00 00 00 00 10 	movabs rax,0x1000000000
+  41a3f8:	00 00 00 
+  41a3fb:	49 39 c6             	cmp    r14,rax
+  41a3fe:	40 0f 97 c6          	seta   sil
+  41a402:	31 c0                	xor    eax,eax
+  41a404:	40 08 d6             	or     sil,dl
+  41a407:	0f 85 ec 01 00 00    	jne    41a5f9 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_decrypt+0x239>
+  41a40d:	48 89 fb             	mov    rbx,rdi
+  41a410:	0f 10 87 98 00 00 00 	movups xmm0,XMMWORD PTR [rdi+0x98]
+  41a417:	0f 29 44 24 50       	movaps XMMWORD PTR [rsp+0x50],xmm0
+  41a41c:	80 4c 24 5f 80       	or     BYTE PTR [rsp+0x5f],0x80
+  41a421:	48 8d 74 24 50       	lea    rsi,[rsp+0x50]
+  41a426:	4c 89 fa             	mov    rdx,r15
+  41a429:	4d 89 f0             	mov    r8,r14
+  41a42c:	e8 1f e3 ff ff       	call   418750 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher17aes_gcm_siv_ctr32>
+  41a431:	41 89 c5             	mov    r13d,eax
+  41a434:	48 8b 6b 28          	mov    rbp,QWORD PTR [rbx+0x28]
+  41a438:	0f 57 c0             	xorps  xmm0,xmm0
+  41a43b:	0f 29 04 24          	movaps XMMWORD PTR [rsp],xmm0
+  41a43f:	48 8b 4b 10          	mov    rcx,QWORD PTR [rbx+0x10]
+  41a443:	48 8b 73 78          	mov    rsi,QWORD PTR [rbx+0x78]
+  41a447:	89 f0                	mov    eax,esi
+  41a449:	83 e0 01             	and    eax,0x1
+  41a44c:	48 f7 d8             	neg    rax
+  41a44f:	48 ba 00 00 00 00 00 	movabs rdx,0xe100000000000000
+  41a456:	00 00 e1 
+  41a459:	48 21 c2             	and    rdx,rax
+  41a45c:	48 8b bb 80 00 00 00 	mov    rdi,QWORD PTR [rbx+0x80]
+  41a463:	48 0f ac fe 01       	shrd   rsi,rdi,0x1
+  41a468:	48 d1 ef             	shr    rdi,1
+  41a46b:	48 31 d7             	xor    rdi,rdx
+  41a46e:	48 89 bb b8 00 00 00 	mov    QWORD PTR [rbx+0xb8],rdi
+  41a475:	48 89 b3 c0 00 00 00 	mov    QWORD PTR [rbx+0xc0],rsi
+  41a47c:	48 85 c9             	test   rcx,rcx
+  41a47f:	74 28                	je     41a4a9 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_decrypt+0xe9>
+  41a481:	48 83 fd f0          	cmp    rbp,0xfffffffffffffff0
+  41a485:	0f 87 7d 01 00 00    	ja     41a608 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_decrypt+0x248>
+  41a48b:	4c 8d 45 0f          	lea    r8,[rbp+0xf]
+  41a48f:	49 83 e0 f0          	and    r8,0xfffffffffffffff0
+  41a493:	48 89 e2             	mov    rdx,rsp
+  41a496:	e8 b5 fb ff ff       	call   41a050 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher18polyval_ghash_hash>
+  41a49b:	48 8b bb b8 00 00 00 	mov    rdi,QWORD PTR [rbx+0xb8]
+  41a4a2:	48 8b b3 c0 00 00 00 	mov    rsi,QWORD PTR [rbx+0xc0]
+  41a4a9:	49 bc f0 ff ff ff 1f 	movabs r12,0x1ffffffff0
+  41a4b0:	00 00 00 
+  41a4b3:	4d 21 f4             	and    r12,r14
+  41a4b6:	74 1c                	je     41a4d4 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_decrypt+0x114>
+  41a4b8:	48 89 e2             	mov    rdx,rsp
+  41a4bb:	4c 89 f9             	mov    rcx,r15
+  41a4be:	4d 89 e0             	mov    r8,r12
+  41a4c1:	e8 8a fb ff ff       	call   41a050 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher18polyval_ghash_hash>
+  41a4c6:	48 8b bb b8 00 00 00 	mov    rdi,QWORD PTR [rbx+0xb8]
+  41a4cd:	48 8b b3 c0 00 00 00 	mov    rsi,QWORD PTR [rbx+0xc0]
+  41a4d4:	48 c1 e5 03          	shl    rbp,0x3
+  41a4d8:	4a 8d 04 f5 00 00 00 	lea    rax,[r14*8+0x0]
+  41a4df:	00 
+  41a4e0:	49 83 e6 0f          	and    r14,0xf
+  41a4e4:	74 7a                	je     41a560 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_decrypt+0x1a0>
+  41a4e6:	4d 01 e7             	add    r15,r12
+  41a4e9:	ba 10 00 00 00       	mov    edx,0x10
+  41a4ee:	4c 29 f2             	sub    rdx,r14
+  41a4f1:	48 89 44 24 48       	mov    QWORD PTR [rsp+0x48],rax
+  41a4f6:	4a 8d 04 34          	lea    rax,[rsp+r14*1]
+  41a4fa:	48 83 c0 20          	add    rax,0x20
+  41a4fe:	49 89 fc             	mov    r12,rdi
+  41a501:	48 89 c7             	mov    rdi,rax
+  41a504:	44 89 6c 24 1c       	mov    DWORD PTR [rsp+0x1c],r13d
+  41a509:	49 89 f5             	mov    r13,rsi
+  41a50c:	31 f6                	xor    esi,esi
+  41a50e:	ff 15 dc 23 4c 00    	call   QWORD PTR [rip+0x4c23dc]        # 8dc8f0 <memset@GLIBC_2.2.5>
+  41a514:	48 8d 7c 24 20       	lea    rdi,[rsp+0x20]
+  41a519:	4c 89 fe             	mov    rsi,r15
+  41a51c:	4c 89 f2             	mov    rdx,r14
+  41a51f:	ff 15 b3 2f 4c 00    	call   QWORD PTR [rip+0x4c2fb3]        # 8dd4d8 <memcpy@GLIBC_2.14>
+  41a525:	0f 28 44 24 20       	movaps xmm0,XMMWORD PTR [rsp+0x20]
+  41a52a:	0f 29 44 24 30       	movaps XMMWORD PTR [rsp+0x30],xmm0
+  41a52f:	48 89 e2             	mov    rdx,rsp
+  41a532:	48 8d 4c 24 30       	lea    rcx,[rsp+0x30]
+  41a537:	41 b8 10 00 00 00    	mov    r8d,0x10
+  41a53d:	4c 89 e7             	mov    rdi,r12
+  41a540:	4c 89 ee             	mov    rsi,r13
+  41a543:	44 8b 6c 24 1c       	mov    r13d,DWORD PTR [rsp+0x1c]
+  41a548:	e8 03 fb ff ff       	call   41a050 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher18polyval_ghash_hash>
+  41a54d:	48 8b 44 24 48       	mov    rax,QWORD PTR [rsp+0x48]
+  41a552:	48 8b bb b8 00 00 00 	mov    rdi,QWORD PTR [rbx+0xb8]
+  41a559:	48 8b b3 c0 00 00 00 	mov    rsi,QWORD PTR [rbx+0xc0]
+  41a560:	48 89 6c 24 30       	mov    QWORD PTR [rsp+0x30],rbp
+  41a565:	48 89 44 24 38       	mov    QWORD PTR [rsp+0x38],rax
+  41a56a:	49 89 e6             	mov    r14,rsp
+  41a56d:	48 8d 4c 24 30       	lea    rcx,[rsp+0x30]
+  41a572:	41 b8 10 00 00 00    	mov    r8d,0x10
+  41a578:	4c 89 f2             	mov    rdx,r14
+  41a57b:	e8 d0 fa ff ff       	call   41a050 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher18polyval_ghash_hash>
+  41a580:	48 8b 83 a8 00 00 00 	mov    rax,QWORD PTR [rbx+0xa8]
+  41a587:	48 31 04 24          	xor    QWORD PTR [rsp],rax
+  41a58b:	f3 0f 10 83 b0 00 00 	movss  xmm0,DWORD PTR [rbx+0xb0]
+  41a592:	00 
+  41a593:	f2 0f 10 4c 24 08    	movsd  xmm1,QWORD PTR [rsp+0x8]
+  41a599:	0f 57 c8             	xorps  xmm1,xmm0
+  41a59c:	f3 0f 11 4c 24 08    	movss  DWORD PTR [rsp+0x8],xmm1
+  41a5a2:	80 64 24 0f 7f       	and    BYTE PTR [rsp+0xf],0x7f
+  41a5a7:	c7 44 24 20 10 00 00 	mov    DWORD PTR [rsp+0x20],0x10
+  41a5ae:	00 
+  41a5af:	48 8b 3b             	mov    rdi,QWORD PTR [rbx]
+  41a5b2:	48 8d b3 88 00 00 00 	lea    rsi,[rbx+0x88]
+  41a5b9:	48 8d 54 24 20       	lea    rdx,[rsp+0x20]
+  41a5be:	4c 89 f1             	mov    rcx,r14
+  41a5c1:	41 b8 10 00 00 00    	mov    r8d,0x10
+  41a5c7:	ff 15 03 3a 4c 00    	call   QWORD PTR [rip+0x4c3a03]        # 8ddfd0 <EVP_EncryptUpdate@@OPENSSL_3.0.0+0x4444d0>
+  41a5cd:	8b 8b b8 01 00 00    	mov    ecx,DWORD PTR [rbx+0x1b8]
+  41a5d3:	85 c0                	test   eax,eax
+  41a5d5:	74 0f                	je     41a5e6 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_decrypt+0x226>
+  41a5d7:	45 85 ed             	test   r13d,r13d
+  41a5da:	74 0f                	je     41a5eb <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_decrypt+0x22b>
+  41a5dc:	83 c9 04             	or     ecx,0x4
+  41a5df:	b8 01 00 00 00       	mov    eax,0x1
+  41a5e4:	eb 0a                	jmp    41a5f0 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_decrypt+0x230>
+  41a5e6:	83 e1 eb             	and    ecx,0xffffffeb
+  41a5e9:	eb 03                	jmp    41a5ee <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_decrypt+0x22e>
+  41a5eb:	83 e1 fb             	and    ecx,0xfffffffb
+  41a5ee:	31 c0                	xor    eax,eax
+  41a5f0:	83 c9 10             	or     ecx,0x10
+  41a5f3:	89 8b b8 01 00 00    	mov    DWORD PTR [rbx+0x1b8],ecx
+  41a5f9:	48 83 c4 68          	add    rsp,0x68
+  41a5fd:	5b                   	pop    rbx
+  41a5fe:	41 5c                	pop    r12
+  41a600:	41 5d                	pop    r13
+  41a602:	41 5e                	pop    r14
+  41a604:	41 5f                	pop    r15
+  41a606:	5d                   	pop    rbp
+  41a607:	c3                   	ret
+  41a608:	48 8d 3d 49 c6 45 00 	lea    rdi,[rip+0x45c649]        # 876c58 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher15CAMELLIA_OFB_HW+0x30>
+  41a60f:	ff 15 9b 2d 4c 00    	call   QWORD PTR [rip+0x4c2d9b]        # 8dd3b0 <_DYNAMIC+0x20b0>
+
+### openssl_rs::provider::cipher::aes_gcm_siv_initkey  0x41a930..0x41afa8
+
+court/tmp/pfp68/final/libcrypto.so.3:     file format elf64-x86-64
+
+
+Disassembly of section .text:
+
+000000000041a930 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey>:
+  41a930:	55                   	push   rbp
+  41a931:	41 57                	push   r15
+  41a933:	41 56                	push   r14
+  41a935:	41 55                	push   r13
+  41a937:	41 54                	push   r12
+  41a939:	53                   	push   rbx
+  41a93a:	48 83 ec 68          	sub    rsp,0x68
+  41a93e:	48 89 fb             	mov    rbx,rdi
+  41a941:	0f 57 c0             	xorps  xmm0,xmm0
+  41a944:	0f 29 44 24 10       	movaps XMMWORD PTR [rsp+0x10],xmm0
+  41a949:	48 8b 47 30          	mov    rax,QWORD PTR [rdi+0x30]
+  41a94d:	48 83 f8 10          	cmp    rax,0x10
+  41a951:	74 22                	je     41a975 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x45>
+  41a953:	48 83 f8 18          	cmp    rax,0x18
+  41a957:	74 13                	je     41a96c <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x3c>
+  41a959:	48 83 f8 20          	cmp    rax,0x20
+  41a95d:	0f 85 08 03 00 00    	jne    41ac6b <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x33b>
+  41a963:	48 8d 0d 45 f1 26 00 	lea    rcx,[rip+0x26f145]        # 689aaf <anon.168e42be594b68f46e63eb3e46d72929.1292.llvm.11763120979207154723>
+  41a96a:	eb 10                	jmp    41a97c <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x4c>
+  41a96c:	48 8d 0d dc f0 26 00 	lea    rcx,[rip+0x26f0dc]        # 689a4f <anon.168e42be594b68f46e63eb3e46d72929.1284.llvm.11763120979207154723>
+  41a973:	eb 07                	jmp    41a97c <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x4c>
+  41a975:	48 8d 0d 73 f0 26 00 	lea    rcx,[rip+0x26f073]        # 6899ef <anon.168e42be594b68f46e63eb3e46d72929.1276.llvm.11763120979207154723>
+  41a97c:	48 8b 43 18          	mov    rax,QWORD PTR [rbx+0x18]
+  41a980:	48 89 44 24 20       	mov    QWORD PTR [rsp+0x20],rax
+  41a985:	0f 11 44 24 28       	movups XMMWORD PTR [rsp+0x28],xmm0
+  41a98a:	0f 11 44 24 38       	movups XMMWORD PTR [rsp+0x38],xmm0
+  41a98f:	c7 44 24 48 00 00 00 	mov    DWORD PTR [rsp+0x48],0x0
+  41a996:	00 
+  41a997:	4c 8d 0d 22 bc ec ff 	lea    r9,[rip+0xffffffffffecbc22]        # 2e65c0 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs3evp6cipher25evp_cipher_from_algorithm.llvm.11763120979207154723>
+  41a99e:	4c 89 4c 24 50       	mov    QWORD PTR [rsp+0x50],r9
+  41a9a3:	48 8d 05 56 1c eb ff 	lea    rax,[rip+0xffffffffffeb1c56]        # 2cc600 <EVP_CIPHER_up_ref>
+  41a9aa:	48 89 44 24 58       	mov    QWORD PTR [rsp+0x58],rax
+  41a9af:	4c 8d 15 ba 14 eb ff 	lea    r10,[rip+0xffffffffffeb14ba]        # 2cbe70 <EVP_CIPHER_free>
+  41a9b6:	4c 89 54 24 60       	mov    QWORD PTR [rsp+0x60],r10
+  41a9bb:	48 8d 7c 24 20       	lea    rdi,[rsp+0x20]
+  41a9c0:	31 f6                	xor    esi,esi
+  41a9c2:	ba 02 00 00 00       	mov    edx,0x2
+  41a9c7:	45 31 c0             	xor    r8d,r8d
+  41a9ca:	41 52                	push   r10
+  41a9cc:	50                   	push   rax
+  41a9cd:	e8 de ad ec ff       	call   2e57b0 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs3evp5fetch23inner_evp_generic_fetch.llvm.11763120979207154723>
+  41a9d2:	48 83 c4 10          	add    rsp,0x10
+  41a9d6:	49 89 c6             	mov    r14,rax
+  41a9d9:	48 8b 7c 24 40       	mov    rdi,QWORD PTR [rsp+0x40]
+  41a9de:	48 85 ff             	test   rdi,rdi
+  41a9e1:	74 05                	je     41a9e8 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0xb8>
+  41a9e3:	e8 f8 94 d8 ff       	call   1a3ee0 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8property5store22ossl_method_store_free>
+  41a9e8:	48 8b 3b             	mov    rdi,QWORD PTR [rbx]
+  41a9eb:	48 85 ff             	test   rdi,rdi
+  41a9ee:	75 2d                	jne    41aa1d <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0xed>
+  41a9f0:	48 8d 35 ec c6 26 00 	lea    rsi,[rip+0x26c6ec]        # 6870e3 <anon.168e42be594b68f46e63eb3e46d72929.427.llvm.11763120979207154723>
+  41a9f7:	bf c0 00 00 00       	mov    edi,0xc0
+  41a9fc:	ba 4a 00 00 00       	mov    edx,0x4a
+  41aa01:	ff 15 89 27 4c 00    	call   QWORD PTR [rip+0x4c2789]        # 8dd190 <CRYPTO_zalloc@@OPENSSL_3.0.0+0x64b450>
+  41aa07:	48 85 c0             	test   rax,rax
+  41aa0a:	0f 84 8e 03 00 00    	je     41ad9e <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x46e>
+  41aa10:	48 89 c7             	mov    rdi,rax
+  41aa13:	c7 40 6c ff ff ff ff 	mov    DWORD PTR [rax+0x6c],0xffffffff
+  41aa1a:	48 89 03             	mov    QWORD PTR [rbx],rax
+  41aa1d:	48 8d 4b 38          	lea    rcx,[rbx+0x38]
+  41aa21:	4c 89 f6             	mov    rsi,r14
+  41aa24:	31 d2                	xor    edx,edx
+  41aa26:	45 31 c0             	xor    r8d,r8d
+  41aa29:	41 b9 01 00 00 00    	mov    r9d,0x1
+  41aa2f:	6a 00                	push   0x0
+  41aa31:	6a 00                	push   0x0
+  41aa33:	e8 c8 1b 09 00       	call   4ac600 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs3evp10cipher_ctx24evp_cipher_init_internal.llvm.6471542228366918689>
+  41aa38:	48 83 c4 10          	add    rsp,0x10
+  41aa3c:	85 c0                	test   eax,eax
+  41aa3e:	0f 84 73 02 00 00    	je     41acb7 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x387>
+  41aa44:	4c 89 74 24 08       	mov    QWORD PTR [rsp+0x8],r14
+  41aa49:	8b 83 b0 00 00 00    	mov    eax,DWORD PTR [rbx+0xb0]
+  41aa4f:	89 44 24 2c          	mov    DWORD PTR [rsp+0x2c],eax
+  41aa53:	48 8b 83 a8 00 00 00 	mov    rax,QWORD PTR [rbx+0xa8]
+  41aa5a:	48 89 44 24 24       	mov    QWORD PTR [rsp+0x24],rax
+  41aa5f:	80 a3 b8 01 00 00 fb 	and    BYTE PTR [rbx+0x1b8],0xfb
+  41aa66:	0f 57 c0             	xorps  xmm0,xmm0
+  41aa69:	0f 11 83 88 00 00 00 	movups XMMWORD PTR [rbx+0x88],xmm0
+  41aa70:	c7 44 24 20 00 00 00 	mov    DWORD PTR [rsp+0x20],0x0
+  41aa77:	00 
+  41aa78:	c7 44 24 04 10 00 00 	mov    DWORD PTR [rsp+0x4],0x10
+  41aa7f:	00 
+  41aa80:	48 8b 3b             	mov    rdi,QWORD PTR [rbx]
+  41aa83:	48 8d 74 24 10       	lea    rsi,[rsp+0x10]
+  41aa88:	48 8d 54 24 04       	lea    rdx,[rsp+0x4]
+  41aa8d:	48 8d 4c 24 20       	lea    rcx,[rsp+0x20]
+  41aa92:	41 b8 10 00 00 00    	mov    r8d,0x10
+  41aa98:	ff 15 32 35 4c 00    	call   QWORD PTR [rip+0x4c3532]        # 8ddfd0 <EVP_EncryptUpdate@@OPENSSL_3.0.0+0x4444d0>
+  41aa9e:	85 c0                	test   eax,eax
+  41aaa0:	0f 84 0e 01 00 00    	je     41abb4 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x284>
+  41aaa6:	48 8b 44 24 10       	mov    rax,QWORD PTR [rsp+0x10]
+  41aaab:	48 89 43 78          	mov    QWORD PTR [rbx+0x78],rax
+  41aaaf:	c7 44 24 20 01 00 00 	mov    DWORD PTR [rsp+0x20],0x1
+  41aab6:	00 
+  41aab7:	c7 44 24 04 10 00 00 	mov    DWORD PTR [rsp+0x4],0x10
+  41aabe:	00 
+  41aabf:	48 8b 3b             	mov    rdi,QWORD PTR [rbx]
+  41aac2:	48 8d 74 24 10       	lea    rsi,[rsp+0x10]
+  41aac7:	48 8d 54 24 04       	lea    rdx,[rsp+0x4]
+  41aacc:	48 8d 4c 24 20       	lea    rcx,[rsp+0x20]
+  41aad1:	41 b8 10 00 00 00    	mov    r8d,0x10
+  41aad7:	ff 15 f3 34 4c 00    	call   QWORD PTR [rip+0x4c34f3]        # 8ddfd0 <EVP_EncryptUpdate@@OPENSSL_3.0.0+0x4444d0>
+  41aadd:	85 c0                	test   eax,eax
+  41aadf:	0f 84 cf 00 00 00    	je     41abb4 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x284>
+  41aae5:	48 8b 44 24 10       	mov    rax,QWORD PTR [rsp+0x10]
+  41aaea:	48 89 83 80 00 00 00 	mov    QWORD PTR [rbx+0x80],rax
+  41aaf1:	48 83 7b 30 00       	cmp    QWORD PTR [rbx+0x30],0x0
+  41aaf6:	74 6f                	je     41ab67 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x237>
+  41aaf8:	bd 02 00 00 00       	mov    ebp,0x2
+  41aafd:	45 31 f6             	xor    r14d,r14d
+  41ab00:	4c 8d 64 24 04       	lea    r12,[rsp+0x4]
+  41ab05:	4c 8d 6c 24 20       	lea    r13,[rsp+0x20]
+  41ab0a:	4c 8b 3d bf 34 4c 00 	mov    r15,QWORD PTR [rip+0x4c34bf]        # 8ddfd0 <EVP_EncryptUpdate@@OPENSSL_3.0.0+0x4444d0>
+  41ab11:	66 66 66 66 66 66 2e 	data16 data16 data16 data16 data16 cs nop WORD PTR [rax+rax*1+0x0]
+  41ab18:	0f 1f 84 00 00 00 00 
+  41ab1f:	00 
+  41ab20:	89 6c 24 20          	mov    DWORD PTR [rsp+0x20],ebp
+  41ab24:	c7 44 24 04 10 00 00 	mov    DWORD PTR [rsp+0x4],0x10
+  41ab2b:	00 
+  41ab2c:	48 8b 3b             	mov    rdi,QWORD PTR [rbx]
+  41ab2f:	48 8d 74 24 10       	lea    rsi,[rsp+0x10]
+  41ab34:	4c 89 e2             	mov    rdx,r12
+  41ab37:	4c 89 e9             	mov    rcx,r13
+  41ab3a:	41 b8 10 00 00 00    	mov    r8d,0x10
+  41ab40:	41 ff d7             	call   r15
+  41ab43:	85 c0                	test   eax,eax
+  41ab45:	74 6d                	je     41abb4 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x284>
+  41ab47:	48 8b 44 24 10       	mov    rax,QWORD PTR [rsp+0x10]
+  41ab4c:	4a 89 44 33 58       	mov    QWORD PTR [rbx+r14*1+0x58],rax
+  41ab51:	49 83 fe f8          	cmp    r14,0xfffffffffffffff8
+  41ab55:	0f 84 0e 04 00 00    	je     41af69 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x639>
+  41ab5b:	49 83 c6 08          	add    r14,0x8
+  41ab5f:	ff c5                	inc    ebp
+  41ab61:	4c 3b 73 30          	cmp    r14,QWORD PTR [rbx+0x30]
+  41ab65:	72 b9                	jb     41ab20 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x1f0>
+  41ab67:	48 8b 3b             	mov    rdi,QWORD PTR [rbx]
+  41ab6a:	48 8d 4b 58          	lea    rcx,[rbx+0x58]
+  41ab6e:	48 8b 74 24 08       	mov    rsi,QWORD PTR [rsp+0x8]
+  41ab73:	31 d2                	xor    edx,edx
+  41ab75:	45 31 c0             	xor    r8d,r8d
+  41ab78:	41 b9 01 00 00 00    	mov    r9d,0x1
+  41ab7e:	6a 00                	push   0x0
+  41ab80:	6a 00                	push   0x0
+  41ab82:	e8 79 1a 09 00       	call   4ac600 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs3evp10cipher_ctx24evp_cipher_init_internal.llvm.6471542228366918689>
+  41ab87:	48 83 c4 10          	add    rsp,0x10
+  41ab8b:	85 c0                	test   eax,eax
+  41ab8d:	74 25                	je     41abb4 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x284>
+  41ab8f:	80 a3 b8 01 00 00 e7 	and    BYTE PTR [rbx+0x1b8],0xe7
+  41ab96:	48 8b 5c 24 08       	mov    rbx,QWORD PTR [rsp+0x8]
+  41ab9b:	48 85 db             	test   rbx,rbx
+  41ab9e:	74 0a                	je     41abaa <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x27a>
+  41aba0:	83 7b 18 00          	cmp    DWORD PTR [rbx+0x18],0x0
+  41aba4:	0f 84 65 02 00 00    	je     41ae0f <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x4df>
+  41abaa:	b8 01 00 00 00       	mov    eax,0x1
+  41abaf:	e9 06 02 00 00       	jmp    41adba <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x48a>
+  41abb4:	4c 8b 3b             	mov    r15,QWORD PTR [rbx]
+  41abb7:	41 f6 c7 07          	test   r15b,0x7
+  41abbb:	0f 95 c0             	setne  al
+  41abbe:	4d 85 ff             	test   r15,r15
+  41abc1:	0f 94 c1             	sete   cl
+  41abc4:	08 c1                	or     cl,al
+  41abc6:	75 2f                	jne    41abf7 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x2c7>
+  41abc8:	4c 89 ff             	mov    rdi,r15
+  41abcb:	ff 15 77 1e 4c 00    	call   QWORD PTR [rip+0x4c1e77]        # 8dca48 <EVP_CIPHER_CTX_reset@@OPENSSL_3.0.0+0x445a68>
+  41abd1:	48 8b 05 68 2f 4d 00 	mov    rax,QWORD PTR [rip+0x4d2f68]        # 8edb40 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs7runtime3mem7FREE_FN.0.llvm.268972770624961581>
+  41abd8:	48 85 c0             	test   rax,rax
+  41abdb:	48 8d 0d 0e d3 e9 ff 	lea    rcx,[rip+0xffffffffffe9d30e]        # 2b7ef0 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs7runtime3mem12default_free.llvm.268972770624961581>
+  41abe2:	48 0f 45 c8          	cmovne rcx,rax
+  41abe6:	48 8d 35 f6 c4 26 00 	lea    rsi,[rip+0x26c4f6]        # 6870e3 <anon.168e42be594b68f46e63eb3e46d72929.427.llvm.11763120979207154723>
+  41abed:	4c 89 ff             	mov    rdi,r15
+  41abf0:	ba 59 00 00 00       	mov    edx,0x59
+  41abf5:	ff d1                	call   rcx
+  41abf7:	4c 8b 74 24 08       	mov    r14,QWORD PTR [rsp+0x8]
+  41abfc:	4d 85 f6             	test   r14,r14
+  41abff:	0f 84 ac 01 00 00    	je     41adb1 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x481>
+  41ac05:	41 83 7e 18 00       	cmp    DWORD PTR [r14+0x18],0x0
+  41ac0a:	0f 85 a1 01 00 00    	jne    41adb1 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x481>
+  41ac10:	41 8b 86 80 00 00 00 	mov    eax,DWORD PTR [r14+0x80]
+  41ac17:	85 c0                	test   eax,eax
+  41ac19:	0f 8e 92 01 00 00    	jle    41adb1 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x481>
+  41ac1f:	b9 00 00 00 80       	mov    ecx,0x80000000
+  41ac24:	eb 2d                	jmp    41ac53 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x323>
+  41ac26:	66 2e 0f 1f 84 00 00 	cs nop WORD PTR [rax+rax*1+0x0]
+  41ac2d:	00 00 00 
+  41ac30:	b8 01 00 00 00       	mov    eax,0x1
+  41ac35:	f0 41 0f b1 8e 80 00 	lock cmpxchg DWORD PTR [r14+0x80],ecx
+  41ac3c:	00 00 
+  41ac3e:	0f 84 7c 02 00 00    	je     41aec0 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x590>
+  41ac44:	41 8b 86 80 00 00 00 	mov    eax,DWORD PTR [r14+0x80]
+  41ac4b:	85 c0                	test   eax,eax
+  41ac4d:	0f 8e 5e 01 00 00    	jle    41adb1 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x481>
+  41ac53:	83 f8 01             	cmp    eax,0x1
+  41ac56:	74 d8                	je     41ac30 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x300>
+  41ac58:	8d 50 ff             	lea    edx,[rax-0x1]
+  41ac5b:	f0 41 0f b1 96 80 00 	lock cmpxchg DWORD PTR [r14+0x80],edx
+  41ac62:	00 00 
+  41ac64:	75 de                	jne    41ac44 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x314>
+  41ac66:	e9 46 01 00 00       	jmp    41adb1 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x481>
+  41ac6b:	4c 8b 33             	mov    r14,QWORD PTR [rbx]
+  41ac6e:	41 f6 c6 07          	test   r14b,0x7
+  41ac72:	0f 95 c0             	setne  al
+  41ac75:	4d 85 f6             	test   r14,r14
+  41ac78:	0f 94 c1             	sete   cl
+  41ac7b:	08 c1                	or     cl,al
+  41ac7d:	0f 85 2e 01 00 00    	jne    41adb1 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x481>
+  41ac83:	4c 89 f7             	mov    rdi,r14
+  41ac86:	ff 15 bc 1d 4c 00    	call   QWORD PTR [rip+0x4c1dbc]        # 8dca48 <EVP_CIPHER_CTX_reset@@OPENSSL_3.0.0+0x445a68>
+  41ac8c:	48 8b 05 ad 2e 4d 00 	mov    rax,QWORD PTR [rip+0x4d2ead]        # 8edb40 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs7runtime3mem7FREE_FN.0.llvm.268972770624961581>
+  41ac93:	48 85 c0             	test   rax,rax
+  41ac96:	48 8d 0d 53 d2 e9 ff 	lea    rcx,[rip+0xffffffffffe9d253]        # 2b7ef0 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs7runtime3mem12default_free.llvm.268972770624961581>
+  41ac9d:	48 0f 45 c8          	cmovne rcx,rax
+  41aca1:	48 8d 35 3b c4 26 00 	lea    rsi,[rip+0x26c43b]        # 6870e3 <anon.168e42be594b68f46e63eb3e46d72929.427.llvm.11763120979207154723>
+  41aca8:	4c 89 f7             	mov    rdi,r14
+  41acab:	ba 59 00 00 00       	mov    edx,0x59
+  41acb0:	ff d1                	call   rcx
+  41acb2:	e9 fa 00 00 00       	jmp    41adb1 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x481>
+  41acb7:	4c 8b 3b             	mov    r15,QWORD PTR [rbx]
+  41acba:	41 f6 c7 07          	test   r15b,0x7
+  41acbe:	0f 95 c0             	setne  al
+  41acc1:	4d 85 ff             	test   r15,r15
+  41acc4:	0f 94 c1             	sete   cl
+  41acc7:	08 c1                	or     cl,al
+  41acc9:	75 2f                	jne    41acfa <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x3ca>
+  41accb:	4c 89 ff             	mov    rdi,r15
+  41acce:	ff 15 74 1d 4c 00    	call   QWORD PTR [rip+0x4c1d74]        # 8dca48 <EVP_CIPHER_CTX_reset@@OPENSSL_3.0.0+0x445a68>
+  41acd4:	48 8b 05 65 2e 4d 00 	mov    rax,QWORD PTR [rip+0x4d2e65]        # 8edb40 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs7runtime3mem7FREE_FN.0.llvm.268972770624961581>
+  41acdb:	48 85 c0             	test   rax,rax
+  41acde:	48 8d 0d 0b d2 e9 ff 	lea    rcx,[rip+0xffffffffffe9d20b]        # 2b7ef0 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs7runtime3mem12default_free.llvm.268972770624961581>
+  41ace5:	48 0f 45 c8          	cmovne rcx,rax
+  41ace9:	48 8d 35 f3 c3 26 00 	lea    rsi,[rip+0x26c3f3]        # 6870e3 <anon.168e42be594b68f46e63eb3e46d72929.427.llvm.11763120979207154723>
+  41acf0:	4c 89 ff             	mov    rdi,r15
+  41acf3:	ba 59 00 00 00       	mov    edx,0x59
+  41acf8:	ff d1                	call   rcx
+  41acfa:	4d 85 f6             	test   r14,r14
+  41acfd:	0f 84 ae 00 00 00    	je     41adb1 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x481>
+  41ad03:	41 83 7e 18 00       	cmp    DWORD PTR [r14+0x18],0x0
+  41ad08:	0f 85 a3 00 00 00    	jne    41adb1 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x481>
+  41ad0e:	41 8b 86 80 00 00 00 	mov    eax,DWORD PTR [r14+0x80]
+  41ad15:	85 c0                	test   eax,eax
+  41ad17:	0f 8e 94 00 00 00    	jle    41adb1 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x481>
+  41ad1d:	b9 00 00 00 80       	mov    ecx,0x80000000
+  41ad22:	eb 25                	jmp    41ad49 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x419>
+  41ad24:	66 66 66 2e 0f 1f 84 	data16 data16 cs nop WORD PTR [rax+rax*1+0x0]
+  41ad2b:	00 00 00 00 00 
+  41ad30:	8d 50 ff             	lea    edx,[rax-0x1]
+  41ad33:	f0 41 0f b1 96 80 00 	lock cmpxchg DWORD PTR [r14+0x80],edx
+  41ad3a:	00 00 
+  41ad3c:	74 73                	je     41adb1 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x481>
+  41ad3e:	41 8b 86 80 00 00 00 	mov    eax,DWORD PTR [r14+0x80]
+  41ad45:	85 c0                	test   eax,eax
+  41ad47:	7e 68                	jle    41adb1 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x481>
+  41ad49:	83 f8 01             	cmp    eax,0x1
+  41ad4c:	75 e2                	jne    41ad30 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x400>
+  41ad4e:	b8 01 00 00 00       	mov    eax,0x1
+  41ad53:	f0 41 0f b1 8e 80 00 	lock cmpxchg DWORD PTR [r14+0x80],ecx
+  41ad5a:	00 00 
+  41ad5c:	75 e0                	jne    41ad3e <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x40e>
+  41ad5e:	41 f6 c6 07          	test   r14b,0x7
+  41ad62:	75 4d                	jne    41adb1 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x481>
+  41ad64:	49 8b 7e 68          	mov    rdi,QWORD PTR [r14+0x68]
+  41ad68:	48 85 ff             	test   rdi,rdi
+  41ad6b:	74 23                	je     41ad90 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x460>
+  41ad6d:	48 8b 05 cc 2d 4d 00 	mov    rax,QWORD PTR [rip+0x4d2dcc]        # 8edb40 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs7runtime3mem7FREE_FN.0.llvm.268972770624961581>
+  41ad74:	48 85 c0             	test   rax,rax
+  41ad77:	48 8d 0d 72 d1 e9 ff 	lea    rcx,[rip+0xffffffffffe9d172]        # 2b7ef0 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs7runtime3mem12default_free.llvm.268972770624961581>
+  41ad7e:	48 0f 45 c8          	cmovne rcx,rax
+  41ad82:	48 8d 35 5a c3 26 00 	lea    rsi,[rip+0x26c35a]        # 6870e3 <anon.168e42be594b68f46e63eb3e46d72929.427.llvm.11763120979207154723>
+  41ad89:	ba 43 08 00 00       	mov    edx,0x843
+  41ad8e:	ff d1                	call   rcx
+  41ad90:	49 8b 7e 78          	mov    rdi,QWORD PTR [r14+0x78]
+  41ad94:	e8 a7 3a ec ff       	call   2de840 <_RNvNtCsfBoMNNx3tZr_10openssl_rs8provider18ossl_provider_free>
+  41ad99:	e9 a2 01 00 00       	jmp    41af40 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x610>
+  41ad9e:	48 c7 03 00 00 00 00 	mov    QWORD PTR [rbx],0x0
+  41ada5:	4d 85 f6             	test   r14,r14
+  41ada8:	74 07                	je     41adb1 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x481>
+  41adaa:	41 83 7e 18 00       	cmp    DWORD PTR [r14+0x18],0x0
+  41adaf:	74 18                	je     41adc9 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x499>
+  41adb1:	48 c7 03 00 00 00 00 	mov    QWORD PTR [rbx],0x0
+  41adb8:	31 c0                	xor    eax,eax
+  41adba:	48 83 c4 68          	add    rsp,0x68
+  41adbe:	5b                   	pop    rbx
+  41adbf:	41 5c                	pop    r12
+  41adc1:	41 5d                	pop    r13
+  41adc3:	41 5e                	pop    r14
+  41adc5:	41 5f                	pop    r15
+  41adc7:	5d                   	pop    rbp
+  41adc8:	c3                   	ret
+  41adc9:	41 8b 86 80 00 00 00 	mov    eax,DWORD PTR [r14+0x80]
+  41add0:	85 c0                	test   eax,eax
+  41add2:	7e dd                	jle    41adb1 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x481>
+  41add4:	b9 00 00 00 80       	mov    ecx,0x80000000
+  41add9:	eb 1f                	jmp    41adfa <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x4ca>
+  41addb:	b8 01 00 00 00       	mov    eax,0x1
+  41ade0:	f0 41 0f b1 8e 80 00 	lock cmpxchg DWORD PTR [r14+0x80],ecx
+  41ade7:	00 00 
+  41ade9:	0f 84 12 01 00 00    	je     41af01 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x5d1>
+  41adef:	41 8b 86 80 00 00 00 	mov    eax,DWORD PTR [r14+0x80]
+  41adf6:	85 c0                	test   eax,eax
+  41adf8:	7e b7                	jle    41adb1 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x481>
+  41adfa:	83 f8 01             	cmp    eax,0x1
+  41adfd:	74 dc                	je     41addb <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x4ab>
+  41adff:	8d 50 ff             	lea    edx,[rax-0x1]
+  41ae02:	f0 41 0f b1 96 80 00 	lock cmpxchg DWORD PTR [r14+0x80],edx
+  41ae09:	00 00 
+  41ae0b:	75 e2                	jne    41adef <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x4bf>
+  41ae0d:	eb a2                	jmp    41adb1 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x481>
+  41ae0f:	8b 83 80 00 00 00    	mov    eax,DWORD PTR [rbx+0x80]
+  41ae15:	85 c0                	test   eax,eax
+  41ae17:	0f 8e 8d fd ff ff    	jle    41abaa <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x27a>
+  41ae1d:	b9 00 00 00 80       	mov    ecx,0x80000000
+  41ae22:	eb 1f                	jmp    41ae43 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x513>
+  41ae24:	8d 50 ff             	lea    edx,[rax-0x1]
+  41ae27:	f0 0f b1 93 80 00 00 	lock cmpxchg DWORD PTR [rbx+0x80],edx
+  41ae2e:	00 
+  41ae2f:	0f 84 75 fd ff ff    	je     41abaa <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x27a>
+  41ae35:	8b 83 80 00 00 00    	mov    eax,DWORD PTR [rbx+0x80]
+  41ae3b:	85 c0                	test   eax,eax
+  41ae3d:	0f 8e 67 fd ff ff    	jle    41abaa <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x27a>
+  41ae43:	83 f8 01             	cmp    eax,0x1
+  41ae46:	75 dc                	jne    41ae24 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x4f4>
+  41ae48:	b8 01 00 00 00       	mov    eax,0x1
+  41ae4d:	f0 0f b1 8b 80 00 00 	lock cmpxchg DWORD PTR [rbx+0x80],ecx
+  41ae54:	00 
+  41ae55:	75 de                	jne    41ae35 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x505>
+  41ae57:	f6 c3 07             	test   bl,0x7
+  41ae5a:	0f 85 4a fd ff ff    	jne    41abaa <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x27a>
+  41ae60:	48 8b 7b 68          	mov    rdi,QWORD PTR [rbx+0x68]
+  41ae64:	48 85 ff             	test   rdi,rdi
+  41ae67:	74 23                	je     41ae8c <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x55c>
+  41ae69:	48 8b 05 d0 2c 4d 00 	mov    rax,QWORD PTR [rip+0x4d2cd0]        # 8edb40 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs7runtime3mem7FREE_FN.0.llvm.268972770624961581>
+  41ae70:	48 85 c0             	test   rax,rax
+  41ae73:	48 8d 0d 76 d0 e9 ff 	lea    rcx,[rip+0xffffffffffe9d076]        # 2b7ef0 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs7runtime3mem12default_free.llvm.268972770624961581>
+  41ae7a:	48 0f 45 c8          	cmovne rcx,rax
+  41ae7e:	48 8d 35 5e c2 26 00 	lea    rsi,[rip+0x26c25e]        # 6870e3 <anon.168e42be594b68f46e63eb3e46d72929.427.llvm.11763120979207154723>
+  41ae85:	ba 43 08 00 00       	mov    edx,0x843
+  41ae8a:	ff d1                	call   rcx
+  41ae8c:	48 8b 7b 78          	mov    rdi,QWORD PTR [rbx+0x78]
+  41ae90:	e8 ab 39 ec ff       	call   2de840 <_RNvNtCsfBoMNNx3tZr_10openssl_rs8provider18ossl_provider_free>
+  41ae95:	48 8b 05 a4 2c 4d 00 	mov    rax,QWORD PTR [rip+0x4d2ca4]        # 8edb40 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs7runtime3mem7FREE_FN.0.llvm.268972770624961581>
+  41ae9c:	48 85 c0             	test   rax,rax
+  41ae9f:	48 8d 0d 4a d0 e9 ff 	lea    rcx,[rip+0xffffffffffe9d04a]        # 2b7ef0 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs7runtime3mem12default_free.llvm.268972770624961581>
+  41aea6:	48 0f 45 c8          	cmovne rcx,rax
+  41aeaa:	48 8d 35 32 c2 26 00 	lea    rsi,[rip+0x26c232]        # 6870e3 <anon.168e42be594b68f46e63eb3e46d72929.427.llvm.11763120979207154723>
+  41aeb1:	48 89 df             	mov    rdi,rbx
+  41aeb4:	ba 46 08 00 00       	mov    edx,0x846
+  41aeb9:	ff d1                	call   rcx
+  41aebb:	e9 ea fc ff ff       	jmp    41abaa <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x27a>
+  41aec0:	41 f6 c6 07          	test   r14b,0x7
+  41aec4:	0f 85 e7 fe ff ff    	jne    41adb1 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x481>
+  41aeca:	49 8b 7e 68          	mov    rdi,QWORD PTR [r14+0x68]
+  41aece:	48 85 ff             	test   rdi,rdi
+  41aed1:	74 23                	je     41aef6 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x5c6>
+  41aed3:	48 8b 05 66 2c 4d 00 	mov    rax,QWORD PTR [rip+0x4d2c66]        # 8edb40 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs7runtime3mem7FREE_FN.0.llvm.268972770624961581>
+  41aeda:	48 85 c0             	test   rax,rax
+  41aedd:	48 8d 0d 0c d0 e9 ff 	lea    rcx,[rip+0xffffffffffe9d00c]        # 2b7ef0 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs7runtime3mem12default_free.llvm.268972770624961581>
+  41aee4:	48 0f 45 c8          	cmovne rcx,rax
+  41aee8:	48 8d 35 f4 c1 26 00 	lea    rsi,[rip+0x26c1f4]        # 6870e3 <anon.168e42be594b68f46e63eb3e46d72929.427.llvm.11763120979207154723>
+  41aeef:	ba 43 08 00 00       	mov    edx,0x843
+  41aef4:	ff d1                	call   rcx
+  41aef6:	49 8b 7e 78          	mov    rdi,QWORD PTR [r14+0x78]
+  41aefa:	e8 41 39 ec ff       	call   2de840 <_RNvNtCsfBoMNNx3tZr_10openssl_rs8provider18ossl_provider_free>
+  41aeff:	eb 3f                	jmp    41af40 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x610>
+  41af01:	41 f6 c6 07          	test   r14b,0x7
+  41af05:	0f 85 a6 fe ff ff    	jne    41adb1 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x481>
+  41af0b:	49 8b 7e 68          	mov    rdi,QWORD PTR [r14+0x68]
+  41af0f:	48 85 ff             	test   rdi,rdi
+  41af12:	74 23                	je     41af37 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x607>
+  41af14:	48 8b 05 25 2c 4d 00 	mov    rax,QWORD PTR [rip+0x4d2c25]        # 8edb40 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs7runtime3mem7FREE_FN.0.llvm.268972770624961581>
+  41af1b:	48 85 c0             	test   rax,rax
+  41af1e:	48 8d 0d cb cf e9 ff 	lea    rcx,[rip+0xffffffffffe9cfcb]        # 2b7ef0 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs7runtime3mem12default_free.llvm.268972770624961581>
+  41af25:	48 0f 45 c8          	cmovne rcx,rax
+  41af29:	48 8d 35 b3 c1 26 00 	lea    rsi,[rip+0x26c1b3]        # 6870e3 <anon.168e42be594b68f46e63eb3e46d72929.427.llvm.11763120979207154723>
+  41af30:	ba 43 08 00 00       	mov    edx,0x843
+  41af35:	ff d1                	call   rcx
+  41af37:	49 8b 7e 78          	mov    rdi,QWORD PTR [r14+0x78]
+  41af3b:	e8 00 39 ec ff       	call   2de840 <_RNvNtCsfBoMNNx3tZr_10openssl_rs8provider18ossl_provider_free>
+  41af40:	48 8b 05 f9 2b 4d 00 	mov    rax,QWORD PTR [rip+0x4d2bf9]        # 8edb40 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs7runtime3mem7FREE_FN.0.llvm.268972770624961581>
+  41af47:	48 85 c0             	test   rax,rax
+  41af4a:	48 8d 0d 9f cf e9 ff 	lea    rcx,[rip+0xffffffffffe9cf9f]        # 2b7ef0 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs7runtime3mem12default_free.llvm.268972770624961581>
+  41af51:	48 0f 45 c8          	cmovne rcx,rax
+  41af55:	48 8d 35 87 c1 26 00 	lea    rsi,[rip+0x26c187]        # 6870e3 <anon.168e42be594b68f46e63eb3e46d72929.427.llvm.11763120979207154723>
+  41af5c:	4c 89 f7             	mov    rdi,r14
+  41af5f:	ba 46 08 00 00       	mov    edx,0x846
+  41af64:	e9 47 fd ff ff       	jmp    41acb0 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19aes_gcm_siv_initkey+0x380>
+  41af69:	48 8d 3d f8 e2 45 00 	lea    rdi,[rip+0x45e2f8]        # 879268 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19SM4128XTS_FUNCTIONS+0xf0>
+  41af70:	ff 15 3a 24 4c 00    	call   QWORD PTR [rip+0x4c243a]        # 8dd3b0 <_DYNAMIC+0x20b0>
+  41af76:	0f 0b                	ud2
+  41af78:	ff 15 c2 28 4c 00    	call   QWORD PTR [rip+0x4c28c2]        # 8dd840 <_DYNAMIC+0x2540>
+  41af7e:	ff 15 bc 28 4c 00    	call   QWORD PTR [rip+0x4c28bc]        # 8dd840 <_DYNAMIC+0x2540>
+  41af84:	ff 15 b6 28 4c 00    	call   QWORD PTR [rip+0x4c28b6]        # 8dd840 <_DYNAMIC+0x2540>
+  41af8a:	ff 15 b0 28 4c 00    	call   QWORD PTR [rip+0x4c28b0]        # 8dd840 <_DYNAMIC+0x2540>
+  41af90:	ff 15 aa 28 4c 00    	call   QWORD PTR [rip+0x4c28aa]        # 8dd840 <_DYNAMIC+0x2540>
+  41af96:	ff 15 a4 28 4c 00    	call   QWORD PTR [rip+0x4c28a4]        # 8dd840 <_DYNAMIC+0x2540>
+  41af9c:	ff 15 9e 28 4c 00    	call   QWORD PTR [rip+0x4c289e]        # 8dd840 <_DYNAMIC+0x2540>
+  41afa2:	ff 15 98 28 4c 00    	call   QWORD PTR [rip+0x4c2898]        # 8dd840 <_DYNAMIC+0x2540>
+

@@ -2,6 +2,11 @@
   "schema": "openssl-rs/performance/workloads/v1",
   "campaign": "PFP-0",
   "frozen_at_source": "c9a0fdd58429ef13ca9b25ddccbc84a832787277",
+  "workload_identity_schema": {
+    "field": "timed_operations",
+    "rule": "Each benchmark row declares the ordered set of exported operations whose calls are inside the timed region. Two rows may be compared as a trend only when their workload_id AND their timed_operations are identical. A row identifier is a label, never the identity: a matching id with a different timed_operations is a different workload and the comparison is refused (BENCH_TREND_IDENTITY_MISMATCH).",
+    "note": "This registry is the canonical declaration for the PFP-0 population. Campaign rows that time a different operation set (for example a sign+verify row) carry their own workload_identity block and remain the same 'name' only as a label."
+  },
   "population_policy": {
     "rule": "The expected population is this file's workload ids. A process is complete only when its RESULT and ALLOC lines match the exact id set, once each. A count of lines is not a completeness test.",
     "result_lines_per_process": 1,
@@ -14,6 +19,7 @@
     {
       "id": "modexp2048",
       "operation": "BN_mod_exp_mont_consttime",
+      "timed_operations": ["BN_mod_exp_mont_consttime"],
       "sizes": {
         "modulus_bits": 2048,
         "exponent_bits": 2048,
@@ -55,6 +61,7 @@
     {
       "id": "modexp8192",
       "operation": "BN_mod_exp_mont_consttime",
+      "timed_operations": ["BN_mod_exp_mont_consttime"],
       "sizes": {
         "modulus_bits": 8192,
         "exponent_bits": 8192,
@@ -96,6 +103,7 @@
     {
       "id": "dh-synth2048",
       "operation": "DH_compute_key",
+      "timed_operations": ["DH_compute_key"],
       "sizes": {
         "modulus_bits": 2048,
         "private_exponent_bits": 2048,
@@ -137,6 +145,7 @@
     {
       "id": "dh-synth3072",
       "operation": "DH_compute_key",
+      "timed_operations": ["DH_compute_key"],
       "sizes": {
         "modulus_bits": 3072,
         "private_exponent_bits": 3072,
@@ -178,6 +187,7 @@
     {
       "id": "dh-ffdhe2048",
       "operation": "DH_compute_key",
+      "timed_operations": ["DH_compute_key"],
       "sizes": {
         "modulus_bits": 2048,
         "private_exponent_bits": 2048,
@@ -207,6 +217,7 @@
     {
       "id": "dh-ffdhe3072",
       "operation": "DH_compute_key",
+      "timed_operations": ["DH_compute_key"],
       "sizes": {
         "modulus_bits": 3072,
         "private_exponent_bits": 3072,
@@ -236,6 +247,7 @@
     {
       "id": "dh-modp2048",
       "operation": "DH_compute_key",
+      "timed_operations": ["DH_compute_key"],
       "sizes": {
         "modulus_bits": 2048,
         "private_exponent_bits": 2048,
@@ -265,6 +277,7 @@
     {
       "id": "rsa2048",
       "operation": "RSA_private_encrypt with RSA_NO_PADDING",
+      "timed_operations": ["RSA_private_encrypt"],
       "sizes": {
         "modulus_bits": 2048,
         "input_bytes": 256,
@@ -304,6 +317,7 @@
     {
       "id": "ecdsa256",
       "operation": "ECDSA_do_sign on P-256",
+      "timed_operations": ["ECDSA_do_sign"],
       "sizes": {
         "curve": "NIST P-256 (prime256v1)",
         "digest_bytes": 32,

@@ -70,6 +70,11 @@ cycles. But the measured kernel is **not** at that latency bound: it sits near t
 throughput floor. Anchoring on the campaign's own admitted numbers for the same
 fixed-width kernel (M-A1 by-product measurements, quoted in the M-A2 record):
 
+> **PFP-57 note (2026-11-27).** This "sits near the throughput floor" bound rests
+> on the throughput explanation, which is a hypothesis, not a finding, and whose
+> counterpart is `PFP-48`'s carry-chain conclusion. No bound in `M-A3` to `M-A6`
+> may rest on either explanation until hardware performance counters exist.
+
 | width | measured CIOS | throughput floor (model) | gap = removable fraction |
 |---|---:|---:|---:|
 | 256-bit (`n=4`) | 12.6 ns (~50 cycles @4 GHz) | ~48 cycles (~12 ns) | **≤ 4 %** |
@@ -121,6 +126,11 @@ From §2 and §3:
   that gap, so the net prediction is **parity at 1024 bits and a loss at
   256 bits**, with a plausible best case of ~+5 % at 1024 bits and a plausible
   worst case of -25 % at both.
+
+> **PFP-57 note (2026-11-27).** This predicted figure is conditional on the §2
+> throughput-floor bound, which is a hypothesis, not a finding; it is recorded
+> as a pre-registered hypothesis and may not bound `M-A3` to `M-A6` until
+> counters exist.
 
 **Prediction:** `ratio = T_cs / T_cios` in `[0.95, 1.05]` at 1024 bits and
 `[1.00, 1.30]` at 256 bits. The arm earns a further measurement only if the

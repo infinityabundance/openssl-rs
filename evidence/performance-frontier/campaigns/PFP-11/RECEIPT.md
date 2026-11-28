@@ -281,7 +281,9 @@ by `adc`/`add`/`sub`/`or`/`and`/`movzbl`. `ctgrind`/`dudect` on this carrier:
 |---|---:|---:|---:|---:|---:|
 | P-521 ECDSA sign | 2.682 | 2.679 [2.674, 2.688] | **1.857 [1.853, 1.861]** | 0.692 | **1.444×** |
 | P-521 ECDSA verify | 2.379 | 2.381 [2.370, 2.391] | **1.741 [1.734, 1.750]** | 0.733 | **1.365×** |
-| P-256 ECDSA sign | 12.972 | — (control) | 13.040 [13.000, 13.139] | 1.006 | 0.994 |
+| P-256 ECDSA sign + verify | 12.972 | — (control) | 13.040 [13.000, 13.139] | 1.006 | 0.994 |
+
+> **PFP-66 SUPERSEDE — 2026-11-27. The row above was originally labelled "P-256 ECDSA sign"; that label is withdrawn and the row is renamed "P-256 ECDSA sign + verify".** The numbers are unchanged (`head/auth 12.972`, `cand/auth 13.040 [13.000, 13.139]`, `cand/head 1.006`). The label was the defect: `ECDSA_do_verify` is inside the timed loop (`bench_p256.c:104-121`), so this row's machine-readable identity is `{workload_id: "ecdsa256", timed_operations: ["ECDSA_do_sign", "ECDSA_do_verify"]}`. `M-A1`'s `ecdsa256 = 10.2012` is a different identity (`timed_operations: ["ECDSA_do_sign"]`, verification outside the timed region). A trend comparison between the two is now refused with `BENCH_TREND_IDENTITY_MISMATCH` by `forensics/tools/benchmark_trend.py`. Original text retained here for history.
 
 The pristine-HEAD arm reproduces phase 1 within noise (2.682 vs 2.679; 2.379
 vs 2.381), so the comparison is at the same composition. The P-521-only delta
@@ -313,6 +315,12 @@ outside the timed region (`bench_pfp5.c:927-935, 1026-1048`), 15 interleaved
 `--prepared` repetitions. The two numbers are not interchangeable: `13.04` is
 sign-plus-in-loop-verify, `10.20` is sign-only. Neither is quoted without its
 instrument.
+
+> **PFP-66 supersede (2026-11-27).** This paragraph is retained verbatim, and
+> the row's label is now "P-256 ECDSA sign + verify" (see the note under the
+> table). The identity is carried as data (`timed_operations`) in
+> `raw/phase2-three-arm.json`; the tool refuses a trend against M-A1's
+> sign-only row.
 
 ## 16. Gate (final source)
 

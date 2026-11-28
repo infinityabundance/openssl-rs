@@ -34,6 +34,11 @@ settling pass.
 `RESULTS.md` records the measured consequence: the extra work is not recovered
 by removing the carry chain.
 
+> **PFP-57 note (2026-11-27).** "Not recovered by removing the carry chain" is
+> a hypothesis about the cause, not a finding; its counterpart is `PFP-48`'s
+> carry-chain conclusion. No bound in `M-A3` to `M-A6` may rest on either until
+> hardware performance counters exist.
+
 ## 2. Accumulator bound (proof)
 
 `mont_mul_52_deferred` holds `N` `u128` coefficients `acc[0..N]`, deliberately

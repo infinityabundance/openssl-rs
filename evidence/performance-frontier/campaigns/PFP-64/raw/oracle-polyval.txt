@@ -1,0 +1,12 @@
+authority static-archive oracle, rebuilt and executed in this batch from
+courts/layout/oracle-polyval.c against
+forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.a
+
+polyval.one=60ae5488532667200d8e39a83e060a00
+polyval.two=a9041791b80bbad7e122c3efc71bc600
+polyval.split=a9041791b80bbad7e122c3efc71bc600
+
+The candidate unit test `the_polyval_helpers_match_the_authority_oracle`
+(src/provider/cipher.rs) asserts these same three strings, so the differential
+is authority (just executed) vs candidate (KAT) over three cases: 3/3 equal,
+0 mismatches.
