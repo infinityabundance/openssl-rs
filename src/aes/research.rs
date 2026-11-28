@@ -10,7 +10,12 @@
 //!   affine map), with the isomorphism and its inverse derived from public constants
 //!   at first use;
 //! * `bitsliced` — the same Boolean field-exponentiation circuit applied to all
-//!   sixteen state bytes in parallel (the shipped construction).
+//!   sixteen state bytes in parallel (the PFP-63 selection).
+//!
+//! PFP-70 added the Boyar–Peralta–Calik circuit, a planar driver, a fixed-slice
+//! driver and a 16/32/64-bit-lane comparison; `pfp70_benchmarks` and
+//! `pfp70_wide_lane_benchmarks` are the measurements that selected the
+//! fixed-slice arm now dispatched by `portable::encrypt_block`.
 //!
 //! Nothing here is compiled into a production artefact.
 //!
@@ -18,6 +23,7 @@
 
 #![forbid(unsafe_code)]
 
+use core::ops::{BitAnd, BitOr, BitXor, BitXorAssign, Not, Shl, Shr};
 use std::hint::black_box;
 use std::sync::OnceLock;
 use std::time::Instant;
@@ -376,11 +382,419 @@ fn pfp63_benchmarks() {
     }
 
     println!(
-        "Selected arm: bitsliced Boolean field-exponentiation circuit \
-         (table {:.1} ns/16B, composite {:.1}, bytewise {:.1}, bitsliced {:.1}).",
+        "PFP-63 exponentiation baseline retained for comparison \
+         (table {:.1} ns/16B, composite {:.1}, bytewise {:.1}, bitsliced {:.1}); \
+         PFP-70 selects fixed-slice, see pfp70_benchmarks.",
         table * 16.0,
         composite * 16.0,
         bytewise * 16.0,
         bitsliced * 16.0
     );
+}
+
+/// PFP-70: the three portable arms plus the table reference, all measured by
+/// the same harness in the same profile. Run alone for stable numbers:
+/// `cargo test --lib aes::research::pfp70_benchmarks -- --nocapture --test-threads=1`.
+#[test]
+fn pfp70_benchmarks() {
+    use super::portable::{
+        decrypt_block_exp, decrypt_block_fixslice, decrypt_block_planar, encrypt_block_exp,
+        encrypt_block_fixslice, encrypt_block_planar,
+    };
+
+    let key = [
+        0x2bu8, 0x7e, 0x15, 0x16, 0x28, 0xae, 0xd2, 0xa6, 0xab, 0xf7, 0x15, 0x88, 0x09, 0xcf, 0x4f,
+        0x3c, 0x76, 0x2e, 0x71, 0x60, 0xf3, 0x8b, 0x4d, 0xa5, 0x6a, 0x78, 0x4b, 0x63, 0x1f, 0x95,
+        0x4d, 0x61,
+    ];
+    type BlockArm = fn(&mut [u8; 16], &[u32; 60], usize);
+    let iters = 20_000usize;
+    println!("PFP-70 arms, MB/s (unoptimised test profile, same harness for every arm):");
+    for bits in [128i32, 192, 256] {
+        let n = (bits / 8) as usize;
+        let (ek, er) = encrypt_schedule(&key[..n], bits);
+        let (dk, dr) = decrypt_schedule(&key[..n], bits);
+
+        let arms: [(&str, BlockArm); 4] = [
+            ("table", reference::encrypt_block),
+            ("exp", encrypt_block_exp),
+            ("bp-planar", encrypt_block_planar),
+            ("fixslice", encrypt_block_fixslice),
+        ];
+        let darms: [(&str, BlockArm); 4] = [
+            ("table", reference::decrypt_block),
+            ("exp", decrypt_block_exp),
+            ("bp-planar", decrypt_block_planar),
+            ("fixslice", decrypt_block_fixslice),
+        ];
+        for (name, f) in arms {
+            let mbs = block_bench(iters, |s| f(s, &ek, er));
+            println!("  AES-{bits} enc {name:9} {mbs:9.2} MB/s");
+        }
+        for (name, f) in darms {
+            let mbs = block_bench(iters, |s| f(s, &dk, dr));
+            println!("  AES-{bits} dec {name:9} {mbs:9.2} MB/s");
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// PFP-70 64-bit-lane experiment
+// ---------------------------------------------------------------------------
+//
+// The single-block ABI can only use the 16-bit carrier. To answer whether
+// wider lanes help, the same fixed-slice round is run four (u64) or two (u32)
+// blocks at a time by packing each block into a separate 16-bit sub-lane. The
+// S-box and the linear layer are bitwise/within-lane, so the only change is
+// that one instruction now carries several blocks. This is an experiment in
+// the test-only research court; the shipped path stays u16.
+
+trait Wide:
+    Copy
+    + BitAnd<Output = Self>
+    + BitOr<Output = Self>
+    + BitXor<Output = Self>
+    + BitXorAssign
+    + Not<Output = Self>
+    + Shl<u32, Output = Self>
+    + Shr<u32, Output = Self>
+{
+    const N: u32;
+    const M4: Self;
+    const M12: Self;
+    const M8: Self;
+    fn zero() -> Self;
+    fn from_u64(v: u64) -> Self;
+    fn to_u64(self) -> u64;
+}
+
+impl Wide for u32 {
+    const N: u32 = 2;
+    const M4: u32 = 0x000f_000f;
+    const M12: u32 = 0x0fff_0fff;
+    const M8: u32 = 0x00ff_00ff;
+    fn zero() -> u32 {
+        0
+    }
+    fn from_u64(v: u64) -> u32 {
+        v as u32
+    }
+    fn to_u64(self) -> u64 {
+        self as u64
+    }
+}
+
+impl Wide for u64 {
+    const N: u32 = 4;
+    const M4: u64 = 0x000f_000f_000f_000f;
+    const M12: u64 = 0x0fff_0fff_0fff_0fff;
+    const M8: u64 = 0x00ff_00ff_00ff_00ff;
+    fn zero() -> u64 {
+        0
+    }
+    fn from_u64(v: u64) -> u64 {
+        v
+    }
+    fn to_u64(self) -> u64 {
+        self
+    }
+}
+
+fn rep16<W: Wide>(m: u16) -> W {
+    let m = m as u64;
+    W::from_u64(m | (m << 16) | (m << 32) | (m << 48))
+}
+
+fn wide_ror16_4<W: Wide>(x: W) -> W {
+    ((x >> 4) & W::M12) | ((x & W::M4) << 12)
+}
+
+fn wide_ror16_8<W: Wide>(x: W) -> W {
+    ((x >> 8) & W::M8) | ((x & W::M8) << 8)
+}
+
+fn wide_delta_swap<W: Wide>(a: &mut W, shift: u32, mask: W) {
+    let t = (*a ^ (*a >> shift)) & mask;
+    *a ^= t ^ (t << shift);
+}
+
+fn wide_shift_rows_1<W: Wide>(state: &mut [W; 8]) {
+    let mut i = 0usize;
+    while i < 8 {
+        wide_delta_swap(&mut state[i], 2, rep16::<W>(0x2310));
+        wide_delta_swap(&mut state[i], 1, rep16::<W>(0x5050));
+        i += 1;
+    }
+}
+
+fn wide_inv_shift_rows_1<W: Wide>(state: &mut [W; 8]) {
+    let mut i = 0usize;
+    while i < 8 {
+        wide_delta_swap(&mut state[i], 2, rep16::<W>(0x1320));
+        wide_delta_swap(&mut state[i], 1, rep16::<W>(0x5050));
+        i += 1;
+    }
+}
+
+fn wide_mix_columns_0<W: Wide>(state: &mut [W; 8]) {
+    let a = *state;
+    let mut b = [W::zero(); 8];
+    let mut c = [W::zero(); 8];
+    let mut k = 0usize;
+    while k < 8 {
+        b[k] = wide_ror16_4(a[k]);
+        c[k] = a[k] ^ b[k];
+        k += 1;
+    }
+    state[0] = b[0] ^ c[7] ^ wide_ror16_8(c[0]);
+    state[1] = b[1] ^ c[0] ^ c[7] ^ wide_ror16_8(c[1]);
+    state[2] = b[2] ^ c[1] ^ wide_ror16_8(c[2]);
+    state[3] = b[3] ^ c[2] ^ c[7] ^ wide_ror16_8(c[3]);
+    state[4] = b[4] ^ c[3] ^ c[7] ^ wide_ror16_8(c[4]);
+    state[5] = b[5] ^ c[4] ^ wide_ror16_8(c[5]);
+    state[6] = b[6] ^ c[5] ^ wide_ror16_8(c[6]);
+    state[7] = b[7] ^ c[6] ^ wide_ror16_8(c[7]);
+}
+
+fn wide_inv_mix_columns_0<W: Wide>(state: &mut [W; 8]) {
+    let a = *state;
+    let mut b = [W::zero(); 8];
+    let mut c = [W::zero(); 8];
+    let mut k = 0usize;
+    while k < 8 {
+        b[k] = wide_ror16_4(a[k]);
+        c[k] = a[k] ^ b[k];
+        k += 1;
+    }
+    let d = [
+        a[0] ^ c[7],
+        a[1] ^ c[0] ^ c[7],
+        a[2] ^ c[1],
+        a[3] ^ c[2] ^ c[7],
+        a[4] ^ c[3] ^ c[7],
+        a[5] ^ c[4],
+        a[6] ^ c[5],
+        a[7] ^ c[6],
+    ];
+    let e = [
+        c[0] ^ d[6],
+        c[1] ^ d[6] ^ d[7],
+        c[2] ^ d[0] ^ d[7],
+        c[3] ^ d[1] ^ d[6],
+        c[4] ^ d[2] ^ d[6] ^ d[7],
+        c[5] ^ d[3] ^ d[7],
+        c[6] ^ d[4],
+        c[7] ^ d[5],
+    ];
+    let mut k = 0usize;
+    while k < 8 {
+        state[k] = d[k] ^ e[k] ^ wide_ror16_8(e[k]);
+        k += 1;
+    }
+}
+
+fn wide_key_words(rk: &[u32; 60], round: usize) -> [u16; 8] {
+    let mut k = [0u8; 16];
+    let mut c = 0usize;
+    while c < 4 {
+        let word = rk[4 * round + c].swap_bytes();
+        let mut r = 0usize;
+        while r < 4 {
+            k[4 * c + r] = ((word >> (24 - 8 * r)) & 0xff) as u8;
+            r += 1;
+        }
+        c += 1;
+    }
+    portable::fix_bitslice(&k)
+}
+
+fn wide_pack<W: Wide>(blocks: &[[u8; 16]; 4]) -> [W; 8] {
+    let mut per = [[0u16; 8]; 4];
+    let mut j = 0usize;
+    while j < 4 {
+        per[j] = portable::fix_bitslice(&blocks[j]);
+        j += 1;
+    }
+    let mut out = [W::zero(); 8];
+    let mut k = 0usize;
+    while k < 8 {
+        let mut v = 0u64;
+        let mut j = 0usize;
+        while j < W::N as usize {
+            v |= (per[j][k] as u64) << (16 * j);
+            j += 1;
+        }
+        out[k] = W::from_u64(v);
+        k += 1;
+    }
+    out
+}
+
+fn wide_unpack<W: Wide>(state: &[W; 8]) -> [[u8; 16]; 4] {
+    let mut out = [[0u8; 16]; 4];
+    let mut j = 0usize;
+    while j < W::N as usize {
+        let mut w = [0u16; 8];
+        let mut k = 0usize;
+        while k < 8 {
+            w[k] = ((state[k].to_u64() >> (16 * j)) & 0xffff) as u16;
+            k += 1;
+        }
+        out[j] = portable::fix_inv_bitslice(&w);
+        j += 1;
+    }
+    out
+}
+
+fn wide_encrypt<W: Wide>(blocks: &mut [[u8; 16]; 4], rk: &[u32; 60], rounds: usize) {
+    let mut keys = [[W::zero(); 8]; 15];
+    let mut r = 0usize;
+    while r <= rounds {
+        let w = wide_key_words(rk, r);
+        let mut k = 0usize;
+        while k < 8 {
+            keys[r][k] = rep16::<W>(w[k]);
+            k += 1;
+        }
+        r += 1;
+    }
+    let mut s = wide_pack::<W>(blocks);
+    let mut k = 0usize;
+    while k < 8 {
+        s[k] ^= keys[0][k];
+        k += 1;
+    }
+    let mut r = 1usize;
+    while r < rounds {
+        portable::bp_sub_bytes(&mut s);
+        portable::sub_bytes_nots(&mut s);
+        wide_shift_rows_1(&mut s);
+        wide_mix_columns_0(&mut s);
+        let mut k = 0usize;
+        while k < 8 {
+            s[k] ^= keys[r][k];
+            k += 1;
+        }
+        r += 1;
+    }
+    portable::bp_sub_bytes(&mut s);
+    portable::sub_bytes_nots(&mut s);
+    wide_shift_rows_1(&mut s);
+    let mut k = 0usize;
+    while k < 8 {
+        s[k] ^= keys[rounds][k];
+        k += 1;
+    }
+    *blocks = wide_unpack::<W>(&s);
+}
+
+fn wide_decrypt<W: Wide>(blocks: &mut [[u8; 16]; 4], rk: &[u32; 60], rounds: usize) {
+    let mut keys = [[W::zero(); 8]; 15];
+    let mut r = 0usize;
+    while r <= rounds {
+        let w = wide_key_words(rk, r);
+        let mut k = 0usize;
+        while k < 8 {
+            keys[r][k] = rep16::<W>(w[k]);
+            k += 1;
+        }
+        r += 1;
+    }
+    let mut s = wide_pack::<W>(blocks);
+    let mut k = 0usize;
+    while k < 8 {
+        s[k] ^= keys[0][k];
+        k += 1;
+    }
+    let mut r = 1usize;
+    while r < rounds {
+        portable::sub_bytes_nots(&mut s);
+        portable::bp_inv_sub_bytes(&mut s);
+        wide_inv_shift_rows_1(&mut s);
+        wide_inv_mix_columns_0(&mut s);
+        let mut k = 0usize;
+        while k < 8 {
+            s[k] ^= keys[r][k];
+            k += 1;
+        }
+        r += 1;
+    }
+    portable::sub_bytes_nots(&mut s);
+    portable::bp_inv_sub_bytes(&mut s);
+    wide_inv_shift_rows_1(&mut s);
+    let mut k = 0usize;
+    while k < 8 {
+        s[k] ^= keys[rounds][k];
+        k += 1;
+    }
+    *blocks = wide_unpack::<W>(&s);
+}
+
+fn wide_bench<W: Wide>(iters: usize, rk: &[u32; 60], rounds: usize) -> f64 {
+    let mut blocks = [[0u8; 16]; 4];
+    let t = Instant::now();
+    for i in 0..iters {
+        blocks[0][0] = i as u8;
+        wide_encrypt::<W>(&mut blocks, rk, rounds);
+        black_box(&blocks);
+    }
+    let secs = t.elapsed().as_secs_f64();
+    iters as f64 * (W::N as f64) * 16.0 / secs / (1024.0 * 1024.0)
+}
+
+/// Correctness of the wide-lane batches against the table reference, then the
+/// per-byte throughput of the 16-, 32- and 64-bit lane forms.
+#[test]
+fn pfp70_wide_lane_benchmarks() {
+    let key = [
+        0x2bu8, 0x7e, 0x15, 0x16, 0x28, 0xae, 0xd2, 0xa6, 0xab, 0xf7, 0x15, 0x88, 0x09, 0xcf, 0x4f,
+        0x3c, 0x76, 0x2e, 0x71, 0x60, 0xf3, 0x8b, 0x4d, 0xa5, 0x6a, 0x78, 0x4b, 0x63, 0x1f, 0x95,
+        0x4d, 0x61,
+    ];
+    let iters = 20_000usize;
+    println!("PFP-70 lane-width experiment, MB/s over all blocks processed:");
+    for bits in [128i32, 192, 256] {
+        let n = (bits / 8) as usize;
+        let (ek, er) = encrypt_schedule(&key[..n], bits);
+        let (dk, dr) = decrypt_schedule(&key[..n], bits);
+
+        // Correctness before any timing.
+        let mut blocks = [[0u8; 16]; 4];
+        for (j, b) in blocks.iter_mut().enumerate() {
+            for (i, x) in b.iter_mut().enumerate() {
+                *x = (i as u8).wrapping_mul(31).wrapping_add(j as u8 * 7);
+            }
+        }
+        for (w, label) in [(2usize, "u32"), (4usize, "u64")] {
+            let mut got = blocks;
+            if w == 2 {
+                wide_encrypt::<u32>(&mut got, &ek, er);
+            } else {
+                wide_encrypt::<u64>(&mut got, &ek, er);
+            }
+            for j in 0..w {
+                let mut want = blocks[j];
+                reference::encrypt_block(&mut want, &ek, er);
+                assert_eq!(got[j], want, "{label} enc bits={bits} block={j}");
+            }
+            let mut got = blocks;
+            if w == 2 {
+                wide_decrypt::<u32>(&mut got, &dk, dr);
+            } else {
+                wide_decrypt::<u64>(&mut got, &dk, dr);
+            }
+            for j in 0..w {
+                let mut want = blocks[j];
+                reference::decrypt_block(&mut want, &dk, dr);
+                assert_eq!(got[j], want, "{label} dec bits={bits} block={j}");
+            }
+        }
+
+        let u16_mbs = block_bench(iters, |s| portable::encrypt_block(s, &ek, er));
+        let u32_mbs = wide_bench::<u32>(iters, &ek, er);
+        let u64_mbs = wide_bench::<u64>(iters, &ek, er);
+        println!(
+            "  AES-{bits} enc: u16x1 {u16_mbs:.2}, u32x2 {u32_mbs:.2}, u64x4 {u64_mbs:.2} MB/s"
+        );
+    }
 }

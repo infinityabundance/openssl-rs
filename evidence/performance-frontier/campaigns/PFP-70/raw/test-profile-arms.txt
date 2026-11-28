@@ -1,0 +1,33 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.01s
+     Running unittests src/lib.rs (target/debug/deps/openssl_rs-672100dcc99e32ac)
+
+running 1 test
+test aes::research::pfp70_benchmarks ... PFP-70 arms, MB/s (unoptimised test profile, same harness for every arm):
+  AES-128 enc table          3.36 MB/s
+  AES-128 enc exp            0.81 MB/s
+  AES-128 enc bp-planar      1.44 MB/s
+  AES-128 enc fixslice       4.33 MB/s
+  AES-128 dec table          0.91 MB/s
+  AES-128 dec exp            0.80 MB/s
+  AES-128 dec bp-planar      1.23 MB/s
+  AES-128 dec fixslice       4.15 MB/s
+  AES-192 enc table          2.87 MB/s
+  AES-192 enc exp            0.69 MB/s
+  AES-192 enc bp-planar      1.22 MB/s
+  AES-192 enc fixslice       3.62 MB/s
+  AES-192 dec table          0.74 MB/s
+  AES-192 dec exp            0.66 MB/s
+  AES-192 dec bp-planar      1.03 MB/s
+  AES-192 dec fixslice       3.49 MB/s
+  AES-256 enc table          2.46 MB/s
+  AES-256 enc exp            0.59 MB/s
+  AES-256 enc bp-planar      1.06 MB/s
+  AES-256 enc fixslice       3.15 MB/s
+  AES-256 dec table          0.63 MB/s
+  AES-256 dec exp            0.57 MB/s
+  AES-256 dec bp-planar      0.90 MB/s
+  AES-256 dec fixslice       3.00 MB/s
+ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 2624 filtered out; finished in 6.42s
+

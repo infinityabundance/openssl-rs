@@ -1,0 +1,380 @@
+== release artefact ==
+695551b8ac89fc81f959337268e1af17790b0970077cac14a0e7b002e70c85cc  target/release/examples/pfp63_bench
+
+--- AES_encrypt$|AES_encrypt (target/release/examples/pfp63_bench 0x0000000000049540..0x495d7) ---
+   4955b:	je     495bb <AES_encrypt+0x7b>
+   4955f:	je     495a7 <AES_encrypt+0x67>
+   49569:	jne    495c3 <AES_encrypt+0x83>
+   49580:	movslq (%rdx,%rcx,4),%rcx
+   49587:	jmp    *%rcx
+   4958e:	jb     495a7 <AES_encrypt+0x67>
+   49599:	call   4b7c0 <_RNvNtCsfBoMNNx3tZr_10openssl_rs3aes14aes_encrypt_ni.llvm.9975568754860756571>
+   4959e:	jmp    495b5 <AES_encrypt+0x75>
+   495a5:	jb     49590 <AES_encrypt+0x50>
+   495b0:	call   4b8b0 <_RNvNtCsfBoMNNx3tZr_10openssl_rs3aes20aes_encrypt_portable.llvm.9975568754860756571>
+   495bb:	call   *0x4ddc7(%rip)        # 97388 <_DYNAMIC+0x500>
+   495c1:	jmp    4955d <AES_encrypt+0x1d>
+   495ca:	call   487a9 <_RINvMNtNtCs9k3SxhrAWiO_3std4sync9once_lockINtB3_8OnceLockANtNtNtCsfBoMNNx3tZr_10openssl_rs7runtime3cpu8Decisionj5_E10initializeNCINvB2_11get_or_initNCNvBW_9decisions0E0zEB10_>
+   495cf:	jmp    4956b <AES_encrypt+0x2b>
+   495d1:	call   *0x4dbe9(%rip)        # 971c0 <_DYNAMIC+0x338>
+
+--- aes::aes_encrypt_portable (target/release/examples/pfp63_bench 0x000000000004b8b0..0x4c0f4) ---
+   4b948:	call   4c2c0 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs3aes8portable8fix_keys>
+   4b9a9:	lea    (%rcx,%rcx,1),%edx
+   4b9bb:	lea    (%rsi,%rsi,1),%edi
+   4b9e1:	lea    (%r9,%r9,1),%r10d
+   4b9fb:	lea    (%r11,%r11,1),%ebx
+   4bae6:	jb     4bdd9 <_RNvNtCsfBoMNNx3tZr_10openssl_rs3aes20aes_encrypt_portable.llvm.9975568754860756571+0x529>
+   4baf7:	nopw   0x0(%rax,%rax,1)
+   4bb03:	call   49b40 <_RINvNtNtCsfBoMNNx3tZr_10openssl_rs3aes8portable12bp_sub_bytestEB6_>
+   4bb0c:	je     4c0dd <_RNvNtCsfBoMNNx3tZr_10openssl_rs3aes20aes_encrypt_portable.llvm.9975568754860756571+0x82d>
+   4bb2f:	lea    (%rcx,%rcx,4),%ecx
+   4bb40:	lea    (%rax,%rax,2),%eax
+   4bb57:	lea    (%rdx,%rdx,4),%esi
+   4bb68:	lea    (%rcx,%rcx,2),%edx
+   4bb8e:	lea    (%r9,%r9,4),%r9d
+   4bba4:	lea    (%rsi,%rsi,2),%esi
+   4bbc1:	lea    (%r10,%r10,4),%r10d
+   4bbd8:	lea    (%r9,%r9,2),%r9d
+   4bbf6:	lea    (%r11,%r11,4),%r11d
+   4bc0d:	lea    (%r10,%r10,2),%r10d
+   4bc29:	lea    (%rbx,%rbx,4),%ebx
+   4bc3f:	lea    (%r11,%r11,2),%r11d
+   4bc5f:	lea    (%r14,%r14,4),%r14d
+   4bc75:	lea    (%rbx,%rbx,2),%ebp
+   4bc8f:	lea    (%r8,%r8,4),%r14d
+   4bca5:	lea    (%rdi,%rdi,2),%r8d
+   4bdb0:	jne    4bb00 <_RNvNtCsfBoMNNx3tZr_10openssl_rs3aes20aes_encrypt_portable.llvm.9975568754860756571+0x250>
+   4bdb9:	call   49b40 <_RINvNtNtCsfBoMNNx3tZr_10openssl_rs3aes8portable12bp_sub_bytestEB6_>
+   4bdc2:	jb     4bde1 <_RNvNtCsfBoMNNx3tZr_10openssl_rs3aes20aes_encrypt_portable.llvm.9975568754860756571+0x531>
+   4bdd3:	call   *0x4b47f(%rip)        # 97258 <_DYNAMIC+0x3d0>
+   4bddc:	call   49b40 <_RINvNtNtCsfBoMNNx3tZr_10openssl_rs3aes8portable12bp_sub_bytestEB6_>
+   4bf29:	movdqa 0x50(%rsp,%r15,1),%xmm4
+   4c0ee:	call   *0x4b164(%rip)        # 97258 <_DYNAMIC+0x3d0>
+
+--- portable::bp_sub_bytes::<u16> (target/release/examples/pfp63_bench 0x0000000000049b40..0x49dd8) ---
+  (none)
+
+--- portable::bp_inv_sub_bytes::<u16> (target/release/examples/pfp63_bench 0x0000000000049de0..0x4a083) ---
+  (none)
+
+--- portable::fix_keys (target/release/examples/pfp63_bench 0x000000000004c2c0..0x4ca1d) ---
+   4c32f:	ja     4c338 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs3aes8portable8fix_keys+0x78>
+   4c333:	jmp    4c7e7 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs3aes8portable8fix_keys+0x527>
+   4c341:	cmovb  %rdx,%rcx
+   4c353:	cmovne %rax,%r8
+   4c370:	movd   0x10(%rsi,%rax,1),%xmm1
+   4c376:	movd   (%rsi,%rax,1),%xmm2
+   4c37f:	movd   0x30(%rsi,%rax,1),%xmm1
+   4c385:	movd   0x20(%rsi,%rax,1),%xmm6
+   4c3df:	movd   0x14(%rsi,%rax,1),%xmm1
+   4c3e5:	movd   0x4(%rsi,%rax,1),%xmm2
+   4c3ef:	movd   0x34(%rsi,%rax,1),%xmm1
+   4c3f5:	movd   0x24(%rsi,%rax,1),%xmm6
+   4c44e:	movd   0x18(%rsi,%rax,1),%xmm1
+   4c454:	movd   0x8(%rsi,%rax,1),%xmm2
+   4c45e:	movd   0x38(%rsi,%rax,1),%xmm1
+   4c464:	movd   0x28(%rsi,%rax,1),%xmm7
+   4c4ba:	movd   0x1c(%rsi,%rax,1),%xmm2
+   4c4c0:	movd   0xc(%rsi,%rax,1),%xmm7
+   4c4ca:	movd   0x3c(%rsi,%rax,1),%xmm2
+   4c4d0:	movd   0x2c(%rsi,%rax,1),%xmm8
+   4c7c3:	movupd %xmm1,0x20(%rdi,%rax,1)
+   4c7c9:	movupd %xmm7,(%rdi,%rax,1)
+   4c7ce:	movups %xmm8,0x30(%rdi,%rax,1)
+   4c7d4:	movups %xmm2,0x10(%rdi,%rax,1)
+   4c7e1:	jne    4c370 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs3aes8portable8fix_keys+0xb0>
+   4c802:	data16 data16 data16 data16 cs nopw 0x0(%rax,%rax,1)
+   4c814:	je     4ca08 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs3aes8portable8fix_keys+0x748>
+   4c81a:	mov    (%rsi,%rax,4),%r9d
+   4c81e:	mov    0x4(%rsi,%rax,4),%r8d
+   4c84f:	mov    0x8(%rsi,%rax,4),%r10d
+   4c86b:	mov    0xc(%rsi,%rax,4),%r11d
+   4c9ea:	movdqu %xmm5,(%rdi,%rax,4)
+   4c9f9:	jne    4c810 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs3aes8portable8fix_keys+0x550>
+   4ca17:	call   *0x4a83b(%rip)        # 97258 <_DYNAMIC+0x3d0>
+
+--- AES_decrypt$|AES_decrypt (target/release/examples/pfp63_bench 0x0000000000048b60..0x4953e) ---
+   48b89:	je     494f3 <AES_decrypt+0x993>
+   48b91:	je     48be2 <AES_decrypt+0x82>
+   48b9b:	jne    494fe <AES_decrypt+0x99e>
+   48bb6:	movslq (%rdx,%rcx,4),%rcx
+   48bbd:	jmp    *%rcx
+   48bc4:	jb     48be2 <AES_decrypt+0x82>
+   48bd1:	call   4b6d0 <_RNvNtCsfBoMNNx3tZr_10openssl_rs3aes14aes_decrypt_ni>
+   48bd6:	jmp    494e1 <AES_decrypt+0x981>
+   48be0:	jb     48bc6 <AES_decrypt+0x66>
+   48c73:	call   4c2c0 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs3aes8portable8fix_keys>
+   48e67:	jb     491c6 <AES_decrypt+0x666>
+   48e87:	nopw   0x0(%rax,%rax,1)
+   48eb4:	call   49de0 <_RINvNtNtCsfBoMNNx3tZr_10openssl_rs3aes8portable16bp_inv_sub_bytestEB6_>
+   48ebd:	je     4950f <AES_decrypt+0x9af>
+   48ed5:	lea    (%rcx,%rcx,4),%ecx
+   48ee5:	lea    (%rax,%rax,2),%eax
+   48f02:	lea    (%rsi,%rsi,4),%edi
+   48f13:	lea    (%rdx,%rdx,2),%esi
+   491c0:	jne    48e90 <AES_decrypt+0x330>
+   491ea:	call   49de0 <_RINvNtNtCsfBoMNNx3tZr_10openssl_rs3aes8portable16bp_inv_sub_bytestEB6_>
+   491f3:	jae    4952a <AES_decrypt+0x9ca>
+   4933d:	movdqu 0x58(%rsp,%r14,1),%xmm7
+   494f3:	call   *0x4de8f(%rip)        # 97388 <_DYNAMIC+0x500>
+   494f9:	jmp    48b8f <AES_decrypt+0x2f>
+   49505:	call   487a9 <_RINvMNtNtCs9k3SxhrAWiO_3std4sync9once_lockINtB3_8OnceLockANtNtNtCsfBoMNNx3tZr_10openssl_rs7runtime3cpu8Decisionj5_E10initializeNCINvB2_11get_or_initNCNvBW_9decisions0E0zEB10_>
+   4950a:	jmp    48ba1 <AES_decrypt+0x41>
+   49522:	call   *0x4dd30(%rip)        # 97258 <_DYNAMIC+0x3d0>
+   49536:	jmp    49515 <AES_decrypt+0x9b5>
+   49538:	call   *0x4dc82(%rip)        # 971c0 <_DYNAMIC+0x338>
+
+--- AES_set_encrypt_key$|AES_set_encrypt_key (target/release/examples/pfp63_bench 0x00000000000499f0..0x49b37) ---
+   499f4:	call   4a090 <_RNvNtCsfBoMNNx3tZr_10openssl_rs3aes10aes_expand.llvm.9975568754860756571>
+   499fb:	js     49af8 <AES_set_encrypt_key+0x108>
+   49a0c:	je     49b13 <AES_set_encrypt_key+0x123>
+   49a1d:	jne    49b22 <AES_set_encrypt_key+0x132>
+   49a26:	je     49af6 <AES_set_encrypt_key+0x106>
+   49a38:	ja     49a41 <AES_set_encrypt_key+0x51>
+   49a3c:	jmp    49ad7 <AES_set_encrypt_key+0xe7>
+   49a4e:	cmovb  %rdx,%rcx
+   49a5f:	cmovne %rdx,%rsi
+   49a70:	movdqu (%rbx,%rdx,4),%xmm1
+   49a75:	movdqu 0x10(%rbx,%rdx,4),%xmm2
+   49ac3:	movdqu %xmm1,(%rbx,%rdx,4)
+   49ac8:	movdqu %xmm2,0x10(%rbx,%rdx,4)
+   49ad5:	jne    49a70 <AES_set_encrypt_key+0x80>
+   49ae4:	je     49afa <AES_set_encrypt_key+0x10a>
+   49ae6:	mov    (%rbx,%rcx,4),%edx
+   49aeb:	mov    %edx,(%rbx,%rcx,4)
+   49af4:	jne    49ae0 <AES_set_encrypt_key+0xf0>
+   49b0b:	call   *0x4d747(%rip)        # 97258 <_DYNAMIC+0x3d0>
+   49b11:	jmp    49b2f <AES_set_encrypt_key+0x13f>
+   49b1a:	call   *0x4d6c0(%rip)        # 971e0 <_DYNAMIC+0x358>
+   49b20:	jmp    49b2f <AES_set_encrypt_key+0x13f>
+   49b29:	call   *0x4d759(%rip)        # 97288 <_DYNAMIC+0x400>
+   49b31:	call   *0x4d689(%rip)        # 971c0 <_DYNAMIC+0x338>
+
+--- AES_set_decrypt_key$|AES_set_decrypt_key (target/release/examples/pfp63_bench 0x00000000000495e0..0x499e3) ---
+   495ee:	call   4a090 <_RNvNtCsfBoMNNx3tZr_10openssl_rs3aes10aes_expand.llvm.9975568754860756571>
+   495f5:	js     49968 <AES_set_decrypt_key+0x388>
+   49605:	js     499b0 <AES_set_decrypt_key+0x3d0>
+   4960d:	je     4989d <AES_set_decrypt_key+0x2bd>
+   49624:	data16 data16 cs nopw 0x0(%rax,%rax,1)
+   49634:	jae    49996 <AES_set_decrypt_key+0x3b6>
+   4963e:	jae    49990 <AES_set_decrypt_key+0x3b0>
+   49644:	mov    (%rbx,%rcx,4),%eax
+   49647:	mov    (%rbx,%rdi,4),%esi
+   4964a:	mov    %esi,(%rbx,%rcx,4)
+   4964d:	mov    %eax,(%rbx,%rdi,4)
+   49650:	mov    0x4(%rbx,%rcx,4),%eax
+   49654:	mov    0x4(%rbx,%rdi,4),%esi
+   49658:	mov    %esi,0x4(%rbx,%rcx,4)
+   4965c:	mov    %eax,0x4(%rbx,%rdi,4)
+   49660:	mov    0x8(%rbx,%rcx,4),%eax
+   49664:	mov    0x8(%rbx,%rdi,4),%esi
+   49668:	mov    %esi,0x8(%rbx,%rcx,4)
+   4966c:	mov    %eax,0x8(%rbx,%rdi,4)
+   49670:	mov    0xc(%rbx,%rcx,4),%eax
+   49674:	mov    0xc(%rbx,%rdi,4),%esi
+   49678:	mov    %esi,0xc(%rbx,%rcx,4)
+   4967c:	mov    %eax,0xc(%rbx,%rdi,4)
+   4968b:	jb     49630 <AES_set_decrypt_key+0x50>
+   49690:	je     4985e <AES_set_decrypt_key+0x27e>
+   496c1:	data16 data16 data16 data16 data16 cs nopw 0x0(%rax,%rax,1)
+   496d4:	je     4999f <AES_set_decrypt_key+0x3bf>
+   496da:	movdqu (%rbx,%rdi,4),%xmm6
+   4984c:	movdqu %xmm3,(%rbx,%rdi,4)
+   49858:	jne    496d0 <AES_set_decrypt_key+0xf0>
+   49869:	je     499bf <AES_set_decrypt_key+0x3df>
+   49879:	jne    499ce <AES_set_decrypt_key+0x3ee>
+   49882:	je     49966 <AES_set_decrypt_key+0x386>
+   49894:	ja     498ac <AES_set_decrypt_key+0x2cc>
+   49898:	jmp    49950 <AES_set_decrypt_key+0x370>
+   498aa:	jbe    49896 <AES_set_decrypt_key+0x2b6>
+   498b5:	cmovb  %rdx,%rcx
+   498c6:	cmovne %rdx,%rsi
+   498d3:	data16 data16 data16 cs nopw 0x0(%rax,%rax,1)
+   498e0:	movdqu (%rbx,%rdx,4),%xmm1
+   498e5:	movdqu 0x10(%rbx,%rdx,4),%xmm2
+   49933:	movdqu %xmm1,(%rbx,%rdx,4)
+   49938:	movdqu %xmm2,0x10(%rbx,%rdx,4)
+   49945:	jne    498e0 <AES_set_decrypt_key+0x300>
+   49947:	nopw   0x0(%rax,%rax,1)
+   49954:	je     49977 <AES_set_decrypt_key+0x397>
+   49956:	mov    (%rbx,%rcx,4),%edx
+   4995b:	mov    %edx,(%rbx,%rcx,4)
+   49964:	jne    49950 <AES_set_decrypt_key+0x370>
+   49988:	call   *0x4d8ca(%rip)        # 97258 <_DYNAMIC+0x3d0>
+   4998e:	jmp    499db <AES_set_decrypt_key+0x3fb>
+   49994:	jmp    4999f <AES_set_decrypt_key+0x3bf>
+   499a8:	call   *0x4d8aa(%rip)        # 97258 <_DYNAMIC+0x3d0>
+   499ae:	jmp    499db <AES_set_decrypt_key+0x3fb>
+   499b7:	call   *0x4d8cb(%rip)        # 97288 <_DYNAMIC+0x400>
+   499bd:	jmp    499db <AES_set_decrypt_key+0x3fb>
+   499c6:	call   *0x4d814(%rip)        # 971e0 <_DYNAMIC+0x358>
+   499cc:	jmp    499db <AES_set_decrypt_key+0x3fb>
+   499d5:	call   *0x4d8ad(%rip)        # 97288 <_DYNAMIC+0x400>
+   499dd:	call   *0x4d7dd(%rip)        # 971c0 <_DYNAMIC+0x338>
+
+Interpretation
+--------------
+* bp_sub_bytes and bp_inv_sub_bytes contain no memory operand at all: the
+  113-gate netlist is pure XOR/AND/NOT over registers.
+* aes_encrypt_portable's only indexed operands are lea (integer
+  multiply/shift) and nop; it contains no indexed load or store.
+* fix_keys (the exported-schedule -> fixed-slice key conversion) loads the
+  round-key bytes at 0xNN(%rsi,%rax,1), where %rax is the public round
+  offset, never a key or state byte.
+* AES_set_decrypt_key indexes rd_key only by its public i/j loop counters.
+* No load or address in any carrier is selected by secret state.
+
+== firing controls (debug test artefact) ==
+9d47095a086acb759b8e6b9d3d253abebe6a6418a2ee42453f9cfabd4dae2bbb  target/debug/deps/openssl_rs-672100dcc99e32ac
+
+--- reference::sub_bytes (table lookup; must fire) (target/debug/deps/openssl_rs-672100dcc99e32ac 0x0000000001bc4b50..0x1bc4bf6) ---
+ 1bc4b5e:	call   1eddc50 <_RNvMNtCsgxBkk5gSRhY_4core5sliceSh8iter_mutCshvlPaunwKLY_10openssl_rs>
+ 1bc4b69:	call   1d44610 <_RNvXNtNtNtCsgxBkk5gSRhY_4core4iter6traits7collectINtNtNtB8_5slice4iter7IterMuthENtB2_12IntoIterator9into_iterCshvlPaunwKLY_10openssl_rs>
+ 1bc4b7d:	call   1d4bac0 <_RNvXs2Q_NtNtCsgxBkk5gSRhY_4core5slice4iterINtB6_7IterMuthENtNtNtNtBa_4iter6traits8iterator8Iterator4nextCshvlPaunwKLY_10openssl_rs>
+ 1bc4b97:	cmove  %rcx,%rax
+ 1bc4ba1:	je     1bc4bc3 <_RNvNtNtCshvlPaunwKLY_10openssl_rs3aes9reference9sub_bytes+0x73>
+ 1bc4bbf:	jb     1bc4bc8 <_RNvNtNtCshvlPaunwKLY_10openssl_rs3aes9reference9sub_bytes+0x78>
+ 1bc4bc1:	jmp    1bc4bdf <_RNvNtNtCshvlPaunwKLY_10openssl_rs3aes9reference9sub_bytes+0x8f>
+ 1bc4bd8:	mov    (%rcx,%rdx,1),%cl
+ 1bc4bdd:	jmp    1bc4b78 <_RNvNtNtCshvlPaunwKLY_10openssl_rs3aes9reference9sub_bytes+0x28>
+ 1bc4bf0:	call   *0x741d1a(%rip)        # 2306910 <_DYNAMIC+0x5e80>
+
+Interpretation: the table reference emits an indexed load from the S-box base.
+
+--- negative_control_branchy_mul (must fire) (target/debug/deps/openssl_rs-672100dcc99e32ac 0x000000000180d9f0..0x180db56) ---
+ 180da41:	jb     180da55 <_RNvNtNtCshvlPaunwKLY_10openssl_rs5modes3gcm28negative_control_branchy_mul+0x65>
+ 180da6b:	jb     180da7a <_RNvNtNtCshvlPaunwKLY_10openssl_rs5modes3gcm28negative_control_branchy_mul+0x8a>
+ 180da76:	jb     180da87 <_RNvNtNtCshvlPaunwKLY_10openssl_rs5modes3gcm28negative_control_branchy_mul+0x97>
+ 180da78:	jmp    180dab2 <_RNvNtNtCshvlPaunwKLY_10openssl_rs5modes3gcm28negative_control_branchy_mul+0xc2>
+ 180da81:	call   *0xaf8e49(%rip)        # 23068d0 <_DYNAMIC+0x5e40>
+ 180daa8:	cmovne %rcx,%rax
+ 180daae:	jne    180dafc <_RNvNtNtCshvlPaunwKLY_10openssl_rs5modes3gcm28negative_control_branchy_mul+0x10c>
+ 180dab0:	jmp    180dabf <_RNvNtNtCshvlPaunwKLY_10openssl_rs5modes3gcm28negative_control_branchy_mul+0xcf>
+ 180dab9:	call   *0xaf8e99(%rip)        # 2306958 <_DYNAMIC+0x5ec8>
+ 180daf8:	jne    180db30 <_RNvNtNtCshvlPaunwKLY_10openssl_rs5modes3gcm28negative_control_branchy_mul+0x140>
+ 180dafa:	jmp    180db1d <_RNvNtNtCshvlPaunwKLY_10openssl_rs5modes3gcm28negative_control_branchy_mul+0x12d>
+ 180db1b:	jmp    180dabf <_RNvNtNtCshvlPaunwKLY_10openssl_rs5modes3gcm28negative_control_branchy_mul+0xcf>
+ 180db2c:	jb     180db49 <_RNvNtNtCshvlPaunwKLY_10openssl_rs5modes3gcm28negative_control_branchy_mul+0x159>
+ 180db2e:	jmp    180db3c <_RNvNtNtCshvlPaunwKLY_10openssl_rs5modes3gcm28negative_control_branchy_mul+0x14c>
+ 180db3a:	jmp    180db1d <_RNvNtNtCshvlPaunwKLY_10openssl_rs5modes3gcm28negative_control_branchy_mul+0x12d>
+ 180db44:	jmp    180da39 <_RNvNtNtCshvlPaunwKLY_10openssl_rs5modes3gcm28negative_control_branchy_mul+0x49>
+ 180db50:	call   *0xaf8d72(%rip)        # 23068c8 <_DYNAMIC+0x5e38>
+
+Interpretation: the branchy control emits data-dependent conditional transfers.
+
+--- portable::bp_sub_bytes (must not fire) (target/debug/deps/openssl_rs-672100dcc99e32ac 0x00000000011016e0..0x11026b4) ---
+ 1101787:	call   1982480 <_RNvXs28_NtNtCsgxBkk5gSRhY_4core3ops3bittNtB6_6BitXor6bitxorCshvlPaunwKLY_10openssl_rs>
+ 11017ac:	call   1982480 <_RNvXs28_NtNtCsgxBkk5gSRhY_4core3ops3bittNtB6_6BitXor6bitxorCshvlPaunwKLY_10openssl_rs>
+ 11017cc:	call   1982480 <_RNvXs28_NtNtCsgxBkk5gSRhY_4core3ops3bittNtB6_6BitXor6bitxorCshvlPaunwKLY_10openssl_rs>
+ 11017e9:	call   1982480 <_RNvXs28_NtNtCsgxBkk5gSRhY_4core3ops3bittNtB6_6BitXor6bitxorCshvlPaunwKLY_10openssl_rs>
+ 1101809:	call   1982480 <_RNvXs28_NtNtCsgxBkk5gSRhY_4core3ops3bittNtB6_6BitXor6bitxorCshvlPaunwKLY_10openssl_rs>
+ 1101826:	call   19827b0 <_RNvXss_NtNtCsgxBkk5gSRhY_4core3ops3bittNtB5_6BitAnd6bitandCshvlPaunwKLY_10openssl_rs>
+ 110184e:	call   1982480 <_RNvXs28_NtNtCsgxBkk5gSRhY_4core3ops3bittNtB6_6BitXor6bitxorCshvlPaunwKLY_10openssl_rs>
+ 1101873:	call   1982480 <_RNvXs28_NtNtCsgxBkk5gSRhY_4core3ops3bittNtB6_6BitXor6bitxorCshvlPaunwKLY_10openssl_rs>
+ 1101898:	call   1982480 <_RNvXs28_NtNtCsgxBkk5gSRhY_4core3ops3bittNtB6_6BitXor6bitxorCshvlPaunwKLY_10openssl_rs>
+ 11018b5:	call   1982480 <_RNvXs28_NtNtCsgxBkk5gSRhY_4core3ops3bittNtB6_6BitXor6bitxorCshvlPaunwKLY_10openssl_rs>
+ 11018d2:	call   19827b0 <_RNvXss_NtNtCsgxBkk5gSRhY_4core3ops3bittNtB5_6BitAnd6bitandCshvlPaunwKLY_10openssl_rs>
+ 11018fa:	call   1982480 <_RNvXs28_NtNtCsgxBkk5gSRhY_4core3ops3bittNtB6_6BitXor6bitxorCshvlPaunwKLY_10openssl_rs>
+ 110191f:	call   1982480 <_RNvXs28_NtNtCsgxBkk5gSRhY_4core3ops3bittNtB6_6BitXor6bitxorCshvlPaunwKLY_10openssl_rs>
+ 1101944:	call   1982480 <_RNvXs28_NtNtCsgxBkk5gSRhY_4core3ops3bittNtB6_6BitXor6bitxorCshvlPaunwKLY_10openssl_rs>
+ 1101961:	call   1982480 <_RNvXs28_NtNtCsgxBkk5gSRhY_4core3ops3bittNtB6_6BitXor6bitxorCshvlPaunwKLY_10openssl_rs>
+ 1101981:	call   1982480 <_RNvXs28_NtNtCsgxBkk5gSRhY_4core3ops3bittNtB6_6BitXor6bitxorCshvlPaunwKLY_10openssl_rs>
+ 110199e:	call   19827b0 <_RNvXss_NtNtCsgxBkk5gSRhY_4core3ops3bittNtB5_6BitAnd6bitandCshvlPaunwKLY_10openssl_rs>
+ 11019b9:	call   1982480 <_RNvXs28_NtNtCsgxBkk5gSRhY_4core3ops3bittNtB6_6BitXor6bitxorCshvlPaunwKLY_10openssl_rs>
+ 11019de:	call   1982480 <_RNvXs28_NtNtCsgxBkk5gSRhY_4core3ops3bittNtB6_6BitXor6bitxorCshvlPaunwKLY_10openssl_rs>
+ 1101a03:	call   19827b0 <_RNvXss_NtNtCsgxBkk5gSRhY_4core3ops3bittNtB5_6BitAnd6bitandCshvlPaunwKLY_10openssl_rs>
+ 1101a1e:	call   1982480 <_RNvXs28_NtNtCsgxBkk5gSRhY_4core3ops3bittNtB6_6BitXor6bitxorCshvlPaunwKLY_10openssl_rs>
+ 1101a43:	call   1982480 <_RNvXs28_NtNtCsgxBkk5gSRhY_4core3ops3bittNtB6_6BitXor6bitxorCshvlPaunwKLY_10openssl_rs>
+ 1101a60:	call   1982480 <_RNvXs28_NtNtCsgxBkk5gSRhY_4core3ops3bittNtB6_6BitXor6bitxorCshvlPaunwKLY_10openssl_rs>
+ 1101a85:	call   19827b0 <_RNvXss_NtNtCsgxBkk5gSRhY_4core3ops3bittNtB5_6BitAnd6bitandCshvlPaunwKLY_10openssl_rs>
+ 1101aaa:	call   1982480 <_RNvXs28_NtNtCsgxBkk5gSRhY_4core3ops3bittNtB6_6BitXor6bitxorCshvlPaunwKLY_10openssl_rs>
+ 1101ad2:	call   1982480 <_RNvXs28_NtNtCsgxBkk5gSRhY_4core3ops3bittNtB6_6BitXor6bitxorCshvlPaunwKLY_10openssl_rs>
+ 1101af2:	call   1982480 <_RNvXs28_NtNtCsgxBkk5gSRhY_4core3ops3bittNtB6_6BitXor6bitxorCshvlPaunwKLY_10openssl_rs>
+ 1101b15:	call   19827b0 <_RNvXss_NtNtCsgxBkk5gSRhY_4core3ops3bittNtB5_6BitAnd6bitandCshvlPaunwKLY_10openssl_rs>
+ 1101b30:	call   1982480 <_RNvXs28_NtNtCsgxBkk5gSRhY_4core3ops3bittNtB6_6BitXor6bitxorCshvlPaunwKLY_10openssl_rs>
+ 1101b4b:	call   1982480 <_RNvXs28_NtNtCsgxBkk5gSRhY_4core3ops3bittNtB6_6BitXor6bitxorCshvlPaunwKLY_10openssl_rs>
+ 1101b66:	call   1982480 <_RNvXs28_NtNtCsgxBkk5gSRhY_4core3ops3bittNtB6_6BitXor6bitxorCshvlPaunwKLY_10openssl_rs>
+ 1101b8b:	call   1982480 <_RNvXs28_NtNtCsgxBkk5gSRhY_4core3ops3bittNtB6_6BitXor6bitxorCshvlPaunwKLY_10openssl_rs>
+ 1101bab:	call   19827b0 <_RNvXss_NtNtCsgxBkk5gSRhY_4core3ops3bittNtB5_6BitAnd6bitandCshvlPaunwKLY_10openssl_rs>
+ 1101bc6:	call   1982480 <_RNvXs28_NtNtCsgxBkk5gSRhY_4core3ops3bittNtB6_6BitXor6bitxorCshvlPaunwKLY_10openssl_rs>
+ 1101be1:	call   1982480 <_RNvXs28_NtNtCsgxBkk5gSRhY_4core3ops3bittNtB6_6BitXor6bitxorCshvlPaunwKLY_10openssl_rs>
+ 1101bfc:	call   1982480 <_RNvXs28_NtNtCsgxBkk5gSRhY_4core3ops3bittNtB6_6BitXor6bitxorCshvlPaunwKLY_10openssl_rs>
+ 1101c21:	call   1982480 <_RNvXs28_NtNtCsgxBkk5gSRhY_4core3ops3bittNtB6_6BitXor6bitxorCshvlPaunwKLY_10openssl_rs>
+ 1101c41:	call   19827b0 <_RNvXss_NtNtCsgxBkk5gSRhY_4core3ops3bittNtB5_6BitAnd6bitandCshvlPaunwKLY_10openssl_rs>
+ 1101c5c:	call   1982480 <_RNvXs28_NtNtCsgxBkk5gSRhY_4core3ops3bittNtB6_6BitXor6bitxorCshvlPaunwKLY_10openssl_rs>
+ 1101c77:	call   1982480 <_RNvXs28_NtNtCsgxBkk5gSRhY_4core3ops3bittNtB6_6BitXor6bitxorCshvlPaunwKLY_10openssl_rs>
+ 1101c92:	call   1982480 <_RNvXs28_NtNtCsgxBkk5gSRhY_4core3ops3bittNtB6_6BitXor6bitxorCshvlPaunwKLY_10openssl_rs>
+ 1101cb7:	call   1982480 <_RNvXs28_NtNtCsgxBkk5gSRhY_4core3ops3bittNtB6_6BitXor6bitxorCshvlPaunwKLY_10openssl_rs>
+ 1101cd7:	call   19827b0 <_RNvXss_NtNtCsgxBkk5gSRhY_4core3ops3bittNtB5_6BitAnd6bitandCshvlPaunwKLY_10openssl_rs>
+ 1101cf2:	call   1982480 <_RNvXs28_NtNtCsgxBkk5gSRhY_4core3ops3bittNtB6_6BitXor6bitxorCshvlPaunwKLY_10openssl_rs>
+ 1101d0d:	call   1982480 <_RNvXs28_NtNtCsgxBkk5gSRhY_4core3ops3bittNtB6_6BitXor6bitxorCshvlPaunwKLY_10openssl_rs>
+ 1101d28:	call   1982480 <_RNvXs28_NtNtCsgxBkk5gSRhY_4core3ops3bittNtB6_6BitXor6bitxorCshvlPaunwKLY_10openssl_rs>
+ 1101d48:	call   19827b0 <_RNvXss_NtNtCsgxBkk5gSRhY_4core3ops3bittNtB5_6BitAnd6bitandCshvlPaunwKLY_10openssl_rs>
+ 1101d65:	call   1982480 <_RNvXs28_NtNtCsgxBkk5gSRhY_4core3ops3bittNtB6_6BitXor6bitxorCshvlPaunwKLY_10openssl_rs>
+ 1101d8a:	call   1982480 <_RNvXs28_NtNtCsgxBkk5gSRhY_4core3ops3bittNtB6_6BitXor6bitxorCshvlPaunwKLY_10openssl_rs>
+ 1101daf:	call   1982480 <_RNvXs28_NtNtCsgxBkk5gSRhY_4core3ops3bittNtB6_6BitXor6bitxorCshvlPaunwKLY_10openssl_rs>
+ 1101dcf:	call   19827b0 <_RNvXss_NtNtCsgxBkk5gSRhY_4core3ops3bittNtB5_6BitAnd6bitandCshvlPaunwKLY_10openssl_rs>
+ 1101dea:	call   1982480 <_RNvXs28_NtNtCsgxBkk5gSRhY_4core3ops3bittNtB6_6BitXor6bitxorCshvlPaunwKLY_10openssl_rs>
+ 1101e0a:	call   19827b0 <_RNvXss_NtNtCsgxBkk5gSRhY_4core3ops3bittNtB5_6BitAnd6bitandCshvlPaunwKLY_10openssl_rs>
+ 1101e32:	call   19827b0 <_RNvXss_NtNtCsgxBkk5gSRhY_4core3ops3bittNtB5_6BitAnd6bitandCshvlPaunwKLY_10openssl_rs>
+ 1101e57:	call   1982480 <_RNvXs28_NtNtCsgxBkk5gSRhY_4core3ops3bittNtB6_6BitXor6bitxorCshvlPaunwKLY_10openssl_rs>
+ 1101e6f:	call   19827b0 <_RNvXss_NtNtCsgxBkk5gSRhY_4core3ops3bittNtB5_6BitAnd6bitandCshvlPaunwKLY_10openssl_rs>
+ 1101e8a:	call   1982480 <_RNvXs28_NtNtCsgxBkk5gSRhY_4core3ops3bittNtB6_6BitXor6bitxorCshvlPaunwKLY_10openssl_rs>
+ 1101eaa:	call   1982480 <_RNvXs28_NtNtCsgxBkk5gSRhY_4core3ops3bittNtB6_6BitXor6bitxorCshvlPaunwKLY_10openssl_rs>
+ 1101ec2:	call   19827b0 <_RNvXss_NtNtCsgxBkk5gSRhY_4core3ops3bittNtB5_6BitAnd6bitandCshvlPaunwKLY_10openssl_rs>
+ 1101edf:	call   1982480 <_RNvXs28_NtNtCsgxBkk5gSRhY_4core3ops3bittNtB6_6BitXor6bitxorCshvlPaunwKLY_10openssl_rs>
+ 1101ef7:	call   19827b0 <_RNvXss_NtNtCsgxBkk5gSRhY_4core3ops3bittNtB5_6BitAnd6bitandCshvlPaunwKLY_10openssl_rs>
+ 1101f0f:	call   1982480 <_RNvXs28_NtNtCsgxBkk5gSRhY_4core3ops3bittNtB6_6BitXor6bitxorCshvlPaunwKLY_10openssl_rs>
+ 1101f2c:	call   1982480 <_RNvXs28_NtNtCsgxBkk5gSRhY_4core3ops3bittNtB6_6BitXor6bitxorCshvlPaunwKLY_10openssl_rs>
+ 1101f4c:	call   19827b0 <_RNvXss_NtNtCsgxBkk5gSRhY_4core3ops3bittNtB5_6BitAnd6bitandCshvlPaunwKLY_10openssl_rs>
+ 1101f6c:	call   1982480 <_RNvXs28_NtNtCsgxBkk5gSRhY_4core3ops3bittNtB6_6BitXor6bitxorCshvlPaunwKLY_10openssl_rs>
+ 1101f94:	call   19827b0 <_RNvXss_NtNtCsgxBkk5gSRhY_4core3ops3bittNtB5_6BitAnd6bitandCshvlPaunwKLY_10openssl_rs>
+ 1101fbc:	call   19827b0 <_RNvXss_NtNtCsgxBkk5gSRhY_4core3ops3bittNtB5_6BitAnd6bitandCshvlPaunwKLY_10openssl_rs>
+ 1101fe4:	call   19827b0 <_RNvXss_NtNtCsgxBkk5gSRhY_4core3ops3bittNtB5_6BitAnd6bitandCshvlPaunwKLY_10openssl_rs>
+ 1101ffc:	call   1982480 <_RNvXs28_NtNtCsgxBkk5gSRhY_4core3ops3bittNtB6_6BitXor6bitxorCshvlPaunwKLY_10openssl_rs>
+ 1102024:	call   1982480 <_RNvXs28_NtNtCsgxBkk5gSRhY_4core3ops3bittNtB6_6BitXor6bitxorCshvlPaunwKLY_10openssl_rs>
+ 110203c:	call   1982480 <_RNvXs28_NtNtCsgxBkk5gSRhY_4core3ops3bittNtB6_6BitXor6bitxorCshvlPaunwKLY_10openssl_rs>
+ 1102059:	call   1982480 <_RNvXs28_NtNtCsgxBkk5gSRhY_4core3ops3bittNtB6_6BitXor6bitxorCshvlPaunwKLY_10openssl_rs>
+ 1102079:	call   19827b0 <_RNvXss_NtNtCsgxBkk5gSRhY_4core3ops3bittNtB5_6BitAnd6bitandCshvlPaunwKLY_10openssl_rs>
+ 11020a1:	call   19827b0 <_RNvXss_NtNtCsgxBkk5gSRhY_4core3ops3bittNtB5_6BitAnd6bitandCshvlPaunwKLY_10openssl_rs>
+ 11020cc:	call   1982480 <_RNvXs28_NtNtCsgxBkk5gSRhY_4core3ops3bittNtB6_6BitXor6bitxorCshvlPaunwKLY_10openssl_rs>
+ 11020ec:	call   19827b0 <_RNvXss_NtNtCsgxBkk5gSRhY_4core3ops3bittNtB5_6BitAnd6bitandCshvlPaunwKLY_10openssl_rs>
+ 1102114:	call   19827b0 <_RNvXss_NtNtCsgxBkk5gSRhY_4core3ops3bittNtB5_6BitAnd6bitandCshvlPaunwKLY_10openssl_rs>
+ 1102139:	call   19827b0 <_RNvXss_NtNtCsgxBkk5gSRhY_4core3ops3bittNtB5_6BitAnd6bitandCshvlPaunwKLY_10openssl_rs>
+ 110215e:	call   19827b0 <_RNvXss_NtNtCsgxBkk5gSRhY_4core3ops3bittNtB5_6BitAnd6bitandCshvlPaunwKLY_10openssl_rs>
+ 110217c:	call   1982480 <_RNvXs28_NtNtCsgxBkk5gSRhY_4core3ops3bittNtB6_6BitXor6bitxorCshvlPaunwKLY_10openssl_rs>
+ 1102194:	call   1982480 <_RNvXs28_NtNtCsgxBkk5gSRhY_4core3ops3bittNtB6_6BitXor6bitxorCshvlPaunwKLY_10openssl_rs>
+ 11021bf:	call   19827b0 <_RNvXss_NtNtCsgxBkk5gSRhY_4core3ops3bittNtB5_6BitAnd6bitandCshvlPaunwKLY_10openssl_rs>
+ 11021e7:	call   1982480 <_RNvXs28_NtNtCsgxBkk5gSRhY_4core3ops3bittNtB6_6BitXor6bitxorCshvlPaunwKLY_10openssl_rs>
+ 1102207:	call   1982480 <_RNvXs28_NtNtCsgxBkk5gSRhY_4core3ops3bittNtB6_6BitXor6bitxorCshvlPaunwKLY_10openssl_rs>
+ 1102227:	call   19827b0 <_RNvXss_NtNtCsgxBkk5gSRhY_4core3ops3bittNtB5_6BitAnd6bitandCshvlPaunwKLY_10openssl_rs>
+ 1102242:	call   1982480 <_RNvXs28_NtNtCsgxBkk5gSRhY_4core3ops3bittNtB6_6BitXor6bitxorCshvlPaunwKLY_10openssl_rs>
+ 110226a:	call   19827b0 <_RNvXss_NtNtCsgxBkk5gSRhY_4core3ops3bittNtB5_6BitAnd6bitandCshvlPaunwKLY_10openssl_rs>
+ 110228f:	call   19827b0 <_RNvXss_NtNtCsgxBkk5gSRhY_4core3ops3bittNtB5_6BitAnd6bitandCshvlPaunwKLY_10openssl_rs>
+ 11022ad:	call   1982480 <_RNvXs28_NtNtCsgxBkk5gSRhY_4core3ops3bittNtB6_6BitXor6bitxorCshvlPaunwKLY_10openssl_rs>
+ 11022d5:	call   19827b0 <_RNvXss_NtNtCsgxBkk5gSRhY_4core3ops3bittNtB5_6BitAnd6bitandCshvlPaunwKLY_10openssl_rs>
+ 11022f8:	call   1982480 <_RNvXs28_NtNtCsgxBkk5gSRhY_4core3ops3bittNtB6_6BitXor6bitxorCshvlPaunwKLY_10openssl_rs>
+ 1102320:	call   1982480 <_RNvXs28_NtNtCsgxBkk5gSRhY_4core3ops3bittNtB6_6BitXor6bitxorCshvlPaunwKLY_10openssl_rs>
+ 1102340:	call   1982480 <_RNvXs28_NtNtCsgxBkk5gSRhY_4core3ops3bittNtB6_6BitXor6bitxorCshvlPaunwKLY_10openssl_rs>
+ 1102360:	call   1982480 <_RNvXs28_NtNtCsgxBkk5gSRhY_4core3ops3bittNtB6_6BitXor6bitxorCshvlPaunwKLY_10openssl_rs>
+ 1102388:	call   1982480 <_RNvXs28_NtNtCsgxBkk5gSRhY_4core3ops3bittNtB6_6BitXor6bitxorCshvlPaunwKLY_10openssl_rs>
+ 11023ae:	call   1982480 <_RNvXs28_NtNtCsgxBkk5gSRhY_4core3ops3bittNtB6_6BitXor6bitxorCshvlPaunwKLY_10openssl_rs>
+ 11023dc:	call   1982480 <_RNvXs28_NtNtCsgxBkk5gSRhY_4core3ops3bittNtB6_6BitXor6bitxorCshvlPaunwKLY_10openssl_rs>
+ 1102402:	call   1982480 <_RNvXs28_NtNtCsgxBkk5gSRhY_4core3ops3bittNtB6_6BitXor6bitxorCshvlPaunwKLY_10openssl_rs>
+ 1102430:	call   1982480 <_RNvXs28_NtNtCsgxBkk5gSRhY_4core3ops3bittNtB6_6BitXor6bitxorCshvlPaunwKLY_10openssl_rs>
+ 110245e:	call   19827b0 <_RNvXss_NtNtCsgxBkk5gSRhY_4core3ops3bittNtB5_6BitAnd6bitandCshvlPaunwKLY_10openssl_rs>
+ 1102479:	call   1982480 <_RNvXs28_NtNtCsgxBkk5gSRhY_4core3ops3bittNtB6_6BitXor6bitxorCshvlPaunwKLY_10openssl_rs>
+ 110249c:	call   1982480 <_RNvXs28_NtNtCsgxBkk5gSRhY_4core3ops3bittNtB6_6BitXor6bitxorCshvlPaunwKLY_10openssl_rs>
+ 11024b7:	call   1982480 <_RNvXs28_NtNtCsgxBkk5gSRhY_4core3ops3bittNtB6_6BitXor6bitxorCshvlPaunwKLY_10openssl_rs>
+ 11024d2:	call   1982480 <_RNvXs28_NtNtCsgxBkk5gSRhY_4core3ops3bittNtB6_6BitXor6bitxorCshvlPaunwKLY_10openssl_rs>
+ 11024f5:	call   1982480 <_RNvXs28_NtNtCsgxBkk5gSRhY_4core3ops3bittNtB6_6BitXor6bitxorCshvlPaunwKLY_10openssl_rs>
+ 1102518:	call   1982480 <_RNvXs28_NtNtCsgxBkk5gSRhY_4core3ops3bittNtB6_6BitXor6bitxorCshvlPaunwKLY_10openssl_rs>
+ 1102546:	call   1982480 <_RNvXs28_NtNtCsgxBkk5gSRhY_4core3ops3bittNtB6_6BitXor6bitxorCshvlPaunwKLY_10openssl_rs>
+ 1102564:	call   1982480 <_RNvXs28_NtNtCsgxBkk5gSRhY_4core3ops3bittNtB6_6BitXor6bitxorCshvlPaunwKLY_10openssl_rs>
+ 1102592:	call   1982480 <_RNvXs28_NtNtCsgxBkk5gSRhY_4core3ops3bittNtB6_6BitXor6bitxorCshvlPaunwKLY_10openssl_rs>
+ 11025b5:	call   1982480 <_RNvXs28_NtNtCsgxBkk5gSRhY_4core3ops3bittNtB6_6BitXor6bitxorCshvlPaunwKLY_10openssl_rs>
+ 11025d8:	call   1982480 <_RNvXs28_NtNtCsgxBkk5gSRhY_4core3ops3bittNtB6_6BitXor6bitxorCshvlPaunwKLY_10openssl_rs>
+ 1102606:	call   1982480 <_RNvXs28_NtNtCsgxBkk5gSRhY_4core3ops3bittNtB6_6BitXor6bitxorCshvlPaunwKLY_10openssl_rs>
+ 1102634:	call   1982480 <_RNvXs28_NtNtCsgxBkk5gSRhY_4core3ops3bittNtB6_6BitXor6bitxorCshvlPaunwKLY_10openssl_rs>
+

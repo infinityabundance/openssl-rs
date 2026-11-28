@@ -1,0 +1,12 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.01s
+     Running unittests src/lib.rs (target/debug/deps/openssl_rs-672100dcc99e32ac)
+
+running 1 test
+test aes::research::pfp70_wide_lane_benchmarks ... PFP-70 lane-width experiment, MB/s over all blocks processed:
+  AES-128 enc: u16x1 4.26, u32x2 5.83, u64x4 11.04 MB/s
+  AES-192 enc: u16x1 3.61, u32x2 4.96, u64x4 9.45 MB/s
+  AES-256 enc: u16x1 3.11, u32x2 4.17, u64x4 8.26 MB/s
+ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 2624 filtered out; finished in 1.02s
+

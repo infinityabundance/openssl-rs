@@ -1,0 +1,4 @@
+dispatch: hardware if present (iters=3000000)
+AES-128: encrypt 68.9 MB/s, decrypt 52.2 MB/s
+AES-192: encrypt 58.9 MB/s, decrypt 44.0 MB/s
+AES-256: encrypt 50.7 MB/s, decrypt 37.6 MB/s

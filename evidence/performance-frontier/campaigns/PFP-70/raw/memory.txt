@@ -1,0 +1,4 @@
+host free -g immediately before the last heavy command (the court image has no free(1)):
+               total        used        free      shared  buff/cache   available
+Mem:              45          18          25           0           2          27
+Swap:             45          45           0

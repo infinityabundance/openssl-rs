@@ -1,0 +1,3 @@
+AES-128: encrypt 267.1 MB/s, decrypt 160.2 MB/s
+AES-192: encrypt 224.2 MB/s, decrypt 130.8 MB/s
+AES-256: encrypt 191.3 MB/s, decrypt 110.6 MB/s
