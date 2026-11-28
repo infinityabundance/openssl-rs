@@ -1,0 +1,34 @@
+{
+  "auth_dso_sha256": "611e511db4273c4b6b522031fd171efce71b80661bb8310c2a21dfd18ec0efd2",
+  "bench_sha256": "8fd79af139a5002e0fa55b86ca005a4f20970a82f76af56a7465e411ba72de62",
+  "cand_dso_sha256": "dbf3d0a427ad9a63eb9b724f1434e2b48a3a005242e60e450cf49db922653e3a",
+  "ecdsa_p384": {
+    "cases": 48,
+    "cross_verifications": 96,
+    "curve": "p384",
+    "pub_dgst_mismatches": 0,
+    "status": "PASS"
+  },
+  "ecdsa_p521": {
+    "cases": 48,
+    "cross_verifications": 96,
+    "curve": "p521",
+    "pub_dgst_mismatches": 0,
+    "status": "PASS"
+  },
+  "ed25519": {
+    "cases_auth": 32,
+    "cases_cand": 32,
+    "cases_expected": 32,
+    "mismatches": 0,
+    "status": "PASS"
+  },
+  "status": "PASS",
+  "x25519": {
+    "cases_auth": 36,
+    "cases_cand": 36,
+    "cases_expected": 36,
+    "mismatches": 0,
+    "status": "PASS"
+  }
+}

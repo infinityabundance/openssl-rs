@@ -1,0 +1,3 @@
+LIB /work/court/tmp/pfp11/distribution/libcrypto.so.3
+CHECK ecdsa-p384 pub=039f124203e4b2ac1f4379cd16a9d89267e84c5625c03161a50454486e3831451d816a367cd5c773f67194b82ac9f49341 verify=1
+RESULT ecdsa-sign curve=p384 median_us=1273.471 min_us=1273.107 max_us=1274.021 spread=0.0007 iters=20 runs=5

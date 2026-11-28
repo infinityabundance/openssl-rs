@@ -1,0 +1,3 @@
+LIB /work/court/tmp/pfp11/distribution/libcrypto.so.3
+CHECK x25519-derive shared= d1bcc47ad07830fc568ad4062295c8cfe83841c2cce2539bf9e1e1ec39988f62
+RESULT x25519-derive curve=- median_us=32.239 min_us=31.924 max_us=32.464 spread=0.0167 iters=100 runs=5

@@ -1,0 +1,696 @@
+{
+  "categories": {},
+  "ops": {
+    "ecdsa-sign-p384": {
+      "categories_ir": {
+        "alloc_memory": 161078153.0,
+        "field_add_sub": 16499156.0,
+        "field_mul_sqr_reduce": 239763425.0,
+        "inversion": 15610.0,
+        "other": 79399771.0,
+        "scalar_order": 2085018.0
+      },
+      "categories_pct": {
+        "alloc_memory": 32.29047132326195,
+        "field_add_sub": 3.3074970984800487,
+        "field_mul_sqr_reduce": 48.0640847634351,
+        "inversion": 0.0031292527755524924,
+        "other": 15.916845213323658,
+        "scalar_order": 0.41797234872369676
+      },
+      "field_inversion_scalar_functions": [
+        {
+          "category": "field_mul_sqr_reduce",
+          "function": "mont_mul_fallible",
+          "ir": 205570595,
+          "pct": 41.20963196513308
+        },
+        {
+          "category": "field_mul_sqr_reduce",
+          "function": "BN_mod_mul_montgomery",
+          "ir": 22080324,
+          "pct": 4.426323841261904
+        },
+        {
+          "category": "field_mul_sqr_reduce",
+          "function": "mont_mul_ladder_into",
+          "ir": 12102750,
+          "pct": 2.426173224171552
+        },
+        {
+          "category": "scalar_order",
+          "function": "mod_lshift_quick_impl",
+          "ir": 1525955,
+          "pct": 0.30589999481859087
+        },
+        {
+          "category": "scalar_order",
+          "function": "BN_mod_lshift1_quick",
+          "ir": 500185,
+          "pct": 0.10026939779242303
+        },
+        {
+          "category": "scalar_order",
+          "function": "BN_mod_lshift_quick",
+          "ir": 49376,
+          "pct": 0.009898141258531702
+        },
+        {
+          "category": "field_mul_sqr_reduce",
+          "function": "BN_to_montgomery",
+          "ir": 9756,
+          "pct": 0.001955732868564389
+        },
+        {
+          "category": "inversion",
+          "function": "mod_exp_core_consttime_from_parts_prepared",
+          "ir": 7710,
+          "pct": 0.001545582248527208
+        },
+        {
+          "category": "inversion",
+          "function": "BN_mod_exp_mont_consttime",
+          "ir": 6570,
+          "pct": 0.0013170525775387492
+        },
+        {
+          "category": "scalar_order",
+          "function": "mod_add_reduced_ct",
+          "ir": 5941,
+          "pct": 0.0011909603292477487
+        },
+        {
+          "category": "scalar_order",
+          "function": "BN_nnmod",
+          "ir": 2640,
+          "pct": 0.0005292266064995888
+        },
+        {
+          "category": "inversion",
+          "function": "ossl_ec_group_do_inverse_ord",
+          "ir": 1022,
+          "pct": 0.00020487484539491655
+        },
+        {
+          "category": "scalar_order",
+          "function": "rem_fallible",
+          "ir": 875,
+          "pct": 0.0001754065457148258
+        },
+        {
+          "category": "inversion",
+          "function": "try_inverse_order",
+          "ir": 308,
+          "pct": 6.174310409161869e-05
+        },
+        {
+          "category": "scalar_order",
+          "function": "BN_mod_mul",
+          "ir": 30,
+          "pct": 6.013938710222599e-06
+        },
+        {
+          "category": "scalar_order",
+          "function": "BN_mod_sqr",
+          "ir": 16,
+          "pct": 3.207433978785386e-06
+        }
+      ],
+      "inclusive": {
+        "BN_mod_exp_mont_consttime": {
+          "function": "BN_mod_exp_mont_consttime",
+          "ir": 14137039,
+          "pct": 2.83
+        },
+        "BN_mod_mul_montgomery": {
+          "function": "BN_mod_mul_montgomery",
+          "ir": 390715093,
+          "pct": 78.32
+        },
+        "ossl_ec_group_do_inverse_ord": {
+          "function": "ossl_ec_group_do_inverse_ord",
+          "ir": 6606932,
+          "pct": 1.32
+        }
+      },
+      "total_ir": 498841133
+    },
+    "ecdsa-sign-p521": {
+      "categories_ir": {
+        "alloc_memory": 226266736.0,
+        "field_add_sub": 24212636.0,
+        "field_mul_sqr_reduce": 581315791.0,
+        "inversion": 17260.0,
+        "other": 105868021.0,
+        "scalar_order": 2089129.0
+      },
+      "categories_pct": {
+        "alloc_memory": 24.07683143833813,
+        "field_add_sub": 2.576443917279284,
+        "field_mul_sqr_reduce": 61.85726881370312,
+        "inversion": 0.0018366204329111643,
+        "other": 11.26531695020094,
+        "scalar_order": 0.22230226004561227
+      },
+      "field_inversion_scalar_functions": [
+        {
+          "category": "field_mul_sqr_reduce",
+          "function": "mont_mul_fallible",
+          "ir": 514916879,
+          "pct": 54.79182278228538
+        },
+        {
+          "category": "field_mul_sqr_reduce",
+          "function": "mont_mul_ladder_into",
+          "ir": 36470700,
+          "pct": 3.8808130256415527
+        },
+        {
+          "category": "field_mul_sqr_reduce",
+          "function": "BN_mod_mul_montgomery",
+          "ir": 29918436,
+          "pct": 3.183592750773173
+        },
+        {
+          "category": "scalar_order",
+          "function": "mod_lshift_quick_impl",
+          "ir": 1283205,
+          "pct": 0.13654464209813272
+        },
+        {
+          "category": "scalar_order",
+          "function": "BN_mod_lshift1_quick",
+          "ir": 727326,
+          "pct": 0.07739407838861793
+        },
+        {
+          "category": "scalar_order",
+          "function": "BN_mod_lshift_quick",
+          "ir": 66912,
+          "pct": 0.007120043244898715
+        },
+        {
+          "category": "field_mul_sqr_reduce",
+          "function": "BN_to_montgomery",
+          "ir": 9776,
+          "pct": 0.001040255003020831
+        },
+        {
+          "category": "inversion",
+          "function": "mod_exp_core_consttime_from_parts_prepared",
+          "ir": 9210,
+          "pct": 0.0009800274731814498
+        },
+        {
+          "category": "scalar_order",
+          "function": "mod_add_reduced_ct",
+          "ir": 8125,
+          "pct": 0.0008645736394787491
+        },
+        {
+          "category": "inversion",
+          "function": "BN_mod_exp_mont_consttime",
+          "ir": 6720,
+          "pct": 0.0007150689055135008
+        },
+        {
+          "category": "scalar_order",
+          "function": "BN_nnmod",
+          "ir": 2640,
+          "pct": 0.0002809199271660182
+        },
+        {
+          "category": "inversion",
+          "function": "ossl_ec_group_do_inverse_ord",
+          "ir": 1022,
+          "pct": 0.00010875006271351158
+        },
+        {
+          "category": "scalar_order",
+          "function": "rem_fallible",
+          "ir": 875,
+          "pct": 9.310793040540375e-05
+        },
+        {
+          "category": "inversion",
+          "function": "try_inverse_order",
+          "ir": 308,
+          "pct": 3.277399150270212e-05
+        },
+        {
+          "category": "scalar_order",
+          "function": "BN_mod_mul",
+          "ir": 30,
+          "pct": 3.192271899613843e-06
+        },
+        {
+          "category": "scalar_order",
+          "function": "BN_mod_sqr",
+          "ir": 16,
+          "pct": 1.7025450131273829e-06
+        }
+      ],
+      "inclusive": {
+        "BN_mod_exp_mont_consttime": {
+          "function": "BN_mod_exp_mont_consttime",
+          "ir": 39540399,
+          "pct": 4.21
+        },
+        "BN_mod_mul_montgomery": {
+          "function": "BN_mod_mul_montgomery",
+          "ir": 776743435,
+          "pct": 82.65
+        },
+        "ossl_ec_group_do_inverse_ord": {
+          "function": "ossl_ec_group_do_inverse_ord",
+          "ir": 18461390,
+          "pct": 1.96
+        }
+      },
+      "total_ir": 939769573
+    },
+    "ecdsa-verify-p384": {
+      "categories_ir": {
+        "alloc_memory": 120420850.0,
+        "field_add_sub": 13253325.0,
+        "field_mul_sqr_reduce": 174491219.0,
+        "inversion": 21322.0,
+        "other": 71514312.0,
+        "scalar_order": 3629144.0
+      },
+      "categories_pct": {
+        "alloc_memory": 31.41439385574898,
+        "field_add_sub": 3.457417643607767,
+        "field_mul_sqr_reduce": 45.51982383479065,
+        "inversion": 0.005562306741667076,
+        "other": 18.65606133398756,
+        "scalar_order": 0.9467410251233759
+      },
+      "field_inversion_scalar_functions": [
+        {
+          "category": "field_mul_sqr_reduce",
+          "function": "mont_mul_fallible",
+          "ir": 142265097,
+          "pct": 37.11294006880314
+        },
+        {
+          "category": "field_mul_sqr_reduce",
+          "function": "mont_mul_ladder_into",
+          "ir": 16943850,
+          "pct": 4.420171235568694
+        },
+        {
+          "category": "field_mul_sqr_reduce",
+          "function": "BN_mod_mul_montgomery",
+          "ir": 15275564,
+          "pct": 3.984962602943762
+        },
+        {
+          "category": "scalar_order",
+          "function": "mod_lshift_quick_impl",
+          "ir": 2772090,
+          "pct": 0.7231598769115414
+        },
+        {
+          "category": "scalar_order",
+          "function": "BN_mod_lshift1_quick",
+          "ir": 763596,
+          "pct": 0.19920059932042083
+        },
+        {
+          "category": "scalar_order",
+          "function": "BN_mod_lshift_quick",
+          "ir": 86464,
+          "pct": 0.02255601210540766
+        },
+        {
+          "category": "inversion",
+          "function": "mod_exp_core_consttime_from_parts_prepared",
+          "ir": 10794,
+          "pct": 0.002815849309143346
+        },
+        {
+          "category": "inversion",
+          "function": "BN_mod_exp_mont_consttime",
+          "ir": 9198,
+          "pct": 0.0023994980494256527
+        },
+        {
+          "category": "field_mul_sqr_reduce",
+          "function": "BN_to_montgomery",
+          "ir": 6708,
+          "pct": 0.0017499274750540639
+        },
+        {
+          "category": "scalar_order",
+          "function": "BN_nnmod",
+          "ir": 4464,
+          "pct": 0.0011645313429697885
+        },
+        {
+          "category": "scalar_order",
+          "function": "rem_fallible",
+          "ir": 1475,
+          "pct": 0.00038478578200726657
+        },
+        {
+          "category": "inversion",
+          "function": "ossl_ec_group_do_inverse_ord",
+          "ir": 1022,
+          "pct": 0.00026661089438062807
+        },
+        {
+          "category": "scalar_order",
+          "function": "mod_add_reduced_ct",
+          "ir": 457,
+          "pct": 0.00011921837449309887
+        },
+        {
+          "category": "scalar_order",
+          "function": "BN_mod_mul",
+          "ir": 390,
+          "pct": 0.00010173996947988744
+        },
+        {
+          "category": "inversion",
+          "function": "try_inverse_order",
+          "ir": 308,
+          "pct": 8.034848871744956e-05
+        },
+        {
+          "category": "scalar_order",
+          "function": "BN_mod_sqr",
+          "ir": 208,
+          "pct": 5.426131705593996e-05
+        }
+      ],
+      "inclusive": {
+        "BN_mod_exp_mont_consttime": {
+          "function": "BN_mod_exp_mont_consttime",
+          "ir": 19787155,
+          "pct": 5.16
+        },
+        "BN_mod_mul_montgomery": {
+          "function": "BN_mod_mul_montgomery",
+          "ir": 270408050,
+          "pct": 70.54
+        },
+        "ossl_ec_group_do_inverse_ord": {
+          "function": "ossl_ec_group_do_inverse_ord",
+          "ir": 6606716,
+          "pct": 1.72
+        }
+      },
+      "total_ir": 383330172
+    },
+    "ecdsa-verify-p521": {
+      "categories_ir": {
+        "alloc_memory": 169103519.0,
+        "field_add_sub": 19609859.0,
+        "field_mul_sqr_reduce": 421716384.0,
+        "inversion": 23632.0,
+        "other": 99289773.0,
+        "scalar_order": 4973693.0
+      },
+      "categories_pct": {
+        "alloc_memory": 23.660211261841507,
+        "field_add_sub": 2.743724137135928,
+        "field_mul_sqr_reduce": 59.00467830015931,
+        "inversion": 0.0033064841929152195,
+        "other": 13.892182842867314,
+        "scalar_order": 0.6958969738030246
+      },
+      "field_inversion_scalar_functions": [
+        {
+          "category": "field_mul_sqr_reduce",
+          "function": "mont_mul_fallible",
+          "ir": 350300836,
+          "pct": 49.01253287910404
+        },
+        {
+          "category": "field_mul_sqr_reduce",
+          "function": "mont_mul_ladder_into",
+          "ir": 51058980,
+          "pct": 7.143945086170207
+        },
+        {
+          "category": "field_mul_sqr_reduce",
+          "function": "BN_mod_mul_montgomery",
+          "ir": 20349840,
+          "pct": 2.847258983088772
+        },
+        {
+          "category": "scalar_order",
+          "function": "mod_lshift_quick_impl",
+          "ir": 3743844,
+          "pct": 0.5238219789582129
+        },
+        {
+          "category": "scalar_order",
+          "function": "BN_mod_lshift1_quick",
+          "ir": 1105535,
+          "pct": 0.15468153360758832
+        },
+        {
+          "category": "scalar_order",
+          "function": "BN_mod_lshift_quick",
+          "ir": 117152,
+          "pct": 0.016391386093788245
+        },
+        {
+          "category": "inversion",
+          "function": "mod_exp_core_consttime_from_parts_prepared",
+          "ir": 12894,
+          "pct": 0.0018040710554946193
+        },
+        {
+          "category": "inversion",
+          "function": "BN_mod_exp_mont_consttime",
+          "ir": 9408,
+          "pct": 0.0013163254606866277
+        },
+        {
+          "category": "field_mul_sqr_reduce",
+          "function": "BN_to_montgomery",
+          "ir": 6728,
+          "pct": 0.000941351796290352
+        },
+        {
+          "category": "scalar_order",
+          "function": "BN_nnmod",
+          "ir": 4464,
+          "pct": 0.0006245829992033489
+        },
+        {
+          "category": "scalar_order",
+          "function": "rem_fallible",
+          "ir": 1475,
+          "pct": 0.00020637543096436818
+        },
+        {
+          "category": "inversion",
+          "function": "ossl_ec_group_do_inverse_ord",
+          "ir": 1022,
+          "pct": 0.00014299368843768425
+        },
+        {
+          "category": "scalar_order",
+          "function": "mod_add_reduced_ct",
+          "ir": 625,
+          "pct": 8.74472165103255e-05
+        },
+        {
+          "category": "scalar_order",
+          "function": "BN_mod_mul",
+          "ir": 390,
+          "pct": 5.456706310244311e-05
+        },
+        {
+          "category": "inversion",
+          "function": "try_inverse_order",
+          "ir": 308,
+          "pct": 4.309398829628841e-05
+        },
+        {
+          "category": "scalar_order",
+          "function": "BN_mod_sqr",
+          "ir": 208,
+          "pct": 2.9102433654636326e-05
+        }
+      ],
+      "inclusive": {
+        "BN_mod_exp_mont_consttime": {
+          "function": "BN_mod_exp_mont_consttime",
+          "ir": 55518471,
+          "pct": 7.77
+        },
+        "BN_mod_mul_montgomery": {
+          "function": "BN_mod_mul_montgomery",
+          "ir": 529123682,
+          "pct": 74.03
+        },
+        "ossl_ec_group_do_inverse_ord": {
+          "function": "ossl_ec_group_do_inverse_ord",
+          "ir": 18493377,
+          "pct": 2.59
+        }
+      },
+      "total_ir": 714716860
+    },
+    "ed25519-sign": {
+      "categories_ir": {
+        "alloc_memory": 2736529.0,
+        "field_add_sub": 0.0,
+        "field_mul_sqr_reduce": 50053366.0,
+        "inversion": 72604.0,
+        "other": 13595771.0,
+        "scalar_order": 0.0
+      },
+      "categories_pct": {
+        "alloc_memory": 4.117665115267069,
+        "field_add_sub": 0.0,
+        "field_mul_sqr_reduce": 75.31548142917353,
+        "inversion": 0.1092475022295946,
+        "other": 20.45760595332981,
+        "scalar_order": 0.0
+      },
+      "field_inversion_scalar_functions": [
+        {
+          "category": "field_mul_sqr_reduce",
+          "function": "fe_conv",
+          "ir": 46704156,
+          "pct": 70.27591299021175
+        },
+        {
+          "category": "field_mul_sqr_reduce",
+          "function": "fe_reduce",
+          "ir": 3349210,
+          "pct": 5.039568438961773
+        },
+        {
+          "category": "inversion",
+          "function": "fe_invert",
+          "ir": 72604,
+          "pct": 0.1092475022295946
+        }
+      ],
+      "inclusive": {
+        "fe_conv": {
+          "function": "fe_conv",
+          "ir": 46704156,
+          "pct": 70.28
+        }
+      },
+      "total_ir": 66458270
+    },
+    "ed25519-verify": {
+      "categories_ir": {
+        "alloc_memory": 2732424.0,
+        "field_add_sub": 0.0,
+        "field_mul_sqr_reduce": 172813916.0,
+        "inversion": 72604.0,
+        "other": 14239935.0,
+        "scalar_order": 0.0
+      },
+      "categories_pct": {
+        "alloc_memory": 1.4391868393998049,
+        "field_add_sub": 0.0,
+        "field_mul_sqr_reduce": 91.02229872536012,
+        "inversion": 0.038241034805646355,
+        "other": 7.500273400434435,
+        "scalar_order": 0.0
+      },
+      "field_inversion_scalar_functions": [
+        {
+          "category": "field_mul_sqr_reduce",
+          "function": "fe_conv",
+          "ir": 161250456,
+          "pct": 84.93174343455382
+        },
+        {
+          "category": "field_mul_sqr_reduce",
+          "function": "fe_reduce",
+          "ir": 11563460,
+          "pct": 6.090555290806283
+        },
+        {
+          "category": "inversion",
+          "function": "fe_invert",
+          "ir": 72604,
+          "pct": 0.038241034805646355
+        }
+      ],
+      "inclusive": {
+        "fe_conv": {
+          "function": "fe_conv",
+          "ir": 161250456,
+          "pct": 84.93
+        }
+      },
+      "total_ir": 189858879
+    },
+    "x25519-derive": {
+      "categories_ir": {
+        "alloc_memory": 2098667.0,
+        "field_add_sub": 0.0,
+        "field_mul_sqr_reduce": 16952764.0,
+        "inversion": 5186.0,
+        "other": 10009833.0,
+        "scalar_order": 0.0
+      },
+      "categories_pct": {
+        "alloc_memory": 7.2202384536123265,
+        "field_add_sub": 0.0,
+        "field_mul_sqr_reduce": 58.324164113608646,
+        "inversion": 0.017841876114902233,
+        "other": 34.43775555666413,
+        "scalar_order": 0.0
+      },
+      "field_inversion_scalar_functions": [
+        {
+          "category": "field_mul_sqr_reduce",
+          "function": "fe51_mul_arr",
+          "ir": 8465886,
+          "pct": 29.125971695889934
+        },
+        {
+          "category": "field_mul_sqr_reduce",
+          "function": "fe51_sqr_arr",
+          "ir": 5266716,
+          "pct": 18.11957084542488
+        },
+        {
+          "category": "field_mul_sqr_reduce",
+          "function": "fe_conv",
+          "ir": 3004692,
+          "pct": 10.337320174978368
+        },
+        {
+          "category": "field_mul_sqr_reduce",
+          "function": "fe_reduce",
+          "ir": 215470,
+          "pct": 0.7413013973154616
+        },
+        {
+          "category": "inversion",
+          "function": "fe_invert",
+          "ir": 5186,
+          "pct": 0.017841876114902233
+        }
+      ],
+      "inclusive": {
+        "fe51_mul_arr": {
+          "function": "fe51_mul_arr",
+          "ir": 8465886,
+          "pct": 29.13
+        },
+        "fe_conv": {
+          "function": "fe_conv",
+          "ir": 3004692,
+          "pct": 10.34
+        }
+      },
+      "total_ir": 29066450
+    }
+  }
+}

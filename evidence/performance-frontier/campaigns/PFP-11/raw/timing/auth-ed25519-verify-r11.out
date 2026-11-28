@@ -1,0 +1,4 @@
+LIB /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3
+CHECK ed25519 pub= d03dbf5bd7de5e6e7106819956d81d9d2124ac2646fe8b07543a1ca56f1b6fdc
+CHECK ed25519 sig= 18fa198819d5976fe8217e4d806b8f1c342b6b63355b02ae82ee7f33be8735d795616497a442a0c8764399be4afe4120925080b871da726df9772d78c5c4600d
+RESULT ed25519-verify curve=- median_us=58.302 min_us=57.873 max_us=58.572 spread=0.0120 iters=50 runs=5
