@@ -1,0 +1,1 @@
+RESULT aes256gcm-64 bytes=64 median_us=0.6607 min_us=0.6599 max_us=0.6672 runs=5 iters=3000

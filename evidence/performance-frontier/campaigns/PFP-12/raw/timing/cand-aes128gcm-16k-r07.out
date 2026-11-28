@@ -1,0 +1,1 @@
+RESULT aes128gcm-16k bytes=16384 median_us=516.2214 min_us=512.4640 max_us=521.6013 runs=5 iters=8

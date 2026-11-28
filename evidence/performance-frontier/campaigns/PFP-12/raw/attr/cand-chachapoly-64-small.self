@@ -1,0 +1,281 @@
+--------------------------------------------------------------------------------
+Profile data file '/work/court/tmp/pfp12/attr/cand-chachapoly-64-small.cg' (creator: callgrind-3.19.0)
+--------------------------------------------------------------------------------
+I1 cache: 
+D1 cache: 
+LL cache: 
+Timerange: Basic block 0 - 3167983
+Trigger: Program termination
+Profiled target:  /work/court/tmp/pfp12/bench_pfp12 --lib /work/court/tmp/pfp12/distribution/libcrypto.so.3 --op chachapoly-64 --iters 250 --runs 1 (PID 479, part 1)
+Events recorded:  Ir
+Events shown:     Ir
+Event sort order: Ir
+Thresholds:       99.9
+Include dirs:     
+User annotated:   
+Auto-annotation:  off
+
+--------------------------------------------------------------------------------
+Ir                  
+--------------------------------------------------------------------------------
+18,153,044 (100.0%)  PROGRAM TOTALS
+
+--------------------------------------------------------------------------------
+Ir                  file:function
+--------------------------------------------------------------------------------
+4,190,840 (23.09%)  ???:openssl_rs::runtime::obj::name_find [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+1,561,248 ( 8.60%)  ???:openssl_rs::chacha::ChaCha20_ctr32 [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+  775,141 ( 4.27%)  ./malloc/./malloc/malloc.c:_int_free [/usr/lib/x86_64-linux-gnu/libc.so.6]
+  735,696 ( 4.05%)  ???:openssl_rs::provider::cipher::chacha20_poly1305_freectx [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+  683,498 ( 3.77%)  ./elf/./elf/dl-lookup.c:do_lookup_x [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+  567,514 ( 3.13%)  ./malloc/./malloc/malloc.c:_int_malloc [/usr/lib/x86_64-linux-gnu/libc.so.6]
+  538,630 ( 2.97%)  ???:OSSL_PARAM_locate [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+  433,653 ( 2.39%)  ./elf/../sysdeps/x86_64/dl-machine.h:_dl_relocate_object
+  379,870 ( 2.09%)  ./malloc/./malloc/malloc.c:malloc [/usr/lib/x86_64-linux-gnu/libc.so.6]
+  349,050 ( 1.92%)  ???:<std::hash::random::DefaultHasher as core::hash::Hasher>::write [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+  342,640 ( 1.89%)  ???:OBJ_obj2txt [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+  332,307 ( 1.83%)  ???:openssl_rs::context::namemap::namemap_add_name [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+  294,010 ( 1.62%)  ./elf/./elf/do-rel.h:_dl_relocate_object
+  272,048 ( 1.50%)  ???:<std::hash::random::RandomState as core::hash::BuildHasher>::hash_one::<&alloc::vec::Vec<u8>> [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+  271,440 ( 1.50%)  ???:openssl_rs::mac::poly1305::poly1305_blocks [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+  260,084 ( 1.43%)  ???:CRYPTO_THREAD_unlock [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+  235,234 ( 1.30%)  ???:openssl_rs::context::namemap::name2num_inner [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+  234,624 ( 1.29%)  ???:openssl_rs::mac::poly1305::Poly1305_Final [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+  226,640 ( 1.25%)  ./elf/./elf/dl-lookup.c:_dl_lookup_symbol_x [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+  216,516 ( 1.19%)  ./elf/../sysdeps/generic/dl-new-hash.h:_dl_lookup_symbol_x
+  212,520 ( 1.17%)  ./malloc/./malloc/malloc.c:realloc [/usr/lib/x86_64-linux-gnu/libc.so.6]
+  199,563 ( 1.10%)  ./malloc/./malloc/malloc.c:free [/usr/lib/x86_64-linux-gnu/libc.so.6]
+  194,845 ( 1.07%)  ???:CRYPTO_THREAD_read_lock [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+  187,300 ( 1.03%)  ./malloc/./malloc/malloc.c:_int_realloc [/usr/lib/x86_64-linux-gnu/libc.so.6]
+  167,232 ( 0.92%)  ???:openssl_rs::provider::cipher::chacha20_poly1305_aead_cipher [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+  161,563 ( 0.89%)  ???:openssl_rs::evp::cipher_ctx::evp_cipher_init_internal [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+  158,782 ( 0.87%)  /rustc/48a229ceaefd4985c50990b14116b6d856af0985/library/alloc/src/raw_vec/mod.rs:<alloc::raw_vec::RawVecInner>::finish_grow [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+  156,097 ( 0.86%)  ./malloc/./malloc/malloc.c:calloc [/usr/lib/x86_64-linux-gnu/libc.so.6]
+  137,904 ( 0.76%)  ???:openssl_rs::provider::cipher::chacha20_poly1305_get_ctx_params [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+  136,144 ( 0.75%)  ???:main [/work/court/tmp/pfp12/bench_pfp12]
+  128,554 ( 0.71%)  /rustc/48a229ceaefd4985c50990b14116b6d856af0985/library/alloc/src/raw_vec/mod.rs:<alloc::raw_vec::RawVec<u8>>::grow_one [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+  122,961 ( 0.68%)  ./elf/./elf/dl-reloc.c:_dl_relocate_object [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+  121,382 ( 0.67%)  ./string/../sysdeps/x86_64/multiarch/memmove-vec-unaligned-erms.S:__memcpy_avx_unaligned_erms [/usr/lib/x86_64-linux-gnu/libc.so.6]
+  120,988 ( 0.67%)  ???:openssl_rs::context::namemap::ossl_namemap_add_names [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+  110,386 ( 0.61%)  ./elf/./elf/dl-lookup.c:check_match [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+   93,288 ( 0.51%)  ???:openssl_rs::provider::cipher::chacha20_poly1305_set_ctx_params [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+   88,011 ( 0.48%)  ???:<alloc::vec::Vec<(u64, usize)>>::remove [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+   82,279 ( 0.45%)  ???:openssl_rs::property::store::ossl_method_store_cache_get [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+   80,103 ( 0.44%)  ./string/../sysdeps/x86_64/multiarch/../multiarch/strcmp-sse2.S:strcmp [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+   76,960 ( 0.42%)  ???:<alloc::raw_vec::RawVecInner>::finish_grow [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+   75,330 ( 0.41%)  ???:CRYPTO_strdup [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+   64,661 ( 0.36%)  ???:CRYPTO_THREAD_write_lock [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+   61,056 ( 0.34%)  /rustc/48a229ceaefd4985c50990b14116b6d856af0985/library/std/src/sys/alloc/unix.rs:__rustc::__rdl_alloc
+   60,528 ( 0.33%)  ???:openssl_rs::provider::cipher::cipher_generic_init_internal [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+   55,806 ( 0.31%)  ???:OSSL_LIB_CTX_get_data [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+   55,380 ( 0.31%)  ???:openssl_rs::provider::cipher::ossl_cipher_generic_get_params [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+   54,587 ( 0.30%)  ???:OPENSSL_LH_retrieve [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+   53,171 ( 0.29%)  ./string/../sysdeps/x86_64/multiarch/memset-vec-unaligned-erms.S:__memset_avx2_unaligned_erms [/usr/lib/x86_64-linux-gnu/libc.so.6]
+   50,627 ( 0.28%)  ???:openssl_rs::evp::cipher::evp_cipher_from_algorithm [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+   50,424 ( 0.28%)  ???:openssl_rs::property::defn_cache::property_defn_hash [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+   49,140 ( 0.27%)  ???:OSSL_PARAM_set_uint64 [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+   48,735 ( 0.27%)  ???:OBJ_nid2obj [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+   47,424 ( 0.26%)  ???:OSSL_PARAM_get_int32 [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+   46,257 ( 0.25%)  ???:openssl_rs::evp::fetch::inner_evp_generic_fetch [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+   45,080 ( 0.25%)  /rustc/48a229ceaefd4985c50990b14116b6d856af0985/library/std/src/sys/alloc/unix.rs:__rustc::__rdl_realloc
+   44,616 ( 0.25%)  ???:EVP_CIPHER_CTX_ctrl [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+   42,094 ( 0.23%)  ./string/../sysdeps/x86_64/multiarch/strlen-avx2.S:__strlen_avx2 [/usr/lib/x86_64-linux-gnu/libc.so.6]
+   40,872 ( 0.23%)  ???:aead_round.constprop.0 [/work/court/tmp/pfp12/bench_pfp12]
+   40,458 ( 0.22%)  ./misc/../sysdeps/unix/sysv/linux/x86_64/syscall.S:syscall [/usr/lib/x86_64-linux-gnu/libc.so.6]
+   39,398 ( 0.22%)  ???:OBJ_NAME_add [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+   39,312 ( 0.22%)  ???:openssl_rs::provider::cipher::chacha20_cipher [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+   37,417 ( 0.21%)  ???:CRYPTO_zalloc [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+   36,192 ( 0.20%)  ???:EVP_CIPHER_CTX_get_iv_length [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+   35,500 ( 0.20%)  ???:OPENSSL_sk_insert [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+   34,958 ( 0.19%)  ???:<hashbrown::map::HashMap<alloc::vec::Vec<u8>, i32, std::hash::random::RandomState>>::insert [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+   34,944 ( 0.19%)  ???:EVP_DecryptUpdate [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+   34,268 ( 0.19%)  /rustc/48a229ceaefd4985c50990b14116b6d856af0985/library/alloc/src/alloc.rs:<alloc::raw_vec::RawVecInner>::finish_grow
+   33,240 ( 0.18%)  ???:<alloc::raw_vec::RawVec<i32>>::grow_one [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+   31,847 ( 0.18%)  ???:OBJ_NAME_get [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+   31,616 ( 0.17%)  /rustc/48a229ceaefd4985c50990b14116b6d856af0985/library/std/src/sys/alloc/unix.rs:__rustc::__rdl_alloc_zeroed
+   30,769 ( 0.17%)  ???:openssl_rs::context::namemap::ossl_namemap_stored [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+   30,576 ( 0.17%)  ???:openssl_rs::provider::cipher::chacha20_poly1305_initiv [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+   29,952 ( 0.16%)  ???:EVP_EncryptUpdate [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+   29,824 ( 0.16%)  ???:openssl_rs::runtime::stack::sk_reserve [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+   28,704 ( 0.16%)  ???:EVP_CIPHER_CTX_get_key_length [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+   28,509 ( 0.16%)  ./malloc/./malloc/arena.c:free
+   28,088 ( 0.15%)  ./string/../sysdeps/x86_64/multiarch/memcmp-avx2-movbe.S:__memcmp_avx2_movbe [/usr/lib/x86_64-linux-gnu/libc.so.6]
+   27,897 ( 0.15%)  ???:openssl_rs::context::namemap::get_legacy_evp_names [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+   25,896 ( 0.14%)  ???:openssl_rs::provider::cipher::chacha20_poly1305_initkey [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+   25,760 ( 0.14%)  /rustc/48a229ceaefd4985c50990b14116b6d856af0985/library/std/src/alloc.rs:__rustc::__rdl_realloc [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+   24,960 ( 0.14%)  ???:OSSL_PARAM_set_int32 [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+   23,202 ( 0.13%)  ???:openssl_rs::property::store::ossl_method_store_add [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+   23,167 ( 0.13%)  ???:openssl_rs::runtime::sparse_array::ossl_sa_set [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+   22,540 ( 0.12%)  ./malloc/./malloc/arena.c:realloc
+   22,464 ( 0.12%)  ???:openssl_rs::provider::cipher::ossl_cipher_generic_set_ctx_params [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+   21,249 ( 0.12%)  ???:<hashbrown::raw::RawTable<(alloc::vec::Vec<u8>, i32)>>::reserve_rehash::<hashbrown::map::make_hasher<alloc::vec::Vec<u8>, i32, std::hash::random::RandomState>::{closure#0}> [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+   20,414 ( 0.11%)  ???:OBJ_NAME_cleanup [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+   20,298 ( 0.11%)  /rustc/48a229ceaefd4985c50990b14116b6d856af0985/library/core/src/alloc/layout.rs:<alloc::raw_vec::RawVecInner>::finish_grow
+   20,298 ( 0.11%)  /rustc/48a229ceaefd4985c50990b14116b6d856af0985/library/core/src/cmp.rs:<alloc::raw_vec::RawVec<u8>>::grow_one
+   20,298 ( 0.11%)  /rustc/48a229ceaefd4985c50990b14116b6d856af0985/library/core/src/result.rs:<alloc::raw_vec::RawVec<u8>>::grow_one
+   19,968 ( 0.11%)  ???:openssl_rs::evp::fetch::evp_generic_fetch [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+   19,708 ( 0.11%)  ./nptl/./nptl/pthread_getspecific.c:pthread_getspecific@@GLIBC_2.34 [/usr/lib/x86_64-linux-gnu/libc.so.6]
+   19,396 ( 0.11%)  ???:openssl_rs::evp::cipher::evp_cipher_cache_constants [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+   18,720 ( 0.10%)  ???:openssl_rs::provider::cipher::chacha20_poly1305_update [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+   18,336 ( 0.10%)  ???:openssl_rs::context::lib_ctx_get_data [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+   18,320 ( 0.10%)  /rustc/48a229ceaefd4985c50990b14116b6d856af0985/library/std/src/sys/pal/unix/futex.rs:<std::sync::poison::condvar::Condvar>::notify_all
+   15,472 ( 0.09%)  ./string/../sysdeps/x86_64/multiarch/strcmp-avx2.S:__strcmp_avx2 [/usr/lib/x86_64-linux-gnu/libc.so.6]
+   14,976 ( 0.08%)  ???:openssl_rs::provider::cipher::chacha20_poly1305_newctx [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+   14,648 ( 0.08%)  ./nptl/./nptl/pthread_self.c:pthread_self [/usr/lib/x86_64-linux-gnu/libc.so.6]
+   14,635 ( 0.08%)  ???:CRYPTO_strndup [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+   14,592 ( 0.08%)  /rustc/48a229ceaefd4985c50990b14116b6d856af0985/library/std/src/alloc.rs:__rustc::__rdl_alloc_zeroed [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+   14,352 ( 0.08%)  ???:EVP_EncryptFinal_ex [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+   14,352 ( 0.08%)  ???:openssl_rs::provider::cipher::chacha20_poly1305_dinit [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+   14,352 ( 0.08%)  ???:openssl_rs::provider::cipher::chacha20_poly1305_einit [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+   13,104 ( 0.07%)  ???:EVP_DecryptFinal_ex [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+   13,104 ( 0.07%)  ???:openssl_rs::provider::cipher::chacha20_initkey [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+   11,926 ( 0.07%)  ???:OPENSSL_LH_new [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+   11,547 ( 0.06%)  ???:openssl_rs::context::namemap::ossl_namemap_doall_names [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+   11,232 ( 0.06%)  ???:openssl_rs::provider::cipher::chacha20_poly1305_final [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+   10,570 ( 0.06%)  ???:EVP_CIPHER_up_ref [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+   10,360 ( 0.06%)  ./malloc/./malloc/malloc.c:alloc_perturb [/usr/lib/x86_64-linux-gnu/libc.so.6]
+   10,276 ( 0.06%)  ./elf/./elf/dl-version.c:_dl_check_map_versions [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+   10,105 ( 0.06%)  ./elf/./elf/dl-tunables.c:__GI___tunables_init [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+   10,064 ( 0.06%)  ???:__rustc::__rust_no_alloc_shim_is_unstable_v2 [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+    9,930 ( 0.05%)  ./elf/../sysdeps/generic/ldsodefs.h:do_lookup_x
+    9,880 ( 0.05%)  ???:openssl_rs::evp::fetch::put_evp_method_in_store [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+    8,736 ( 0.05%)  /rustc/48a229ceaefd4985c50990b14116b6d856af0985/library/std/src/sys/alloc/unix.rs:__rustc::__rdl_dealloc [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+    8,736 ( 0.05%)  ???:__rustc::__rust_dealloc [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+    8,722 ( 0.05%)  ???:openssl_rs::property::store::query_cmp [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+    8,202 ( 0.05%)  ./elf/../sysdeps/generic/ldsodefs.h:_dl_relocate_object
+    7,944 ( 0.04%)  ./elf/../sysdeps/generic/dl-protected.h:do_lookup_x
+    7,632 ( 0.04%)  /rustc/48a229ceaefd4985c50990b14116b6d856af0985/library/std/src/alloc.rs:__rustc::__rdl_alloc [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+    7,632 ( 0.04%)  ???:__rustc::__rust_alloc [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+    7,591 ( 0.04%)  ./nptl/./nptl/pthread_once.c:pthread_once@@GLIBC_2.34 [/usr/lib/x86_64-linux-gnu/libc.so.6]
+    7,282 ( 0.04%)  ???:OPENSSL_sk_new_null [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+    7,205 ( 0.04%)  ???:OPENSSL_sk_dup [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+    6,864 ( 0.04%)  ???:openssl_rs::property::store::query_hash [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+    6,068 ( 0.03%)  ???:<alloc::vec::Vec<openssl_rs::runtime::obj::NameRec> as alloc::vec::spec_from_iter_nested::SpecFromIterNested<openssl_rs::runtime::obj::NameRec, core::iter::adapters::copied::Copied<core::iter::adapters::filter::Filter<core::slice::iter::Iter<openssl_rs::runtime::obj::NameRec>, openssl_rs::runtime::obj::OBJ_NAME_do_all::{closure#0}::{closure#0}>>>>::from_iter [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+    4,992 ( 0.03%)  ???:EVP_DecryptInit_ex [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+    4,992 ( 0.03%)  ???:EVP_EncryptInit_ex [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+    4,940 ( 0.03%)  ???:openssl_rs::evp::method_store::ossl_method_construct_this [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+    4,939 ( 0.03%)  ???:openssl_rs::property::defn_cache::ossl_prop_defn_get [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+    4,878 ( 0.03%)  ./malloc/./malloc/arena.c:calloc
+    4,368 ( 0.02%)  ???:openssl_rs::provider::cipher::chacha20_initiv [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+    4,095 ( 0.02%)  ???:openssl_rs::property::strings::property_hash [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+    4,030 ( 0.02%)  ???:OSSL_PARAM_set_uint32 [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+    3,744 ( 0.02%)  ???:CRYPTO_malloc [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+    3,717 ( 0.02%)  ./malloc/./malloc/arena.c:malloc
+    3,664 ( 0.02%)  /rustc/48a229ceaefd4985c50990b14116b6d856af0985/library/core/src/sync/atomic.rs:<std::sync::poison::condvar::Condvar>::notify_all
+    3,664 ( 0.02%)  /rustc/48a229ceaefd4985c50990b14116b6d856af0985/library/std/src/sync/poison/condvar.rs:<std::sync::poison::condvar::Condvar>::notify_all [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+    3,640 ( 0.02%)  ???:openssl_rs::evp::fetch::construct_evp_method [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+    3,555 ( 0.02%)  ???:openssl_rs::context::namemap::get_legacy_md_names [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+    3,446 ( 0.02%)  ???:openssl_rs::evp::c_allc::openssl_add_all_ciphers_int [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+    3,284 ( 0.02%)  ???:openssl_rs::evp::cipher::set_legacy_nid [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+    3,220 ( 0.02%)  ???:__rustc::__rust_realloc [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+    3,120 ( 0.02%)  ???:<alloc::raw_vec::RawVec<usize>>::grow_one [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+    2,980 ( 0.02%)  ./elf/../sysdeps/x86/dl-cacheinfo.h:intel_check_word.constprop.0 [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+    2,872 ( 0.02%)  ./elf/./elf/dl-load.c:_dl_map_object_from_fd [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+    2,604 ( 0.01%)  ./string/../sysdeps/x86_64/multiarch/strchr-avx2.S:__strchr_avx2 [/usr/lib/x86_64-linux-gnu/libc.so.6]
+    2,526 ( 0.01%)  ???:OBJ_NAME_do_all [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+    2,493 ( 0.01%)  ./stdio-common/./stdio-common/printf_fp.c:__printf_fp_l [/usr/lib/x86_64-linux-gnu/libc.so.6]
+    2,474 ( 0.01%)  ???:<std::sync::once::Once>::call_once::<openssl_rs::provider::cipher::fill_exported_ciphers>::{closure#0} [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+    2,432 ( 0.01%)  ???:__rustc::__rust_alloc_zeroed [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+    2,340 ( 0.01%)  ???:EVP_CIPHER_free [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+    2,292 ( 0.01%)  ./malloc/./malloc/malloc.c:malloc_consolidate [/usr/lib/x86_64-linux-gnu/libc.so.6]
+    2,268 ( 0.01%)  ./elf/../bits/stdlib-bsearch.h:intel_check_word.constprop.0
+    2,210 ( 0.01%)  ???:openssl_rs::provider::ossl_provider_up_ref [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+    2,201 ( 0.01%)  ./elf/./elf/dl-deps.c:_dl_map_object_deps [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+    1,989 ( 0.01%)  ???:openssl_rs::runtime::mem::default_malloc [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+    1,821 ( 0.01%)  ./malloc/./malloc/malloc.c:unlink_chunk.constprop.0 [/usr/lib/x86_64-linux-gnu/libc.so.6]
+    1,560 ( 0.01%)  ???:cipher_of [/work/court/tmp/pfp12/bench_pfp12]
+    1,423 ( 0.01%)  ./elf/./elf/dl-load.c:_dl_map_object [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+    1,382 ( 0.01%)  ???:EVP_add_digest [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+    1,372 ( 0.01%)  ./elf/./elf/dl-misc.c:_dl_name_match_p [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+    1,300 ( 0.01%)  ???:openssl_rs::provider::cipher::set_size_param [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+    1,249 ( 0.01%)  ./elf/./elf/rtld.c:dl_main [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+    1,224 ( 0.01%)  ./elf/./elf/dl-runtime.c:_dl_fixup [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+    1,219 ( 0.01%)  ./elf/./elf/dl-sym.c:do_sym [/usr/lib/x86_64-linux-gnu/libc.so.6]
+    1,209 ( 0.01%)  ./elf/./elf/get-dynamic-info.h:_dl_map_object_from_fd
+    1,170 ( 0.01%)  ./nptl/./nptl/pthread_mutex_lock.c:pthread_mutex_lock@@GLIBC_2.2.5 [/usr/lib/x86_64-linux-gnu/libc.so.6]
+    1,169 ( 0.01%)  ./elf/./elf/dl-tunables.h:__GI___tunables_init
+    1,131 ( 0.01%)  ???:openssl_rs::evp::algorithm::algorithm_do_this [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+    1,085 ( 0.01%)  ???:OPENSSL_LH_insert [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+    1,082 ( 0.01%)  ./elf/./elf/dl-cache.c:_dl_cache_libcmp [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+    1,077 ( 0.01%)  ./stdio-common/./stdio-common/printf_fp.c:hack_digit [/usr/lib/x86_64-linux-gnu/libc.so.6]
+    1,036 ( 0.01%)  ./elf/./elf/dl-error-skeleton.c:_dl_catch_exception [/usr/lib/x86_64-linux-gnu/libc.so.6]
+    1,005 ( 0.01%)  ???:openssl_rs::property::strings::ossl_property_string [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+      990 ( 0.01%)  ./nptl/./nptl/pthread_mutex_unlock.c:__pthread_mutex_unlock_usercnt [/usr/lib/x86_64-linux-gnu/libc.so.6]
+      963 ( 0.01%)  ./elf/./elf/dl-object.c:_dl_new_object [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+      962 ( 0.01%)  ./stdio-common/./stdio-common/vfprintf-internal.c:__vfprintf_internal [/usr/lib/x86_64-linux-gnu/libc.so.6]
+      903 ( 0.00%)  ./stdlib/./stdlib/divrem.c:__mpn_divrem [/usr/lib/x86_64-linux-gnu/libc.so.6]
+      897 ( 0.00%)  ./dlfcn/./dlfcn/dlerror.c:_dlerror_run [/usr/lib/x86_64-linux-gnu/libc.so.6]
+      807 ( 0.00%)  ./elf/./elf/dl-load.c:open_path [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+      776 ( 0.00%)  ./malloc/./malloc/malloc.c:ptmalloc_init.part.0
+      763 ( 0.00%)  ???:openssl_rs::runtime::mem::default_free [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+      744 ( 0.00%)  ???:<alloc::raw_vec::RawVec<alloc::vec::Vec<usize>>>::grow_one [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+      720 ( 0.00%)  ./elf/./elf/dl-hwcaps.c:_dl_important_hwcaps [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+      704 ( 0.00%)  ./string/../sysdeps/x86_64/multiarch/memmove-vec-unaligned-erms.S:mempcpy [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+      696 ( 0.00%)  ./elf/./elf/dl-load.c:open_verify.constprop.0 [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+      696 ( 0.00%)  ./string/../sysdeps/x86_64/multiarch/../multiarch/strchr-sse2.S:index [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+      679 ( 0.00%)  ./string/../sysdeps/x86_64/multiarch/../multiarch/memset-vec-unaligned-erms.S:memset [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+      672 ( 0.00%)  ./dlfcn/./dlfcn/dlsym.c:dlsym@@GLIBC_2.34 [/usr/lib/x86_64-linux-gnu/libc.so.6]
+      667 ( 0.00%)  ./elf/./elf/dl-error-skeleton.c:_dl_catch_error [/usr/lib/x86_64-linux-gnu/libc.so.6]
+      640 ( 0.00%)  ./elf/./elf/dl-sort-maps.c:dfs_traversal.part.0 [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+      628 ( 0.00%)  ./elf/./elf/dl-tunables.c:__tunable_get_val [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+      624 ( 0.00%)  ???:EVP_chacha20_poly1305 [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+      620 ( 0.00%)  ./elf/./elf/dl-minimal-malloc.c:__minimal_malloc [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+      615 ( 0.00%)  ./setjmp/../sysdeps/x86_64/setjmp.S:__sigsetjmp [/usr/lib/x86_64-linux-gnu/libc.so.6]
+      606 ( 0.00%)  ./elf/./elf/dl-close.c:_dl_close_worker [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+      600 ( 0.00%)  ./string/../sysdeps/x86_64/multiarch/../multiarch/strlen-sse2.S:strlen [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+      592 ( 0.00%)  ./elf/./dl-map-segments.h:_dl_map_object_from_fd
+      568 ( 0.00%)  ./elf/./elf/dl-sort-maps.c:_dl_sort_maps [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+      555 ( 0.00%)  ???:EVP_PKEY_asn1_get0 [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+      550 ( 0.00%)  ./libio/./libio/fileops.c:_IO_file_xsputn@@GLIBC_2.2.5 [/usr/lib/x86_64-linux-gnu/libc.so.6]
+      520 ( 0.00%)  ./elf/../sysdeps/x86_64/dl-trampoline.h:_dl_runtime_resolve_xsave [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+      504 ( 0.00%)  ./elf/../sysdeps/x86/dl-cacheinfo.h:handle_intel.constprop.0 [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+      497 ( 0.00%)  ???:openssl_rs::provider::seeding::ossl_prov_seeding_from_dispatch [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+      496 ( 0.00%)  ???:openssl_rs::provider::digest::ossl_default_provider_init [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+      477 ( 0.00%)  ./elf/./elf/dl-open.c:dl_open_worker_begin [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+      464 ( 0.00%)  ???:<openssl_rs::runtime::err::ErrState>::clear [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+      420 ( 0.00%)  ./stdlib/../sysdeps/x86_64/mul_1.S:__mpn_mul_1 [/usr/lib/x86_64-linux-gnu/libc.so.6]
+      418 ( 0.00%)  ./elf/./elf/dl-cache.c:search_cache [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+      393 ( 0.00%)  ./elf/./elf/dl-hwcaps_split.c:_dl_hwcaps_split [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+      390 ( 0.00%)  ./elf/./elf/dl-init.c:call_init [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+      388 ( 0.00%)  ./malloc/./malloc/malloc.c:sysmalloc [/usr/lib/x86_64-linux-gnu/libc.so.6]
+      387 ( 0.00%)  ???:openssl_rs::property::defn_cache::property_defn_cmp [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+      362 ( 0.00%)  ???:openssl_rs::runtime::rcu::ossl_synchronize_rcu [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+      360 ( 0.00%)  ???:<alloc::raw_vec::RawVecInner<_>>::reserve::do_reserve_and_handle::<alloc::alloc::Global> [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+      360 ( 0.00%)  ???:openssl_rs::runtime::thread::mutex_acquire [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+      345 ( 0.00%)  ./string/../sysdeps/x86_64/multiarch/memmove-vec-unaligned-erms.S:memcpy [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+      344 ( 0.00%)  ./elf/./dl-find_object.h:_dl_find_object_from_map [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+      333 ( 0.00%)  ./elf/../elf/dl-tls.c:_dl_allocate_tls_storage [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+      332 ( 0.00%)  ./elf/./get-dynamic-info.h:dl_main
+      315 ( 0.00%)  ???:0x0000000000003430 [/usr/lib/x86_64-linux-gnu/libgcc_s.so.1]
+      314 ( 0.00%)  ./elf/./elf/dl-error-skeleton.c:_dl_catch_exception'2 [/usr/lib/x86_64-linux-gnu/libc.so.6]
+      305 ( 0.00%)  ./io/../sysdeps/unix/sysv/linux/open64_nocancel.c:__open_nocancel [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+      302 ( 0.00%)  ./elf/./elf/dl-load.c:_dl_init_paths [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+      290 ( 0.00%)  ./elf/./elf/dl-minimal.c:strsep [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+      288 ( 0.00%)  ???:<alloc::raw_vec::RawVec<openssl_rs::runtime::obj::DeferredFree>>::grow_one [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+      282 ( 0.00%)  ./stdio-common/./stdio-common/vfprintf-process-arg.c:__vfprintf_internal
+      280 ( 0.00%)  ???:openssl_rs::property::parse::parse_value [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+      264 ( 0.00%)  ./elf/./elf/dl-fini.c:_dl_fini [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+      263 ( 0.00%)  ./elf/./get-dynamic-info.h:_dl_start
+      251 ( 0.00%)  ./string/../string/strcspn.c:strcspn [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+      248 ( 0.00%)  ./setjmp/./setjmp/sigjmp.c:__sigjmp_save [/usr/lib/x86_64-linux-gnu/libc.so.6]
+      248 ( 0.00%)  ???:openssl_rs::property::store::ossl_method_store_new [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+      243 ( 0.00%)  ???:OPENSSL_init_crypto [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+      238 ( 0.00%)  ???:openssl_rs::property::parse::parse_name [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+      234 ( 0.00%)  ./stdlib/../stdlib/strtol_l.c:____strtol_l_internal [/usr/lib/x86_64-linux-gnu/libc.so.6]
+      229 ( 0.00%)  ./elf/../sysdeps/x86/dl-cacheinfo.h:get_common_cache_info.constprop.0 [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+      227 ( 0.00%)  ./string/../sysdeps/x86_64/multiarch/memmove-vec-unaligned-erms.S:__mempcpy_avx_unaligned_erms [/usr/lib/x86_64-linux-gnu/libc.so.6]
+      224 ( 0.00%)  ./stdlib/./stdlib/cxa_finalize.c:__cxa_finalize [/usr/lib/x86_64-linux-gnu/libc.so.6]
+      219 ( 0.00%)  ./elf/../sysdeps/x86/dl-cacheinfo.h:init_cpu_features.constprop.0
+      214 ( 0.00%)  ???:openssl_rs::property::store::ossl_method_store_fetch [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+      210 ( 0.00%)  ./elf/./elf/dl-object.c:_dl_add_to_namespace_list [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+      208 ( 0.00%)  ./elf/./elf/dl-find_object.c:_dl_find_object_update [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+      203 ( 0.00%)  ./elf/../sysdeps/unix/sysv/linux/dl-parse_auxv.h:_dl_sysdep_parse_arguments
+      201 ( 0.00%)  ./elf/./elf/dl-hwcaps_split.c:_dl_hwcaps_split_masked [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+      201 ( 0.00%)  ./stdlib/./stdlib/getenv.c:getenv [/usr/lib/x86_64-linux-gnu/libc.so.6]
+      200 ( 0.00%)  ./elf/./elf/dl-open.c:_dl_find_dso_for_object [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+      199 ( 0.00%)  ./elf/./elf/rtld.c:_dl_start [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+      197 ( 0.00%)  ./elf/./elf/dl-find_object.c:_dlfo_process_initial [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+      192 ( 0.00%)  ???:<alloc::raw_vec::RawVec<(u64, usize)>>::grow_one [/work/court/tmp/pfp12/distribution/libcrypto.so.3]
+      189 ( 0.00%)  ./dlfcn/./dlfcn/dlsym.c:dlsym_doit [/usr/lib/x86_64-linux-gnu/libc.so.6]
+      180 ( 0.00%)  ./nptl/./nptl/pthread_once.c:__pthread_once_slow [/usr/lib/x86_64-linux-gnu/libc.so.6]
+

@@ -45,6 +45,17 @@
 //! exactly those two plus their shared bodies. A `SHA224_Transform` does not exist to be
 //! written.
 //!
+//! ## The SHA-NI arm
+//!
+//! On x86-64 with the SHA and SSE4.1 extensions, [`sha256_block`] dispatches to a
+//! `#[target_feature]` compression function built from `sha256rnds2`/`sha256msg1`/
+//! `sha256msg2`; the portable `OPENSSL_SMALL_FOOTPRINT` transcription remains the
+//! fallback and the differential reference. The dispatch is the single gated site. The
+//! `OPENSSL_ia32cap` second-vector clear mask (bit 29, the CPUID `SHA` bit) forces the
+//! fallback, which is how the portable arm is measured live. The value-set form of
+//! `OPENSSL_ia32cap` is not modelled (only the `~` clear mask), and the AArch64 SHA-2
+//! crypto extension is not implemented in this batch; both are recorded as residuals.
+//!
 //! SPDX-License-Identifier: Apache-2.0
 
 use core::ffi::{c_int, c_void};
@@ -191,7 +202,149 @@ fn maj64(x: u64, y: u64, z: u64) -> u64 {
     (x & y) ^ (x & z) ^ (y & z)
 }
 
-/// `sha256_block_data_order` — `crypto/sha/sha256.c`'s `OPENSSL_SMALL_FOOTPRINT` arm.
+/// The SHA extension bit in the second `OPENSSL_ia32cap` vector.
+///
+/// `OPENSSL_ia32cap`'s value is `[vec1][:vec2]`; a vector prefixed with `~` clears the named
+/// bits. `SHA` is `CPUID.(EAX=7,ECX=0).EBX` bit 29, i.e. bit 29 of the second vector. Only the
+/// clear mask is modelled, because that is the form that forces the portable path; the
+/// authority's value-set form and its other capability bits are not modelled (`RT-CPU-CAPABILITY`).
+#[cfg(target_arch = "x86_64")]
+fn ia32cap_sha_cleared(spec: Option<&str>) -> bool {
+    let Some(second) = spec.and_then(|s| s.split(':').nth(1)) else {
+        return false;
+    };
+    let Some(mask) = second.strip_prefix('~') else {
+        return false;
+    };
+    let mask = mask.trim_start_matches("0x").trim_start_matches("0X");
+    u64::from_str_radix(mask, 16)
+        .map(|m| m & (1u64 << 29) != 0)
+        .unwrap_or(false)
+}
+
+/// The SHA-NI dispatch predicate — the only runtime feature-detection site on this path.
+///
+/// `BOUNDARY_COVERED`: `is_x86_feature_detected!` is a cached CPUID read with no memory
+/// or initialisation obligation, and the `#[target_feature]` callee additionally executes
+/// SSE4.1 `blend`/SSSE3 `alignr`, so both bits are established before the call. The result
+/// is cached for the process, and `OPENSSL_ia32cap`'s SHA clear mask overrides it to force
+/// the portable arm.
+#[cfg(target_arch = "x86_64")]
+fn sha256_ni_available() -> bool {
+    use std::sync::OnceLock;
+
+    static AVAILABLE: OnceLock<bool> = OnceLock::new();
+    *AVAILABLE.get_or_init(|| {
+        let spec = std::env::var("OPENSSL_ia32cap").ok();
+        if ia32cap_sha_cleared(spec.as_deref()) {
+            return false;
+        }
+        std::is_x86_feature_detected!("sha") && std::is_x86_feature_detected!("sse4.1")
+    })
+}
+
+/// SHA-256 compression over `num` blocks using the x86 SHA-NI instructions.
+///
+/// The register layout, the message-schedule recurrence and the final state shuffle are the
+/// standard SHA-NI shape: four message vectors are carried, `sha256msg1`/`sha256msg2` produce
+/// each new schedule vector, and `sha256rnds2` performs two rounds per instruction. `K256` is
+/// public round-constant data; no table is indexed by message or state content.
+///
+/// # Safety
+///
+/// The caller must have established [`sha256_ni_available`], and `data` must be readable for
+/// `num * MD32_CBLOCK` bytes and disjoint from `*ctx` (the [`sha256_block`] contract).
+#[cfg(target_arch = "x86_64")]
+#[target_feature(enable = "sha,sse4.1")]
+unsafe fn sha256_blocks_sha_ni(ctx: &mut Sha256Ctx, mut data: *const u8, mut num: usize) {
+    use core::arch::x86_64::*;
+
+    // SAFETY: the caller's contract gives `data` for `num` blocks; `ctx.h` is the live,
+    // exclusively borrowed state, and every load/store below lies inside one of the two.
+    unsafe {
+        let mask = _mm_set_epi64x(0x0c0d_0e0f_0809_0a0b, 0x0405_0607_0001_0203);
+        let mut state0 = _mm_loadu_si128(ctx.h.as_ptr().cast());
+        let mut state1 = _mm_loadu_si128(ctx.h.as_ptr().add(4).cast());
+        let tmp = _mm_shuffle_epi32(state0, 0xB1);
+        state1 = _mm_shuffle_epi32(state1, 0x1B);
+        state0 = _mm_alignr_epi8(tmp, state1, 8);
+        state1 = _mm_blend_epi16(state1, tmp, 0xF0);
+
+        while num > 0 {
+            let abef = state0;
+            let cdgh = state1;
+
+            let mut msgs = [
+                _mm_shuffle_epi8(_mm_loadu_si128(data.cast()), mask),
+                _mm_shuffle_epi8(_mm_loadu_si128(data.add(16).cast()), mask),
+                _mm_shuffle_epi8(_mm_loadu_si128(data.add(32).cast()), mask),
+                _mm_shuffle_epi8(_mm_loadu_si128(data.add(48).cast()), mask),
+            ];
+
+            for (g, m) in msgs.iter().enumerate() {
+                let kv = _mm_loadu_si128(K256.as_ptr().add(4 * g).cast());
+                let mut msg = _mm_add_epi32(*m, kv);
+                state1 = _mm_sha256rnds2_epu32(state1, state0, msg);
+                msg = _mm_shuffle_epi32(msg, 0x0E);
+                state0 = _mm_sha256rnds2_epu32(state0, state1, msg);
+            }
+
+            for i in 0..12usize {
+                let j = i & 3;
+                let a = msgs[j];
+                let b = msgs[(j + 1) & 3];
+                let c = msgs[(j + 2) & 3];
+                let e = msgs[(j + 3) & 3];
+
+                let mut msg = _mm_sha256msg1_epu32(a, b);
+                msg = _mm_add_epi32(msg, _mm_alignr_epi8(e, c, 4));
+                msg = _mm_sha256msg2_epu32(msg, e);
+                msgs[j] = msg;
+                let kv = _mm_loadu_si128(K256.as_ptr().add(16 + 4 * i).cast());
+                msg = _mm_add_epi32(msg, kv);
+                state1 = _mm_sha256rnds2_epu32(state1, state0, msg);
+                msg = _mm_shuffle_epi32(msg, 0x0E);
+                state0 = _mm_sha256rnds2_epu32(state0, state1, msg);
+            }
+
+            state0 = _mm_add_epi32(state0, abef);
+            state1 = _mm_add_epi32(state1, cdgh);
+
+            data = data.add(MD32_CBLOCK);
+            num -= 1;
+        }
+
+        let tmp = _mm_shuffle_epi32(state0, 0x1B);
+        state1 = _mm_shuffle_epi32(state1, 0xB1);
+        state0 = _mm_blend_epi16(tmp, state1, 0xF0);
+        state1 = _mm_alignr_epi8(state1, tmp, 8);
+        _mm_storeu_si128(ctx.h.as_mut_ptr().cast(), state0);
+        _mm_storeu_si128(ctx.h.as_mut_ptr().add(4).cast(), state1);
+    }
+}
+
+/// Dispatch `num` SHA-256 blocks to the SHA-NI arm when it is available and live, else to the
+/// portable transcription.
+///
+/// # Safety
+///
+/// `data` must be readable for `num * MD32_CBLOCK` bytes and disjoint from `*ctx`; when `num`
+/// is zero nothing is read.
+unsafe fn sha256_block(ctx: &mut Sha256Ctx, data: *const u8, num: usize) {
+    #[cfg(target_arch = "x86_64")]
+    if num > 0 && sha256_ni_available() {
+        // SAFETY: the feature predicate above establishes the target features, and the
+        // pointer extent is this function's own contract, which is unchanged for the callee.
+        unsafe { sha256_blocks_sha_ni(ctx, data, num) };
+        return;
+    }
+
+    // SAFETY: the caller's contract, unchanged for the portable transcription.
+    unsafe { sha256_block_portable(ctx, data, num) }
+}
+
+/// `sha256_block_data_order` — `crypto/sha/sha256.c`'s `OPENSSL_SMALL_FOOTPRINT` arm, the
+/// portable reference and the fallback for CPUs without SHA-NI.
 ///
 /// # Safety
 ///
@@ -203,7 +356,7 @@ fn maj64(x: u64, y: u64, z: u64) -> u64 {
 /// extent must be representable (`num * MD32_CBLOCK` must not overflow `usize`), and the region
 /// need not be aligned beyond `u8`, because every word is loaded byte-wise. When `num == 0`
 /// nothing is read.
-unsafe fn sha256_block(ctx: &mut Sha256Ctx, mut data: *const u8, mut num: usize) {
+unsafe fn sha256_block_portable(ctx: &mut Sha256Ctx, mut data: *const u8, mut num: usize) {
     while num > 0 {
         let mut x = [0u32; 16];
         for (i, word) in x.iter_mut().enumerate() {
@@ -1198,6 +1351,50 @@ mod tests {
                 assert_eq!(hex(&out[..len]), want, "one-shot {i}");
             }
         }
+    }
+
+    #[cfg(target_arch = "x86_64")]
+    #[test]
+    fn the_ia32cap_clear_mask_is_the_sha_bit_only() {
+        assert!(!ia32cap_sha_cleared(None));
+        assert!(!ia32cap_sha_cleared(Some("0xffffffff")));
+        assert!(!ia32cap_sha_cleared(Some(":0x20000000")));
+        assert!(!ia32cap_sha_cleared(Some("~0x20000000")));
+        assert!(!ia32cap_sha_cleared(Some(":~0x10000000")));
+        assert!(ia32cap_sha_cleared(Some(":~0x20000000")));
+        assert!(ia32cap_sha_cleared(Some("~0x1:~0x20000000")));
+        assert!(!ia32cap_sha_cleared(Some(":~not-hex")));
+    }
+
+    /// The portable transcription and the dispatched block function must agree on the
+    /// chaining state for the same blocks. On this machine the dispatched call takes the
+    /// SHA-NI arm, so this is the differential reference check; on a machine without the
+    /// extension both paths are portable and equality only proves the wrapper is live.
+    fn ctx_with_init_words() -> Sha256Ctx {
+        Sha256Ctx {
+            h: sha256_init_words(),
+            nl: 0,
+            nh: 0,
+            data: [0; 16],
+            num: 0,
+            md_len: SHA256_DIGEST_LENGTH,
+        }
+    }
+
+    #[test]
+    fn the_portable_compression_matches_the_dispatched_path() {
+        let mut buf = [0u8; 2 * MD32_CBLOCK];
+        for (i, b) in buf.iter_mut().enumerate() {
+            *b = (i as u8).wrapping_mul(37).wrapping_add(11);
+        }
+        let mut portable = ctx_with_init_words();
+        let mut dispatched = ctx_with_init_words();
+        // SAFETY: both pointers are live locals covering exactly the contracted extent.
+        unsafe {
+            sha256_block_portable(&mut portable, buf.as_ptr(), 2);
+            sha256_block(&mut dispatched, buf.as_ptr(), 2);
+        }
+        assert_eq!(portable.h, dispatched.h);
     }
 }
 

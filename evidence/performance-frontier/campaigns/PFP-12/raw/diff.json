@@ -1,0 +1,53 @@
+{
+  "kat_cases": 16,
+  "kat_cross_library": "IDENTICAL",
+  "kat_mismatch_lines": [],
+  "ok": true,
+  "pairs": {
+    "aes128gcm-16k": {
+      "auth_lines": 1,
+      "cand_lines": 1,
+      "status": "IDENTICAL"
+    },
+    "aes128gcm-64": {
+      "auth_lines": 1,
+      "cand_lines": 1,
+      "status": "IDENTICAL"
+    },
+    "aes256gcm-16k": {
+      "auth_lines": 1,
+      "cand_lines": 1,
+      "status": "IDENTICAL"
+    },
+    "aes256gcm-64": {
+      "auth_lines": 1,
+      "cand_lines": 1,
+      "status": "IDENTICAL"
+    },
+    "chachapoly-16k": {
+      "auth_lines": 1,
+      "cand_lines": 1,
+      "status": "IDENTICAL"
+    },
+    "chachapoly-64": {
+      "auth_lines": 1,
+      "cand_lines": 1,
+      "status": "IDENTICAL"
+    },
+    "kat": {
+      "auth_lines": 16,
+      "cand_lines": 16,
+      "status": "IDENTICAL"
+    },
+    "sha256-16k": {
+      "auth_lines": 1,
+      "cand_lines": 1,
+      "status": "IDENTICAL"
+    },
+    "sha512-16k": {
+      "auth_lines": 1,
+      "cand_lines": 1,
+      "status": "IDENTICAL"
+    }
+  }
+}
