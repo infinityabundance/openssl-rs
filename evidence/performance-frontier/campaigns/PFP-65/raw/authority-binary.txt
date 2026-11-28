@@ -1,0 +1,28 @@
+PFP-65 — authority binary record (pinned 3.6.4 DSO)
+====================================================
+
+Authority DSO: forensics/authorities/build/openssl-3.6.4-production/libcrypto.so.3
+SHA-256      : 611e511db4273c4b6b522031fd171efce71b80661bb8310c2a21dfd18ec0efd2
+Tool          : objdump -d -M intel, per-symbol ranges from nm -S
+
+Carrier                                    insns  indexed-scaled memory operands
+-----------------------------------------  -----  ------------------------------
+_x86_64_Camellia_encrypt (the data path)     282   60 (56 with *8 scale)
+    e.g. 160674 mov edx,[rbp+rsi*8+0x804]     # rbp = .LCamellia_SBOX
+         16067b mov ecx,[rbp+rdi*8+0x0]
+    rsi/rdi are state-derived; the table base is .LCamellia_SBOX (0x47af80).
+    There is no table-free Camellia path in this DSO.
+
+ossl_aria_encrypt (the only path)            486   64 (scale-4 loads)
+    e.g. 1007e9 mov r12d,[r9+r10*4]
+         10084e xor r12d,[r8+r13*4]
+         10085b xor r12d,[r10+rbp*4]
+         10085f xor r12d,[r11+rax*4]
+    State-byte indices into S1/S2/X1/X2.  No ARIA assembly exists in 3.6.4.
+
+ossl_sm4_encrypt (C fallback taken here)     821   128
+    e.g. 38acd0 movzx edx,BYTE PTR [rdi+rdx*1]   # SM4_S
+         (plus the SM4_SBOX_T* word loads)
+    This is the path the pinned DSO executes ON THIS VENUE because the CPU
+    lacks the SM4 extension (see authority-path.txt).  On SM4-capable CPUs
+    the provider selects hw_x86_64_sm4_* (vsm4rnds4/vsm4key4) instead.

@@ -1,0 +1,74 @@
+PFP-65 — authority path evidence (pinned OpenSSL 3.6.4)
+=======================================================
+
+Authority tree : forensics/authorities/src/openssl-3.6.4
+Authority DSO  : forensics/authorities/build/openssl-3.6.4-production/libcrypto.so.3
+Authority SHA  : 611e511db4273c4b6b522031fd171efce71b80661bb8310c2a21dfd18ec0efd2
+CPU            : 13th Gen Intel(R) Core(TM) i9-13900K
+CPU flags      : aes avx2 gfni vaes   (no avx512, NO sm4)
+
+CAMELLIA
+---------
+Source path (always table-indexed, both data and key schedule):
+  crypto/camellia/camellia.c:64    static const u32 Camellia_SBOX[][256]
+  crypto/camellia/camellia.c:253-269  Camellia_Feistel: 8 loads indexed by state bytes
+  (Camellia_Ekeygen uses the same Camellia_Feistel; no separate path)
+x86_64 shipped path:
+  crypto/camellia/asm/cmll-x86_64.pl:90-105
+    mov/xor  $SBOX3_3033($Tbl,$i0,8), ...
+    mov/xor  $SBOX1_1110($Tbl,$i1,8), ...
+  with $Tbl = .LCamellia_SBOX at lines 161/288/505.
+  The assembly is the data path for Camellia_EncryptBlock/DecryptBlock; it is
+  secret-table-indexed, exactly as the C fallback is.  There is no table-free
+  Camellia path in the pinned authority.
+=> Same-path secret-indexed tables.  Classification: PARITY.
+
+ARIA
+----
+Source path (only path; 3.6.4 has no crypto/aria/asm directory):
+  crypto/aria/aria.c:69,136,203,270   static const uint32_t S1,S2,X1,X2[256]
+  crypto/aria/aria.c:349-361          data-path loads indexed by state bytes
+  crypto/aria/aria.c:460-463          key-schedule loads indexed by key-derived bytes
+  The OPENSSL_SMALL_FOOTPRINT alternative (aria.c:685-1121) is a byte-wise
+  variant, not the default build.
+=> Same-path secret-indexed tables.  Classification: PARITY.
+
+SM4
+---
+Runtime capability gate:
+  include/crypto/sm4_platform.h:53-54
+    #define HWSM4_CAPABLE_X86_64 \
+      ((OPENSSL_ia32cap_P[2] & (1 << 5)) && (OPENSSL_ia32cap_P[5] & (1 << 2)))
+  OPENSSL_ia32cap_P[5] is CPUID.(EAX=7,ECX=1).EAX
+    (crypto/x86_64cpuid.pl:218 saves it).  Bit 2 is the SM4 instruction-set
+    extension, exposed by Linux as the `sm4` CPU flag.
+  This CPU's /proc/cpuinfo has no `sm4` flag, and a direct CPUID probe
+  (raw/cpuid_sm4.c -> raw/cpuid-sm4.txt, run in the court) confirms the gate:
+    cpuid.7.0.ebx=0x219c27eb bit5(AVX2)=1
+    cpuid.7.1.eax=0x00000810 bit2(SM4)=0
+    HWSM4_CAPABLE_X86_64=0
+  so the authority selects the C table fallback on this venue.
+
+Table-free path the authority ships and selects on capable CPUs:
+  providers/implementations/ciphers/cipher_sm4_hw_x86_64.inc:37-38
+    if (HWSM4_CAPABLE_X86_64) return &hw_x86_64_sm4_<mode>;
+  crypto/sm4/asm/sm4-x86_64.pl:119,170,266  vsm4key4 / vsm4rnds4, vpshufb with
+    constant shuffle masks; no memory address derived from a state/key byte.
+  Symbols present in the pinned DSO: hw_x86_64_sm4_set_key/encrypt/decrypt.
+
+Fallback path taken on THIS venue (no SM4 extension):
+  crypto/sm4/sm4.c:249-252   SM4_S[(uint8_t)X ...]   (byte table, state/key-indexed)
+  crypto/sm4/sm4.c:269       SM4_SBOX_T0..T3 [(uint8_t)X ...]
+
+=> On this CPU the authority's same-path code is the secret-indexed C fallback,
+   so the binary carries the same weakness.  But the authority *does* ship and
+   dispatch to a table-free SM4 data/key path on SM4-capable x86_64, whereas the
+   crate had no table-free path at all.  Classification: OWN-WEAKNESS (avoidable
+   divergence from the authority's capable path); same-path binary parity on this
+   specific CPU is recorded explicitly and is NOT treated as discharge.
+
+CPUID check cross-reference:
+  The gate's inputs were read directly rather than inferred (raw/cpuid-sm4.txt):
+  CPUID.(7,0).EBX bit5 = 1 (AVX2), CPUID.(7,1).EAX bit2 = 0 (no SM4 ISA),
+  so HWSM4_CAPABLE_X86_64 = 0.  If the SM4 bit were set, the same pinned DSO
+  would execute vsm4rnds4 instead of ossl_sm4_encrypt.

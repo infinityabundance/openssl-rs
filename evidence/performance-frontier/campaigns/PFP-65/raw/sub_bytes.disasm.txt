@@ -1,0 +1,449 @@
+
+court/tmp/pfp65/final/libcrypto.so.3:     file format elf64-x86-64
+
+
+Disassembly of section .text:
+
+00000000002d0740 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs3sm48portable9sub_bytes>:
+  2d0740:	55                   	push   rbp
+  2d0741:	41 56                	push   r14
+  2d0743:	53                   	push   rbx
+  2d0744:	48 81 ec 88 00 00 00 	sub    rsp,0x88
+  2d074b:	89 fe                	mov    esi,edi
+  2d074d:	c1 ee 18             	shr    esi,0x18
+  2d0750:	89 f9                	mov    ecx,edi
+  2d0752:	c1 e9 10             	shr    ecx,0x10
+  2d0755:	89 f8                	mov    eax,edi
+  2d0757:	c1 e8 08             	shr    eax,0x8
+  2d075a:	40 80 e6 01          	and    sil,0x1
+  2d075e:	89 fa                	mov    edx,edi
+  2d0760:	c1 ea 19             	shr    edx,0x19
+  2d0763:	80 e2 01             	and    dl,0x1
+  2d0766:	44 8d 04 fd 00 00 00 	lea    r8d,[rdi*8+0x0]
+  2d076d:	00 
+  2d076e:	41 80 e0 08          	and    r8b,0x8
+  2d0772:	41 08 f0             	or     r8b,sil
+  2d0775:	8d 34 09             	lea    esi,[rcx+rcx*1]
+  2d0778:	40 80 e6 02          	and    sil,0x2
+  2d077c:	41 08 f0             	or     r8b,sil
+  2d077f:	8d 34 85 00 00 00 00 	lea    esi,[rax*4+0x0]
+  2d0786:	40 80 e6 04          	and    sil,0x4
+  2d078a:	41 08 f0             	or     r8b,sil
+  2d078d:	89 ce                	mov    esi,ecx
+  2d078f:	40 80 e6 02          	and    sil,0x2
+  2d0793:	44 88 44 24 80       	mov    BYTE PTR [rsp-0x80],r8b
+  2d0798:	44 8d 04 bd 00 00 00 	lea    r8d,[rdi*4+0x0]
+  2d079f:	00 
+  2d07a0:	41 80 e0 08          	and    r8b,0x8
+  2d07a4:	41 08 f0             	or     r8b,sil
+  2d07a7:	89 fe                	mov    esi,edi
+  2d07a9:	c1 ee 1a             	shr    esi,0x1a
+  2d07ac:	40 80 e6 01          	and    sil,0x1
+  2d07b0:	41 08 d0             	or     r8b,dl
+  2d07b3:	8d 14 00             	lea    edx,[rax+rax*1]
+  2d07b6:	80 e2 04             	and    dl,0x4
+  2d07b9:	41 08 d0             	or     r8b,dl
+  2d07bc:	89 ca                	mov    edx,ecx
+  2d07be:	d0 ea                	shr    dl,1
+  2d07c0:	80 e2 02             	and    dl,0x2
+  2d07c3:	41 89 c1             	mov    r9d,eax
+  2d07c6:	41 80 e1 04          	and    r9b,0x4
+  2d07ca:	44 88 44 24 81       	mov    BYTE PTR [rsp-0x7f],r8b
+  2d07cf:	44 8d 04 3f          	lea    r8d,[rdi+rdi*1]
+  2d07d3:	41 80 e0 08          	and    r8b,0x8
+  2d07d7:	45 08 c8             	or     r8b,r9b
+  2d07da:	41 08 d0             	or     r8b,dl
+  2d07dd:	41 89 f9             	mov    r9d,edi
+  2d07e0:	41 c1 e9 1b          	shr    r9d,0x1b
+  2d07e4:	41 80 e1 01          	and    r9b,0x1
+  2d07e8:	41 08 f0             	or     r8b,sil
+  2d07eb:	41 89 fa             	mov    r10d,edi
+  2d07ee:	41 c1 ea 1c          	shr    r10d,0x1c
+  2d07f2:	41 80 e2 01          	and    r10b,0x1
+  2d07f6:	44 88 44 24 82       	mov    BYTE PTR [rsp-0x7e],r8b
+  2d07fb:	89 ce                	mov    esi,ecx
+  2d07fd:	40 c0 ee 02          	shr    sil,0x2
+  2d0801:	40 80 e6 02          	and    sil,0x2
+  2d0805:	89 fa                	mov    edx,edi
+  2d0807:	80 e2 08             	and    dl,0x8
+  2d080a:	40 08 f2             	or     dl,sil
+  2d080d:	41 89 c8             	mov    r8d,ecx
+  2d0810:	41 c0 e8 03          	shr    r8b,0x3
+  2d0814:	41 80 e0 02          	and    r8b,0x2
+  2d0818:	44 08 ca             	or     dl,r9b
+  2d081b:	89 fe                	mov    esi,edi
+  2d081d:	40 d0 ee             	shr    sil,1
+  2d0820:	40 80 e6 08          	and    sil,0x8
+  2d0824:	44 08 c6             	or     sil,r8b
+  2d0827:	41 89 f9             	mov    r9d,edi
+  2d082a:	41 c1 e9 1d          	shr    r9d,0x1d
+  2d082e:	41 80 e1 01          	and    r9b,0x1
+  2d0832:	44 08 d6             	or     sil,r10b
+  2d0835:	41 89 ca             	mov    r10d,ecx
+  2d0838:	41 c0 ea 04          	shr    r10b,0x4
+  2d083c:	41 80 e2 02          	and    r10b,0x2
+  2d0840:	41 89 f8             	mov    r8d,edi
+  2d0843:	41 c0 e8 02          	shr    r8b,0x2
+  2d0847:	41 80 e0 08          	and    r8b,0x8
+  2d084b:	45 08 d0             	or     r8b,r10b
+  2d084e:	41 89 ca             	mov    r10d,ecx
+  2d0851:	41 c0 ea 05          	shr    r10b,0x5
+  2d0855:	41 80 e2 02          	and    r10b,0x2
+  2d0859:	45 08 c8             	or     r8b,r9b
+  2d085c:	41 89 f9             	mov    r9d,edi
+  2d085f:	41 c0 e9 03          	shr    r9b,0x3
+  2d0863:	41 80 e1 08          	and    r9b,0x8
+  2d0867:	45 08 d1             	or     r9b,r10b
+  2d086a:	41 89 fa             	mov    r10d,edi
+  2d086d:	41 c1 ea 1e          	shr    r10d,0x1e
+  2d0871:	41 80 e2 01          	and    r10b,0x1
+  2d0875:	45 08 d1             	or     r9b,r10b
+  2d0878:	41 89 fa             	mov    r10d,edi
+  2d087b:	41 c1 ea 1f          	shr    r10d,0x1f
+  2d087f:	40 c0 ef 04          	shr    dil,0x4
+  2d0883:	40 80 e7 08          	and    dil,0x8
+  2d0887:	44 08 d7             	or     dil,r10b
+  2d088a:	c0 e9 06             	shr    cl,0x6
+  2d088d:	80 e1 02             	and    cl,0x2
+  2d0890:	40 08 cf             	or     dil,cl
+  2d0893:	89 c1                	mov    ecx,eax
+  2d0895:	d0 e9                	shr    cl,1
+  2d0897:	80 e1 04             	and    cl,0x4
+  2d089a:	08 ca                	or     dl,cl
+  2d089c:	88 54 24 83          	mov    BYTE PTR [rsp-0x7d],dl
+  2d08a0:	89 c1                	mov    ecx,eax
+  2d08a2:	c0 e9 02             	shr    cl,0x2
+  2d08a5:	80 e1 04             	and    cl,0x4
+  2d08a8:	40 08 ce             	or     sil,cl
+  2d08ab:	40 88 74 24 84       	mov    BYTE PTR [rsp-0x7c],sil
+  2d08b0:	89 c1                	mov    ecx,eax
+  2d08b2:	c0 e9 03             	shr    cl,0x3
+  2d08b5:	80 e1 04             	and    cl,0x4
+  2d08b8:	41 08 c8             	or     r8b,cl
+  2d08bb:	44 88 44 24 85       	mov    BYTE PTR [rsp-0x7b],r8b
+  2d08c0:	89 c1                	mov    ecx,eax
+  2d08c2:	c0 e9 04             	shr    cl,0x4
+  2d08c5:	80 e1 04             	and    cl,0x4
+  2d08c8:	41 08 c9             	or     r9b,cl
+  2d08cb:	44 88 4c 24 86       	mov    BYTE PTR [rsp-0x7a],r9b
+  2d08d0:	c0 e8 05             	shr    al,0x5
+  2d08d3:	24 04                	and    al,0x4
+  2d08d5:	40 08 c7             	or     dil,al
+  2d08d8:	48 b8 ff ff ff ff ff 	movabs rax,0x7fffffffffffffff
+  2d08df:	ff ff 7f 
+  2d08e2:	40 88 7c 24 87       	mov    BYTE PTR [rsp-0x79],dil
+  2d08e7:	66 0f ef c0          	pxor   xmm0,xmm0
+  2d08eb:	f3 0f 7f 44 24 78    	movdqu XMMWORD PTR [rsp+0x78],xmm0
+  2d08f1:	f3 0f 7f 44 24 69    	movdqu XMMWORD PTR [rsp+0x69],xmm0
+  2d08f7:	f3 0f 7f 44 24 59    	movdqu XMMWORD PTR [rsp+0x59],xmm0
+  2d08fd:	f3 0f 7f 44 24 49    	movdqu XMMWORD PTR [rsp+0x49],xmm0
+  2d0903:	f3 0f 7f 44 24 39    	movdqu XMMWORD PTR [rsp+0x39],xmm0
+  2d0909:	f3 0f 7f 44 24 29    	movdqu XMMWORD PTR [rsp+0x29],xmm0
+  2d090f:	f3 0f 7f 44 24 19    	movdqu XMMWORD PTR [rsp+0x19],xmm0
+  2d0915:	f3 0f 7f 44 24 09    	movdqu XMMWORD PTR [rsp+0x9],xmm0
+  2d091b:	f3 0f 7f 44 24 f9    	movdqu XMMWORD PTR [rsp-0x7],xmm0
+  2d0921:	f3 0f 7f 44 24 e9    	movdqu XMMWORD PTR [rsp-0x17],xmm0
+  2d0927:	f3 0f 7f 44 24 d9    	movdqu XMMWORD PTR [rsp-0x27],xmm0
+  2d092d:	f3 0f 7f 44 24 c9    	movdqu XMMWORD PTR [rsp-0x37],xmm0
+  2d0933:	f3 0f 7f 44 24 b9    	movdqu XMMWORD PTR [rsp-0x47],xmm0
+  2d0939:	f3 0f 7f 44 24 a9    	movdqu XMMWORD PTR [rsp-0x57],xmm0
+  2d093f:	f3 0f 7f 44 24 99    	movdqu XMMWORD PTR [rsp-0x67],xmm0
+  2d0945:	f3 0f 7f 44 24 89    	movdqu XMMWORD PTR [rsp-0x77],xmm0
+  2d094b:	c6 44 24 88 0f       	mov    BYTE PTR [rsp-0x78],0xf
+  2d0950:	b9 01 00 00 00       	mov    ecx,0x1
+  2d0955:	66 66 2e 0f 1f 84 00 	data16 cs nop WORD PTR [rax+rax*1+0x0]
+  2d095c:	00 00 00 00 
+  2d0960:	f3 48 0f bc d1       	tzcnt  rdx,rcx
+  2d0965:	48 8d 34 01          	lea    rsi,[rcx+rax*1]
+  2d0969:	48 8d 3c 30          	lea    rdi,[rax+rsi*1]
+  2d096d:	48 83 c7 02          	add    rdi,0x2
+  2d0971:	48 21 f7             	and    rdi,rsi
+  2d0974:	0f b6 54 14 80       	movzx  edx,BYTE PTR [rsp+rdx*1-0x80]
+  2d0979:	22 54 3c 88          	and    dl,BYTE PTR [rsp+rdi*1-0x78]
+  2d097d:	88 54 0c 88          	mov    BYTE PTR [rsp+rcx*1-0x78],dl
+  2d0981:	48 8d 14 30          	lea    rdx,[rax+rsi*1]
+  2d0985:	48 83 c2 03          	add    rdx,0x3
+  2d0989:	48 81 fa 00 01 00 00 	cmp    rdx,0x100
+  2d0990:	74 23                	je     2d09b5 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs3sm48portable9sub_bytes+0x275>
+  2d0992:	f3 48 0f bc f2       	tzcnt  rsi,rdx
+  2d0997:	48 8d 7a ff          	lea    rdi,[rdx-0x1]
+  2d099b:	48 21 d7             	and    rdi,rdx
+  2d099e:	0f b6 74 34 80       	movzx  esi,BYTE PTR [rsp+rsi*1-0x80]
+  2d09a3:	40 22 74 3c 88       	and    sil,BYTE PTR [rsp+rdi*1-0x78]
+  2d09a8:	40 88 74 0c 89       	mov    BYTE PTR [rsp+rcx*1-0x77],sil
+  2d09ad:	48 ff c2             	inc    rdx
+  2d09b0:	48 89 d1             	mov    rcx,rdx
+  2d09b3:	eb ab                	jmp    2d0960 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs3sm48portable9sub_bytes+0x220>
+  2d09b5:	66 0f ef c0          	pxor   xmm0,xmm0
+  2d09b9:	48 c7 c0 00 ff ff ff 	mov    rax,0xffffffffffffff00
+  2d09c0:	48 8d 0d aa 38 3b 00 	lea    rcx,[rip+0x3b38aa]        # 684271 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs3sm48portable3ANF>
+  2d09c7:	66 0f ef c9          	pxor   xmm1,xmm1
+  2d09cb:	66 0f ef d2          	pxor   xmm2,xmm2
+  2d09cf:	66 0f ef db          	pxor   xmm3,xmm3
+  2d09d3:	66 0f ef e4          	pxor   xmm4,xmm4
+  2d09d7:	66 0f ef ed          	pxor   xmm5,xmm5
+  2d09db:	66 0f ef f6          	pxor   xmm6,xmm6
+  2d09df:	66 0f ef ff          	pxor   xmm7,xmm7
+  2d09e3:	66 66 66 66 2e 0f 1f 	data16 data16 data16 cs nop WORD PTR [rax+rax*1+0x0]
+  2d09ea:	84 00 00 00 00 00 
+  2d09f0:	f3 44 0f 6f 84 04 88 	movdqu xmm8,XMMWORD PTR [rsp+rax*1+0x88]
+  2d09f7:	00 00 00 
+  2d09fa:	f3 44 0f 6f 8c 08 00 	movdqu xmm9,XMMWORD PTR [rax+rcx*1+0x100]
+  2d0a01:	01 00 00 
+  2d0a04:	f3 44 0f 6f 94 08 00 	movdqu xmm10,XMMWORD PTR [rax+rcx*1+0x200]
+  2d0a0b:	02 00 00 
+  2d0a0e:	f3 44 0f 6f 9c 08 00 	movdqu xmm11,XMMWORD PTR [rax+rcx*1+0x300]
+  2d0a15:	03 00 00 
+  2d0a18:	66 45 0f ef e4       	pxor   xmm12,xmm12
+  2d0a1d:	66 45 0f f8 e1       	psubb  xmm12,xmm9
+  2d0a22:	66 45 0f db e0       	pand   xmm12,xmm8
+  2d0a27:	66 41 0f ef dc       	pxor   xmm3,xmm12
+  2d0a2c:	66 45 0f ef c9       	pxor   xmm9,xmm9
+  2d0a31:	66 45 0f f8 ca       	psubb  xmm9,xmm10
+  2d0a36:	66 45 0f db c8       	pand   xmm9,xmm8
+  2d0a3b:	66 41 0f ef d1       	pxor   xmm2,xmm9
+  2d0a40:	66 45 0f ef c9       	pxor   xmm9,xmm9
+  2d0a45:	66 45 0f f8 cb       	psubb  xmm9,xmm11
+  2d0a4a:	66 45 0f db c8       	pand   xmm9,xmm8
+  2d0a4f:	66 41 0f ef c9       	pxor   xmm1,xmm9
+  2d0a54:	f3 44 0f 6f 8c 08 00 	movdqu xmm9,XMMWORD PTR [rax+rcx*1+0x400]
+  2d0a5b:	04 00 00 
+  2d0a5e:	66 45 0f ef d2       	pxor   xmm10,xmm10
+  2d0a63:	66 45 0f f8 d1       	psubb  xmm10,xmm9
+  2d0a68:	66 45 0f db d0       	pand   xmm10,xmm8
+  2d0a6d:	66 41 0f ef c2       	pxor   xmm0,xmm10
+  2d0a72:	f3 44 0f 6f 8c 08 00 	movdqu xmm9,XMMWORD PTR [rax+rcx*1+0x500]
+  2d0a79:	05 00 00 
+  2d0a7c:	66 45 0f ef d2       	pxor   xmm10,xmm10
+  2d0a81:	66 45 0f f8 d1       	psubb  xmm10,xmm9
+  2d0a86:	66 45 0f db d0       	pand   xmm10,xmm8
+  2d0a8b:	66 41 0f ef e2       	pxor   xmm4,xmm10
+  2d0a90:	f3 44 0f 6f 8c 08 00 	movdqu xmm9,XMMWORD PTR [rax+rcx*1+0x600]
+  2d0a97:	06 00 00 
+  2d0a9a:	66 45 0f ef d2       	pxor   xmm10,xmm10
+  2d0a9f:	66 45 0f f8 d1       	psubb  xmm10,xmm9
+  2d0aa4:	66 45 0f db d0       	pand   xmm10,xmm8
+  2d0aa9:	66 41 0f ef ea       	pxor   xmm5,xmm10
+  2d0aae:	f3 44 0f 6f 8c 08 00 	movdqu xmm9,XMMWORD PTR [rax+rcx*1+0x700]
+  2d0ab5:	07 00 00 
+  2d0ab8:	66 45 0f ef d2       	pxor   xmm10,xmm10
+  2d0abd:	66 45 0f f8 d1       	psubb  xmm10,xmm9
+  2d0ac2:	66 45 0f db d0       	pand   xmm10,xmm8
+  2d0ac7:	66 41 0f ef f2       	pxor   xmm6,xmm10
+  2d0acc:	f3 44 0f 6f 8c 08 00 	movdqu xmm9,XMMWORD PTR [rax+rcx*1+0x800]
+  2d0ad3:	08 00 00 
+  2d0ad6:	66 45 0f ef d2       	pxor   xmm10,xmm10
+  2d0adb:	66 45 0f f8 d1       	psubb  xmm10,xmm9
+  2d0ae0:	66 45 0f db d0       	pand   xmm10,xmm8
+  2d0ae5:	66 41 0f ef fa       	pxor   xmm7,xmm10
+  2d0aea:	48 83 c0 10          	add    rax,0x10
+  2d0aee:	0f 85 fc fe ff ff    	jne    2d09f0 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs3sm48portable9sub_bytes+0x2b0>
+  2d0af4:	66 44 0f 70 c7 ee    	pshufd xmm8,xmm7,0xee
+  2d0afa:	66 44 0f ef c7       	pxor   xmm8,xmm7
+  2d0aff:	66 41 0f 70 f8 55    	pshufd xmm7,xmm8,0x55
+  2d0b05:	66 41 0f ef f8       	pxor   xmm7,xmm8
+  2d0b0a:	66 44 0f 6f c7       	movdqa xmm8,xmm7
+  2d0b0f:	66 41 0f 72 d0 10    	psrld  xmm8,0x10
+  2d0b15:	66 44 0f ef c7       	pxor   xmm8,xmm7
+  2d0b1a:	66 41 0f 6f f8       	movdqa xmm7,xmm8
+  2d0b1f:	66 0f 71 d7 08       	psrlw  xmm7,0x8
+  2d0b24:	66 41 0f ef f8       	pxor   xmm7,xmm8
+  2d0b29:	66 0f 7e f8          	movd   eax,xmm7
+  2d0b2d:	66 0f 70 fe ee       	pshufd xmm7,xmm6,0xee
+  2d0b32:	66 0f ef fe          	pxor   xmm7,xmm6
+  2d0b36:	66 0f 70 f7 55       	pshufd xmm6,xmm7,0x55
+  2d0b3b:	66 0f ef f7          	pxor   xmm6,xmm7
+  2d0b3f:	66 0f 6f fe          	movdqa xmm7,xmm6
+  2d0b43:	66 0f 72 d7 10       	psrld  xmm7,0x10
+  2d0b48:	66 0f ef fe          	pxor   xmm7,xmm6
+  2d0b4c:	66 0f 6f f7          	movdqa xmm6,xmm7
+  2d0b50:	66 0f 71 d6 08       	psrlw  xmm6,0x8
+  2d0b55:	66 0f ef f7          	pxor   xmm6,xmm7
+  2d0b59:	66 0f 7e f1          	movd   ecx,xmm6
+  2d0b5d:	66 0f 70 f5 ee       	pshufd xmm6,xmm5,0xee
+  2d0b62:	66 0f ef f5          	pxor   xmm6,xmm5
+  2d0b66:	66 0f 70 ee 55       	pshufd xmm5,xmm6,0x55
+  2d0b6b:	66 0f ef ee          	pxor   xmm5,xmm6
+  2d0b6f:	66 0f 6f f5          	movdqa xmm6,xmm5
+  2d0b73:	66 0f 72 d6 10       	psrld  xmm6,0x10
+  2d0b78:	66 0f ef f5          	pxor   xmm6,xmm5
+  2d0b7c:	66 0f 6f ee          	movdqa xmm5,xmm6
+  2d0b80:	66 0f 71 d5 08       	psrlw  xmm5,0x8
+  2d0b85:	66 0f ef ee          	pxor   xmm5,xmm6
+  2d0b89:	66 0f 7e ea          	movd   edx,xmm5
+  2d0b8d:	66 0f 70 ec ee       	pshufd xmm5,xmm4,0xee
+  2d0b92:	66 0f ef ec          	pxor   xmm5,xmm4
+  2d0b96:	66 0f 70 e5 55       	pshufd xmm4,xmm5,0x55
+  2d0b9b:	66 0f ef e5          	pxor   xmm4,xmm5
+  2d0b9f:	66 0f 6f ec          	movdqa xmm5,xmm4
+  2d0ba3:	66 0f 72 d5 10       	psrld  xmm5,0x10
+  2d0ba8:	66 0f ef ec          	pxor   xmm5,xmm4
+  2d0bac:	66 0f 6f e5          	movdqa xmm4,xmm5
+  2d0bb0:	66 0f 71 d4 08       	psrlw  xmm4,0x8
+  2d0bb5:	66 0f ef e5          	pxor   xmm4,xmm5
+  2d0bb9:	66 0f 7e e6          	movd   esi,xmm4
+  2d0bbd:	66 0f 70 e3 ee       	pshufd xmm4,xmm3,0xee
+  2d0bc2:	66 0f ef e3          	pxor   xmm4,xmm3
+  2d0bc6:	66 0f 70 dc 55       	pshufd xmm3,xmm4,0x55
+  2d0bcb:	66 0f ef dc          	pxor   xmm3,xmm4
+  2d0bcf:	66 0f 6f e3          	movdqa xmm4,xmm3
+  2d0bd3:	66 0f 72 d4 10       	psrld  xmm4,0x10
+  2d0bd8:	66 0f ef e3          	pxor   xmm4,xmm3
+  2d0bdc:	66 0f 6f dc          	movdqa xmm3,xmm4
+  2d0be0:	66 0f 71 d3 08       	psrlw  xmm3,0x8
+  2d0be5:	66 0f ef dc          	pxor   xmm3,xmm4
+  2d0be9:	66 0f 7e df          	movd   edi,xmm3
+  2d0bed:	66 0f 70 da ee       	pshufd xmm3,xmm2,0xee
+  2d0bf2:	66 0f ef da          	pxor   xmm3,xmm2
+  2d0bf6:	66 0f 70 d3 55       	pshufd xmm2,xmm3,0x55
+  2d0bfb:	66 0f ef d3          	pxor   xmm2,xmm3
+  2d0bff:	66 0f 6f da          	movdqa xmm3,xmm2
+  2d0c03:	66 0f 72 d3 10       	psrld  xmm3,0x10
+  2d0c08:	66 0f ef da          	pxor   xmm3,xmm2
+  2d0c0c:	66 0f 6f d3          	movdqa xmm2,xmm3
+  2d0c10:	66 0f 71 d2 08       	psrlw  xmm2,0x8
+  2d0c15:	66 0f ef d3          	pxor   xmm2,xmm3
+  2d0c19:	66 41 0f 7e d0       	movd   r8d,xmm2
+  2d0c1e:	66 0f 70 d1 ee       	pshufd xmm2,xmm1,0xee
+  2d0c23:	66 0f ef d1          	pxor   xmm2,xmm1
+  2d0c27:	66 0f 70 ca 55       	pshufd xmm1,xmm2,0x55
+  2d0c2c:	66 0f ef ca          	pxor   xmm1,xmm2
+  2d0c30:	66 0f 6f d1          	movdqa xmm2,xmm1
+  2d0c34:	66 0f 72 d2 10       	psrld  xmm2,0x10
+  2d0c39:	66 0f ef d1          	pxor   xmm2,xmm1
+  2d0c3d:	66 0f 6f ca          	movdqa xmm1,xmm2
+  2d0c41:	66 0f 71 d1 08       	psrlw  xmm1,0x8
+  2d0c46:	66 0f ef ca          	pxor   xmm1,xmm2
+  2d0c4a:	66 41 0f 7e c9       	movd   r9d,xmm1
+  2d0c4f:	66 0f 70 c8 ee       	pshufd xmm1,xmm0,0xee
+  2d0c54:	66 0f ef c8          	pxor   xmm1,xmm0
+  2d0c58:	66 0f 70 c1 55       	pshufd xmm0,xmm1,0x55
+  2d0c5d:	66 0f ef c1          	pxor   xmm0,xmm1
+  2d0c61:	66 0f 6f c8          	movdqa xmm1,xmm0
+  2d0c65:	66 0f 72 d1 10       	psrld  xmm1,0x10
+  2d0c6a:	66 0f ef c8          	pxor   xmm1,xmm0
+  2d0c6e:	66 0f 6f c1          	movdqa xmm0,xmm1
+  2d0c72:	66 0f 71 d0 08       	psrlw  xmm0,0x8
+  2d0c77:	66 0f ef c1          	pxor   xmm0,xmm1
+  2d0c7b:	66 41 0f 7e c2       	movd   r10d,xmm0
+  2d0c80:	41 89 fb             	mov    r11d,edi
+  2d0c83:	41 80 e3 01          	and    r11b,0x1
+  2d0c87:	43 8d 1c 00          	lea    ebx,[r8+r8*1]
+  2d0c8b:	80 e3 02             	and    bl,0x2
+  2d0c8e:	44 08 db             	or     bl,r11b
+  2d0c91:	46 8d 1c 8d 00 00 00 	lea    r11d,[r9*4+0x0]
+  2d0c98:	00 
+  2d0c99:	41 80 e3 04          	and    r11b,0x4
+  2d0c9d:	41 08 db             	or     r11b,bl
+  2d0ca0:	42 8d 1c d5 00 00 00 	lea    ebx,[r10*8+0x0]
+  2d0ca7:	00 
+  2d0ca8:	80 e3 08             	and    bl,0x8
+  2d0cab:	44 08 db             	or     bl,r11b
+  2d0cae:	41 89 f3             	mov    r11d,esi
+  2d0cb1:	41 c0 e3 04          	shl    r11b,0x4
+  2d0cb5:	41 80 e3 10          	and    r11b,0x10
+  2d0cb9:	41 08 db             	or     r11b,bl
+  2d0cbc:	89 d3                	mov    ebx,edx
+  2d0cbe:	c0 e3 05             	shl    bl,0x5
+  2d0cc1:	80 e3 20             	and    bl,0x20
+  2d0cc4:	44 08 db             	or     bl,r11b
+  2d0cc7:	41 89 cb             	mov    r11d,ecx
+  2d0cca:	41 c0 e3 06          	shl    r11b,0x6
+  2d0cce:	41 80 e3 40          	and    r11b,0x40
+  2d0cd2:	41 08 db             	or     r11b,bl
+  2d0cd5:	89 c3                	mov    ebx,eax
+  2d0cd7:	c0 e3 07             	shl    bl,0x7
+  2d0cda:	44 08 db             	or     bl,r11b
+  2d0cdd:	44 0f b6 db          	movzx  r11d,bl
+  2d0ce1:	89 fb                	mov    ebx,edi
+  2d0ce3:	d0 eb                	shr    bl,1
+  2d0ce5:	80 e3 01             	and    bl,0x1
+  2d0ce8:	44 89 c5             	mov    ebp,r8d
+  2d0ceb:	40 80 e5 02          	and    bpl,0x2
+  2d0cef:	40 08 dd             	or     bpl,bl
+  2d0cf2:	43 8d 1c 09          	lea    ebx,[r9+r9*1]
+  2d0cf6:	80 e3 04             	and    bl,0x4
+  2d0cf9:	40 08 eb             	or     bl,bpl
+  2d0cfc:	42 8d 2c 95 00 00 00 	lea    ebp,[r10*4+0x0]
+  2d0d03:	00 
+  2d0d04:	40 80 e5 08          	and    bpl,0x8
+  2d0d08:	40 08 dd             	or     bpl,bl
+  2d0d0b:	8d 1c f5 00 00 00 00 	lea    ebx,[rsi*8+0x0]
+  2d0d12:	80 e3 10             	and    bl,0x10
+  2d0d15:	40 08 eb             	or     bl,bpl
+  2d0d18:	89 d5                	mov    ebp,edx
+  2d0d1a:	40 c0 e5 04          	shl    bpl,0x4
+  2d0d1e:	40 80 e5 20          	and    bpl,0x20
+  2d0d22:	40 08 dd             	or     bpl,bl
+  2d0d25:	89 cb                	mov    ebx,ecx
+  2d0d27:	c0 e3 05             	shl    bl,0x5
+  2d0d2a:	80 e3 40             	and    bl,0x40
+  2d0d2d:	40 08 eb             	or     bl,bpl
+  2d0d30:	89 c5                	mov    ebp,eax
+  2d0d32:	40 c0 e5 06          	shl    bpl,0x6
+  2d0d36:	40 80 e5 80          	and    bpl,0x80
+  2d0d3a:	40 08 dd             	or     bpl,bl
+  2d0d3d:	40 0f b6 dd          	movzx  ebx,bpl
+  2d0d41:	89 fd                	mov    ebp,edi
+  2d0d43:	40 c0 ed 02          	shr    bpl,0x2
+  2d0d47:	40 80 e5 01          	and    bpl,0x1
+  2d0d4b:	45 89 c6             	mov    r14d,r8d
+  2d0d4e:	41 d0 ee             	shr    r14b,1
+  2d0d51:	41 80 e6 02          	and    r14b,0x2
+  2d0d55:	41 08 ee             	or     r14b,bpl
+  2d0d58:	44 89 cd             	mov    ebp,r9d
+  2d0d5b:	40 80 e5 04          	and    bpl,0x4
+  2d0d5f:	44 08 f5             	or     bpl,r14b
+  2d0d62:	47 8d 34 12          	lea    r14d,[r10+r10*1]
+  2d0d66:	41 80 e6 08          	and    r14b,0x8
+  2d0d6a:	41 08 ee             	or     r14b,bpl
+  2d0d6d:	8d 2c b5 00 00 00 00 	lea    ebp,[rsi*4+0x0]
+  2d0d74:	40 80 e5 10          	and    bpl,0x10
+  2d0d78:	44 08 f5             	or     bpl,r14b
+  2d0d7b:	44 8d 34 d5 00 00 00 	lea    r14d,[rdx*8+0x0]
+  2d0d82:	00 
+  2d0d83:	41 80 e6 20          	and    r14b,0x20
+  2d0d87:	41 08 ee             	or     r14b,bpl
+  2d0d8a:	89 cd                	mov    ebp,ecx
+  2d0d8c:	40 c0 e5 04          	shl    bpl,0x4
+  2d0d90:	40 80 e5 40          	and    bpl,0x40
+  2d0d94:	44 08 f5             	or     bpl,r14b
+  2d0d97:	41 89 c6             	mov    r14d,eax
+  2d0d9a:	41 c0 e6 05          	shl    r14b,0x5
+  2d0d9e:	41 80 e6 80          	and    r14b,0x80
+  2d0da2:	41 08 ee             	or     r14b,bpl
+  2d0da5:	41 c1 e3 10          	shl    r11d,0x10
+  2d0da9:	c1 e3 08             	shl    ebx,0x8
+  2d0dac:	44 09 db             	or     ebx,r11d
+  2d0daf:	45 0f b6 de          	movzx  r11d,r14b
+  2d0db3:	41 09 db             	or     r11d,ebx
+  2d0db6:	40 c0 ef 03          	shr    dil,0x3
+  2d0dba:	40 80 e7 01          	and    dil,0x1
+  2d0dbe:	41 c0 e8 02          	shr    r8b,0x2
+  2d0dc2:	41 80 e0 02          	and    r8b,0x2
+  2d0dc6:	41 08 f8             	or     r8b,dil
+  2d0dc9:	41 d0 e9             	shr    r9b,1
+  2d0dcc:	41 80 e1 04          	and    r9b,0x4
+  2d0dd0:	45 08 c1             	or     r9b,r8b
+  2d0dd3:	41 80 e2 08          	and    r10b,0x8
+  2d0dd7:	45 08 ca             	or     r10b,r9b
+  2d0dda:	40 00 f6             	add    sil,sil
+  2d0ddd:	40 80 e6 10          	and    sil,0x10
+  2d0de1:	44 08 d6             	or     sil,r10b
+  2d0de4:	c0 e2 02             	shl    dl,0x2
+  2d0de7:	80 e2 20             	and    dl,0x20
+  2d0dea:	40 08 f2             	or     dl,sil
+  2d0ded:	c0 e1 03             	shl    cl,0x3
+  2d0df0:	80 e1 40             	and    cl,0x40
+  2d0df3:	08 d1                	or     cl,dl
+  2d0df5:	c0 e0 04             	shl    al,0x4
+  2d0df8:	24 80                	and    al,0x80
+  2d0dfa:	08 c8                	or     al,cl
+  2d0dfc:	41 c1 e3 08          	shl    r11d,0x8
+  2d0e00:	0f b6 c0             	movzx  eax,al
+  2d0e03:	44 09 d8             	or     eax,r11d
+  2d0e06:	48 81 c4 88 00 00 00 	add    rsp,0x88
+  2d0e0d:	5b                   	pop    rbx
+  2d0e0e:	41 5e                	pop    r14
+  2d0e10:	5d                   	pop    rbp
+  2d0e11:	c3                   	ret

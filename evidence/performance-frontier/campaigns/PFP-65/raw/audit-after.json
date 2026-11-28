@@ -1,0 +1,2899 @@
+{
+  "dso": "court/tmp/pfp65/final/libcrypto.so.3",
+  "functions": {
+    "Camellia_decrypt": {
+      "calls": [
+        "0x5469fd QWORD PTR [rip+0x399eed]        # 8e08f0 <_DYNAMIC+0x3620>",
+        "0x546a40 QWORD PTR [rip+0x3990ea]        # 8dfb30 <_DYNAMIC+0x2860>",
+        "0x546a4f QWORD PTR [rip+0x398913]        # 8df368 <_DYNAMIC+0x2098>",
+        "0x546a5e QWORD PTR [rip+0x39839c]        # 8dee00 <_DYNAMIC+0x1b30>",
+        "0x546a76 QWORD PTR [rip+0x397f6c]        # 8de9e8 <_DYNAMIC+0x1718>",
+        "0x546a7e QWORD PTR [rip+0x398d7c]        # 8df800 <_DYNAMIC+0x2530>"
+      ],
+      "cmov": [],
+      "crypto_instructions": [],
+      "indexed_lea_arithmetic": [
+        {
+          "at": "0x5465a5",
+          "context": "lea rcx,[rip+0x378752]        # 8becf0 <anon.b0e342c0ab042a44e1a50d0e91f3f89e.173.llvm.7073746849553088576+0x150> ; mov QWORD PTR [rsp],rcx ; mov r15,r8",
+          "mnemonic": "data16",
+          "operands": "cs nop WORD PTR [rax+rax*1+0x0]"
+        }
+      ],
+      "indexed_memory_operands": [
+        {
+          "at": "0x546566",
+          "context": "jb 546a4f <Camellia_decrypt+0x53f> ; mov ebp,DWORD PTR [rax] ; bswap ebp",
+          "mnemonic": "xor",
+          "operands": "ebp,DWORD PTR [r12+r8*4]"
+        },
+        {
+          "at": "0x546571",
+          "context": "xor ebp,DWORD PTR [r12+r8*4] ; mov r9d,DWORD PTR [rax+0x4] ; bswap r9d",
+          "mnemonic": "xor",
+          "operands": "r9d,DWORD PTR [r12+r8*4+0x4]"
+        },
+        {
+          "at": "0x54657d",
+          "context": "xor r9d,DWORD PTR [r12+r8*4+0x4] ; mov r10d,DWORD PTR [rax+0x8] ; bswap r10d",
+          "mnemonic": "xor",
+          "operands": "r10d,DWORD PTR [r12+r8*4+0x8]"
+        },
+        {
+          "at": "0x546587",
+          "context": "xor r10d,DWORD PTR [r12+r8*4+0x8] ; mov eax,DWORD PTR [rax+0xc] ; bswap eax",
+          "mnemonic": "xor",
+          "operands": "eax,DWORD PTR [r12+r8*4+0xc]"
+        },
+        {
+          "at": "0x5465cf",
+          "context": "lea rdx,[r15+0x18] ; cmp rdx,rcx ; jb 546a05 <Camellia_decrypt+0x4f5>",
+          "mnemonic": "mov",
+          "operands": "edx,DWORD PTR [r12+r15*4+0x68]"
+        },
+        {
+          "at": "0x5465dc",
+          "context": "xor edx,ebp ; movzx ebx,dh ; movzx ecx,dl",
+          "mnemonic": "mov",
+          "operands": "ecx,DWORD PTR [r11+rcx*4+0x400]"
+        },
+        {
+          "at": "0x5465e4",
+          "context": "movzx ebx,dh ; movzx ecx,dl ; mov ecx,DWORD PTR [r11+rcx*4+0x400]",
+          "mnemonic": "xor",
+          "operands": "ecx,DWORD PTR [r11+rbx*4+0xc00]"
+        },
+        {
+          "at": "0x5465fa",
+          "context": "mov r8d,edx ; shr r8d,0xe ; and r8d,0x3fc",
+          "mnemonic": "xor",
+          "operands": "ecx,DWORD PTR [r8+r11*1+0x800]"
+        },
+        {
+          "at": "0x546605",
+          "context": "and r8d,0x3fc ; xor ecx,DWORD PTR [r8+r11*1+0x800] ; shr edx,0x18",
+          "mnemonic": "xor",
+          "operands": "ecx,DWORD PTR [r11+rdx*4]"
+        },
+        {
+          "at": "0x546609",
+          "context": "xor ecx,DWORD PTR [r8+r11*1+0x800] ; shr edx,0x18 ; xor ecx,DWORD PTR [r11+rdx*4]",
+          "mnemonic": "mov",
+          "operands": "ebx,DWORD PTR [r12+r15*4+0x6c]"
+        },
+        {
+          "at": "0x546614",
+          "context": "mov ebx,DWORD PTR [r12+r15*4+0x6c] ; xor ebx,r9d ; movzx edx,bh",
+          "mnemonic": "mov",
+          "operands": "r13d,DWORD PTR [r11+rdx*4+0x400]"
+        },
+        {
+          "at": "0x546630",
+          "context": "shr r8d,0xe ; and r8d,0x3fc ; shr ebx,0x18",
+          "mnemonic": "xor",
+          "operands": "r13d,DWORD PTR [r11+rdx*4]"
+        },
+        {
+          "at": "0x546634",
+          "context": "and r8d,0x3fc ; shr ebx,0x18 ; xor r13d,DWORD PTR [r11+rdx*4]",
+          "mnemonic": "xor",
+          "operands": "r13d,DWORD PTR [r8+r11*1+0xc00]"
+        },
+        {
+          "at": "0x54663c",
+          "context": "shr ebx,0x18 ; xor r13d,DWORD PTR [r11+rdx*4] ; xor r13d,DWORD PTR [r8+r11*1+0xc00]",
+          "mnemonic": "xor",
+          "operands": "r13d,DWORD PTR [r11+rbx*4+0x800]"
+        },
+        {
+          "at": "0x546652",
+          "context": "xor eax,r13d ; xor eax,ecx ; xor r13d,r10d",
+          "mnemonic": "mov",
+          "operands": "ecx,DWORD PTR [r12+r15*4+0x60]"
+        },
+        {
+          "at": "0x54665e",
+          "context": "mov ecx,DWORD PTR [r12+r15*4+0x60] ; xor ecx,r13d ; movzx r10d,cl",
+          "mnemonic": "mov",
+          "operands": "ebx,DWORD PTR [r12+r15*4+0x64]"
+        },
+        {
+          "at": "0x546668",
+          "context": "mov ebx,DWORD PTR [r12+r15*4+0x64] ; xor ebx,eax ; movzx edx,ch",
+          "mnemonic": "mov",
+          "operands": "r8d,DWORD PTR [r11+rdx*4+0xc00]"
+        },
+        {
+          "at": "0x546670",
+          "context": "xor ebx,eax ; movzx edx,ch ; mov r8d,DWORD PTR [r11+rdx*4+0xc00]",
+          "mnemonic": "xor",
+          "operands": "r8d,DWORD PTR [r11+r10*4+0x400]"
+        },
+        {
+          "at": "0x54668a",
+          "context": "mov r10d,ecx ; shr r10d,0xe ; and r10d,0x3fc",
+          "mnemonic": "xor",
+          "operands": "r8d,DWORD PTR [r10+r11*1+0x800]"
+        },
+        {
+          "at": "0x546698",
+          "context": "xor r8d,DWORD PTR [r10+r11*1+0x800] ; movzx edx,bh ; shr ecx,0x18",
+          "mnemonic": "xor",
+          "operands": "r8d,DWORD PTR [r11+rcx*4]"
+        },
+        {
+          "at": "0x54669c",
+          "context": "movzx edx,bh ; shr ecx,0x18 ; xor r8d,DWORD PTR [r11+rcx*4]",
+          "mnemonic": "mov",
+          "operands": "r10d,DWORD PTR [r11+rdx*4+0x400]"
+        },
+        {
+          "at": "0x5466af",
+          "context": "mov ecx,ebx ; shr ecx,0xe ; and ecx,0x3fc",
+          "mnemonic": "xor",
+          "operands": "r10d,DWORD PTR [r11+r14*4]"
+        },
+        {
+          "at": "0x5466b3",
+          "context": "shr ecx,0xe ; and ecx,0x3fc ; xor r10d,DWORD PTR [r11+r14*4]",
+          "mnemonic": "xor",
+          "operands": "r10d,DWORD PTR [rcx+r11*1+0xc00]"
+        },
+        {
+          "at": "0x5466be",
+          "context": "xor r10d,DWORD PTR [r11+r14*4] ; xor r10d,DWORD PTR [rcx+r11*1+0xc00] ; shr ebx,0x18",
+          "mnemonic": "xor",
+          "operands": "r10d,DWORD PTR [r11+rbx*4+0x800]"
+        },
+        {
+          "at": "0x5466d6",
+          "context": "xor r8d,r9d ; xor ebp,r10d ; xor r10d,r8d",
+          "mnemonic": "mov",
+          "operands": "ecx,DWORD PTR [r12+r15*4+0x58]"
+        },
+        {
+          "at": "0x5466e1",
+          "context": "mov ecx,DWORD PTR [r12+r15*4+0x58] ; xor ecx,ebp ; movzx r8d,cl",
+          "mnemonic": "mov",
+          "operands": "ebx,DWORD PTR [r12+r15*4+0x5c]"
+        },
+        {
+          "at": "0x5466ec",
+          "context": "mov ebx,DWORD PTR [r12+r15*4+0x5c] ; xor ebx,r10d ; movzx edx,ch",
+          "mnemonic": "mov",
+          "operands": "r9d,DWORD PTR [r11+rdx*4+0xc00]"
+        },
+        {
+          "at": "0x5466f4",
+          "context": "xor ebx,r10d ; movzx edx,ch ; mov r9d,DWORD PTR [r11+rdx*4+0xc00]",
+          "mnemonic": "xor",
+          "operands": "r9d,DWORD PTR [r11+r8*4+0x400]"
+        },
+        {
+          "at": "0x546707",
+          "context": "mov edx,ecx ; shr edx,0xe ; and edx,0x3fc",
+          "mnemonic": "xor",
+          "operands": "r9d,DWORD PTR [rdx+r11*1+0x800]"
+        },
+        {
+          "at": "0x546715",
+          "context": "xor r9d,DWORD PTR [rdx+r11*1+0x800] ; movzx edx,bl ; shr ecx,0x18",
+          "mnemonic": "xor",
+          "operands": "r9d,DWORD PTR [r11+rcx*4]"
+        },
+        {
+          "at": "0x546723",
+          "context": "movzx ecx,bh ; mov r14d,r9d ; rol r14d,0x18",
+          "mnemonic": "mov",
+          "operands": "r8d,DWORD PTR [r11+rcx*4+0x400]"
+        },
+        {
+          "at": "0x546736",
+          "context": "mov ecx,ebx ; shr ecx,0xe ; and ecx,0x3fc",
+          "mnemonic": "xor",
+          "operands": "r8d,DWORD PTR [r11+rdx*4]"
+        },
+        {
+          "at": "0x54673a",
+          "context": "shr ecx,0xe ; and ecx,0x3fc ; xor r8d,DWORD PTR [r11+rdx*4]",
+          "mnemonic": "xor",
+          "operands": "r8d,DWORD PTR [rcx+r11*1+0xc00]"
+        },
+        {
+          "at": "0x546745",
+          "context": "xor r8d,DWORD PTR [r11+rdx*4] ; xor r8d,DWORD PTR [rcx+r11*1+0xc00] ; shr ebx,0x18",
+          "mnemonic": "xor",
+          "operands": "r8d,DWORD PTR [r11+rbx*4+0x800]"
+        },
+        {
+          "at": "0x546759",
+          "context": "xor r14d,eax ; xor r13d,r8d ; xor r8d,r14d",
+          "mnemonic": "mov",
+          "operands": "ecx,DWORD PTR [r12+r15*4+0x54]"
+        },
+        {
+          "at": "0x546767",
+          "context": "xor ecx,r8d ; movzx edx,ch ; movzx eax,cl",
+          "mnemonic": "mov",
+          "operands": "eax,DWORD PTR [r11+rax*4]"
+        },
+        {
+          "at": "0x54676b",
+          "context": "movzx edx,ch ; movzx eax,cl ; mov eax,DWORD PTR [r11+rax*4]",
+          "mnemonic": "xor",
+          "operands": "eax,DWORD PTR [r11+rdx*4+0x400]"
+        },
+        {
+          "at": "0x54677e",
+          "context": "mov edx,ecx ; shr edx,0xe ; and edx,0x3fc",
+          "mnemonic": "xor",
+          "operands": "eax,DWORD PTR [rdx+r11*1+0xc00]"
+        },
+        {
+          "at": "0x546789",
+          "context": "and edx,0x3fc ; xor eax,DWORD PTR [rdx+r11*1+0xc00] ; shr ecx,0x18",
+          "mnemonic": "xor",
+          "operands": "eax,DWORD PTR [r11+rcx*4+0x800]"
+        },
+        {
+          "at": "0x546791",
+          "context": "xor eax,DWORD PTR [rdx+r11*1+0xc00] ; shr ecx,0x18 ; xor eax,DWORD PTR [r11+rcx*4+0x800]",
+          "mnemonic": "mov",
+          "operands": "ecx,DWORD PTR [r12+r15*4+0x50]"
+        },
+        {
+          "at": "0x5467a0",
+          "context": "xor ecx,r13d ; movzx edx,ch ; movzx r9d,cl",
+          "mnemonic": "mov",
+          "operands": "r9d,DWORD PTR [r11+r9*4+0x400]"
+        },
+        {
+          "at": "0x5467a8",
+          "context": "movzx edx,ch ; movzx r9d,cl ; mov r9d,DWORD PTR [r11+r9*4+0x400]",
+          "mnemonic": "xor",
+          "operands": "r9d,DWORD PTR [r11+rdx*4+0xc00]"
+        },
+        {
+          "at": "0x5467bb",
+          "context": "mov edx,ecx ; shr edx,0xe ; and edx,0x3fc",
+          "mnemonic": "xor",
+          "operands": "r9d,DWORD PTR [rdx+r11*1+0x800]"
+        },
+        {
+          "at": "0x5467c6",
+          "context": "and edx,0x3fc ; xor r9d,DWORD PTR [rdx+r11*1+0x800] ; shr ecx,0x18",
+          "mnemonic": "xor",
+          "operands": "r9d,DWORD PTR [r11+rcx*4]"
+        },
+        {
+          "at": "0x5467d9",
+          "context": "xor r9d,r10d ; xor r9d,eax ; xor eax,ebp",
+          "mnemonic": "mov",
+          "operands": "ecx,DWORD PTR [r12+r15*4+0x48]"
+        },
+        {
+          "at": "0x5467e6",
+          "context": "xor ecx,eax ; movzx edx,cl ; movzx ebx,ch",
+          "mnemonic": "mov",
+          "operands": "r10d,DWORD PTR [r11+rbx*4+0xc00]"
+        },
+        {
+          "at": "0x5467ee",
+          "context": "movzx edx,cl ; movzx ebx,ch ; mov r10d,DWORD PTR [r11+rbx*4+0xc00]",
+          "mnemonic": "xor",
+          "operands": "r10d,DWORD PTR [r11+rdx*4+0x400]"
+        },
+        {
+          "at": "0x546801",
+          "context": "mov edx,ecx ; shr edx,0xe ; and edx,0x3fc",
+          "mnemonic": "xor",
+          "operands": "r10d,DWORD PTR [rdx+r11*1+0x800]"
+        },
+        {
+          "at": "0x54680c",
+          "context": "and edx,0x3fc ; xor r10d,DWORD PTR [rdx+r11*1+0x800] ; shr ecx,0x18",
+          "mnemonic": "xor",
+          "operands": "r10d,DWORD PTR [r11+rcx*4]"
+        },
+        {
+          "at": "0x546810",
+          "context": "xor r10d,DWORD PTR [rdx+r11*1+0x800] ; shr ecx,0x18 ; xor r10d,DWORD PTR [r11+rcx*4]",
+          "mnemonic": "mov",
+          "operands": "ebx,DWORD PTR [r12+r15*4+0x4c]"
+        },
+        {
+          "at": "0x546825",
+          "context": "movzx ecx,bh ; mov r14d,ebx ; shr r14d,0xe",
+          "mnemonic": "mov",
+          "operands": "ecx,DWORD PTR [r11+rcx*4+0x400]"
+        },
+        {
+          "at": "0x54682d",
+          "context": "mov r14d,ebx ; shr r14d,0xe ; mov ecx,DWORD PTR [r11+rcx*4+0x400]",
+          "mnemonic": "xor",
+          "operands": "ecx,DWORD PTR [r11+rdx*4]"
+        },
+        {
+          "at": "0x546838",
+          "context": "mov ecx,DWORD PTR [r11+rcx*4+0x400] ; xor ecx,DWORD PTR [r11+rdx*4] ; and r14d,0x3fc",
+          "mnemonic": "xor",
+          "operands": "ecx,DWORD PTR [r14+r11*1+0xc00]"
+        },
+        {
+          "at": "0x546843",
+          "context": "and r14d,0x3fc ; xor ecx,DWORD PTR [r14+r11*1+0xc00] ; shr ebx,0x18",
+          "mnemonic": "xor",
+          "operands": "ecx,DWORD PTR [r11+rbx*4+0x800]"
+        },
+        {
+          "at": "0x546851",
+          "context": "xor ecx,DWORD PTR [r11+rbx*4+0x800] ; xor ecx,r10d ; xor r13d,ecx",
+          "mnemonic": "mov",
+          "operands": "ebx,DWORD PTR [r12+r15*4+0x40]"
+        },
+        {
+          "at": "0x546862",
+          "context": "xor ebx,r13d ; movzx edx,bl ; movzx ebp,bh",
+          "mnemonic": "mov",
+          "operands": "ebp,DWORD PTR [r11+rbp*4+0xc00]"
+        },
+        {
+          "at": "0x54686a",
+          "context": "movzx edx,bl ; movzx ebp,bh ; mov ebp,DWORD PTR [r11+rbp*4+0xc00]",
+          "mnemonic": "xor",
+          "operands": "ebp,DWORD PTR [r11+rdx*4+0x400]"
+        },
+        {
+          "at": "0x54687d",
+          "context": "mov edx,ebx ; shr edx,0xe ; and edx,0x3fc",
+          "mnemonic": "xor",
+          "operands": "ebp,DWORD PTR [rdx+r11*1+0x800]"
+        },
+        {
+          "at": "0x546888",
+          "context": "and edx,0x3fc ; xor ebp,DWORD PTR [rdx+r11*1+0x800] ; shr ebx,0x18",
+          "mnemonic": "xor",
+          "operands": "ebp,DWORD PTR [r11+rbx*4]"
+        },
+        {
+          "at": "0x546896",
+          "context": "rol r10d,0x18 ; xor r10d,r8d ; xor ecx,r10d",
+          "mnemonic": "mov",
+          "operands": "edx,DWORD PTR [r12+r15*4+0x44]"
+        },
+        {
+          "at": "0x5468b2",
+          "context": "mov r10d,edx ; shr r10d,0xe ; and r10d,0x3fc",
+          "mnemonic": "mov",
+          "operands": "ebx,DWORD PTR [r11+rbx*4+0x400]"
+        },
+        {
+          "at": "0x5468ba",
+          "context": "shr r10d,0xe ; and r10d,0x3fc ; mov ebx,DWORD PTR [r11+rbx*4+0x400]",
+          "mnemonic": "xor",
+          "operands": "ebx,DWORD PTR [r11+r8*4]"
+        },
+        {
+          "at": "0x5468be",
+          "context": "and r10d,0x3fc ; mov ebx,DWORD PTR [r11+rbx*4+0x400] ; xor ebx,DWORD PTR [r11+r8*4]",
+          "mnemonic": "xor",
+          "operands": "ebx,DWORD PTR [r10+r11*1+0xc00]"
+        },
+        {
+          "at": "0x5468c9",
+          "context": "xor ebx,DWORD PTR [r11+r8*4] ; xor ebx,DWORD PTR [r10+r11*1+0xc00] ; shr edx,0x18",
+          "mnemonic": "xor",
+          "operands": "ebx,DWORD PTR [r11+rdx*4+0x800]"
+        },
+        {
+          "at": "0x546926",
+          "context": "lea r8,[r15+0xf] ; cmp r8,rdx ; jb 546a17 <Camellia_decrypt+0x507>",
+          "mnemonic": "mov",
+          "operands": "r9d,DWORD PTR [r12+r15*4+0x38]"
+        },
+        {
+          "at": "0x546934",
+          "context": "and r9d,eax ; rol r9d,1 ; xor r9d,ebx",
+          "mnemonic": "mov",
+          "operands": "r10d,DWORD PTR [r12+r15*4+0x34]"
+        },
+        {
+          "at": "0x54693f",
+          "context": "mov r10d,DWORD PTR [r12+r15*4+0x34] ; or r10d,ecx ; xor r10d,r14d",
+          "mnemonic": "mov",
+          "operands": "ebp,DWORD PTR [r12+r15*4+0x3c]"
+        },
+        {
+          "at": "0x546949",
+          "context": "mov ebp,DWORD PTR [r12+r15*4+0x3c] ; or ebp,r9d ; xor ebp,eax",
+          "mnemonic": "mov",
+          "operands": "eax,DWORD PTR [r12+r15*4+0x30]"
+        }
+      ],
+      "jcc": [
+        {
+          "at": "0x546525",
+          "context": "push rax ; movsxd rcx,DWORD PTR [rdx+0x110] ; test rcx,rcx",
+          "mnemonic": "js",
+          "operands": "546a57 <Camellia_decrypt+0x547>"
+        },
+        {
+          "at": "0x546536",
+          "context": "mov r8,rcx ; shl r8,0x4 ; cmp r8,0x44",
+          "mnemonic": "jae",
+          "operands": "546a66 <Camellia_decrypt+0x556>"
+        },
+        {
+          "at": "0x54653e",
+          "context": "cmp r8,0x44 ; jae 546a66 <Camellia_decrypt+0x556> ; test ecx,ecx",
+          "mnemonic": "je",
+          "operands": "546a6f <Camellia_decrypt+0x55f>"
+        },
+        {
+          "at": "0x54655c",
+          "context": "lea rdx,[r8-0x2] ; lea rdi,[rip+0x37871f]        # 8bec78 <anon.b0e342c0ab042a44e1a50d0e91f3f89e.173.llvm.7073746849553088576+0xd8> ; cmp rdx,rcx",
+          "mnemonic": "jb",
+          "operands": "546a4f <Camellia_decrypt+0x53f>"
+        },
+        {
+          "at": "0x5465b8",
+          "context": "data16 cs nop WORD PTR [rax+rax*1+0x0] ; lea r8,[r15+0x1a] ; cmp r8,0x44",
+          "mnemonic": "ja",
+          "operands": "5469e9 <Camellia_decrypt+0x4d9>"
+        },
+        {
+          "at": "0x5465c9",
+          "context": "lea rcx,[r15+0x10] ; lea rdx,[r15+0x18] ; cmp rdx,rcx",
+          "mnemonic": "jb",
+          "operands": "546a05 <Camellia_decrypt+0x4f5>"
+        },
+        {
+          "at": "0x5468e1",
+          "context": "xor eax,ebx ; xor ebx,ebp ; cmp r15,0xfffffffffffffff4",
+          "mnemonic": "je",
+          "operands": "54696b <Camellia_decrypt+0x45b>"
+        },
+        {
+          "at": "0x5468f2",
+          "context": "lea rdx,[r15+0xc] ; lea r8,[r15+0xe] ; cmp r8,rdx",
+          "mnemonic": "jb",
+          "operands": "546a48 <Camellia_decrypt+0x538>"
+        },
+        {
+          "at": "0x5468fc",
+          "context": "cmp r8,rdx ; jb 546a48 <Camellia_decrypt+0x538> ; cmp r8,0x43",
+          "mnemonic": "ja",
+          "operands": "546a29 <Camellia_decrypt+0x519>"
+        },
+        {
+          "at": "0x546909",
+          "context": "ja 546a29 <Camellia_decrypt+0x519> ; lea r8,[r15+0xd] ; cmp r8,rdx",
+          "mnemonic": "jb",
+          "operands": "546a0e <Camellia_decrypt+0x4fe>"
+        },
+        {
+          "at": "0x546913",
+          "context": "cmp r8,rdx ; jb 546a0e <Camellia_decrypt+0x4fe> ; cmp r8,0x43",
+          "mnemonic": "ja",
+          "operands": "546a20 <Camellia_decrypt+0x510>"
+        },
+        {
+          "at": "0x546920",
+          "context": "ja 546a20 <Camellia_decrypt+0x510> ; lea r8,[r15+0xf] ; cmp r8,rdx",
+          "mnemonic": "jb",
+          "operands": "546a17 <Camellia_decrypt+0x507>"
+        },
+        {
+          "at": "0x546960",
+          "context": "lea rcx,[r15+0xa] ; cmp rcx,r15 ; lea r15,[r15-0x10]",
+          "mnemonic": "jae",
+          "operands": "5465b0 <Camellia_decrypt+0xa0>"
+        }
+      ],
+      "label": "camellia data path (public decrypt)",
+      "n_insns": 337,
+      "range": [
+        "0x546510",
+        "0x546a84"
+      ],
+      "setcc": [],
+      "status": "PRESENT"
+    },
+    "Camellia_encrypt": {
+      "calls": [
+        "0x546e7f QWORD PTR [rip+0x398cab]        # 8dfb30 <_DYNAMIC+0x2860>",
+        "0x546f1f QWORD PTR [rip+0x397edb]        # 8dee00 <_DYNAMIC+0x1b30>",
+        "0x546f42 QWORD PTR [rip+0x3988b8]        # 8df800 <_DYNAMIC+0x2530>"
+      ],
+      "cmov": [],
+      "crypto_instructions": [],
+      "indexed_lea_arithmetic": [
+        {
+          "at": "0x546b27",
+          "context": "lea rax,[rip+0x378249]        # 8bed68 <anon.b0e342c0ab042a44e1a50d0e91f3f89e.173.llvm.7073746849553088576+0x1c8> ; mov QWORD PTR [rsp+0x18],rax ; xor r10d,r10d",
+          "mnemonic": "nop",
+          "operands": "WORD PTR [rax+rax*1+0x0]"
+        }
+      ],
+      "indexed_memory_operands": [
+        {
+          "at": "0x546b30",
+          "context": "mov QWORD PTR [rsp+0x18],rax ; xor r10d,r10d ; nop WORD PTR [rax+rax*1+0x0]",
+          "mnemonic": "mov",
+          "operands": "ecx,DWORD PTR [r15+r10*4+0x10]"
+        },
+        {
+          "at": "0x546b3d",
+          "context": "xor ecx,edx ; movzx ebx,cl ; mov r9d,edx",
+          "mnemonic": "mov",
+          "operands": "edx,DWORD PTR [r15+r10*4+0x14]"
+        },
+        {
+          "at": "0x546b47",
+          "context": "mov edx,DWORD PTR [r15+r10*4+0x14] ; xor edx,ebp ; movzx eax,ch",
+          "mnemonic": "mov",
+          "operands": "eax,DWORD PTR [r14+rax*4+0xc00]"
+        },
+        {
+          "at": "0x546b4f",
+          "context": "xor edx,ebp ; movzx eax,ch ; mov eax,DWORD PTR [r14+rax*4+0xc00]",
+          "mnemonic": "xor",
+          "operands": "eax,DWORD PTR [r14+rbx*4+0x400]"
+        },
+        {
+          "at": "0x546b68",
+          "context": "mov r12d,ecx ; shr r12d,0xe ; and r12d,0x3fc",
+          "mnemonic": "xor",
+          "operands": "eax,DWORD PTR [r12+r14*1+0x800]"
+        },
+        {
+          "at": "0x546b76",
+          "context": "xor eax,DWORD PTR [r12+r14*1+0x800] ; movzx edi,dh ; shr ecx,0x18",
+          "mnemonic": "xor",
+          "operands": "eax,DWORD PTR [r14+rcx*4]"
+        },
+        {
+          "at": "0x546b7a",
+          "context": "movzx edi,dh ; shr ecx,0x18 ; xor eax,DWORD PTR [r14+rcx*4]",
+          "mnemonic": "mov",
+          "operands": "r12d,DWORD PTR [r14+rdi*4+0x400]"
+        },
+        {
+          "at": "0x546b8d",
+          "context": "mov ecx,edx ; shr ecx,0xe ; and ecx,0x3fc",
+          "mnemonic": "xor",
+          "operands": "r12d,DWORD PTR [r14+rbx*4]"
+        },
+        {
+          "at": "0x546b91",
+          "context": "shr ecx,0xe ; and ecx,0x3fc ; xor r12d,DWORD PTR [r14+rbx*4]",
+          "mnemonic": "xor",
+          "operands": "r12d,DWORD PTR [rcx+r14*1+0xc00]"
+        },
+        {
+          "at": "0x546b9c",
+          "context": "xor r12d,DWORD PTR [r14+rbx*4] ; xor r12d,DWORD PTR [rcx+r14*1+0xc00] ; shr edx,0x18",
+          "mnemonic": "xor",
+          "operands": "r12d,DWORD PTR [r14+rdx*4+0x800]"
+        },
+        {
+          "at": "0x546bb3",
+          "context": "xor r8d,r12d ; xor r12d,r13d ; xor r12d,eax",
+          "mnemonic": "mov",
+          "operands": "ecx,DWORD PTR [r15+r10*4+0x18]"
+        },
+        {
+          "at": "0x546bbe",
+          "context": "mov ecx,DWORD PTR [r15+r10*4+0x18] ; xor ecx,r8d ; movzx eax,cl",
+          "mnemonic": "mov",
+          "operands": "ebx,DWORD PTR [r15+r10*4+0x1c]"
+        },
+        {
+          "at": "0x546bc6",
+          "context": "movzx eax,cl ; mov ebx,DWORD PTR [r15+r10*4+0x1c] ; movzx edx,ch",
+          "mnemonic": "mov",
+          "operands": "edx,DWORD PTR [r14+rdx*4+0xc00]"
+        },
+        {
+          "at": "0x546bce",
+          "context": "mov ebx,DWORD PTR [r15+r10*4+0x1c] ; movzx edx,ch ; mov edx,DWORD PTR [r14+rdx*4+0xc00]",
+          "mnemonic": "xor",
+          "operands": "edx,DWORD PTR [r14+rax*4+0x400]"
+        },
+        {
+          "at": "0x546be6",
+          "context": "mov eax,ecx ; shr eax,0xe ; and eax,0x3fc",
+          "mnemonic": "xor",
+          "operands": "edx,DWORD PTR [rax+r14*1+0x800]"
+        },
+        {
+          "at": "0x546bf1",
+          "context": "and eax,0x3fc ; xor edx,DWORD PTR [rax+r14*1+0x800] ; movzx eax,bh",
+          "mnemonic": "mov",
+          "operands": "eax,DWORD PTR [r14+rax*4+0x400]"
+        },
+        {
+          "at": "0x546bfc",
+          "context": "movzx eax,bh ; mov eax,DWORD PTR [r14+rax*4+0x400] ; shr ecx,0x18",
+          "mnemonic": "xor",
+          "operands": "edx,DWORD PTR [r14+rcx*4]"
+        },
+        {
+          "at": "0x546c05",
+          "context": "xor edx,DWORD PTR [r14+rcx*4] ; mov ecx,ebx ; shr ecx,0xe",
+          "mnemonic": "xor",
+          "operands": "eax,DWORD PTR [r14+rdi*4]"
+        },
+        {
+          "at": "0x546c0f",
+          "context": "shr ecx,0xe ; xor eax,DWORD PTR [r14+rdi*4] ; and ecx,0x3fc",
+          "mnemonic": "xor",
+          "operands": "eax,DWORD PTR [rcx+r14*1+0xc00]"
+        },
+        {
+          "at": "0x546c1a",
+          "context": "and ecx,0x3fc ; xor eax,DWORD PTR [rcx+r14*1+0xc00] ; shr ebx,0x18",
+          "mnemonic": "xor",
+          "operands": "eax,DWORD PTR [r14+rbx*4+0x800]"
+        },
+        {
+          "at": "0x546c2e",
+          "context": "xor edx,ebp ; xor r9d,eax ; xor eax,edx",
+          "mnemonic": "mov",
+          "operands": "ecx,DWORD PTR [r15+r10*4+0x20]"
+        },
+        {
+          "at": "0x546c39",
+          "context": "mov ecx,DWORD PTR [r15+r10*4+0x20] ; xor ecx,r9d ; movzx edi,cl",
+          "mnemonic": "mov",
+          "operands": "ebx,DWORD PTR [r15+r10*4+0x24]"
+        },
+        {
+          "at": "0x546c43",
+          "context": "mov ebx,DWORD PTR [r15+r10*4+0x24] ; xor ebx,eax ; movzx edx,ch",
+          "mnemonic": "mov",
+          "operands": "edx,DWORD PTR [r14+rdx*4+0xc00]"
+        },
+        {
+          "at": "0x546c4b",
+          "context": "xor ebx,eax ; movzx edx,ch ; mov edx,DWORD PTR [r14+rdx*4+0xc00]",
+          "mnemonic": "xor",
+          "operands": "edx,DWORD PTR [r14+rdi*4+0x400]"
+        },
+        {
+          "at": "0x546c64",
+          "context": "mov r13d,ecx ; shr r13d,0xe ; and r13d,0x3fc",
+          "mnemonic": "xor",
+          "operands": "edx,DWORD PTR [r13+r14*1+0x800]"
+        },
+        {
+          "at": "0x546c72",
+          "context": "xor edx,DWORD PTR [r13+r14*1+0x800] ; movzx ebp,bh ; shr ecx,0x18",
+          "mnemonic": "xor",
+          "operands": "edx,DWORD PTR [r14+rcx*4]"
+        },
+        {
+          "at": "0x546c76",
+          "context": "movzx ebp,bh ; shr ecx,0x18 ; xor edx,DWORD PTR [r14+rcx*4]",
+          "mnemonic": "mov",
+          "operands": "ebp,DWORD PTR [r14+rbp*4+0x400]"
+        },
+        {
+          "at": "0x546c89",
+          "context": "mov ecx,ebx ; shr ecx,0xe ; and ecx,0x3fc",
+          "mnemonic": "xor",
+          "operands": "ebp,DWORD PTR [r14+rdi*4]"
+        },
+        {
+          "at": "0x546c8d",
+          "context": "shr ecx,0xe ; and ecx,0x3fc ; xor ebp,DWORD PTR [r14+rdi*4]",
+          "mnemonic": "xor",
+          "operands": "ebp,DWORD PTR [rcx+r14*1+0xc00]"
+        },
+        {
+          "at": "0x546c98",
+          "context": "xor ebp,DWORD PTR [r14+rdi*4] ; xor ebp,DWORD PTR [rcx+r14*1+0xc00] ; shr ebx,0x18",
+          "mnemonic": "xor",
+          "operands": "ebp,DWORD PTR [r14+rbx*4+0x800]"
+        },
+        {
+          "at": "0x546cad",
+          "context": "xor edx,r12d ; xor r8d,ebp ; xor ebp,edx",
+          "mnemonic": "mov",
+          "operands": "ecx,DWORD PTR [r15+r10*4+0x28]"
+        },
+        {
+          "at": "0x546cb8",
+          "context": "mov ecx,DWORD PTR [r15+r10*4+0x28] ; xor ecx,r8d ; movzx edi,cl",
+          "mnemonic": "mov",
+          "operands": "ebx,DWORD PTR [r15+r10*4+0x2c]"
+        },
+        {
+          "at": "0x546cc2",
+          "context": "mov ebx,DWORD PTR [r15+r10*4+0x2c] ; xor ebx,ebp ; movzx edx,ch",
+          "mnemonic": "mov",
+          "operands": "edx,DWORD PTR [r14+rdx*4+0xc00]"
+        },
+        {
+          "at": "0x546cca",
+          "context": "xor ebx,ebp ; movzx edx,ch ; mov edx,DWORD PTR [r14+rdx*4+0xc00]",
+          "mnemonic": "xor",
+          "operands": "edx,DWORD PTR [r14+rdi*4+0x400]"
+        },
+        {
+          "at": "0x546cdd",
+          "context": "mov edi,ecx ; shr edi,0xe ; and edi,0x3fc",
+          "mnemonic": "xor",
+          "operands": "edx,DWORD PTR [rdi+r14*1+0x800]"
+        },
+        {
+          "at": "0x546ceb",
+          "context": "xor edx,DWORD PTR [rdi+r14*1+0x800] ; movzx edi,bl ; shr ecx,0x18",
+          "mnemonic": "xor",
+          "operands": "edx,DWORD PTR [r14+rcx*4]"
+        },
+        {
+          "at": "0x546cf9",
+          "context": "movzx ecx,bh ; mov r13d,edx ; rol r13d,0x18",
+          "mnemonic": "mov",
+          "operands": "r12d,DWORD PTR [r14+rcx*4+0x400]"
+        },
+        {
+          "at": "0x546d0c",
+          "context": "mov ecx,ebx ; shr ecx,0xe ; and ecx,0x3fc",
+          "mnemonic": "xor",
+          "operands": "r12d,DWORD PTR [r14+rdi*4]"
+        },
+        {
+          "at": "0x546d10",
+          "context": "shr ecx,0xe ; and ecx,0x3fc ; xor r12d,DWORD PTR [r14+rdi*4]",
+          "mnemonic": "xor",
+          "operands": "r12d,DWORD PTR [rcx+r14*1+0xc00]"
+        },
+        {
+          "at": "0x546d1b",
+          "context": "xor r12d,DWORD PTR [r14+rdi*4] ; xor r12d,DWORD PTR [rcx+r14*1+0xc00] ; shr ebx,0x18",
+          "mnemonic": "xor",
+          "operands": "r12d,DWORD PTR [r14+rbx*4+0x800]"
+        },
+        {
+          "at": "0x546d2f",
+          "context": "xor r13d,eax ; xor r9d,r12d ; xor r12d,r13d",
+          "mnemonic": "mov",
+          "operands": "ecx,DWORD PTR [r15+r10*4+0x30]"
+        },
+        {
+          "at": "0x546d3a",
+          "context": "mov ecx,DWORD PTR [r15+r10*4+0x30] ; xor ecx,r9d ; movzx eax,cl",
+          "mnemonic": "mov",
+          "operands": "ebx,DWORD PTR [r15+r10*4+0x34]"
+        },
+        {
+          "at": "0x546d42",
+          "context": "movzx eax,cl ; mov ebx,DWORD PTR [r15+r10*4+0x34] ; movzx edx,ch",
+          "mnemonic": "mov",
+          "operands": "edx,DWORD PTR [r14+rdx*4+0xc00]"
+        },
+        {
+          "at": "0x546d4a",
+          "context": "mov ebx,DWORD PTR [r15+r10*4+0x34] ; movzx edx,ch ; mov edx,DWORD PTR [r14+rdx*4+0xc00]",
+          "mnemonic": "xor",
+          "operands": "edx,DWORD PTR [r14+rax*4+0x400]"
+        },
+        {
+          "at": "0x546d62",
+          "context": "mov eax,ecx ; shr eax,0xe ; and eax,0x3fc",
+          "mnemonic": "xor",
+          "operands": "edx,DWORD PTR [rax+r14*1+0x800]"
+        },
+        {
+          "at": "0x546d6d",
+          "context": "and eax,0x3fc ; xor edx,DWORD PTR [rax+r14*1+0x800] ; movzx eax,bh",
+          "mnemonic": "mov",
+          "operands": "eax,DWORD PTR [r14+rax*4+0x400]"
+        },
+        {
+          "at": "0x546d78",
+          "context": "movzx eax,bh ; mov eax,DWORD PTR [r14+rax*4+0x400] ; shr ecx,0x18",
+          "mnemonic": "xor",
+          "operands": "edx,DWORD PTR [r14+rcx*4]"
+        },
+        {
+          "at": "0x546d81",
+          "context": "xor edx,DWORD PTR [r14+rcx*4] ; mov ecx,ebx ; shr ecx,0xe",
+          "mnemonic": "xor",
+          "operands": "eax,DWORD PTR [r14+rdi*4]"
+        },
+        {
+          "at": "0x546d8b",
+          "context": "shr ecx,0xe ; xor eax,DWORD PTR [r14+rdi*4] ; and ecx,0x3fc",
+          "mnemonic": "xor",
+          "operands": "eax,DWORD PTR [rcx+r14*1+0xc00]"
+        },
+        {
+          "at": "0x546d96",
+          "context": "and ecx,0x3fc ; xor eax,DWORD PTR [rcx+r14*1+0xc00] ; shr ebx,0x18",
+          "mnemonic": "xor",
+          "operands": "eax,DWORD PTR [r14+rbx*4+0x800]"
+        },
+        {
+          "at": "0x546daa",
+          "context": "xor edx,ebp ; xor r8d,eax ; xor eax,edx",
+          "mnemonic": "mov",
+          "operands": "ecx,DWORD PTR [r15+r10*4+0x38]"
+        },
+        {
+          "at": "0x546db5",
+          "context": "mov ecx,DWORD PTR [r15+r10*4+0x38] ; xor ecx,r8d ; movzx edi,cl",
+          "mnemonic": "mov",
+          "operands": "edx,DWORD PTR [r15+r10*4+0x3c]"
+        },
+        {
+          "at": "0x546dbf",
+          "context": "mov edx,DWORD PTR [r15+r10*4+0x3c] ; xor edx,eax ; movzx ebx,ch",
+          "mnemonic": "mov",
+          "operands": "ebp,DWORD PTR [r14+rbx*4+0xc00]"
+        },
+        {
+          "at": "0x546dc7",
+          "context": "xor edx,eax ; movzx ebx,ch ; mov ebp,DWORD PTR [r14+rbx*4+0xc00]",
+          "mnemonic": "xor",
+          "operands": "ebp,DWORD PTR [r14+rdi*4+0x400]"
+        },
+        {
+          "at": "0x546ddd",
+          "context": "mov ebx,ecx ; shr ebx,0xe ; and ebx,0x3fc",
+          "mnemonic": "xor",
+          "operands": "ebp,DWORD PTR [rbx+r14*1+0x800]"
+        },
+        {
+          "at": "0x546deb",
+          "context": "xor ebp,DWORD PTR [rbx+r14*1+0x800] ; movzx ebx,dh ; shr ecx,0x18",
+          "mnemonic": "xor",
+          "operands": "ebp,DWORD PTR [r14+rcx*4]"
+        },
+        {
+          "at": "0x546def",
+          "context": "movzx ebx,dh ; shr ecx,0x18 ; xor ebp,DWORD PTR [r14+rcx*4]",
+          "mnemonic": "mov",
+          "operands": "ebx,DWORD PTR [r14+rbx*4+0x400]"
+        },
+        {
+          "at": "0x546e02",
+          "context": "mov ecx,edx ; shr ecx,0xe ; and ecx,0x3fc",
+          "mnemonic": "xor",
+          "operands": "ebx,DWORD PTR [r14+rdi*4]"
+        },
+        {
+          "at": "0x546e06",
+          "context": "shr ecx,0xe ; and ecx,0x3fc ; xor ebx,DWORD PTR [r14+rdi*4]",
+          "mnemonic": "xor",
+          "operands": "ebx,DWORD PTR [rcx+r14*1+0xc00]"
+        },
+        {
+          "at": "0x546e11",
+          "context": "xor ebx,DWORD PTR [r14+rdi*4] ; xor ebx,DWORD PTR [rcx+r14*1+0xc00] ; shr edx,0x18",
+          "mnemonic": "xor",
+          "operands": "ebx,DWORD PTR [r14+rdx*4+0x800]"
+        },
+        {
+          "at": "0x546e2d",
+          "context": "xor ebx,ebp ; cmp r11,r10 ; je 546e8a <Camellia_encrypt+0x3da>",
+          "mnemonic": "mov",
+          "operands": "ebp,DWORD PTR [r15+r10*4+0x40]"
+        },
+        {
+          "at": "0x546e38",
+          "context": "and ebp,edx ; rol ebp,1 ; xor ebp,ebx",
+          "mnemonic": "mov",
+          "operands": "ecx,DWORD PTR [r15+r10*4+0x4c]"
+        },
+        {
+          "at": "0x546e42",
+          "context": "mov ecx,DWORD PTR [r15+r10*4+0x4c] ; or ecx,eax ; xor r8d,ecx",
+          "mnemonic": "mov",
+          "operands": "r13d,DWORD PTR [r15+r10*4+0x48]"
+        },
+        {
+          "at": "0x546e50",
+          "context": "and r13d,r8d ; rol r13d,1 ; xor r13d,eax",
+          "mnemonic": "mov",
+          "operands": "eax,DWORD PTR [r15+r10*4+0x44]"
+        },
+        {
+          "at": "0x546e95",
+          "context": "jmp 546f25 <Camellia_encrypt+0x475> ; cmp DWORD PTR [rsp+0x14],0x5 ; jge 546f27 <Camellia_encrypt+0x477>",
+          "mnemonic": "xor",
+          "operands": "eax,DWORD PTR [r15+r10*4+0x44]"
+        },
+        {
+          "at": "0x546e9f",
+          "context": "jge 546f27 <Camellia_encrypt+0x477> ; xor eax,DWORD PTR [r15+r10*4+0x44] ; mov rcx,QWORD PTR [rsp+0x8]",
+          "mnemonic": "xor",
+          "operands": "r8d,DWORD PTR [r15+rcx*4]"
+        },
+        {
+          "at": "0x546ea3",
+          "context": "xor eax,DWORD PTR [r15+r10*4+0x44] ; mov rcx,QWORD PTR [rsp+0x8] ; xor r8d,DWORD PTR [r15+rcx*4]",
+          "mnemonic": "xor",
+          "operands": "edx,DWORD PTR [r15+rcx*4+0x8]"
+        },
+        {
+          "at": "0x546ea8",
+          "context": "mov rcx,QWORD PTR [rsp+0x8] ; xor r8d,DWORD PTR [r15+rcx*4] ; xor edx,DWORD PTR [r15+rcx*4+0x8]",
+          "mnemonic": "xor",
+          "operands": "ebx,DWORD PTR [r15+r10*4+0x4c]"
+        }
+      ],
+      "jcc": [
+        {
+          "at": "0x546ac8",
+          "context": "sub rsp,0x28 ; movsxd rcx,DWORD PTR [rdx+0x110] ; test rcx,rcx",
+          "mnemonic": "js",
+          "operands": "546f18 <Camellia_encrypt+0x468>"
+        },
+        {
+          "at": "0x546e2b",
+          "context": "xor edx,ebx ; xor ebx,ebp ; cmp r11,r10",
+          "mnemonic": "je",
+          "operands": "546e8a <Camellia_encrypt+0x3da>"
+        },
+        {
+          "at": "0x546e61",
+          "context": "xor edx,eax ; add r10,0x10 ; cmp r10,0x40",
+          "mnemonic": "jne",
+          "operands": "546b30 <Camellia_encrypt+0x80>"
+        },
+        {
+          "at": "0x546e8f",
+          "context": "call QWORD PTR [rip+0x398cab]        # 8dfb30 <_DYNAMIC+0x2860> ; jmp 546f25 <Camellia_encrypt+0x475> ; cmp DWORD PTR [rsp+0x14],0x5",
+          "mnemonic": "jge",
+          "operands": "546f27 <Camellia_encrypt+0x477>"
+        }
+      ],
+      "label": "camellia data path (public encrypt)",
+      "n_insns": 292,
+      "range": [
+        "0x546ab0",
+        "0x546f48"
+      ],
+      "setcc": [],
+      "status": "PRESENT"
+    },
+    "Camellia_set_key": {
+      "calls": [],
+      "cmov": [],
+      "crypto_instructions": [],
+      "indexed_lea_arithmetic": [],
+      "indexed_memory_operands": [
+        {
+          "at": "0x5470db",
+          "context": "mov ebx,eax ; xor ebx,0x3bcc908b ; movzx ebp,ch",
+          "mnemonic": "mov",
+          "operands": "r10d,DWORD PTR [r13+rbp*4+0xc00]"
+        },
+        {
+          "at": "0x5470e3",
+          "context": "xor ebx,0x3bcc908b ; movzx ebp,ch ; mov r10d,DWORD PTR [r13+rbp*4+0xc00]",
+          "mnemonic": "xor",
+          "operands": "r10d,DWORD PTR [r13+rdi*4+0x400]"
+        },
+        {
+          "at": "0x5470f6",
+          "context": "mov edi,ecx ; shr edi,0xe ; and edi,0x3fc",
+          "mnemonic": "xor",
+          "operands": "r10d,DWORD PTR [rdi+r13*1+0x800]"
+        },
+        {
+          "at": "0x547108",
+          "context": "mov ebp,r11d ; movzx r11d,bl ; shr ecx,0x18",
+          "mnemonic": "xor",
+          "operands": "r10d,DWORD PTR [r13+rcx*4+0x0]"
+        },
+        {
+          "at": "0x547110",
+          "context": "shr ecx,0x18 ; xor r10d,DWORD PTR [r13+rcx*4+0x0] ; movzx ecx,bh",
+          "mnemonic": "mov",
+          "operands": "edi,DWORD PTR [r13+rcx*4+0x400]"
+        },
+        {
+          "at": "0x547118",
+          "context": "xor r10d,DWORD PTR [r13+rcx*4+0x0] ; movzx ecx,bh ; mov edi,DWORD PTR [r13+rcx*4+0x400]",
+          "mnemonic": "xor",
+          "operands": "edi,DWORD PTR [r13+r11*4+0x0]"
+        },
+        {
+          "at": "0x54712b",
+          "context": "mov ecx,ebx ; shr ecx,0xe ; and ecx,0x3fc",
+          "mnemonic": "xor",
+          "operands": "edi,DWORD PTR [rcx+r13*1+0xc00]"
+        },
+        {
+          "at": "0x547136",
+          "context": "and ecx,0x3fc ; xor edi,DWORD PTR [rcx+r13*1+0xc00] ; shr ebx,0x18",
+          "mnemonic": "xor",
+          "operands": "edi,DWORD PTR [r13+rbx*4+0x800]"
+        },
+        {
+          "at": "0x547166",
+          "context": "mov ebx,edi ; xor ebx,0x4caa73b2 ; movzx ebp,ch",
+          "mnemonic": "mov",
+          "operands": "r9d,DWORD PTR [r13+rbp*4+0xc00]"
+        },
+        {
+          "at": "0x54716e",
+          "context": "xor ebx,0x4caa73b2 ; movzx ebp,ch ; mov r9d,DWORD PTR [r13+rbp*4+0xc00]",
+          "mnemonic": "xor",
+          "operands": "r9d,DWORD PTR [r13+r10*4+0x400]"
+        },
+        {
+          "at": "0x547184",
+          "context": "mov r10d,ecx ; shr r10d,0xe ; and r10d,0x3fc",
+          "mnemonic": "xor",
+          "operands": "r9d,DWORD PTR [r10+r13*1+0x800]"
+        },
+        {
+          "at": "0x547193",
+          "context": "xor r9d,DWORD PTR [r10+r13*1+0x800] ; movzx r10d,bl ; shr ecx,0x18",
+          "mnemonic": "xor",
+          "operands": "r9d,DWORD PTR [r13+rcx*4+0x0]"
+        },
+        {
+          "at": "0x54719b",
+          "context": "shr ecx,0x18 ; xor r9d,DWORD PTR [r13+rcx*4+0x0] ; movzx ecx,bh",
+          "mnemonic": "mov",
+          "operands": "ecx,DWORD PTR [r13+rcx*4+0x400]"
+        },
+        {
+          "at": "0x5471a3",
+          "context": "xor r9d,DWORD PTR [r13+rcx*4+0x0] ; movzx ecx,bh ; mov ecx,DWORD PTR [r13+rcx*4+0x400]",
+          "mnemonic": "xor",
+          "operands": "ecx,DWORD PTR [r13+r10*4+0x0]"
+        },
+        {
+          "at": "0x5471b6",
+          "context": "mov r10d,ebx ; shr r10d,0xe ; and r10d,0x3fc",
+          "mnemonic": "xor",
+          "operands": "ecx,DWORD PTR [r10+r13*1+0xc00]"
+        },
+        {
+          "at": "0x5471c1",
+          "context": "and r10d,0x3fc ; xor ecx,DWORD PTR [r10+r13*1+0xc00] ; shr ebx,0x18",
+          "mnemonic": "xor",
+          "operands": "ecx,DWORD PTR [r13+rbx*4+0x800]"
+        },
+        {
+          "at": "0x5471f7",
+          "context": "mov ebx,eax ; xor ebx,0xe94f82be ; movzx ebp,ch",
+          "mnemonic": "mov",
+          "operands": "r9d,DWORD PTR [r13+rbp*4+0xc00]"
+        },
+        {
+          "at": "0x5471ff",
+          "context": "xor ebx,0xe94f82be ; movzx ebp,ch ; mov r9d,DWORD PTR [r13+rbp*4+0xc00]",
+          "mnemonic": "xor",
+          "operands": "r9d,DWORD PTR [r13+r10*4+0x400]"
+        },
+        {
+          "at": "0x547215",
+          "context": "mov r10d,ecx ; shr r10d,0xe ; and r10d,0x3fc",
+          "mnemonic": "xor",
+          "operands": "r9d,DWORD PTR [r10+r13*1+0x800]"
+        },
+        {
+          "at": "0x547224",
+          "context": "xor r9d,DWORD PTR [r10+r13*1+0x800] ; movzx r10d,bl ; shr ecx,0x18",
+          "mnemonic": "xor",
+          "operands": "r9d,DWORD PTR [r13+rcx*4+0x0]"
+        },
+        {
+          "at": "0x54722c",
+          "context": "shr ecx,0x18 ; xor r9d,DWORD PTR [r13+rcx*4+0x0] ; movzx ecx,bh",
+          "mnemonic": "mov",
+          "operands": "ecx,DWORD PTR [r13+rcx*4+0x400]"
+        },
+        {
+          "at": "0x547234",
+          "context": "xor r9d,DWORD PTR [r13+rcx*4+0x0] ; movzx ecx,bh ; mov ecx,DWORD PTR [r13+rcx*4+0x400]",
+          "mnemonic": "xor",
+          "operands": "ecx,DWORD PTR [r13+r10*4+0x0]"
+        },
+        {
+          "at": "0x547247",
+          "context": "mov r10d,ebx ; shr r10d,0xe ; and r10d,0x3fc",
+          "mnemonic": "xor",
+          "operands": "ecx,DWORD PTR [r10+r13*1+0xc00]"
+        },
+        {
+          "at": "0x547252",
+          "context": "and r10d,0x3fc ; xor ecx,DWORD PTR [r10+r13*1+0xc00] ; shr ebx,0x18",
+          "mnemonic": "xor",
+          "operands": "ecx,DWORD PTR [r13+rbx*4+0x800]"
+        },
+        {
+          "at": "0x547287",
+          "context": "mov ebx,edi ; xor ebx,0xf1d36f1c ; movzx ebp,ch",
+          "mnemonic": "mov",
+          "operands": "r9d,DWORD PTR [r13+rbp*4+0xc00]"
+        },
+        {
+          "at": "0x54728f",
+          "context": "xor ebx,0xf1d36f1c ; movzx ebp,ch ; mov r9d,DWORD PTR [r13+rbp*4+0xc00]",
+          "mnemonic": "xor",
+          "operands": "r9d,DWORD PTR [r13+r10*4+0x400]"
+        },
+        {
+          "at": "0x5472a5",
+          "context": "mov r10d,ecx ; shr r10d,0xe ; and r10d,0x3fc",
+          "mnemonic": "xor",
+          "operands": "r9d,DWORD PTR [r10+r13*1+0x800]"
+        },
+        {
+          "at": "0x5472b4",
+          "context": "xor r9d,DWORD PTR [r10+r13*1+0x800] ; movzx r10d,bl ; shr ecx,0x18",
+          "mnemonic": "xor",
+          "operands": "r9d,DWORD PTR [r13+rcx*4+0x0]"
+        },
+        {
+          "at": "0x5472bf",
+          "context": "xor r9d,DWORD PTR [r13+rcx*4+0x0] ; movzx ecx,bh ; mov ebp,r12d",
+          "mnemonic": "mov",
+          "operands": "r12d,DWORD PTR [r13+rcx*4+0x400]"
+        },
+        {
+          "at": "0x5472c7",
+          "context": "movzx ecx,bh ; mov ebp,r12d ; mov r12d,DWORD PTR [r13+rcx*4+0x400]",
+          "mnemonic": "xor",
+          "operands": "r12d,DWORD PTR [r13+r10*4+0x0]"
+        },
+        {
+          "at": "0x5472d7",
+          "context": "mov ecx,ebx ; shr ecx,0xe ; and ecx,0x3fc",
+          "mnemonic": "xor",
+          "operands": "r12d,DWORD PTR [rcx+r13*1+0xc00]"
+        },
+        {
+          "at": "0x5472e2",
+          "context": "and ecx,0x3fc ; xor r12d,DWORD PTR [rcx+r13*1+0xc00] ; shr ebx,0x18",
+          "mnemonic": "xor",
+          "operands": "r12d,DWORD PTR [r13+rbx*4+0x800]"
+        },
+        {
+          "at": "0x54751a",
+          "context": "xor eax,0x10e527fa ; mov DWORD PTR [rsp-0x8],r15d ; movzx ecx,ah",
+          "mnemonic": "mov",
+          "operands": "r9d,DWORD PTR [r13+rcx*4+0xc00]"
+        },
+        {
+          "at": "0x547525",
+          "context": "movzx ecx,ah ; mov r9d,DWORD PTR [r13+rcx*4+0xc00] ; movzx ecx,al",
+          "mnemonic": "xor",
+          "operands": "r9d,DWORD PTR [r13+rcx*4+0x400]"
+        },
+        {
+          "at": "0x547538",
+          "context": "mov ecx,eax ; shr ecx,0xe ; and ecx,0x3fc",
+          "mnemonic": "xor",
+          "operands": "r9d,DWORD PTR [rcx+r13*1+0x800]"
+        },
+        {
+          "at": "0x547543",
+          "context": "and ecx,0x3fc ; xor r9d,DWORD PTR [rcx+r13*1+0x800] ; shr eax,0x18",
+          "mnemonic": "xor",
+          "operands": "r9d,DWORD PTR [r13+rax*4+0x0]"
+        },
+        {
+          "at": "0x54755d",
+          "context": "mov DWORD PTR [rsp-0x18],ecx ; xor ecx,0xde682d1d ; movzx ebx,ch",
+          "mnemonic": "mov",
+          "operands": "r10d,DWORD PTR [r13+rbx*4+0x400]"
+        },
+        {
+          "at": "0x54756e",
+          "context": "mov r10d,DWORD PTR [r13+rbx*4+0x400] ; mov DWORD PTR [rsp-0x4],r11d ; movzx r11d,cl",
+          "mnemonic": "xor",
+          "operands": "r10d,DWORD PTR [r13+r11*4+0x0]"
+        },
+        {
+          "at": "0x547581",
+          "context": "mov r11d,ecx ; shr r11d,0xe ; and r11d,0x3fc",
+          "mnemonic": "xor",
+          "operands": "r10d,DWORD PTR [r11+r13*1+0xc00]"
+        },
+        {
+          "at": "0x54758c",
+          "context": "and r11d,0x3fc ; xor r10d,DWORD PTR [r11+r13*1+0xc00] ; shr ecx,0x18",
+          "mnemonic": "xor",
+          "operands": "r10d,DWORD PTR [r13+rcx*4+0x800]"
+        },
+        {
+          "at": "0x5475c9",
+          "context": "mov ecx,ebp ; xor ecx,0xb05688c2 ; movzx ebx,ch",
+          "mnemonic": "mov",
+          "operands": "r15d,DWORD PTR [r13+rbx*4+0xc00]"
+        },
+        {
+          "at": "0x5475d4",
+          "context": "movzx ebx,ch ; mov r15d,DWORD PTR [r13+rbx*4+0xc00] ; movzx ebx,cl",
+          "mnemonic": "xor",
+          "operands": "r15d,DWORD PTR [r13+rbx*4+0x400]"
+        },
+        {
+          "at": "0x5475e7",
+          "context": "mov ebx,ecx ; shr ebx,0xe ; and ebx,0x3fc",
+          "mnemonic": "xor",
+          "operands": "r15d,DWORD PTR [rbx+r13*1+0x800]"
+        },
+        {
+          "at": "0x5475f5",
+          "context": "xor r15d,DWORD PTR [rbx+r13*1+0x800] ; xor r8d,r10d ; shr ecx,0x18",
+          "mnemonic": "xor",
+          "operands": "r15d,DWORD PTR [r13+rcx*4+0x0]"
+        },
+        {
+          "at": "0x547606",
+          "context": "mov ecx,r8d ; xor ecx,0xb3e6c1fd ; movzx ebx,ch",
+          "mnemonic": "mov",
+          "operands": "r10d,DWORD PTR [r13+rbx*4+0x400]"
+        },
+        {
+          "at": "0x547611",
+          "context": "movzx ebx,ch ; mov r10d,DWORD PTR [r13+rbx*4+0x400] ; movzx ebx,cl",
+          "mnemonic": "xor",
+          "operands": "r10d,DWORD PTR [r13+rbx*4+0x0]"
+        },
+        {
+          "at": "0x547621",
+          "context": "mov ebx,ecx ; shr ebx,0xe ; and ebx,0x3fc",
+          "mnemonic": "xor",
+          "operands": "r10d,DWORD PTR [rbx+r13*1+0xc00]"
+        },
+        {
+          "at": "0x54762c",
+          "context": "and ebx,0x3fc ; xor r10d,DWORD PTR [rbx+r13*1+0xc00] ; shr ecx,0x18",
+          "mnemonic": "xor",
+          "operands": "r10d,DWORD PTR [r13+rcx*4+0x800]"
+        },
+        {
+          "at": "0x5478db",
+          "context": "mov r10d,0xf0 ; mov r11d,r8d ; mov r8d,ebp",
+          "mnemonic": "mov",
+          "operands": "DWORD PTR [rdx+r10*1],eax"
+        },
+        {
+          "at": "0x5478df",
+          "context": "mov r11d,r8d ; mov r8d,ebp ; mov DWORD PTR [rdx+r10*1],eax",
+          "mnemonic": "mov",
+          "operands": "DWORD PTR [rdx+rcx*1],ebx"
+        },
+        {
+          "at": "0x5478e2",
+          "context": "mov r8d,ebp ; mov DWORD PTR [rdx+r10*1],eax ; mov DWORD PTR [rdx+rcx*1],ebx",
+          "mnemonic": "mov",
+          "operands": "DWORD PTR [rdx+r9*1],r8d"
+        },
+        {
+          "at": "0x5478e6",
+          "context": "mov DWORD PTR [rdx+r10*1],eax ; mov DWORD PTR [rdx+rcx*1],ebx ; mov DWORD PTR [rdx+r9*1],r8d",
+          "mnemonic": "mov",
+          "operands": "DWORD PTR [rdx+rdi*1],r11d"
+        }
+      ],
+      "jcc": [
+        {
+          "at": "0x546f78",
+          "context": "mov eax,0xffffffff ; test rdi,rdi",
+          "mnemonic": "je",
+          "operands": "5478fc <Camellia_set_key+0x98c>"
+        },
+        {
+          "at": "0x546f81",
+          "context": "test rdi,rdi ; je 5478fc <Camellia_set_key+0x98c> ; test rdx,rdx",
+          "mnemonic": "je",
+          "operands": "5478fc <Camellia_set_key+0x98c>"
+        },
+        {
+          "at": "0x546f8d",
+          "context": "test rdx,rdx ; je 5478fc <Camellia_set_key+0x98c> ; cmp esi,0x80",
+          "mnemonic": "je",
+          "operands": "546fa8 <Camellia_set_key+0x38>"
+        },
+        {
+          "at": "0x546f95",
+          "context": "cmp esi,0x80 ; je 546fa8 <Camellia_set_key+0x38> ; cmp esi,0xc0",
+          "mnemonic": "je",
+          "operands": "546fa8 <Camellia_set_key+0x38>"
+        },
+        {
+          "at": "0x546fa2",
+          "context": "je 546fa8 <Camellia_set_key+0x38> ; mov eax,0xfffffffe ; cmp esi,0x100",
+          "mnemonic": "jne",
+          "operands": "5478fc <Camellia_set_key+0x98c>"
+        },
+        {
+          "at": "0x54706f",
+          "context": "mov eax,r10d ; mov r15d,r11d ; cmp esi,0x80",
+          "mnemonic": "je",
+          "operands": "5470bd <Camellia_set_key+0x14d>"
+        },
+        {
+          "at": "0x54708a",
+          "context": "bswap eax ; mov DWORD PTR [rdx+0x24],eax ; cmp esi,0xc0",
+          "mnemonic": "jne",
+          "operands": "54709a <Camellia_set_key+0x12a>"
+        },
+        {
+          "at": "0x547300",
+          "context": "xor r15d,r12d ; xor r12d,r9d ; cmp esi,0x80",
+          "mnemonic": "jne",
+          "operands": "547501 <Camellia_set_key+0x591>"
+        }
+      ],
+      "label": "camellia key schedule",
+      "n_insns": 568,
+      "range": [
+        "0x546f70",
+        "0x5478fd"
+      ],
+      "setcc": [],
+      "status": "PRESENT"
+    },
+    "openssl_rs::aria::ossl_aria_encrypt": {
+      "calls": [
+        "0x281c31 QWORD PTR [rip+0x65cdb1]        # 8de9e8 <_DYNAMIC+0x1718>",
+        "0x281dff QWORD PTR [rip+0x65d563]        # 8df368 <_DYNAMIC+0x2098>"
+      ],
+      "cmov": [],
+      "crypto_instructions": [],
+      "indexed_lea_arithmetic": [
+        {
+          "at": "0x281a42",
+          "context": "lea r14,[rdx+0x3c] ; mov edx,ebp ; xor r15d,r15d",
+          "mnemonic": "data16",
+          "operands": "data16 data16 data16 cs nop WORD PTR [rax+rax*1+0x0]"
+        }
+      ],
+      "indexed_memory_operands": [
+        {
+          "at": "0x281943",
+          "context": "shr r8d,0xe ; and r8d,0x3fc ; lea rdi,[rip+0x3f901d]        # 67a960 <_RNvNtCsfBoMNNx3tZr_10openssl_rs4aria2S2>",
+          "mnemonic": "mov",
+          "operands": "r10d,DWORD PTR [r8+rdi*1]"
+        },
+        {
+          "at": "0x28194e",
+          "context": "lea rdi,[rip+0x3f901d]        # 67a960 <_RNvNtCsfBoMNNx3tZr_10openssl_rs4aria2S2> ; mov r10d,DWORD PTR [r8+rdi*1] ; lea r8,[rip+0x3f9412]        # 67ad60 <_RNvNtCsfBoMNNx3tZr_10openssl_rs4aria2X1>",
+          "mnemonic": "xor",
+          "operands": "r10d,DWORD PTR [r13+r9*4+0x0]"
+        },
+        {
+          "at": "0x281953",
+          "context": "mov r10d,DWORD PTR [r8+rdi*1] ; lea r8,[rip+0x3f9412]        # 67ad60 <_RNvNtCsfBoMNNx3tZr_10openssl_rs4aria2X1> ; xor r10d,DWORD PTR [r13+r9*4+0x0]",
+          "mnemonic": "xor",
+          "operands": "r10d,DWORD PTR [r8+rsi*4]"
+        },
+        {
+          "at": "0x281961",
+          "context": "xor r10d,DWORD PTR [r8+rsi*4] ; movzx esi,bl ; lea r9,[rip+0x3f97ff]        # 67b160 <_RNvNtCsfBoMNNx3tZr_10openssl_rs4aria2X2>",
+          "mnemonic": "xor",
+          "operands": "r10d,DWORD PTR [r9+rsi*4]"
+        },
+        {
+          "at": "0x28197e",
+          "context": "shr r14d,0x18 ; shr esi,0xe ; and esi,0x3fc",
+          "mnemonic": "mov",
+          "operands": "ecx,DWORD PTR [rsi+rdi*1]"
+        },
+        {
+          "at": "0x281981",
+          "context": "shr esi,0xe ; and esi,0x3fc ; mov ecx,DWORD PTR [rsi+rdi*1]",
+          "mnemonic": "xor",
+          "operands": "ecx,DWORD PTR [r13+r14*4+0x0]"
+        },
+        {
+          "at": "0x281986",
+          "context": "and esi,0x3fc ; mov ecx,DWORD PTR [rsi+rdi*1] ; xor ecx,DWORD PTR [r13+r14*4+0x0]",
+          "mnemonic": "xor",
+          "operands": "ecx,DWORD PTR [r8+rbx*4]"
+        },
+        {
+          "at": "0x28198a",
+          "context": "mov ecx,DWORD PTR [rsi+rdi*1] ; xor ecx,DWORD PTR [r13+r14*4+0x0] ; xor ecx,DWORD PTR [r8+rbx*4]",
+          "mnemonic": "xor",
+          "operands": "ecx,DWORD PTR [r9+r11*4]"
+        },
+        {
+          "at": "0x2819a3",
+          "context": "shr eax,0x18 ; shr esi,0xe ; and esi,0x3fc",
+          "mnemonic": "mov",
+          "operands": "r11d,DWORD PTR [rsi+rdi*1]"
+        },
+        {
+          "at": "0x2819a7",
+          "context": "shr esi,0xe ; and esi,0x3fc ; mov r11d,DWORD PTR [rsi+rdi*1]",
+          "mnemonic": "xor",
+          "operands": "r11d,DWORD PTR [r13+rax*4+0x0]"
+        },
+        {
+          "at": "0x2819ac",
+          "context": "and esi,0x3fc ; mov r11d,DWORD PTR [rsi+rdi*1] ; xor r11d,DWORD PTR [r13+rax*4+0x0]",
+          "mnemonic": "xor",
+          "operands": "r11d,DWORD PTR [r8+rbx*4]"
+        },
+        {
+          "at": "0x2819b0",
+          "context": "mov r11d,DWORD PTR [rsi+rdi*1] ; xor r11d,DWORD PTR [r13+rax*4+0x0] ; xor r11d,DWORD PTR [r8+rbx*4]",
+          "mnemonic": "xor",
+          "operands": "r11d,DWORD PTR [r9+r14*4]"
+        },
+        {
+          "at": "0x2819ce",
+          "context": "shr r14d,0x18 ; shr eax,0xe ; and eax,0x3fc",
+          "mnemonic": "mov",
+          "operands": "eax,DWORD PTR [rax+rdi*1]"
+        },
+        {
+          "at": "0x2819d1",
+          "context": "shr eax,0xe ; and eax,0x3fc ; mov eax,DWORD PTR [rax+rdi*1]",
+          "mnemonic": "xor",
+          "operands": "eax,DWORD PTR [r13+r14*4+0x0]"
+        },
+        {
+          "at": "0x2819d6",
+          "context": "and eax,0x3fc ; mov eax,DWORD PTR [rax+rdi*1] ; xor eax,DWORD PTR [r13+r14*4+0x0]",
+          "mnemonic": "xor",
+          "operands": "eax,DWORD PTR [r8+rsi*4]"
+        },
+        {
+          "at": "0x2819da",
+          "context": "mov eax,DWORD PTR [rax+rdi*1] ; xor eax,DWORD PTR [r13+r14*4+0x0] ; xor eax,DWORD PTR [r8+rsi*4]",
+          "mnemonic": "xor",
+          "operands": "eax,DWORD PTR [r9+rbx*4]"
+        },
+        {
+          "at": "0x281a78",
+          "context": "shr eax,0xe ; and eax,0x3fc ; shr r11d,0x18",
+          "mnemonic": "mov",
+          "operands": "r12d,DWORD PTR [r8+r11*4]"
+        },
+        {
+          "at": "0x281a7c",
+          "context": "and eax,0x3fc ; shr r11d,0x18 ; mov r12d,DWORD PTR [r8+r11*4]",
+          "mnemonic": "xor",
+          "operands": "r12d,DWORD PTR [rax+r9*1]"
+        },
+        {
+          "at": "0x281a80",
+          "context": "shr r11d,0x18 ; mov r12d,DWORD PTR [r8+r11*4] ; xor r12d,DWORD PTR [rax+r9*1]",
+          "mnemonic": "xor",
+          "operands": "r12d,DWORD PTR [r13+rbp*4+0x0]"
+        },
+        {
+          "at": "0x281a85",
+          "context": "mov r12d,DWORD PTR [r8+r11*4] ; xor r12d,DWORD PTR [rax+r9*1] ; xor r12d,DWORD PTR [r13+rbp*4+0x0]",
+          "mnemonic": "xor",
+          "operands": "r12d,DWORD PTR [rdi+rsi*4]"
+        },
+        {
+          "at": "0x281a9d",
+          "context": "shr edx,0xe ; and edx,0x3fc ; shr eax,0x18",
+          "mnemonic": "mov",
+          "operands": "r11d,DWORD PTR [r8+rax*4]"
+        },
+        {
+          "at": "0x281aa1",
+          "context": "and edx,0x3fc ; shr eax,0x18 ; mov r11d,DWORD PTR [r8+rax*4]",
+          "mnemonic": "xor",
+          "operands": "r11d,DWORD PTR [rdx+r9*1]"
+        },
+        {
+          "at": "0x281aa5",
+          "context": "shr eax,0x18 ; mov r11d,DWORD PTR [r8+rax*4] ; xor r11d,DWORD PTR [rdx+r9*1]",
+          "mnemonic": "xor",
+          "operands": "r11d,DWORD PTR [r13+rsi*4+0x0]"
+        },
+        {
+          "at": "0x281aaa",
+          "context": "mov r11d,DWORD PTR [r8+rax*4] ; xor r11d,DWORD PTR [rdx+r9*1] ; xor r11d,DWORD PTR [r13+rsi*4+0x0]",
+          "mnemonic": "xor",
+          "operands": "r11d,DWORD PTR [rdi+rbp*4]"
+        },
+        {
+          "at": "0x281abf",
+          "context": "movzx esi,cl ; shr ecx,0xe ; and ecx,0x3fc",
+          "mnemonic": "mov",
+          "operands": "ebp,DWORD PTR [rcx+r9*1]"
+        },
+        {
+          "at": "0x281ac6",
+          "context": "and ecx,0x3fc ; mov ebp,DWORD PTR [rcx+r9*1] ; shr eax,0x18",
+          "mnemonic": "xor",
+          "operands": "ebp,DWORD PTR [r8+rax*4]"
+        },
+        {
+          "at": "0x281aca",
+          "context": "mov ebp,DWORD PTR [rcx+r9*1] ; shr eax,0x18 ; xor ebp,DWORD PTR [r8+rax*4]",
+          "mnemonic": "xor",
+          "operands": "ebp,DWORD PTR [r13+rdx*4+0x0]"
+        },
+        {
+          "at": "0x281acf",
+          "context": "shr eax,0x18 ; xor ebp,DWORD PTR [r8+rax*4] ; xor ebp,DWORD PTR [r13+rdx*4+0x0]",
+          "mnemonic": "xor",
+          "operands": "ebp,DWORD PTR [rdi+rsi*4]"
+        },
+        {
+          "at": "0x281ae9",
+          "context": "shr ebx,0xe ; and ebx,0x3fc ; shr eax,0x18",
+          "mnemonic": "mov",
+          "operands": "ecx,DWORD PTR [r8+rax*4]"
+        },
+        {
+          "at": "0x281aed",
+          "context": "and ebx,0x3fc ; shr eax,0x18 ; mov ecx,DWORD PTR [r8+rax*4]",
+          "mnemonic": "xor",
+          "operands": "ecx,DWORD PTR [rbx+r9*1]"
+        },
+        {
+          "at": "0x281af1",
+          "context": "shr eax,0x18 ; mov ecx,DWORD PTR [r8+rax*4] ; xor ecx,DWORD PTR [rbx+r9*1]",
+          "mnemonic": "xor",
+          "operands": "ecx,DWORD PTR [r13+rdx*4+0x0]"
+        },
+        {
+          "at": "0x281af6",
+          "context": "mov ecx,DWORD PTR [r8+rax*4] ; xor ecx,DWORD PTR [rbx+r9*1] ; xor ecx,DWORD PTR [r13+rdx*4+0x0]",
+          "mnemonic": "xor",
+          "operands": "ecx,DWORD PTR [rdi+rsi*4]"
+        },
+        {
+          "at": "0x281b2b",
+          "context": "shr esi,0xe ; and esi,0x3fc ; shr edx,0x18",
+          "mnemonic": "mov",
+          "operands": "edx,DWORD PTR [r13+rdx*4+0x0]"
+        },
+        {
+          "at": "0x281b30",
+          "context": "and esi,0x3fc ; shr edx,0x18 ; mov edx,DWORD PTR [r13+rdx*4+0x0]",
+          "mnemonic": "xor",
+          "operands": "edx,DWORD PTR [rsi+rdi*1]"
+        },
+        {
+          "at": "0x281b39",
+          "context": "xor edx,DWORD PTR [rsi+rdi*1] ; movzx esi,bh ; movzx ebx,bl",
+          "mnemonic": "xor",
+          "operands": "edx,DWORD PTR [r8+rsi*4]"
+        },
+        {
+          "at": "0x281b3d",
+          "context": "movzx esi,bh ; movzx ebx,bl ; xor edx,DWORD PTR [r8+rsi*4]",
+          "mnemonic": "xor",
+          "operands": "edx,DWORD PTR [r9+rbx*4]"
+        },
+        {
+          "at": "0x281b64",
+          "context": "shr r11d,0xe ; and r11d,0x3fc ; shr esi,0x18",
+          "mnemonic": "mov",
+          "operands": "r12d,DWORD PTR [r13+rsi*4+0x0]"
+        },
+        {
+          "at": "0x281b69",
+          "context": "and r11d,0x3fc ; shr esi,0x18 ; mov r12d,DWORD PTR [r13+rsi*4+0x0]",
+          "mnemonic": "xor",
+          "operands": "r12d,DWORD PTR [r11+rdi*1]"
+        },
+        {
+          "at": "0x281b70",
+          "context": "mov r12d,DWORD PTR [r13+rsi*4+0x0] ; xor r12d,DWORD PTR [r11+rdi*1] ; movzx esi,bh",
+          "mnemonic": "xor",
+          "operands": "r12d,DWORD PTR [r8+rsi*4]"
+        },
+        {
+          "at": "0x281b77",
+          "context": "movzx esi,bh ; xor r12d,DWORD PTR [r8+rsi*4] ; movzx esi,bl",
+          "mnemonic": "xor",
+          "operands": "r12d,DWORD PTR [r9+rsi*4]"
+        },
+        {
+          "at": "0x281b91",
+          "context": "mov r11d,ecx ; shr r11d,0xe ; and r11d,0x3fc",
+          "mnemonic": "mov",
+          "operands": "r11d,DWORD PTR [r11+rdi*1]"
+        },
+        {
+          "at": "0x281b98",
+          "context": "and r11d,0x3fc ; mov r11d,DWORD PTR [r11+rdi*1] ; shr esi,0x18",
+          "mnemonic": "xor",
+          "operands": "r11d,DWORD PTR [r13+rsi*4+0x0]"
+        },
+        {
+          "at": "0x281ba3",
+          "context": "xor r11d,DWORD PTR [r13+rsi*4+0x0] ; movzx esi,ch ; movzx ecx,cl",
+          "mnemonic": "xor",
+          "operands": "r11d,DWORD PTR [r8+rsi*4]"
+        },
+        {
+          "at": "0x281ba7",
+          "context": "movzx esi,ch ; movzx ecx,cl ; xor r11d,DWORD PTR [r8+rsi*4]",
+          "mnemonic": "xor",
+          "operands": "r11d,DWORD PTR [r9+rcx*4]"
+        },
+        {
+          "at": "0x281bbf",
+          "context": "shr esi,0xe ; and esi,0x3fc ; shr ecx,0x18",
+          "mnemonic": "mov",
+          "operands": "ecx,DWORD PTR [r13+rcx*4+0x0]"
+        },
+        {
+          "at": "0x281bc4",
+          "context": "and esi,0x3fc ; shr ecx,0x18 ; mov ecx,DWORD PTR [r13+rcx*4+0x0]",
+          "mnemonic": "xor",
+          "operands": "ecx,DWORD PTR [rsi+rdi*1]"
+        },
+        {
+          "at": "0x281bca",
+          "context": "mov ecx,DWORD PTR [r13+rcx*4+0x0] ; xor ecx,DWORD PTR [rsi+rdi*1] ; movzx esi,ah",
+          "mnemonic": "xor",
+          "operands": "ecx,DWORD PTR [r8+rsi*4]"
+        },
+        {
+          "at": "0x281bd4",
+          "context": "xor ecx,DWORD PTR [r8+rsi*4] ; movzx eax,al ; xor r11d,r12d",
+          "mnemonic": "xor",
+          "operands": "ecx,DWORD PTR [r9+rax*4]"
+        },
+        {
+          "at": "0x281c47",
+          "context": "movzx ebp,bh ; movzx esi,bl ; shr r10d,0x18",
+          "mnemonic": "mov",
+          "operands": "r10d,DWORD PTR [r8+r10*4]"
+        },
+        {
+          "at": "0x281c56",
+          "context": "mov r10d,DWORD PTR [r8+r10*4] ; shr r11d,0xe ; and r11d,0x3fc",
+          "mnemonic": "mov",
+          "operands": "r11d,DWORD PTR [r11+r9*1]"
+        },
+        {
+          "at": "0x281c5a",
+          "context": "shr r11d,0xe ; and r11d,0x3fc ; mov r11d,DWORD PTR [r11+r9*1]",
+          "mnemonic": "mov",
+          "operands": "ebx,DWORD PTR [r13+rbp*4+0x0]"
+        },
+        {
+          "at": "0x281c87",
+          "context": "movzx r10d,cl ; movzx ecx,bx ; or ecx,r11d",
+          "mnemonic": "movzx",
+          "operands": "esi,BYTE PTR [rdi+rsi*4]"
+        },
+        {
+          "at": "0x281c91",
+          "context": "movzx esi,BYTE PTR [rdi+rsi*4] ; or ecx,esi ; shr r14d,0x18",
+          "mnemonic": "mov",
+          "operands": "esi,DWORD PTR [r8+r14*4]"
+        },
+        {
+          "at": "0x281ca0",
+          "context": "mov esi,DWORD PTR [r8+r14*4] ; shr r15d,0xe ; and r15d,0x3fc",
+          "mnemonic": "mov",
+          "operands": "r11d,DWORD PTR [r15+r9*1]"
+        },
+        {
+          "at": "0x281ca4",
+          "context": "shr r15d,0xe ; and r15d,0x3fc ; mov r11d,DWORD PTR [r15+r9*1]",
+          "mnemonic": "mov",
+          "operands": "ebx,DWORD PTR [r13+rbp*4+0x0]"
+        },
+        {
+          "at": "0x281ce2",
+          "context": "mov r11,QWORD PTR [rsp+0x10] ; shl r11,0x4 ; mov rbp,QWORD PTR [rsp+0x18]",
+          "mnemonic": "xor",
+          "operands": "ecx,DWORD PTR [rbp+r11*1+0x0]"
+        },
+        {
+          "at": "0x281ce7",
+          "context": "shl r11,0x4 ; mov rbp,QWORD PTR [rsp+0x18] ; xor ecx,DWORD PTR [rbp+r11*1+0x0]",
+          "mnemonic": "movzx",
+          "operands": "r10d,BYTE PTR [rdi+r10*4]"
+        },
+        {
+          "at": "0x281cf3",
+          "context": "movzx r10d,BYTE PTR [rdi+r10*4] ; or edx,r10d ; shr r14d,0x18",
+          "mnemonic": "mov",
+          "operands": "ebx,DWORD PTR [r8+r14*4]"
+        },
+        {
+          "at": "0x281d02",
+          "context": "mov ebx,DWORD PTR [r8+r14*4] ; shr r15d,0xe ; and r15d,0x3fc",
+          "mnemonic": "mov",
+          "operands": "r10d,DWORD PTR [r15+r9*1]"
+        },
+        {
+          "at": "0x281d06",
+          "context": "shr r15d,0xe ; and r15d,0x3fc ; mov r10d,DWORD PTR [r15+r9*1]",
+          "mnemonic": "mov",
+          "operands": "esi,DWORD PTR [r13+rsi*4+0x0]"
+        },
+        {
+          "at": "0x281d32",
+          "context": "movzx r12d,al ; movzx eax,si ; or eax,r10d",
+          "mnemonic": "xor",
+          "operands": "edx,DWORD PTR [rbp+r11*1+0x4]"
+        },
+        {
+          "at": "0x281d3c",
+          "context": "or eax,r10d ; xor edx,DWORD PTR [rbp+r11*1+0x4] ; mov rsi,QWORD PTR [rsp+0x8]",
+          "mnemonic": "movzx",
+          "operands": "esi,BYTE PTR [rdi+rsi*4]"
+        },
+        {
+          "at": "0x281d42",
+          "context": "mov rsi,QWORD PTR [rsp+0x8] ; movzx esi,BYTE PTR [rdi+rsi*4] ; or eax,esi",
+          "mnemonic": "xor",
+          "operands": "eax,DWORD PTR [rbp+r11*1+0x8]"
+        },
+        {
+          "at": "0x281d4b",
+          "context": "or eax,esi ; xor eax,DWORD PTR [rbp+r11*1+0x8] ; shr r14d,0x18",
+          "mnemonic": "mov",
+          "operands": "esi,DWORD PTR [r8+r14*4]"
+        },
+        {
+          "at": "0x281d5a",
+          "context": "mov esi,DWORD PTR [r8+r14*4] ; shr r15d,0xe ; and r15d,0x3fc",
+          "mnemonic": "mov",
+          "operands": "r8d,DWORD PTR [r15+r9*1]"
+        },
+        {
+          "at": "0x281d5e",
+          "context": "shr r15d,0xe ; and r15d,0x3fc ; mov r8d,DWORD PTR [r15+r9*1]",
+          "mnemonic": "mov",
+          "operands": "r9d,DWORD PTR [r13+rbx*4+0x0]"
+        },
+        {
+          "at": "0x281d63",
+          "context": "and r15d,0x3fc ; mov r8d,DWORD PTR [r15+r9*1] ; mov r9d,DWORD PTR [r13+rbx*4+0x0]",
+          "mnemonic": "movzx",
+          "operands": "edi,BYTE PTR [rdi+r12*4]"
+        },
+        {
+          "at": "0x281d86",
+          "context": "movzx ebx,r9w ; or ebx,r8d ; or ebx,edi",
+          "mnemonic": "xor",
+          "operands": "ebx,DWORD PTR [rbp+r11*1+0xc]"
+        }
+      ],
+      "jcc": [
+        {
+          "at": "0x2818d4",
+          "context": "test rdx,rdx ; sete al ; or al,cl",
+          "mnemonic": "jne",
+          "operands": "281de9 <_RNvNtCsfBoMNNx3tZr_10openssl_rs4aria17ossl_aria_encrypt+0x539>"
+        },
+        {
+          "at": "0x2818e5",
+          "context": "jne 281de9 <_RNvNtCsfBoMNNx3tZr_10openssl_rs4aria17ossl_aria_encrypt+0x539> ; mov r15d,DWORD PTR [rdx+0x110] ; cmp r15,0x10",
+          "mnemonic": "ja",
+          "operands": "281de9 <_RNvNtCsfBoMNNx3tZr_10openssl_rs4aria17ossl_aria_encrypt+0x539>"
+        },
+        {
+          "at": "0x2818f4",
+          "context": "ja 281de9 <_RNvNtCsfBoMNNx3tZr_10openssl_rs4aria17ossl_aria_encrypt+0x539> ; mov eax,0x15000 ; bt eax,r15d",
+          "mnemonic": "jae",
+          "operands": "281de9 <_RNvNtCsfBoMNNx3tZr_10openssl_rs4aria17ossl_aria_encrypt+0x539>"
+        },
+        {
+          "at": "0x281a53",
+          "context": "xor r15d,r15d ; data16 data16 data16 data16 cs nop WORD PTR [rax+rax*1+0x0] ; cmp r10d,r15d",
+          "mnemonic": "je",
+          "operands": "281c37 <_RNvNtCsfBoMNNx3tZr_10openssl_rs4aria17ossl_aria_encrypt+0x387>"
+        },
+        {
+          "at": "0x281a5d",
+          "context": "cmp r10d,r15d ; je 281c37 <_RNvNtCsfBoMNNx3tZr_10openssl_rs4aria17ossl_aria_encrypt+0x387> ; cmp r15,0x4",
+          "mnemonic": "je",
+          "operands": "281df8 <_RNvNtCsfBoMNNx3tZr_10openssl_rs4aria17ossl_aria_encrypt+0x548>"
+        },
+        {
+          "at": "0x281c24",
+          "context": "add r15,0xfffffffffffffffe ; add r14,0x20 ; cmp DWORD PTR [rsp+0x8],r15d",
+          "mnemonic": "jne",
+          "operands": "281a50 <_RNvNtCsfBoMNNx3tZr_10openssl_rs4aria17ossl_aria_encrypt+0x1a0>"
+        }
+      ],
+      "label": "aria data path",
+      "n_insns": 384,
+      "range": [
+        "0x2818b0",
+        "0x281e05"
+      ],
+      "setcc": [
+        {
+          "at": "0x2818c1",
+          "context": "push rbx ; sub rsp,0x28 ; test rdi,rdi",
+          "mnemonic": "sete",
+          "operands": "al"
+        },
+        {
+          "at": "0x2818c7",
+          "context": "test rdi,rdi ; sete al ; test rsi,rsi",
+          "mnemonic": "sete",
+          "operands": "cl"
+        },
+        {
+          "at": "0x2818cf",
+          "context": "sete cl ; or cl,al ; test rdx,rdx",
+          "mnemonic": "sete",
+          "operands": "al"
+        }
+      ],
+      "status": "PRESENT"
+    },
+    "openssl_rs::aria::ossl_aria_set_encrypt_key": {
+      "calls": [
+        "0x282baf QWORD PTR [rip+0x65cf7b]        # 8dfb30 <_DYNAMIC+0x2860>",
+        "0x282bc1 QWORD PTR [rip+0x65cf69]        # 8dfb30 <_DYNAMIC+0x2860>",
+        "0x282bd8 QWORD PTR [rip+0x65cf52]        # 8dfb30 <_DYNAMIC+0x2860>"
+      ],
+      "cmov": [],
+      "crypto_instructions": [],
+      "indexed_lea_arithmetic": [
+        {
+          "at": "0x282367",
+          "context": "jae 282bc7 <_RNvNtCsfBoMNNx3tZr_10openssl_rs4aria25ossl_aria_set_encrypt_key+0xb47> ; xor ebp,r10d ; mov DWORD PTR [rsp+0x24],ebp",
+          "mnemonic": "lea",
+          "operands": "edx,[r9*4+0x10]"
+        },
+        {
+          "at": "0x2823d0",
+          "context": "movzx edx,dl ; lea r13,[rip+0x3f8595]        # 67a960 <_RNvNtCsfBoMNNx3tZr_10openssl_rs4aria2S2> ; xor ebx,DWORD PTR [r13+rdx*4+0x0]",
+          "mnemonic": "lea",
+          "operands": "edx,[r9*4+0x14]"
+        },
+        {
+          "at": "0x282418",
+          "context": "xor r10d,DWORD PTR [rbp+rsi*4+0x0] ; movzx edx,dl ; xor r10d,DWORD PTR [r13+rdx*4+0x0]",
+          "mnemonic": "lea",
+          "operands": "edx,[r9*4+0x18]"
+        },
+        {
+          "at": "0x282455",
+          "context": "xor esi,DWORD PTR [r11+rbp*4] ; movzx edx,dl ; xor esi,DWORD PTR [r13+rdx*4+0x0]",
+          "mnemonic": "lea",
+          "operands": "edx,[r9*4+0x1c]"
+        },
+        {
+          "at": "0x28253f",
+          "context": "and edx,0x3fc ; mov r15d,DWORD PTR [rdx+r8*1] ; xor r15d,DWORD PTR [r13+rax*4+0x0]",
+          "mnemonic": "lea",
+          "operands": "eax,[r9*4+0x28]"
+        }
+      ],
+      "indexed_memory_operands": [
+        {
+          "at": "0x282130",
+          "context": "movzx ebp,BYTE PTR [rdi+0x5] ; movzx ebx,BYTE PTR [rdi+0x6] ; lea r14,[rip+0x3f9430]        # 67b560 <_RNvNtCsfBoMNNx3tZr_10openssl_rs4aria6KEY_RC>",
+          "mnemonic": "mov",
+          "operands": "ecx,DWORD PTR [r14+r9*4]"
+        },
+        {
+          "at": "0x282166",
+          "context": "shr r11d,0xe ; and r11d,0x3fc ; lea rax,[rip+0x3f87fa]        # 67a960 <_RNvNtCsfBoMNNx3tZr_10openssl_rs4aria2S2>",
+          "mnemonic": "mov",
+          "operands": "ecx,DWORD PTR [r11+rax*1]"
+        },
+        {
+          "at": "0x28216a",
+          "context": "and r11d,0x3fc ; lea rax,[rip+0x3f87fa]        # 67a960 <_RNvNtCsfBoMNNx3tZr_10openssl_rs4aria2S2> ; mov ecx,DWORD PTR [r11+rax*1]",
+          "mnemonic": "xor",
+          "operands": "ecx,DWORD PTR [r13+r10*4+0x0]"
+        },
+        {
+          "at": "0x282176",
+          "context": "mov ecx,DWORD PTR [r11+rax*1] ; xor ecx,DWORD PTR [r13+r10*4+0x0] ; lea r15,[rip+0x3f8bea]        # 67ad60 <_RNvNtCsfBoMNNx3tZr_10openssl_rs4aria2X1>",
+          "mnemonic": "xor",
+          "operands": "ecx,DWORD PTR [r15+rdx*4]"
+        },
+        {
+          "at": "0x282181",
+          "context": "lea r15,[rip+0x3f8bea]        # 67ad60 <_RNvNtCsfBoMNNx3tZr_10openssl_rs4aria2X1> ; xor ecx,DWORD PTR [r15+rdx*4] ; lea r12,[rip+0x3f8fdf]        # 67b160 <_RNvNtCsfBoMNNx3tZr_10openssl_rs4aria2X2>",
+          "mnemonic": "xor",
+          "operands": "ecx,DWORD PTR [r12+r8*4]"
+        },
+        {
+          "at": "0x2821a8",
+          "context": "or ebx,edx ; mov DWORD PTR [rsp+0x70],ebp ; or ebx,ebp",
+          "mnemonic": "mov",
+          "operands": "edx,DWORD PTR [r14+r9*4+0x4]"
+        },
+        {
+          "at": "0x2821c8",
+          "context": "mov r8d,edx ; shr r8d,0xe ; and r8d,0x3fc",
+          "mnemonic": "mov",
+          "operands": "r11d,DWORD PTR [r8+rax*1]"
+        },
+        {
+          "at": "0x2821cc",
+          "context": "shr r8d,0xe ; and r8d,0x3fc ; mov r11d,DWORD PTR [r8+rax*1]",
+          "mnemonic": "xor",
+          "operands": "r11d,DWORD PTR [r13+r10*4+0x0]"
+        },
+        {
+          "at": "0x2821d4",
+          "context": "mov r11d,DWORD PTR [r8+rax*1] ; xor r11d,DWORD PTR [r13+r10*4+0x0] ; movzx ebx,dh",
+          "mnemonic": "xor",
+          "operands": "r11d,DWORD PTR [r15+rbx*4]"
+        },
+        {
+          "at": "0x2821db",
+          "context": "movzx ebx,dh ; xor r11d,DWORD PTR [r15+rbx*4] ; movzx edx,dl",
+          "mnemonic": "xor",
+          "operands": "r11d,DWORD PTR [r12+rdx*4]"
+        },
+        {
+          "at": "0x282212",
+          "context": "or r8d,edx ; mov DWORD PTR [rsp+0x60],r10d ; or r8d,r10d",
+          "mnemonic": "mov",
+          "operands": "edx,DWORD PTR [r14+r9*4+0x8]"
+        },
+        {
+          "at": "0x282237",
+          "context": "mov r8d,edx ; shr r8d,0xe ; and r8d,0x3fc",
+          "mnemonic": "mov",
+          "operands": "r14d,DWORD PTR [r8+rax*1]"
+        },
+        {
+          "at": "0x28223b",
+          "context": "shr r8d,0xe ; and r8d,0x3fc ; mov r14d,DWORD PTR [r8+rax*1]",
+          "mnemonic": "xor",
+          "operands": "r14d,DWORD PTR [r13+r10*4+0x0]"
+        },
+        {
+          "at": "0x282243",
+          "context": "mov r14d,DWORD PTR [r8+rax*1] ; xor r14d,DWORD PTR [r13+r10*4+0x0] ; movzx ebx,dh",
+          "mnemonic": "xor",
+          "operands": "r14d,DWORD PTR [r15+rbx*4]"
+        },
+        {
+          "at": "0x28224a",
+          "context": "movzx ebx,dh ; xor r14d,DWORD PTR [r15+rbx*4] ; movzx edx,dl",
+          "mnemonic": "xor",
+          "operands": "r14d,DWORD PTR [r12+rdx*4]"
+        },
+        {
+          "at": "0x282281",
+          "context": "or edx,r8d ; mov DWORD PTR [rsp+0x5c],r10d ; or edx,r10d",
+          "mnemonic": "mov",
+          "operands": "ebx,DWORD PTR [rbp+r9*4+0xc]"
+        },
+        {
+          "at": "0x28229e",
+          "context": "mov edx,ebx ; shr edx,0xe ; and edx,0x3fc",
+          "mnemonic": "mov",
+          "operands": "edx,DWORD PTR [rdx+rax*1]"
+        },
+        {
+          "at": "0x2822a1",
+          "context": "shr edx,0xe ; and edx,0x3fc ; mov edx,DWORD PTR [rdx+rax*1]",
+          "mnemonic": "xor",
+          "operands": "edx,DWORD PTR [r13+r8*4+0x0]"
+        },
+        {
+          "at": "0x2822a9",
+          "context": "mov edx,DWORD PTR [rdx+rax*1] ; xor edx,DWORD PTR [r13+r8*4+0x0] ; movzx ebp,bh",
+          "mnemonic": "xor",
+          "operands": "edx,DWORD PTR [r15+rbp*4]"
+        },
+        {
+          "at": "0x2822b1",
+          "context": "movzx ebp,bh ; xor edx,DWORD PTR [r15+rbp*4] ; movzx r8d,bl",
+          "mnemonic": "xor",
+          "operands": "edx,DWORD PTR [r12+r8*4]"
+        },
+        {
+          "at": "0x282379",
+          "context": "lea edx,[r9*4+0x10] ; and edx,0xfffffff0 ; lea rsi,[rip+0x3f91e7]        # 67b560 <_RNvNtCsfBoMNNx3tZr_10openssl_rs4aria6KEY_RC>",
+          "mnemonic": "mov",
+          "operands": "edx,DWORD PTR [rdx+rsi*1]"
+        },
+        {
+          "at": "0x282397",
+          "context": "shr ebx,0xe ; and ebx,0x3fc ; lea r12,[rip+0x3f8dc9]        # 67b160 <_RNvNtCsfBoMNNx3tZr_10openssl_rs4aria2X2>",
+          "mnemonic": "mov",
+          "operands": "ebx,DWORD PTR [rbx+r12*1]"
+        },
+        {
+          "at": "0x2823a2",
+          "context": "lea r12,[rip+0x3f8dc9]        # 67b160 <_RNvNtCsfBoMNNx3tZr_10openssl_rs4aria2X2> ; mov ebx,DWORD PTR [rbx+r12*1] ; lea rax,[rip+0x3f89be]        # 67ad60 <_RNvNtCsfBoMNNx3tZr_10openssl_rs4aria2X1>",
+          "mnemonic": "xor",
+          "operands": "ebx,DWORD PTR [rax+r10*4]"
+        },
+        {
+          "at": "0x2823b3",
+          "context": "xor r11d,r8d ; movzx ebp,dh ; lea rsi,[rip+0x3f81ad]        # 67a560 <_RNvNtCsfBoMNNx3tZr_10openssl_rs4aria2S1>",
+          "mnemonic": "xor",
+          "operands": "ebx,DWORD PTR [rsi+rbp*4]"
+        },
+        {
+          "at": "0x2823cb",
+          "context": "mov DWORD PTR [rsp+0x8],r11d ; movzx edx,dl ; lea r13,[rip+0x3f8595]        # 67a960 <_RNvNtCsfBoMNNx3tZr_10openssl_rs4aria2S2>",
+          "mnemonic": "xor",
+          "operands": "ebx,DWORD PTR [r13+rdx*4+0x0]"
+        },
+        {
+          "at": "0x2823e2",
+          "context": "lea edx,[r9*4+0x14] ; and edx,0xfffffff0 ; lea r15,[rip+0x3f917e]        # 67b560 <_RNvNtCsfBoMNNx3tZr_10openssl_rs4aria6KEY_RC>",
+          "mnemonic": "mov",
+          "operands": "edx,DWORD PTR [rdx+r15*1+0x4]"
+        },
+        {
+          "at": "0x2823fd",
+          "context": "mov r8d,edx ; shr r8d,0xe ; and r8d,0x3fc",
+          "mnemonic": "mov",
+          "operands": "r10d,DWORD PTR [r8+r12*1]"
+        },
+        {
+          "at": "0x282401",
+          "context": "shr r8d,0xe ; and r8d,0x3fc ; mov r10d,DWORD PTR [r8+r12*1]",
+          "mnemonic": "xor",
+          "operands": "r10d,DWORD PTR [rax+rsi*4]"
+        },
+        {
+          "at": "0x28240b",
+          "context": "xor r10d,DWORD PTR [rax+rsi*4] ; movzx esi,dh ; mov r11,rbp",
+          "mnemonic": "xor",
+          "operands": "r10d,DWORD PTR [rbp+rsi*4+0x0]"
+        },
+        {
+          "at": "0x282413",
+          "context": "mov r11,rbp ; xor r10d,DWORD PTR [rbp+rsi*4+0x0] ; movzx edx,dl",
+          "mnemonic": "xor",
+          "operands": "r10d,DWORD PTR [r13+rdx*4+0x0]"
+        },
+        {
+          "at": "0x282423",
+          "context": "xor r10d,DWORD PTR [r13+rdx*4+0x0] ; lea edx,[r9*4+0x18] ; and edx,0xfffffff0",
+          "mnemonic": "mov",
+          "operands": "edx,DWORD PTR [rdx+r15*1+0x8]"
+        },
+        {
+          "at": "0x28243e",
+          "context": "mov esi,edx ; shr esi,0xe ; and esi,0x3fc",
+          "mnemonic": "mov",
+          "operands": "esi,DWORD PTR [rsi+r12*1]"
+        },
+        {
+          "at": "0x282442",
+          "context": "shr esi,0xe ; and esi,0x3fc ; mov esi,DWORD PTR [rsi+r12*1]",
+          "mnemonic": "xor",
+          "operands": "esi,DWORD PTR [rax+r8*4]"
+        },
+        {
+          "at": "0x282449",
+          "context": "mov esi,DWORD PTR [rsi+r12*1] ; xor esi,DWORD PTR [rax+r8*4] ; movzx ebp,dh",
+          "mnemonic": "xor",
+          "operands": "esi,DWORD PTR [r11+rbp*4]"
+        },
+        {
+          "at": "0x282450",
+          "context": "movzx ebp,dh ; xor esi,DWORD PTR [r11+rbp*4] ; movzx edx,dl",
+          "mnemonic": "xor",
+          "operands": "esi,DWORD PTR [r13+rdx*4+0x0]"
+        },
+        {
+          "at": "0x282460",
+          "context": "xor esi,DWORD PTR [r13+rdx*4+0x0] ; lea edx,[r9*4+0x1c] ; and edx,0xfffffff0",
+          "mnemonic": "mov",
+          "operands": "edx,DWORD PTR [rdx+r15*1+0xc]"
+        },
+        {
+          "at": "0x28247d",
+          "context": "mov r15d,edx ; shr r15d,0xe ; and r15d,0x3fc",
+          "mnemonic": "mov",
+          "operands": "ebp,DWORD PTR [r15+r12*1]"
+        },
+        {
+          "at": "0x282481",
+          "context": "shr r15d,0xe ; and r15d,0x3fc ; mov ebp,DWORD PTR [r15+r12*1]",
+          "mnemonic": "xor",
+          "operands": "ebp,DWORD PTR [rax+r8*4]"
+        },
+        {
+          "at": "0x282488",
+          "context": "mov ebp,DWORD PTR [r15+r12*1] ; xor ebp,DWORD PTR [rax+r8*4] ; movzx eax,dh",
+          "mnemonic": "xor",
+          "operands": "ebp,DWORD PTR [r11+rax*4]"
+        },
+        {
+          "at": "0x282492",
+          "context": "xor ebp,DWORD PTR [r11+rax*4] ; mov r15,r11 ; movzx eax,dl",
+          "mnemonic": "xor",
+          "operands": "ebp,DWORD PTR [r13+rax*4+0x0]"
+        },
+        {
+          "at": "0x2824f8",
+          "context": "mov DWORD PTR [rsp+0x34],eax ; shl ecx,0x4 ; lea r10,[rip+0x3f9068]        # 67b560 <_RNvNtCsfBoMNNx3tZr_10openssl_rs4aria6KEY_RC>",
+          "mnemonic": "mov",
+          "operands": "ebx,DWORD PTR [rcx+r10*1]"
+        },
+        {
+          "at": "0x282511",
+          "context": "shr ecx,0xe ; and ecx,0x3fc ; mov r8,r13",
+          "mnemonic": "mov",
+          "operands": "r12d,DWORD PTR [rcx+r13*1]"
+        },
+        {
+          "at": "0x282518",
+          "context": "mov r8,r13 ; mov r12d,DWORD PTR [rcx+r13*1] ; mov r13,r15",
+          "mnemonic": "xor",
+          "operands": "r12d,DWORD PTR [r15+rax*4]"
+        },
+        {
+          "at": "0x28251f",
+          "context": "mov r13,r15 ; xor r12d,DWORD PTR [r15+rax*4] ; shl edi,0x4",
+          "mnemonic": "mov",
+          "operands": "ecx,DWORD PTR [rdi+r10*1+0x4]"
+        },
+        {
+          "at": "0x282536",
+          "context": "mov edx,ecx ; shr edx,0xe ; and edx,0x3fc",
+          "mnemonic": "mov",
+          "operands": "r15d,DWORD PTR [rdx+r8*1]"
+        },
+        {
+          "at": "0x28253a",
+          "context": "shr edx,0xe ; and edx,0x3fc ; mov r15d,DWORD PTR [rdx+r8*1]",
+          "mnemonic": "xor",
+          "operands": "r15d,DWORD PTR [r13+rax*4+0x0]"
+        },
+        {
+          "at": "0x28254a",
+          "context": "xor r15d,DWORD PTR [r13+rax*4+0x0] ; lea eax,[r9*4+0x28] ; and eax,0xfffffff0",
+          "mnemonic": "mov",
+          "operands": "edx,DWORD PTR [rax+r10*1+0x8]"
+        },
+        {
+          "at": "0x282561",
+          "context": "mov edi,edx ; shr edi,0xe ; and edi,0x3fc",
+          "mnemonic": "mov",
+          "operands": "r9d,DWORD PTR [rdi+r8*1]"
+        },
+        {
+          "at": "0x282565",
+          "context": "shr edi,0xe ; and edi,0x3fc ; mov r9d,DWORD PTR [rdi+r8*1]",
+          "mnemonic": "xor",
+          "operands": "r9d,DWORD PTR [r13+rax*4+0x0]"
+        },
+        {
+          "at": "0x28257f",
+          "context": "mov DWORD PTR [rsp+0x58],r11d ; mov rax,QWORD PTR [rsp+0x38] ; shl eax,0x4",
+          "mnemonic": "mov",
+          "operands": "eax,DWORD PTR [rax+r10*1+0xc]"
+        },
+        {
+          "at": "0x282592",
+          "context": "mov edi,eax ; shr edi,0xe ; and edi,0x3fc",
+          "mnemonic": "mov",
+          "operands": "edi,DWORD PTR [rdi+r8*1]"
+        },
+        {
+          "at": "0x28259b",
+          "context": "mov edi,DWORD PTR [rdi+r8*1] ; mov ebp,eax ; shr ebp,0x18",
+          "mnemonic": "xor",
+          "operands": "edi,DWORD PTR [r13+rbp*4+0x0]"
+        },
+        {
+          "at": "0x2825aa",
+          "context": "xor edi,DWORD PTR [r13+rbp*4+0x0] ; movzx ebp,bh ; lea rsi,[rip+0x3f87b6]        # 67ad60 <_RNvNtCsfBoMNNx3tZr_10openssl_rs4aria2X1>",
+          "mnemonic": "xor",
+          "operands": "r12d,DWORD PTR [rsi+rbp*4]"
+        },
+        {
+          "at": "0x2825b4",
+          "context": "xor r12d,DWORD PTR [rsi+rbp*4] ; movzx ebx,bl ; movzx ebp,ch",
+          "mnemonic": "xor",
+          "operands": "r15d,DWORD PTR [rsi+rbp*4]"
+        },
+        {
+          "at": "0x2825bb",
+          "context": "movzx ebp,ch ; xor r15d,DWORD PTR [rsi+rbp*4] ; movzx ebp,dh",
+          "mnemonic": "xor",
+          "operands": "r9d,DWORD PTR [rsi+rbp*4]"
+        },
+        {
+          "at": "0x2825c2",
+          "context": "movzx ebp,dh ; xor r9d,DWORD PTR [rsi+rbp*4] ; movzx ebp,ah",
+          "mnemonic": "xor",
+          "operands": "edi,DWORD PTR [rsi+rbp*4]"
+        },
+        {
+          "at": "0x2825cc",
+          "context": "movzx ebp,ah ; xor edi,DWORD PTR [rsi+rbp*4] ; lea rsi,[rip+0x3f8b94]        # 67b160 <_RNvNtCsfBoMNNx3tZr_10openssl_rs4aria2X2>",
+          "mnemonic": "xor",
+          "operands": "r12d,DWORD PTR [rsi+rbx*4]"
+        },
+        {
+          "at": "0x2825d3",
+          "context": "lea rsi,[rip+0x3f8b94]        # 67b160 <_RNvNtCsfBoMNNx3tZr_10openssl_rs4aria2X2> ; xor r12d,DWORD PTR [rsi+rbx*4] ; movzx ecx,cl",
+          "mnemonic": "xor",
+          "operands": "r15d,DWORD PTR [rsi+rcx*4]"
+        },
+        {
+          "at": "0x2825da",
+          "context": "movzx ecx,cl ; xor r15d,DWORD PTR [rsi+rcx*4] ; movzx ecx,dl",
+          "mnemonic": "xor",
+          "operands": "r9d,DWORD PTR [rsi+rcx*4]"
+        },
+        {
+          "at": "0x2825e1",
+          "context": "movzx ecx,dl ; xor r9d,DWORD PTR [rsi+rcx*4] ; movzx eax,al",
+          "mnemonic": "xor",
+          "operands": "edi,DWORD PTR [rsi+rax*4]"
+        }
+      ],
+      "jcc": [
+        {
+          "at": "0x282099",
+          "context": "sub rsp,0x88 ; mov eax,0xffffffff ; test rdi,rdi",
+          "mnemonic": "je",
+          "operands": "282b8e <_RNvNtCsfBoMNNx3tZr_10openssl_rs4aria25ossl_aria_set_encrypt_key+0xb0e>"
+        },
+        {
+          "at": "0x2820a2",
+          "context": "test rdi,rdi ; je 282b8e <_RNvNtCsfBoMNNx3tZr_10openssl_rs4aria25ossl_aria_set_encrypt_key+0xb0e> ; test rdx,rdx",
+          "mnemonic": "je",
+          "operands": "282b8e <_RNvNtCsfBoMNNx3tZr_10openssl_rs4aria25ossl_aria_set_encrypt_key+0xb0e>"
+        },
+        {
+          "at": "0x2820ae",
+          "context": "test rdx,rdx ; je 282b8e <_RNvNtCsfBoMNNx3tZr_10openssl_rs4aria25ossl_aria_set_encrypt_key+0xb0e> ; cmp esi,0x80",
+          "mnemonic": "je",
+          "operands": "2820c9 <_RNvNtCsfBoMNNx3tZr_10openssl_rs4aria25ossl_aria_set_encrypt_key+0x49>"
+        },
+        {
+          "at": "0x2820b6",
+          "context": "cmp esi,0x80 ; je 2820c9 <_RNvNtCsfBoMNNx3tZr_10openssl_rs4aria25ossl_aria_set_encrypt_key+0x49> ; cmp esi,0xc0",
+          "mnemonic": "je",
+          "operands": "2820c9 <_RNvNtCsfBoMNNx3tZr_10openssl_rs4aria25ossl_aria_set_encrypt_key+0x49>"
+        },
+        {
+          "at": "0x2820c3",
+          "context": "je 2820c9 <_RNvNtCsfBoMNNx3tZr_10openssl_rs4aria25ossl_aria_set_encrypt_key+0x49> ; mov eax,0xfffffffe ; cmp esi,0x100",
+          "mnemonic": "jne",
+          "operands": "282b8e <_RNvNtCsfBoMNNx3tZr_10openssl_rs4aria25ossl_aria_set_encrypt_key+0xb0e>"
+        },
+        {
+          "at": "0x2822f5",
+          "context": "xor ebx,r15d ; xor r8d,r8d ; cmp esi,0x80",
+          "mnemonic": "jbe",
+          "operands": "28231c <_RNvNtCsfBoMNNx3tZr_10openssl_rs4aria25ossl_aria_set_encrypt_key+0x29c>"
+        },
+        {
+          "at": "0x282309",
+          "context": "bswap ebp ; bswap r8d ; cmp esi,0xc1",
+          "mnemonic": "jb",
+          "operands": "28231e <_RNvNtCsfBoMNNx3tZr_10openssl_rs4aria25ossl_aria_set_encrypt_key+0x29e>"
+        },
+        {
+          "at": "0x28232a",
+          "context": "lea ecx,[r9+0x8] ; shr ecx,0x2 ; cmp DWORD PTR [rsp+0x8],0x4",
+          "mnemonic": "je",
+          "operands": "282ba0 <_RNvNtCsfBoMNNx3tZr_10openssl_rs4aria25ossl_aria_set_encrypt_key+0xb20>"
+        },
+        {
+          "at": "0x28233b",
+          "context": "lea edi,[r9+0x9] ; shr edi,0x2 ; cmp r9d,0xb",
+          "mnemonic": "jae",
+          "operands": "282bb5 <_RNvNtCsfBoMNNx3tZr_10openssl_rs4aria25ossl_aria_set_encrypt_key+0xb35>"
+        },
+        {
+          "at": "0x28235a",
+          "context": "shr eax,0x2 ; mov QWORD PTR [rsp+0x38],rax ; cmp r9d,0x9",
+          "mnemonic": "jae",
+          "operands": "282bc7 <_RNvNtCsfBoMNNx3tZr_10openssl_rs4aria25ossl_aria_set_encrypt_key+0xb47>"
+        },
+        {
+          "at": "0x282a34",
+          "context": "xor eax,eax ; mov rbx,QWORD PTR [rsp+0x78] ; cmp ebx,0x81",
+          "mnemonic": "jb",
+          "operands": "282b8e <_RNvNtCsfBoMNNx3tZr_10openssl_rs4aria25ossl_aria_set_encrypt_key+0xb0e>"
+        },
+        {
+          "at": "0x282ae3",
+          "context": "xor r8d,esi ; mov DWORD PTR [r13+0xec],r8d ; cmp ebx,0xc1",
+          "mnemonic": "jb",
+          "operands": "282b8e <_RNvNtCsfBoMNNx3tZr_10openssl_rs4aria25ossl_aria_set_encrypt_key+0xb0e>"
+        }
+      ],
+      "label": "aria key schedule",
+      "n_insns": 738,
+      "range": [
+        "0x282080",
+        "0x282bde"
+      ],
+      "setcc": [],
+      "status": "PRESENT"
+    },
+    "openssl_rs::sm4::ossl_sm4_decrypt": {
+      "calls": [
+        "0x554ca0 2d0740 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs3sm48portable9sub_bytes>",
+        "0x554ccd 2d0740 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs3sm48portable9sub_bytes>",
+        "0x554cfb 2d0740 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs3sm48portable9sub_bytes>",
+        "0x554d2f 2d0740 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs3sm48portable9sub_bytes>",
+        "0x554d69 QWORD PTR [rip+0x38a721]        # 8df490 <memcpy@GLIBC_2.14>",
+        "0x554dc6 2d0740 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs3sm48portable9sub_bytes>",
+        "0x554dff 2d0740 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs3sm48portable9sub_bytes>",
+        "0x554e40 2d0740 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs3sm48portable9sub_bytes>",
+        "0x554e83 2d0740 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs3sm48portable9sub_bytes>",
+        "0x554ec8 2d0740 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs3sm48portable9sub_bytes>",
+        "0x554efe 2d0740 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs3sm48portable9sub_bytes>",
+        "0x554f2d 2d0740 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs3sm48portable9sub_bytes>",
+        "0x554f5a 2d0740 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs3sm48portable9sub_bytes>",
+        "0x554ffe QWORD PTR [rip+0x38ab2c]        # 8dfb30 <_DYNAMIC+0x2860>",
+        "0x555010 QWORD PTR [rip+0x38ab1a]        # 8dfb30 <_DYNAMIC+0x2860>",
+        "0x555025 QWORD PTR [rip+0x38ab05]        # 8dfb30 <_DYNAMIC+0x2860>",
+        "0x555037 QWORD PTR [rip+0x38aaf3]        # 8dfb30 <_DYNAMIC+0x2860>"
+      ],
+      "cmov": [],
+      "crypto_instructions": [],
+      "indexed_lea_arithmetic": [
+        {
+          "at": "0x554d75",
+          "context": "mov edx,0xc0 ; call QWORD PTR [rip+0x38a721]        # 8df490 <memcpy@GLIBC_2.14> ; mov r15d,0x28",
+          "mnemonic": "data16",
+          "operands": "cs nop WORD PTR [rax+rax*1+0x0]"
+        }
+      ],
+      "indexed_memory_operands": [
+        {
+          "at": "0x554d89",
+          "context": "data16 cs nop WORD PTR [rax+rax*1+0x0] ; mov DWORD PTR [rsp+0xc],ebp ; mov DWORD PTR [rsp+0x8],r12d",
+          "mnemonic": "mov",
+          "operands": "rdi,QWORD PTR [rsp+r15*1+0x10]"
+        },
+        {
+          "at": "0x554d98",
+          "context": "mov rdi,QWORD PTR [rsp+r15*1+0x10] ; cmp rdi,0x1f ; ja 55502b <_RNvNtCsfBoMNNx3tZr_10openssl_rs3sm416ossl_sm4_decrypt+0x3cb>",
+          "mnemonic": "mov",
+          "operands": "rbp,QWORD PTR [rsp+r15*1+0x18]"
+        },
+        {
+          "at": "0x554d9d",
+          "context": "cmp rdi,0x1f ; ja 55502b <_RNvNtCsfBoMNNx3tZr_10openssl_rs3sm416ossl_sm4_decrypt+0x3cb> ; mov rbp,QWORD PTR [rsp+r15*1+0x18]",
+          "mnemonic": "mov",
+          "operands": "rax,QWORD PTR [rsp+r15*1+0x20]"
+        },
+        {
+          "at": "0x554da7",
+          "context": "mov rbp,QWORD PTR [rsp+r15*1+0x18] ; mov rax,QWORD PTR [rsp+r15*1+0x20] ; mov QWORD PTR [rsp+0x20],rax",
+          "mnemonic": "mov",
+          "operands": "rax,QWORD PTR [rsp+r15*1+0x28]"
+        },
+        {
+          "at": "0x554db1",
+          "context": "mov QWORD PTR [rsp+0x20],rax ; mov rax,QWORD PTR [rsp+r15*1+0x28] ; mov QWORD PTR [rsp+0x18],rax",
+          "mnemonic": "mov",
+          "operands": "eax,DWORD PTR [r14+rdi*4]"
+        },
+        {
+          "at": "0x554df3",
+          "context": "rol ebx,0x18 ; xor ebx,eax ; xor ebx,esi",
+          "mnemonic": "mov",
+          "operands": "edi,DWORD PTR [r14+rbp*4]"
+        },
+        {
+          "at": "0x554e35",
+          "context": "xor eax,edx ; mov ebp,eax ; xor ebp,esi",
+          "mnemonic": "mov",
+          "operands": "edi,DWORD PTR [r14+rdi*4]"
+        },
+        {
+          "at": "0x554e78",
+          "context": "xor eax,edx ; mov r12d,eax ; xor r12d,esi",
+          "mnemonic": "mov",
+          "operands": "edi,DWORD PTR [r14+rdi*4]"
+        }
+      ],
+      "jcc": [
+        {
+          "at": "0x554d92",
+          "context": "mov DWORD PTR [rsp+0x8],r12d ; mov rdi,QWORD PTR [rsp+r15*1+0x10] ; cmp rdi,0x1f",
+          "mnemonic": "ja",
+          "operands": "55502b <_RNvNtCsfBoMNNx3tZr_10openssl_rs3sm416ossl_sm4_decrypt+0x3cb>"
+        },
+        {
+          "at": "0x554dcf",
+          "context": "xor edi,eax ; call 2d0740 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs3sm48portable9sub_bytes> ; cmp rbp,0x20",
+          "mnemonic": "jae",
+          "operands": "555016 <_RNvNtCsfBoMNNx3tZr_10openssl_rs3sm416ossl_sm4_decrypt+0x3b6>"
+        },
+        {
+          "at": "0x554e0d",
+          "context": "call 2d0740 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs3sm48portable9sub_bytes> ; mov rdi,QWORD PTR [rsp+0x20] ; cmp rdi,0x20",
+          "mnemonic": "jae",
+          "operands": "555004 <_RNvNtCsfBoMNNx3tZr_10openssl_rs3sm416ossl_sm4_decrypt+0x3a4>"
+        },
+        {
+          "at": "0x554e4e",
+          "context": "call 2d0740 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs3sm48portable9sub_bytes> ; mov rdi,QWORD PTR [rsp+0x18] ; cmp rdi,0x20",
+          "mnemonic": "jae",
+          "operands": "554ff2 <_RNvNtCsfBoMNNx3tZr_10openssl_rs3sm416ossl_sm4_decrypt+0x392>"
+        },
+        {
+          "at": "0x554eb6",
+          "context": "xor r13d,ecx ; add r15,0x20 ; cmp r15,0xe8",
+          "mnemonic": "jne",
+          "operands": "554d80 <_RNvNtCsfBoMNNx3tZr_10openssl_rs3sm416ossl_sm4_decrypt+0x120>"
+        }
+      ],
+      "label": "sm4 data path (decrypt)",
+      "n_insns": 317,
+      "range": [
+        "0x554c60",
+        "0x55503d"
+      ],
+      "setcc": [],
+      "status": "PRESENT"
+    },
+    "openssl_rs::sm4::ossl_sm4_encrypt": {
+      "calls": [
+        "0x55507f 2d0740 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs3sm48portable9sub_bytes>",
+        "0x5550ac 2d0740 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs3sm48portable9sub_bytes>",
+        "0x5550da 2d0740 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs3sm48portable9sub_bytes>",
+        "0x55510e 2d0740 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs3sm48portable9sub_bytes>",
+        "0x555148 QWORD PTR [rip+0x38a342]        # 8df490 <memcpy@GLIBC_2.14>",
+        "0x5551a6 2d0740 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs3sm48portable9sub_bytes>",
+        "0x5551df 2d0740 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs3sm48portable9sub_bytes>",
+        "0x555220 2d0740 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs3sm48portable9sub_bytes>",
+        "0x555263 2d0740 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs3sm48portable9sub_bytes>",
+        "0x5552a8 2d0740 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs3sm48portable9sub_bytes>",
+        "0x5552de 2d0740 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs3sm48portable9sub_bytes>",
+        "0x55530d 2d0740 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs3sm48portable9sub_bytes>",
+        "0x55533b 2d0740 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs3sm48portable9sub_bytes>",
+        "0x5553df QWORD PTR [rip+0x38a74b]        # 8dfb30 <_DYNAMIC+0x2860>",
+        "0x5553f1 QWORD PTR [rip+0x38a739]        # 8dfb30 <_DYNAMIC+0x2860>",
+        "0x555406 QWORD PTR [rip+0x38a724]        # 8dfb30 <_DYNAMIC+0x2860>",
+        "0x555418 QWORD PTR [rip+0x38a712]        # 8dfb30 <_DYNAMIC+0x2860>"
+      ],
+      "cmov": [],
+      "crypto_instructions": [],
+      "indexed_lea_arithmetic": [
+        {
+          "at": "0x555154",
+          "context": "mov edx,0xc0 ; call QWORD PTR [rip+0x38a342]        # 8df490 <memcpy@GLIBC_2.14> ; mov r15d,0x28",
+          "mnemonic": "data16",
+          "operands": "data16 cs nop WORD PTR [rax+rax*1+0x0]"
+        }
+      ],
+      "indexed_memory_operands": [
+        {
+          "at": "0x555169",
+          "context": "data16 data16 cs nop WORD PTR [rax+rax*1+0x0] ; mov DWORD PTR [rsp+0xc],ebp ; mov DWORD PTR [rsp+0x8],r12d",
+          "mnemonic": "mov",
+          "operands": "rdi,QWORD PTR [rsp+r15*1+0x10]"
+        },
+        {
+          "at": "0x555178",
+          "context": "mov rdi,QWORD PTR [rsp+r15*1+0x10] ; cmp rdi,0x1f ; ja 55540c <_RNvNtCsfBoMNNx3tZr_10openssl_rs3sm416ossl_sm4_encrypt+0x3cc>",
+          "mnemonic": "mov",
+          "operands": "rbp,QWORD PTR [rsp+r15*1+0x18]"
+        },
+        {
+          "at": "0x55517d",
+          "context": "cmp rdi,0x1f ; ja 55540c <_RNvNtCsfBoMNNx3tZr_10openssl_rs3sm416ossl_sm4_encrypt+0x3cc> ; mov rbp,QWORD PTR [rsp+r15*1+0x18]",
+          "mnemonic": "mov",
+          "operands": "rax,QWORD PTR [rsp+r15*1+0x20]"
+        },
+        {
+          "at": "0x555187",
+          "context": "mov rbp,QWORD PTR [rsp+r15*1+0x18] ; mov rax,QWORD PTR [rsp+r15*1+0x20] ; mov QWORD PTR [rsp+0x20],rax",
+          "mnemonic": "mov",
+          "operands": "rax,QWORD PTR [rsp+r15*1+0x28]"
+        },
+        {
+          "at": "0x555191",
+          "context": "mov QWORD PTR [rsp+0x20],rax ; mov rax,QWORD PTR [rsp+r15*1+0x28] ; mov QWORD PTR [rsp+0x18],rax",
+          "mnemonic": "mov",
+          "operands": "eax,DWORD PTR [r14+rdi*4]"
+        },
+        {
+          "at": "0x5551d3",
+          "context": "rol ebx,0x18 ; xor ebx,eax ; xor ebx,esi",
+          "mnemonic": "mov",
+          "operands": "edi,DWORD PTR [r14+rbp*4]"
+        },
+        {
+          "at": "0x555215",
+          "context": "xor eax,edx ; mov ebp,eax ; xor ebp,esi",
+          "mnemonic": "mov",
+          "operands": "edi,DWORD PTR [r14+rdi*4]"
+        },
+        {
+          "at": "0x555258",
+          "context": "xor eax,edx ; mov r12d,eax ; xor r12d,esi",
+          "mnemonic": "mov",
+          "operands": "edi,DWORD PTR [r14+rdi*4]"
+        }
+      ],
+      "jcc": [
+        {
+          "at": "0x555172",
+          "context": "mov DWORD PTR [rsp+0x8],r12d ; mov rdi,QWORD PTR [rsp+r15*1+0x10] ; cmp rdi,0x1f",
+          "mnemonic": "ja",
+          "operands": "55540c <_RNvNtCsfBoMNNx3tZr_10openssl_rs3sm416ossl_sm4_encrypt+0x3cc>"
+        },
+        {
+          "at": "0x5551af",
+          "context": "xor edi,eax ; call 2d0740 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs3sm48portable9sub_bytes> ; cmp rbp,0x20",
+          "mnemonic": "jae",
+          "operands": "5553f7 <_RNvNtCsfBoMNNx3tZr_10openssl_rs3sm416ossl_sm4_encrypt+0x3b7>"
+        },
+        {
+          "at": "0x5551ed",
+          "context": "call 2d0740 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs3sm48portable9sub_bytes> ; mov rdi,QWORD PTR [rsp+0x20] ; cmp rdi,0x20",
+          "mnemonic": "jae",
+          "operands": "5553e5 <_RNvNtCsfBoMNNx3tZr_10openssl_rs3sm416ossl_sm4_encrypt+0x3a5>"
+        },
+        {
+          "at": "0x55522e",
+          "context": "call 2d0740 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs3sm48portable9sub_bytes> ; mov rdi,QWORD PTR [rsp+0x18] ; cmp rdi,0x20",
+          "mnemonic": "jae",
+          "operands": "5553d3 <_RNvNtCsfBoMNNx3tZr_10openssl_rs3sm416ossl_sm4_encrypt+0x393>"
+        },
+        {
+          "at": "0x555296",
+          "context": "xor r13d,ecx ; add r15,0x20 ; cmp r15,0xe8",
+          "mnemonic": "jne",
+          "operands": "555160 <_RNvNtCsfBoMNNx3tZr_10openssl_rs3sm416ossl_sm4_encrypt+0x120>"
+        }
+      ],
+      "label": "sm4 data path",
+      "n_insns": 317,
+      "range": [
+        "0x555040",
+        "0x55541e"
+      ],
+      "setcc": [],
+      "status": "PRESENT"
+    },
+    "openssl_rs::sm4::ossl_sm4_set_key": {
+      "calls": [
+        "0x555487 2d0740 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs3sm48portable9sub_bytes>",
+        "0x5554ae 2d0740 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs3sm48portable9sub_bytes>",
+        "0x5554d0 2d0740 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs3sm48portable9sub_bytes>",
+        "0x5554f2 2d0740 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs3sm48portable9sub_bytes>"
+      ],
+      "cmov": [],
+      "crypto_instructions": [],
+      "indexed_lea_arithmetic": [],
+      "indexed_memory_operands": [
+        {
+          "at": "0x555477",
+          "context": "mov r13,0xfffffffffffffffc ; xchg ax,ax ; lea rax,[rip+0x178645]        # 6cdabc <_RNvNvNtCsfBoMNNx3tZr_10openssl_rs3sm416ossl_sm4_set_key2CK>",
+          "mnemonic": "mov",
+          "operands": "eax,DWORD PTR [rax+r13*4+0x10]"
+        },
+        {
+          "at": "0x5554a1",
+          "context": "xor ebp,ebx ; xor ebp,eax ; lea rbx,[rip+0x17861b]        # 6cdabc <_RNvNvNtCsfBoMNNx3tZr_10openssl_rs3sm416ossl_sm4_set_key2CK>",
+          "mnemonic": "mov",
+          "operands": "edi,DWORD PTR [rbx+r13*4+0x14]"
+        },
+        {
+          "at": "0x5554c3",
+          "context": "rol eax,0x17 ; xor eax,ecx ; xor r14d,eax",
+          "mnemonic": "mov",
+          "operands": "edi,DWORD PTR [rbx+r13*4+0x18]"
+        },
+        {
+          "at": "0x5554e5",
+          "context": "rol eax,0x17 ; xor eax,ecx ; xor r15d,eax",
+          "mnemonic": "mov",
+          "operands": "edi,DWORD PTR [rbx+r13*4+0x1c]"
+        },
+        {
+          "at": "0x55550c",
+          "context": "xor eax,ecx ; xor r12d,eax ; mov rax,QWORD PTR [rsp+0x20]",
+          "mnemonic": "mov",
+          "operands": "DWORD PTR [rax+r13*4+0x10],ebp"
+        },
+        {
+          "at": "0x555511",
+          "context": "xor r12d,eax ; mov rax,QWORD PTR [rsp+0x20] ; mov DWORD PTR [rax+r13*4+0x10],ebp",
+          "mnemonic": "mov",
+          "operands": "DWORD PTR [rax+r13*4+0x14],r14d"
+        },
+        {
+          "at": "0x555516",
+          "context": "mov rax,QWORD PTR [rsp+0x20] ; mov DWORD PTR [rax+r13*4+0x10],ebp ; mov DWORD PTR [rax+r13*4+0x14],r14d",
+          "mnemonic": "mov",
+          "operands": "DWORD PTR [rax+r13*4+0x18],r15d"
+        },
+        {
+          "at": "0x55551b",
+          "context": "mov DWORD PTR [rax+r13*4+0x10],ebp ; mov DWORD PTR [rax+r13*4+0x14],r14d ; mov DWORD PTR [rax+r13*4+0x18],r15d",
+          "mnemonic": "mov",
+          "operands": "DWORD PTR [rax+r13*4+0x1c],r12d"
+        }
+      ],
+      "jcc": [
+        {
+          "at": "0x55552a",
+          "context": "add r13,0x4 ; mov ebx,ebp ; cmp r13,0x1c",
+          "mnemonic": "jb",
+          "operands": "555470 <_RNvNtCsfBoMNNx3tZr_10openssl_rs3sm416ossl_sm4_set_key+0x50>"
+        }
+      ],
+      "label": "sm4 key schedule",
+      "n_insns": 103,
+      "range": [
+        "0x555420",
+        "0x555593"
+      ],
+      "setcc": [],
+      "status": "PRESENT"
+    },
+    "openssl_rs::sm4::portable::sub_bytes": {
+      "calls": [],
+      "cmov": [],
+      "crypto_instructions": [],
+      "indexed_lea_arithmetic": [
+        {
+          "at": "0x2d0766",
+          "context": "mov edx,edi ; shr edx,0x19 ; and dl,0x1",
+          "mnemonic": "lea",
+          "operands": "r8d,[rdi*8+0x0]"
+        },
+        {
+          "at": "0x2d0775",
+          "context": "lea r8d,[rdi*8+0x0] ; and r8b,0x8 ; or r8b,sil",
+          "mnemonic": "lea",
+          "operands": "esi,[rcx+rcx*1]"
+        },
+        {
+          "at": "0x2d077f",
+          "context": "lea esi,[rcx+rcx*1] ; and sil,0x2 ; or r8b,sil",
+          "mnemonic": "lea",
+          "operands": "esi,[rax*4+0x0]"
+        },
+        {
+          "at": "0x2d0798",
+          "context": "mov esi,ecx ; and sil,0x2 ; mov BYTE PTR [rsp-0x80],r8b",
+          "mnemonic": "lea",
+          "operands": "r8d,[rdi*4+0x0]"
+        },
+        {
+          "at": "0x2d07b3",
+          "context": "shr esi,0x1a ; and sil,0x1 ; or r8b,dl",
+          "mnemonic": "lea",
+          "operands": "edx,[rax+rax*1]"
+        },
+        {
+          "at": "0x2d07cf",
+          "context": "mov r9d,eax ; and r9b,0x4 ; mov BYTE PTR [rsp-0x7f],r8b",
+          "mnemonic": "lea",
+          "operands": "r8d,[rdi+rdi*1]"
+        },
+        {
+          "at": "0x2d0955",
+          "context": "movdqu XMMWORD PTR [rsp-0x77],xmm0 ; mov BYTE PTR [rsp-0x78],0xf ; mov ecx,0x1",
+          "mnemonic": "data16",
+          "operands": "cs nop WORD PTR [rax+rax*1+0x0]"
+        },
+        {
+          "at": "0x2d0965",
+          "context": "mov ecx,0x1 ; data16 cs nop WORD PTR [rax+rax*1+0x0] ; tzcnt rdx,rcx",
+          "mnemonic": "lea",
+          "operands": "rsi,[rcx+rax*1]"
+        },
+        {
+          "at": "0x2d0969",
+          "context": "data16 cs nop WORD PTR [rax+rax*1+0x0] ; tzcnt rdx,rcx ; lea rsi,[rcx+rax*1]",
+          "mnemonic": "lea",
+          "operands": "rdi,[rax+rsi*1]"
+        },
+        {
+          "at": "0x2d0981",
+          "context": "movzx edx,BYTE PTR [rsp+rdx*1-0x80] ; and dl,BYTE PTR [rsp+rdi*1-0x78] ; mov BYTE PTR [rsp+rcx*1-0x78],dl",
+          "mnemonic": "lea",
+          "operands": "rdx,[rax+rsi*1]"
+        },
+        {
+          "at": "0x2d09e3",
+          "context": "pxor xmm5,xmm5 ; pxor xmm6,xmm6 ; pxor xmm7,xmm7",
+          "mnemonic": "data16",
+          "operands": "data16 data16 cs nop WORD PTR [rax+rax*1+0x0]"
+        },
+        {
+          "at": "0x2d0c87",
+          "context": "movd r10d,xmm0 ; mov r11d,edi ; and r11b,0x1",
+          "mnemonic": "lea",
+          "operands": "ebx,[r8+r8*1]"
+        },
+        {
+          "at": "0x2d0c91",
+          "context": "lea ebx,[r8+r8*1] ; and bl,0x2 ; or bl,r11b",
+          "mnemonic": "lea",
+          "operands": "r11d,[r9*4+0x0]"
+        },
+        {
+          "at": "0x2d0ca0",
+          "context": "lea r11d,[r9*4+0x0] ; and r11b,0x4 ; or r11b,bl",
+          "mnemonic": "lea",
+          "operands": "ebx,[r10*8+0x0]"
+        },
+        {
+          "at": "0x2d0cf2",
+          "context": "mov ebp,r8d ; and bpl,0x2 ; or bpl,bl",
+          "mnemonic": "lea",
+          "operands": "ebx,[r9+r9*1]"
+        },
+        {
+          "at": "0x2d0cfc",
+          "context": "lea ebx,[r9+r9*1] ; and bl,0x4 ; or bl,bpl",
+          "mnemonic": "lea",
+          "operands": "ebp,[r10*4+0x0]"
+        },
+        {
+          "at": "0x2d0d0b",
+          "context": "lea ebp,[r10*4+0x0] ; and bpl,0x8 ; or bpl,bl",
+          "mnemonic": "lea",
+          "operands": "ebx,[rsi*8+0x0]"
+        },
+        {
+          "at": "0x2d0d62",
+          "context": "mov ebp,r9d ; and bpl,0x4 ; or bpl,r14b",
+          "mnemonic": "lea",
+          "operands": "r14d,[r10+r10*1]"
+        },
+        {
+          "at": "0x2d0d6d",
+          "context": "lea r14d,[r10+r10*1] ; and r14b,0x8 ; or r14b,bpl",
+          "mnemonic": "lea",
+          "operands": "ebp,[rsi*4+0x0]"
+        },
+        {
+          "at": "0x2d0d7b",
+          "context": "lea ebp,[rsi*4+0x0] ; and bpl,0x10 ; or bpl,r14b",
+          "mnemonic": "lea",
+          "operands": "r14d,[rdx*8+0x0]"
+        }
+      ],
+      "indexed_memory_operands": [
+        {
+          "at": "0x2d0974",
+          "context": "lea rdi,[rax+rsi*1] ; add rdi,0x2 ; and rdi,rsi",
+          "mnemonic": "movzx",
+          "operands": "edx,BYTE PTR [rsp+rdx*1-0x80]"
+        },
+        {
+          "at": "0x2d0979",
+          "context": "add rdi,0x2 ; and rdi,rsi ; movzx edx,BYTE PTR [rsp+rdx*1-0x80]",
+          "mnemonic": "and",
+          "operands": "dl,BYTE PTR [rsp+rdi*1-0x78]"
+        },
+        {
+          "at": "0x2d097d",
+          "context": "and rdi,rsi ; movzx edx,BYTE PTR [rsp+rdx*1-0x80] ; and dl,BYTE PTR [rsp+rdi*1-0x78]",
+          "mnemonic": "mov",
+          "operands": "BYTE PTR [rsp+rcx*1-0x78],dl"
+        },
+        {
+          "at": "0x2d099e",
+          "context": "tzcnt rsi,rdx ; lea rdi,[rdx-0x1] ; and rdi,rdx",
+          "mnemonic": "movzx",
+          "operands": "esi,BYTE PTR [rsp+rsi*1-0x80]"
+        },
+        {
+          "at": "0x2d09a3",
+          "context": "lea rdi,[rdx-0x1] ; and rdi,rdx ; movzx esi,BYTE PTR [rsp+rsi*1-0x80]",
+          "mnemonic": "and",
+          "operands": "sil,BYTE PTR [rsp+rdi*1-0x78]"
+        },
+        {
+          "at": "0x2d09a8",
+          "context": "and rdi,rdx ; movzx esi,BYTE PTR [rsp+rsi*1-0x80] ; and sil,BYTE PTR [rsp+rdi*1-0x78]",
+          "mnemonic": "mov",
+          "operands": "BYTE PTR [rsp+rcx*1-0x77],sil"
+        },
+        {
+          "at": "0x2d09f0",
+          "context": "pxor xmm6,xmm6 ; pxor xmm7,xmm7 ; data16 data16 data16 cs nop WORD PTR [rax+rax*1+0x0]",
+          "mnemonic": "movdqu",
+          "operands": "xmm8,XMMWORD PTR [rsp+rax*1+0x88]"
+        },
+        {
+          "at": "0x2d09fa",
+          "context": "pxor xmm7,xmm7 ; data16 data16 data16 cs nop WORD PTR [rax+rax*1+0x0] ; movdqu xmm8,XMMWORD PTR [rsp+rax*1+0x88]",
+          "mnemonic": "movdqu",
+          "operands": "xmm9,XMMWORD PTR [rax+rcx*1+0x100]"
+        },
+        {
+          "at": "0x2d0a04",
+          "context": "data16 data16 data16 cs nop WORD PTR [rax+rax*1+0x0] ; movdqu xmm8,XMMWORD PTR [rsp+rax*1+0x88] ; movdqu xmm9,XMMWORD PTR [rax+rcx*1+0x100]",
+          "mnemonic": "movdqu",
+          "operands": "xmm10,XMMWORD PTR [rax+rcx*1+0x200]"
+        },
+        {
+          "at": "0x2d0a0e",
+          "context": "movdqu xmm8,XMMWORD PTR [rsp+rax*1+0x88] ; movdqu xmm9,XMMWORD PTR [rax+rcx*1+0x100] ; movdqu xmm10,XMMWORD PTR [rax+rcx*1+0x200]",
+          "mnemonic": "movdqu",
+          "operands": "xmm11,XMMWORD PTR [rax+rcx*1+0x300]"
+        },
+        {
+          "at": "0x2d0a54",
+          "context": "psubb xmm9,xmm11 ; pand xmm9,xmm8 ; pxor xmm1,xmm9",
+          "mnemonic": "movdqu",
+          "operands": "xmm9,XMMWORD PTR [rax+rcx*1+0x400]"
+        },
+        {
+          "at": "0x2d0a72",
+          "context": "psubb xmm10,xmm9 ; pand xmm10,xmm8 ; pxor xmm0,xmm10",
+          "mnemonic": "movdqu",
+          "operands": "xmm9,XMMWORD PTR [rax+rcx*1+0x500]"
+        },
+        {
+          "at": "0x2d0a90",
+          "context": "psubb xmm10,xmm9 ; pand xmm10,xmm8 ; pxor xmm4,xmm10",
+          "mnemonic": "movdqu",
+          "operands": "xmm9,XMMWORD PTR [rax+rcx*1+0x600]"
+        },
+        {
+          "at": "0x2d0aae",
+          "context": "psubb xmm10,xmm9 ; pand xmm10,xmm8 ; pxor xmm5,xmm10",
+          "mnemonic": "movdqu",
+          "operands": "xmm9,XMMWORD PTR [rax+rcx*1+0x700]"
+        },
+        {
+          "at": "0x2d0acc",
+          "context": "psubb xmm10,xmm9 ; pand xmm10,xmm8 ; pxor xmm6,xmm10",
+          "mnemonic": "movdqu",
+          "operands": "xmm9,XMMWORD PTR [rax+rcx*1+0x800]"
+        }
+      ],
+      "jcc": [
+        {
+          "at": "0x2d0990",
+          "context": "lea rdx,[rax+rsi*1] ; add rdx,0x3 ; cmp rdx,0x100",
+          "mnemonic": "je",
+          "operands": "2d09b5 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs3sm48portable9sub_bytes+0x275>"
+        },
+        {
+          "at": "0x2d0aee",
+          "context": "pand xmm10,xmm8 ; pxor xmm7,xmm10 ; add rax,0x10",
+          "mnemonic": "jne",
+          "operands": "2d09f0 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs3sm48portable9sub_bytes+0x2b0>"
+        }
+      ],
+      "label": "sm4 constant-pattern S-box carrier",
+      "n_insns": 425,
+      "range": [
+        "0x2d0740",
+        "0x2d0e12"
+      ],
+      "setcc": [],
+      "status": "PRESENT"
+    }
+  },
+  "label": "converted-pfp65"
+}

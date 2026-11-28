@@ -1,0 +1,3521 @@
+### Camellia_encrypt [camellia data path (public encrypt)]  0x213940..0x213dd8
+
+court/tmp/pfp68/final/libcrypto.so.3:     file format elf64-x86-64
+
+
+Disassembly of section .text:
+
+0000000000213940 <Camellia_encrypt>:
+  213940:	55                   	push   rbp
+  213941:	41 57                	push   r15
+  213943:	41 56                	push   r14
+  213945:	41 55                	push   r13
+  213947:	41 54                	push   r12
+  213949:	53                   	push   rbx
+  21394a:	48 83 ec 28          	sub    rsp,0x28
+  21394e:	48 63 8a 10 01 00 00 	movsxd rcx,DWORD PTR [rdx+0x110]
+  213955:	48 85 c9             	test   rcx,rcx
+  213958:	0f 88 4a 04 00 00    	js     213da8 <Camellia_encrypt+0x468>
+  21395e:	49 89 d7             	mov    r15,rdx
+  213961:	89 4c 24 14          	mov    DWORD PTR [rsp+0x14],ecx
+  213965:	48 c1 e1 04          	shl    rcx,0x4
+  213969:	44 8b 6f 0c          	mov    r13d,DWORD PTR [rdi+0xc]
+  21396d:	41 0f cd             	bswap  r13d
+  213970:	44 33 6a 0c          	xor    r13d,DWORD PTR [rdx+0xc]
+  213974:	44 8b 47 08          	mov    r8d,DWORD PTR [rdi+0x8]
+  213978:	41 0f c8             	bswap  r8d
+  21397b:	44 33 42 08          	xor    r8d,DWORD PTR [rdx+0x8]
+  21397f:	8b 17                	mov    edx,DWORD PTR [rdi]
+  213981:	8b 6f 04             	mov    ebp,DWORD PTR [rdi+0x4]
+  213984:	0f cd                	bswap  ebp
+  213986:	41 33 6f 04          	xor    ebp,DWORD PTR [r15+0x4]
+  21398a:	0f ca                	bswap  edx
+  21398c:	41 33 17             	xor    edx,DWORD PTR [r15]
+  21398f:	48 89 4c 24 08       	mov    QWORD PTR [rsp+0x8],rcx
+  213994:	4c 8d 59 f0          	lea    r11,[rcx-0x10]
+  213998:	48 c7 44 24 20 00 00 	mov    QWORD PTR [rsp+0x20],0x0
+  21399f:	00 00 
+  2139a1:	4c 8d 35 60 7f 48 00 	lea    r14,[rip+0x487f60]        # 69b908 <_RNvNtCsfBoMNNx3tZr_10openssl_rs13cipher_tables13CAMELLIA_SBOX>
+  2139a8:	48 8d 05 11 b2 60 00 	lea    rax,[rip+0x60b211]        # 81ebc0 <anon.0ec28c8051915372a7f93747e15cd319.214.llvm.14757520186848287924+0x1c8>
+  2139af:	48 89 44 24 18       	mov    QWORD PTR [rsp+0x18],rax
+  2139b4:	45 31 d2             	xor    r10d,r10d
+  2139b7:	66 0f 1f 84 00 00 00 	nop    WORD PTR [rax+rax*1+0x0]
+  2139be:	00 00 
+  2139c0:	43 8b 4c 97 10       	mov    ecx,DWORD PTR [r15+r10*4+0x10]
+  2139c5:	31 d1                	xor    ecx,edx
+  2139c7:	0f b6 d9             	movzx  ebx,cl
+  2139ca:	41 89 d1             	mov    r9d,edx
+  2139cd:	43 8b 54 97 14       	mov    edx,DWORD PTR [r15+r10*4+0x14]
+  2139d2:	31 ea                	xor    edx,ebp
+  2139d4:	0f b6 c5             	movzx  eax,ch
+  2139d7:	41 8b 84 86 00 0c 00 	mov    eax,DWORD PTR [r14+rax*4+0xc00]
+  2139de:	00 
+  2139df:	41 33 84 9e 00 04 00 	xor    eax,DWORD PTR [r14+rbx*4+0x400]
+  2139e6:	00 
+  2139e7:	0f b6 da             	movzx  ebx,dl
+  2139ea:	41 89 cc             	mov    r12d,ecx
+  2139ed:	41 c1 ec 0e          	shr    r12d,0xe
+  2139f1:	41 81 e4 fc 03 00 00 	and    r12d,0x3fc
+  2139f8:	43 33 84 34 00 08 00 	xor    eax,DWORD PTR [r12+r14*1+0x800]
+  2139ff:	00 
+  213a00:	0f b6 fe             	movzx  edi,dh
+  213a03:	c1 e9 18             	shr    ecx,0x18
+  213a06:	41 33 04 8e          	xor    eax,DWORD PTR [r14+rcx*4]
+  213a0a:	45 8b a4 be 00 04 00 	mov    r12d,DWORD PTR [r14+rdi*4+0x400]
+  213a11:	00 
+  213a12:	89 d1                	mov    ecx,edx
+  213a14:	c1 e9 0e             	shr    ecx,0xe
+  213a17:	81 e1 fc 03 00 00    	and    ecx,0x3fc
+  213a1d:	45 33 24 9e          	xor    r12d,DWORD PTR [r14+rbx*4]
+  213a21:	46 33 a4 31 00 0c 00 	xor    r12d,DWORD PTR [rcx+r14*1+0xc00]
+  213a28:	00 
+  213a29:	c1 ea 18             	shr    edx,0x18
+  213a2c:	45 33 a4 96 00 08 00 	xor    r12d,DWORD PTR [r14+rdx*4+0x800]
+  213a33:	00 
+  213a34:	41 31 c4             	xor    r12d,eax
+  213a37:	c1 c0 18             	rol    eax,0x18
+  213a3a:	45 31 e0             	xor    r8d,r12d
+  213a3d:	45 31 ec             	xor    r12d,r13d
+  213a40:	41 31 c4             	xor    r12d,eax
+  213a43:	43 8b 4c 97 18       	mov    ecx,DWORD PTR [r15+r10*4+0x18]
+  213a48:	44 31 c1             	xor    ecx,r8d
+  213a4b:	0f b6 c1             	movzx  eax,cl
+  213a4e:	43 8b 5c 97 1c       	mov    ebx,DWORD PTR [r15+r10*4+0x1c]
+  213a53:	0f b6 d5             	movzx  edx,ch
+  213a56:	41 8b 94 96 00 0c 00 	mov    edx,DWORD PTR [r14+rdx*4+0xc00]
+  213a5d:	00 
+  213a5e:	41 33 94 86 00 04 00 	xor    edx,DWORD PTR [r14+rax*4+0x400]
+  213a65:	00 
+  213a66:	44 31 e3             	xor    ebx,r12d
+  213a69:	0f b6 fb             	movzx  edi,bl
+  213a6c:	89 c8                	mov    eax,ecx
+  213a6e:	c1 e8 0e             	shr    eax,0xe
+  213a71:	25 fc 03 00 00       	and    eax,0x3fc
+  213a76:	42 33 94 30 00 08 00 	xor    edx,DWORD PTR [rax+r14*1+0x800]
+  213a7d:	00 
+  213a7e:	0f b6 c7             	movzx  eax,bh
+  213a81:	41 8b 84 86 00 04 00 	mov    eax,DWORD PTR [r14+rax*4+0x400]
+  213a88:	00 
+  213a89:	c1 e9 18             	shr    ecx,0x18
+  213a8c:	41 33 14 8e          	xor    edx,DWORD PTR [r14+rcx*4]
+  213a90:	89 d9                	mov    ecx,ebx
+  213a92:	c1 e9 0e             	shr    ecx,0xe
+  213a95:	41 33 04 be          	xor    eax,DWORD PTR [r14+rdi*4]
+  213a99:	81 e1 fc 03 00 00    	and    ecx,0x3fc
+  213a9f:	42 33 84 31 00 0c 00 	xor    eax,DWORD PTR [rcx+r14*1+0xc00]
+  213aa6:	00 
+  213aa7:	c1 eb 18             	shr    ebx,0x18
+  213aaa:	41 33 84 9e 00 08 00 	xor    eax,DWORD PTR [r14+rbx*4+0x800]
+  213ab1:	00 
+  213ab2:	31 d0                	xor    eax,edx
+  213ab4:	c1 c2 18             	rol    edx,0x18
+  213ab7:	31 ea                	xor    edx,ebp
+  213ab9:	41 31 c1             	xor    r9d,eax
+  213abc:	31 d0                	xor    eax,edx
+  213abe:	43 8b 4c 97 20       	mov    ecx,DWORD PTR [r15+r10*4+0x20]
+  213ac3:	44 31 c9             	xor    ecx,r9d
+  213ac6:	0f b6 f9             	movzx  edi,cl
+  213ac9:	43 8b 5c 97 24       	mov    ebx,DWORD PTR [r15+r10*4+0x24]
+  213ace:	31 c3                	xor    ebx,eax
+  213ad0:	0f b6 d5             	movzx  edx,ch
+  213ad3:	41 8b 94 96 00 0c 00 	mov    edx,DWORD PTR [r14+rdx*4+0xc00]
+  213ada:	00 
+  213adb:	41 33 94 be 00 04 00 	xor    edx,DWORD PTR [r14+rdi*4+0x400]
+  213ae2:	00 
+  213ae3:	0f b6 fb             	movzx  edi,bl
+  213ae6:	41 89 cd             	mov    r13d,ecx
+  213ae9:	41 c1 ed 0e          	shr    r13d,0xe
+  213aed:	41 81 e5 fc 03 00 00 	and    r13d,0x3fc
+  213af4:	43 33 94 35 00 08 00 	xor    edx,DWORD PTR [r13+r14*1+0x800]
+  213afb:	00 
+  213afc:	0f b6 ef             	movzx  ebp,bh
+  213aff:	c1 e9 18             	shr    ecx,0x18
+  213b02:	41 33 14 8e          	xor    edx,DWORD PTR [r14+rcx*4]
+  213b06:	41 8b ac ae 00 04 00 	mov    ebp,DWORD PTR [r14+rbp*4+0x400]
+  213b0d:	00 
+  213b0e:	89 d9                	mov    ecx,ebx
+  213b10:	c1 e9 0e             	shr    ecx,0xe
+  213b13:	81 e1 fc 03 00 00    	and    ecx,0x3fc
+  213b19:	41 33 2c be          	xor    ebp,DWORD PTR [r14+rdi*4]
+  213b1d:	42 33 ac 31 00 0c 00 	xor    ebp,DWORD PTR [rcx+r14*1+0xc00]
+  213b24:	00 
+  213b25:	c1 eb 18             	shr    ebx,0x18
+  213b28:	41 33 ac 9e 00 08 00 	xor    ebp,DWORD PTR [r14+rbx*4+0x800]
+  213b2f:	00 
+  213b30:	31 d5                	xor    ebp,edx
+  213b32:	c1 c2 18             	rol    edx,0x18
+  213b35:	44 31 e2             	xor    edx,r12d
+  213b38:	41 31 e8             	xor    r8d,ebp
+  213b3b:	31 d5                	xor    ebp,edx
+  213b3d:	43 8b 4c 97 28       	mov    ecx,DWORD PTR [r15+r10*4+0x28]
+  213b42:	44 31 c1             	xor    ecx,r8d
+  213b45:	0f b6 f9             	movzx  edi,cl
+  213b48:	43 8b 5c 97 2c       	mov    ebx,DWORD PTR [r15+r10*4+0x2c]
+  213b4d:	31 eb                	xor    ebx,ebp
+  213b4f:	0f b6 d5             	movzx  edx,ch
+  213b52:	41 8b 94 96 00 0c 00 	mov    edx,DWORD PTR [r14+rdx*4+0xc00]
+  213b59:	00 
+  213b5a:	41 33 94 be 00 04 00 	xor    edx,DWORD PTR [r14+rdi*4+0x400]
+  213b61:	00 
+  213b62:	89 cf                	mov    edi,ecx
+  213b64:	c1 ef 0e             	shr    edi,0xe
+  213b67:	81 e7 fc 03 00 00    	and    edi,0x3fc
+  213b6d:	42 33 94 37 00 08 00 	xor    edx,DWORD PTR [rdi+r14*1+0x800]
+  213b74:	00 
+  213b75:	0f b6 fb             	movzx  edi,bl
+  213b78:	c1 e9 18             	shr    ecx,0x18
+  213b7b:	41 33 14 8e          	xor    edx,DWORD PTR [r14+rcx*4]
+  213b7f:	0f b6 cf             	movzx  ecx,bh
+  213b82:	41 89 d5             	mov    r13d,edx
+  213b85:	41 c1 c5 18          	rol    r13d,0x18
+  213b89:	45 8b a4 8e 00 04 00 	mov    r12d,DWORD PTR [r14+rcx*4+0x400]
+  213b90:	00 
+  213b91:	89 d9                	mov    ecx,ebx
+  213b93:	c1 e9 0e             	shr    ecx,0xe
+  213b96:	81 e1 fc 03 00 00    	and    ecx,0x3fc
+  213b9c:	45 33 24 be          	xor    r12d,DWORD PTR [r14+rdi*4]
+  213ba0:	46 33 a4 31 00 0c 00 	xor    r12d,DWORD PTR [rcx+r14*1+0xc00]
+  213ba7:	00 
+  213ba8:	c1 eb 18             	shr    ebx,0x18
+  213bab:	45 33 a4 9e 00 08 00 	xor    r12d,DWORD PTR [r14+rbx*4+0x800]
+  213bb2:	00 
+  213bb3:	41 31 d4             	xor    r12d,edx
+  213bb6:	41 31 c5             	xor    r13d,eax
+  213bb9:	45 31 e1             	xor    r9d,r12d
+  213bbc:	45 31 ec             	xor    r12d,r13d
+  213bbf:	43 8b 4c 97 30       	mov    ecx,DWORD PTR [r15+r10*4+0x30]
+  213bc4:	44 31 c9             	xor    ecx,r9d
+  213bc7:	0f b6 c1             	movzx  eax,cl
+  213bca:	43 8b 5c 97 34       	mov    ebx,DWORD PTR [r15+r10*4+0x34]
+  213bcf:	0f b6 d5             	movzx  edx,ch
+  213bd2:	41 8b 94 96 00 0c 00 	mov    edx,DWORD PTR [r14+rdx*4+0xc00]
+  213bd9:	00 
+  213bda:	41 33 94 86 00 04 00 	xor    edx,DWORD PTR [r14+rax*4+0x400]
+  213be1:	00 
+  213be2:	44 31 e3             	xor    ebx,r12d
+  213be5:	0f b6 fb             	movzx  edi,bl
+  213be8:	89 c8                	mov    eax,ecx
+  213bea:	c1 e8 0e             	shr    eax,0xe
+  213bed:	25 fc 03 00 00       	and    eax,0x3fc
+  213bf2:	42 33 94 30 00 08 00 	xor    edx,DWORD PTR [rax+r14*1+0x800]
+  213bf9:	00 
+  213bfa:	0f b6 c7             	movzx  eax,bh
+  213bfd:	41 8b 84 86 00 04 00 	mov    eax,DWORD PTR [r14+rax*4+0x400]
+  213c04:	00 
+  213c05:	c1 e9 18             	shr    ecx,0x18
+  213c08:	41 33 14 8e          	xor    edx,DWORD PTR [r14+rcx*4]
+  213c0c:	89 d9                	mov    ecx,ebx
+  213c0e:	c1 e9 0e             	shr    ecx,0xe
+  213c11:	41 33 04 be          	xor    eax,DWORD PTR [r14+rdi*4]
+  213c15:	81 e1 fc 03 00 00    	and    ecx,0x3fc
+  213c1b:	42 33 84 31 00 0c 00 	xor    eax,DWORD PTR [rcx+r14*1+0xc00]
+  213c22:	00 
+  213c23:	c1 eb 18             	shr    ebx,0x18
+  213c26:	41 33 84 9e 00 08 00 	xor    eax,DWORD PTR [r14+rbx*4+0x800]
+  213c2d:	00 
+  213c2e:	31 d0                	xor    eax,edx
+  213c30:	c1 c2 18             	rol    edx,0x18
+  213c33:	31 ea                	xor    edx,ebp
+  213c35:	41 31 c0             	xor    r8d,eax
+  213c38:	31 d0                	xor    eax,edx
+  213c3a:	43 8b 4c 97 38       	mov    ecx,DWORD PTR [r15+r10*4+0x38]
+  213c3f:	44 31 c1             	xor    ecx,r8d
+  213c42:	0f b6 f9             	movzx  edi,cl
+  213c45:	43 8b 54 97 3c       	mov    edx,DWORD PTR [r15+r10*4+0x3c]
+  213c4a:	31 c2                	xor    edx,eax
+  213c4c:	0f b6 dd             	movzx  ebx,ch
+  213c4f:	41 8b ac 9e 00 0c 00 	mov    ebp,DWORD PTR [r14+rbx*4+0xc00]
+  213c56:	00 
+  213c57:	41 33 ac be 00 04 00 	xor    ebp,DWORD PTR [r14+rdi*4+0x400]
+  213c5e:	00 
+  213c5f:	0f b6 fa             	movzx  edi,dl
+  213c62:	89 cb                	mov    ebx,ecx
+  213c64:	c1 eb 0e             	shr    ebx,0xe
+  213c67:	81 e3 fc 03 00 00    	and    ebx,0x3fc
+  213c6d:	42 33 ac 33 00 08 00 	xor    ebp,DWORD PTR [rbx+r14*1+0x800]
+  213c74:	00 
+  213c75:	0f b6 de             	movzx  ebx,dh
+  213c78:	c1 e9 18             	shr    ecx,0x18
+  213c7b:	41 33 2c 8e          	xor    ebp,DWORD PTR [r14+rcx*4]
+  213c7f:	41 8b 9c 9e 00 04 00 	mov    ebx,DWORD PTR [r14+rbx*4+0x400]
+  213c86:	00 
+  213c87:	89 d1                	mov    ecx,edx
+  213c89:	c1 e9 0e             	shr    ecx,0xe
+  213c8c:	81 e1 fc 03 00 00    	and    ecx,0x3fc
+  213c92:	41 33 1c be          	xor    ebx,DWORD PTR [r14+rdi*4]
+  213c96:	42 33 9c 31 00 0c 00 	xor    ebx,DWORD PTR [rcx+r14*1+0xc00]
+  213c9d:	00 
+  213c9e:	c1 ea 18             	shr    edx,0x18
+  213ca1:	41 33 9c 96 00 08 00 	xor    ebx,DWORD PTR [r14+rdx*4+0x800]
+  213ca8:	00 
+  213ca9:	44 89 ca             	mov    edx,r9d
+  213cac:	31 eb                	xor    ebx,ebp
+  213cae:	c1 c5 18             	rol    ebp,0x18
+  213cb1:	44 31 e5             	xor    ebp,r12d
+  213cb4:	31 da                	xor    edx,ebx
+  213cb6:	31 eb                	xor    ebx,ebp
+  213cb8:	4d 39 d3             	cmp    r11,r10
+  213cbb:	74 5d                	je     213d1a <Camellia_encrypt+0x3da>
+  213cbd:	43 8b 6c 97 40       	mov    ebp,DWORD PTR [r15+r10*4+0x40]
+  213cc2:	21 d5                	and    ebp,edx
+  213cc4:	d1 c5                	rol    ebp,1
+  213cc6:	31 dd                	xor    ebp,ebx
+  213cc8:	43 8b 4c 97 4c       	mov    ecx,DWORD PTR [r15+r10*4+0x4c]
+  213ccd:	09 c1                	or     ecx,eax
+  213ccf:	41 31 c8             	xor    r8d,ecx
+  213cd2:	47 8b 6c 97 48       	mov    r13d,DWORD PTR [r15+r10*4+0x48]
+  213cd7:	45 21 c5             	and    r13d,r8d
+  213cda:	41 d1 c5             	rol    r13d,1
+  213cdd:	41 31 c5             	xor    r13d,eax
+  213ce0:	43 8b 44 97 44       	mov    eax,DWORD PTR [r15+r10*4+0x44]
+  213ce5:	09 e8                	or     eax,ebp
+  213ce7:	31 c2                	xor    edx,eax
+  213ce9:	49 83 c2 10          	add    r10,0x10
+  213ced:	49 83 fa 40          	cmp    r10,0x40
+  213cf1:	0f 85 c9 fc ff ff    	jne    2139c0 <Camellia_encrypt+0x80>
+  213cf7:	48 c7 44 24 08 00 00 	mov    QWORD PTR [rsp+0x8],0x0
+  213cfe:	00 00 
+  213d00:	48 8b 7c 24 08       	mov    rdi,QWORD PTR [rsp+0x8]
+  213d05:	48 8b 74 24 20       	mov    rsi,QWORD PTR [rsp+0x20]
+  213d0a:	48 8b 54 24 18       	mov    rdx,QWORD PTR [rsp+0x18]
+  213d0f:	ff 15 5b 9e 6c 00    	call   QWORD PTR [rip+0x6c9e5b]        # 8ddb70 <_DYNAMIC+0x2870>
+  213d15:	e9 9b 00 00 00       	jmp    213db5 <Camellia_encrypt+0x475>
+  213d1a:	83 7c 24 14 05       	cmp    DWORD PTR [rsp+0x14],0x5
+  213d1f:	0f 8d 92 00 00 00    	jge    213db7 <Camellia_encrypt+0x477>
+  213d25:	43 33 44 97 44       	xor    eax,DWORD PTR [r15+r10*4+0x44]
+  213d2a:	48 8b 4c 24 08       	mov    rcx,QWORD PTR [rsp+0x8]
+  213d2f:	45 33 04 8f          	xor    r8d,DWORD PTR [r15+rcx*4]
+  213d33:	41 33 54 8f 08       	xor    edx,DWORD PTR [r15+rcx*4+0x8]
+  213d38:	43 33 5c 97 4c       	xor    ebx,DWORD PTR [r15+r10*4+0x4c]
+  213d3d:	44 89 c1             	mov    ecx,r8d
+  213d40:	c1 e9 18             	shr    ecx,0x18
+  213d43:	88 0e                	mov    BYTE PTR [rsi],cl
+  213d45:	44 89 c1             	mov    ecx,r8d
+  213d48:	c1 e9 10             	shr    ecx,0x10
+  213d4b:	88 4e 01             	mov    BYTE PTR [rsi+0x1],cl
+  213d4e:	44 89 c1             	mov    ecx,r8d
+  213d51:	88 6e 02             	mov    BYTE PTR [rsi+0x2],ch
+  213d54:	88 4e 03             	mov    BYTE PTR [rsi+0x3],cl
+  213d57:	89 c1                	mov    ecx,eax
+  213d59:	c1 e9 18             	shr    ecx,0x18
+  213d5c:	88 4e 04             	mov    BYTE PTR [rsi+0x4],cl
+  213d5f:	89 c1                	mov    ecx,eax
+  213d61:	c1 e9 10             	shr    ecx,0x10
+  213d64:	88 4e 05             	mov    BYTE PTR [rsi+0x5],cl
+  213d67:	88 66 06             	mov    BYTE PTR [rsi+0x6],ah
+  213d6a:	88 46 07             	mov    BYTE PTR [rsi+0x7],al
+  213d6d:	89 d0                	mov    eax,edx
+  213d6f:	c1 e8 18             	shr    eax,0x18
+  213d72:	88 46 08             	mov    BYTE PTR [rsi+0x8],al
+  213d75:	89 d0                	mov    eax,edx
+  213d77:	c1 e8 10             	shr    eax,0x10
+  213d7a:	88 46 09             	mov    BYTE PTR [rsi+0x9],al
+  213d7d:	88 76 0a             	mov    BYTE PTR [rsi+0xa],dh
+  213d80:	88 56 0b             	mov    BYTE PTR [rsi+0xb],dl
+  213d83:	89 d8                	mov    eax,ebx
+  213d85:	c1 e8 18             	shr    eax,0x18
+  213d88:	88 46 0c             	mov    BYTE PTR [rsi+0xc],al
+  213d8b:	89 d8                	mov    eax,ebx
+  213d8d:	c1 e8 10             	shr    eax,0x10
+  213d90:	88 46 0d             	mov    BYTE PTR [rsi+0xd],al
+  213d93:	88 7e 0e             	mov    BYTE PTR [rsi+0xe],bh
+  213d96:	88 5e 0f             	mov    BYTE PTR [rsi+0xf],bl
+  213d99:	48 83 c4 28          	add    rsp,0x28
+  213d9d:	5b                   	pop    rbx
+  213d9e:	41 5c                	pop    r12
+  213da0:	41 5d                	pop    r13
+  213da2:	41 5e                	pop    r14
+  213da4:	41 5f                	pop    r15
+  213da6:	5d                   	pop    rbp
+  213da7:	c3                   	ret
+  213da8:	48 8d 3d e1 ad 60 00 	lea    rdi,[rip+0x60ade1]        # 81eb90 <anon.0ec28c8051915372a7f93747e15cd319.214.llvm.14757520186848287924+0x198>
+  213daf:	ff 15 8b 90 6c 00    	call   QWORD PTR [rip+0x6c908b]        # 8dce40 <_DYNAMIC+0x1b40>
+  213db5:	0f 0b                	ud2
+  213db7:	48 8d 05 ea ad 60 00 	lea    rax,[rip+0x60adea]        # 81eba8 <anon.0ec28c8051915372a7f93747e15cd319.214.llvm.14757520186848287924+0x1b0>
+  213dbe:	48 89 44 24 18       	mov    QWORD PTR [rsp+0x18],rax
+  213dc3:	b8 44 00 00 00       	mov    eax,0x44
+  213dc8:	48 89 44 24 20       	mov    QWORD PTR [rsp+0x20],rax
+  213dcd:	e9 2e ff ff ff       	jmp    213d00 <Camellia_encrypt+0x3c0>
+  213dd2:	ff 15 68 9a 6c 00    	call   QWORD PTR [rip+0x6c9a68]        # 8dd840 <_DYNAMIC+0x2540>
+
+### Camellia_decrypt [camellia data path (public decrypt)]  0x2133a0..0x213914
+
+court/tmp/pfp68/final/libcrypto.so.3:     file format elf64-x86-64
+
+
+Disassembly of section .text:
+
+00000000002133a0 <Camellia_decrypt>:
+  2133a0:	55                   	push   rbp
+  2133a1:	41 57                	push   r15
+  2133a3:	41 56                	push   r14
+  2133a5:	41 55                	push   r13
+  2133a7:	41 54                	push   r12
+  2133a9:	53                   	push   rbx
+  2133aa:	50                   	push   rax
+  2133ab:	48 63 8a 10 01 00 00 	movsxd rcx,DWORD PTR [rdx+0x110]
+  2133b2:	48 85 c9             	test   rcx,rcx
+  2133b5:	0f 88 2c 05 00 00    	js     2138e7 <Camellia_decrypt+0x547>
+  2133bb:	49 89 c8             	mov    r8,rcx
+  2133be:	49 c1 e0 04          	shl    r8,0x4
+  2133c2:	49 83 f8 44          	cmp    r8,0x44
+  2133c6:	0f 83 2a 05 00 00    	jae    2138f6 <Camellia_decrypt+0x556>
+  2133cc:	85 c9                	test   ecx,ecx
+  2133ce:	0f 84 2b 05 00 00    	je     2138ff <Camellia_decrypt+0x55f>
+  2133d4:	49 89 d4             	mov    r12,rdx
+  2133d7:	48 89 f8             	mov    rax,rdi
+  2133da:	49 8d 48 f4          	lea    rcx,[r8-0xc]
+  2133de:	49 8d 50 fe          	lea    rdx,[r8-0x2]
+  2133e2:	48 8d 3d e7 b6 60 00 	lea    rdi,[rip+0x60b6e7]        # 81ead0 <anon.0ec28c8051915372a7f93747e15cd319.214.llvm.14757520186848287924+0xd8>
+  2133e9:	48 39 ca             	cmp    rdx,rcx
+  2133ec:	0f 82 ed 04 00 00    	jb     2138df <Camellia_decrypt+0x53f>
+  2133f2:	8b 28                	mov    ebp,DWORD PTR [rax]
+  2133f4:	0f cd                	bswap  ebp
+  2133f6:	43 33 2c 84          	xor    ebp,DWORD PTR [r12+r8*4]
+  2133fa:	44 8b 48 04          	mov    r9d,DWORD PTR [rax+0x4]
+  2133fe:	41 0f c9             	bswap  r9d
+  213401:	47 33 4c 84 04       	xor    r9d,DWORD PTR [r12+r8*4+0x4]
+  213406:	44 8b 50 08          	mov    r10d,DWORD PTR [rax+0x8]
+  21340a:	41 0f ca             	bswap  r10d
+  21340d:	47 33 54 84 08       	xor    r10d,DWORD PTR [r12+r8*4+0x8]
+  213412:	8b 40 0c             	mov    eax,DWORD PTR [rax+0xc]
+  213415:	0f c8                	bswap  eax
+  213417:	43 33 44 84 0c       	xor    eax,DWORD PTR [r12+r8*4+0xc]
+  21341c:	49 83 c0 e4          	add    r8,0xffffffffffffffe4
+  213420:	4c 8d 1d e1 84 48 00 	lea    r11,[rip+0x4884e1]        # 69b908 <_RNvNtCsfBoMNNx3tZr_10openssl_rs13cipher_tables13CAMELLIA_SBOX>
+  213427:	48 8d 0d 1a b7 60 00 	lea    rcx,[rip+0x60b71a]        # 81eb48 <anon.0ec28c8051915372a7f93747e15cd319.214.llvm.14757520186848287924+0x150>
+  21342e:	48 89 0c 24          	mov    QWORD PTR [rsp],rcx
+  213432:	4d 89 c7             	mov    r15,r8
+  213435:	66 66 2e 0f 1f 84 00 	data16 cs nop WORD PTR [rax+rax*1+0x0]
+  21343c:	00 00 00 00 
+  213440:	4d 8d 47 1a          	lea    r8,[r15+0x1a]
+  213444:	49 83 f8 44          	cmp    r8,0x44
+  213448:	0f 87 2b 04 00 00    	ja     213879 <Camellia_decrypt+0x4d9>
+  21344e:	49 8d 4f 10          	lea    rcx,[r15+0x10]
+  213452:	49 8d 57 18          	lea    rdx,[r15+0x18]
+  213456:	48 39 ca             	cmp    rdx,rcx
+  213459:	0f 82 36 04 00 00    	jb     213895 <Camellia_decrypt+0x4f5>
+  21345f:	43 8b 54 bc 68       	mov    edx,DWORD PTR [r12+r15*4+0x68]
+  213464:	31 ea                	xor    edx,ebp
+  213466:	0f b6 de             	movzx  ebx,dh
+  213469:	0f b6 ca             	movzx  ecx,dl
+  21346c:	41 8b 8c 8b 00 04 00 	mov    ecx,DWORD PTR [r11+rcx*4+0x400]
+  213473:	00 
+  213474:	41 33 8c 9b 00 0c 00 	xor    ecx,DWORD PTR [r11+rbx*4+0xc00]
+  21347b:	00 
+  21347c:	41 89 d0             	mov    r8d,edx
+  21347f:	41 c1 e8 0e          	shr    r8d,0xe
+  213483:	41 81 e0 fc 03 00 00 	and    r8d,0x3fc
+  21348a:	43 33 8c 18 00 08 00 	xor    ecx,DWORD PTR [r8+r11*1+0x800]
+  213491:	00 
+  213492:	c1 ea 18             	shr    edx,0x18
+  213495:	41 33 0c 93          	xor    ecx,DWORD PTR [r11+rdx*4]
+  213499:	43 8b 5c bc 6c       	mov    ebx,DWORD PTR [r12+r15*4+0x6c]
+  21349e:	44 31 cb             	xor    ebx,r9d
+  2134a1:	0f b6 d7             	movzx  edx,bh
+  2134a4:	45 8b ac 93 00 04 00 	mov    r13d,DWORD PTR [r11+rdx*4+0x400]
+  2134ab:	00 
+  2134ac:	0f b6 d3             	movzx  edx,bl
+  2134af:	41 89 d8             	mov    r8d,ebx
+  2134b2:	41 c1 e8 0e          	shr    r8d,0xe
+  2134b6:	41 81 e0 fc 03 00 00 	and    r8d,0x3fc
+  2134bd:	c1 eb 18             	shr    ebx,0x18
+  2134c0:	45 33 2c 93          	xor    r13d,DWORD PTR [r11+rdx*4]
+  2134c4:	47 33 ac 18 00 0c 00 	xor    r13d,DWORD PTR [r8+r11*1+0xc00]
+  2134cb:	00 
+  2134cc:	45 33 ac 9b 00 08 00 	xor    r13d,DWORD PTR [r11+rbx*4+0x800]
+  2134d3:	00 
+  2134d4:	41 31 cd             	xor    r13d,ecx
+  2134d7:	c1 c1 18             	rol    ecx,0x18
+  2134da:	44 31 e8             	xor    eax,r13d
+  2134dd:	31 c8                	xor    eax,ecx
+  2134df:	45 31 d5             	xor    r13d,r10d
+  2134e2:	43 8b 4c bc 60       	mov    ecx,DWORD PTR [r12+r15*4+0x60]
+  2134e7:	44 31 e9             	xor    ecx,r13d
+  2134ea:	44 0f b6 d1          	movzx  r10d,cl
+  2134ee:	43 8b 5c bc 64       	mov    ebx,DWORD PTR [r12+r15*4+0x64]
+  2134f3:	31 c3                	xor    ebx,eax
+  2134f5:	0f b6 d5             	movzx  edx,ch
+  2134f8:	45 8b 84 93 00 0c 00 	mov    r8d,DWORD PTR [r11+rdx*4+0xc00]
+  2134ff:	00 
+  213500:	47 33 84 93 00 04 00 	xor    r8d,DWORD PTR [r11+r10*4+0x400]
+  213507:	00 
+  213508:	44 0f b6 f3          	movzx  r14d,bl
+  21350c:	41 89 ca             	mov    r10d,ecx
+  21350f:	41 c1 ea 0e          	shr    r10d,0xe
+  213513:	41 81 e2 fc 03 00 00 	and    r10d,0x3fc
+  21351a:	47 33 84 1a 00 08 00 	xor    r8d,DWORD PTR [r10+r11*1+0x800]
+  213521:	00 
+  213522:	0f b6 d7             	movzx  edx,bh
+  213525:	c1 e9 18             	shr    ecx,0x18
+  213528:	45 33 04 8b          	xor    r8d,DWORD PTR [r11+rcx*4]
+  21352c:	45 8b 94 93 00 04 00 	mov    r10d,DWORD PTR [r11+rdx*4+0x400]
+  213533:	00 
+  213534:	89 d9                	mov    ecx,ebx
+  213536:	c1 e9 0e             	shr    ecx,0xe
+  213539:	81 e1 fc 03 00 00    	and    ecx,0x3fc
+  21353f:	47 33 14 b3          	xor    r10d,DWORD PTR [r11+r14*4]
+  213543:	46 33 94 19 00 0c 00 	xor    r10d,DWORD PTR [rcx+r11*1+0xc00]
+  21354a:	00 
+  21354b:	c1 eb 18             	shr    ebx,0x18
+  21354e:	45 33 94 9b 00 08 00 	xor    r10d,DWORD PTR [r11+rbx*4+0x800]
+  213555:	00 
+  213556:	45 31 c2             	xor    r10d,r8d
+  213559:	41 c1 c0 18          	rol    r8d,0x18
+  21355d:	45 31 c8             	xor    r8d,r9d
+  213560:	44 31 d5             	xor    ebp,r10d
+  213563:	45 31 c2             	xor    r10d,r8d
+  213566:	43 8b 4c bc 58       	mov    ecx,DWORD PTR [r12+r15*4+0x58]
+  21356b:	31 e9                	xor    ecx,ebp
+  21356d:	44 0f b6 c1          	movzx  r8d,cl
+  213571:	43 8b 5c bc 5c       	mov    ebx,DWORD PTR [r12+r15*4+0x5c]
+  213576:	44 31 d3             	xor    ebx,r10d
+  213579:	0f b6 d5             	movzx  edx,ch
+  21357c:	45 8b 8c 93 00 0c 00 	mov    r9d,DWORD PTR [r11+rdx*4+0xc00]
+  213583:	00 
+  213584:	47 33 8c 83 00 04 00 	xor    r9d,DWORD PTR [r11+r8*4+0x400]
+  21358b:	00 
+  21358c:	89 ca                	mov    edx,ecx
+  21358e:	c1 ea 0e             	shr    edx,0xe
+  213591:	81 e2 fc 03 00 00    	and    edx,0x3fc
+  213597:	46 33 8c 1a 00 08 00 	xor    r9d,DWORD PTR [rdx+r11*1+0x800]
+  21359e:	00 
+  21359f:	0f b6 d3             	movzx  edx,bl
+  2135a2:	c1 e9 18             	shr    ecx,0x18
+  2135a5:	45 33 0c 8b          	xor    r9d,DWORD PTR [r11+rcx*4]
+  2135a9:	0f b6 cf             	movzx  ecx,bh
+  2135ac:	45 89 ce             	mov    r14d,r9d
+  2135af:	41 c1 c6 18          	rol    r14d,0x18
+  2135b3:	45 8b 84 8b 00 04 00 	mov    r8d,DWORD PTR [r11+rcx*4+0x400]
+  2135ba:	00 
+  2135bb:	89 d9                	mov    ecx,ebx
+  2135bd:	c1 e9 0e             	shr    ecx,0xe
+  2135c0:	81 e1 fc 03 00 00    	and    ecx,0x3fc
+  2135c6:	45 33 04 93          	xor    r8d,DWORD PTR [r11+rdx*4]
+  2135ca:	46 33 84 19 00 0c 00 	xor    r8d,DWORD PTR [rcx+r11*1+0xc00]
+  2135d1:	00 
+  2135d2:	c1 eb 18             	shr    ebx,0x18
+  2135d5:	45 33 84 9b 00 08 00 	xor    r8d,DWORD PTR [r11+rbx*4+0x800]
+  2135dc:	00 
+  2135dd:	45 31 c8             	xor    r8d,r9d
+  2135e0:	41 31 c6             	xor    r14d,eax
+  2135e3:	45 31 c5             	xor    r13d,r8d
+  2135e6:	45 31 f0             	xor    r8d,r14d
+  2135e9:	43 8b 4c bc 54       	mov    ecx,DWORD PTR [r12+r15*4+0x54]
+  2135ee:	44 31 c1             	xor    ecx,r8d
+  2135f1:	0f b6 d5             	movzx  edx,ch
+  2135f4:	0f b6 c1             	movzx  eax,cl
+  2135f7:	41 8b 04 83          	mov    eax,DWORD PTR [r11+rax*4]
+  2135fb:	41 33 84 93 00 04 00 	xor    eax,DWORD PTR [r11+rdx*4+0x400]
+  213602:	00 
+  213603:	89 ca                	mov    edx,ecx
+  213605:	c1 ea 0e             	shr    edx,0xe
+  213608:	81 e2 fc 03 00 00    	and    edx,0x3fc
+  21360e:	42 33 84 1a 00 0c 00 	xor    eax,DWORD PTR [rdx+r11*1+0xc00]
+  213615:	00 
+  213616:	c1 e9 18             	shr    ecx,0x18
+  213619:	41 33 84 8b 00 08 00 	xor    eax,DWORD PTR [r11+rcx*4+0x800]
+  213620:	00 
+  213621:	43 8b 4c bc 50       	mov    ecx,DWORD PTR [r12+r15*4+0x50]
+  213626:	44 31 e9             	xor    ecx,r13d
+  213629:	0f b6 d5             	movzx  edx,ch
+  21362c:	44 0f b6 c9          	movzx  r9d,cl
+  213630:	47 8b 8c 8b 00 04 00 	mov    r9d,DWORD PTR [r11+r9*4+0x400]
+  213637:	00 
+  213638:	45 33 8c 93 00 0c 00 	xor    r9d,DWORD PTR [r11+rdx*4+0xc00]
+  21363f:	00 
+  213640:	89 ca                	mov    edx,ecx
+  213642:	c1 ea 0e             	shr    edx,0xe
+  213645:	81 e2 fc 03 00 00    	and    edx,0x3fc
+  21364b:	46 33 8c 1a 00 08 00 	xor    r9d,DWORD PTR [rdx+r11*1+0x800]
+  213652:	00 
+  213653:	c1 e9 18             	shr    ecx,0x18
+  213656:	45 33 0c 8b          	xor    r9d,DWORD PTR [r11+rcx*4]
+  21365a:	44 31 c8             	xor    eax,r9d
+  21365d:	41 c1 c1 18          	rol    r9d,0x18
+  213661:	45 31 d1             	xor    r9d,r10d
+  213664:	41 31 c1             	xor    r9d,eax
+  213667:	31 e8                	xor    eax,ebp
+  213669:	43 8b 4c bc 48       	mov    ecx,DWORD PTR [r12+r15*4+0x48]
+  21366e:	31 c1                	xor    ecx,eax
+  213670:	0f b6 d1             	movzx  edx,cl
+  213673:	0f b6 dd             	movzx  ebx,ch
+  213676:	45 8b 94 9b 00 0c 00 	mov    r10d,DWORD PTR [r11+rbx*4+0xc00]
+  21367d:	00 
+  21367e:	45 33 94 93 00 04 00 	xor    r10d,DWORD PTR [r11+rdx*4+0x400]
+  213685:	00 
+  213686:	89 ca                	mov    edx,ecx
+  213688:	c1 ea 0e             	shr    edx,0xe
+  21368b:	81 e2 fc 03 00 00    	and    edx,0x3fc
+  213691:	46 33 94 1a 00 08 00 	xor    r10d,DWORD PTR [rdx+r11*1+0x800]
+  213698:	00 
+  213699:	c1 e9 18             	shr    ecx,0x18
+  21369c:	45 33 14 8b          	xor    r10d,DWORD PTR [r11+rcx*4]
+  2136a0:	43 8b 5c bc 4c       	mov    ebx,DWORD PTR [r12+r15*4+0x4c]
+  2136a5:	44 31 cb             	xor    ebx,r9d
+  2136a8:	0f b6 d3             	movzx  edx,bl
+  2136ab:	0f b6 cf             	movzx  ecx,bh
+  2136ae:	41 89 de             	mov    r14d,ebx
+  2136b1:	41 c1 ee 0e          	shr    r14d,0xe
+  2136b5:	41 8b 8c 8b 00 04 00 	mov    ecx,DWORD PTR [r11+rcx*4+0x400]
+  2136bc:	00 
+  2136bd:	41 33 0c 93          	xor    ecx,DWORD PTR [r11+rdx*4]
+  2136c1:	41 81 e6 fc 03 00 00 	and    r14d,0x3fc
+  2136c8:	43 33 8c 1e 00 0c 00 	xor    ecx,DWORD PTR [r14+r11*1+0xc00]
+  2136cf:	00 
+  2136d0:	c1 eb 18             	shr    ebx,0x18
+  2136d3:	41 33 8c 9b 00 08 00 	xor    ecx,DWORD PTR [r11+rbx*4+0x800]
+  2136da:	00 
+  2136db:	44 31 d1             	xor    ecx,r10d
+  2136de:	41 31 cd             	xor    r13d,ecx
+  2136e1:	43 8b 5c bc 40       	mov    ebx,DWORD PTR [r12+r15*4+0x40]
+  2136e6:	45 89 ee             	mov    r14d,r13d
+  2136e9:	44 31 eb             	xor    ebx,r13d
+  2136ec:	0f b6 d3             	movzx  edx,bl
+  2136ef:	0f b6 ef             	movzx  ebp,bh
+  2136f2:	41 8b ac ab 00 0c 00 	mov    ebp,DWORD PTR [r11+rbp*4+0xc00]
+  2136f9:	00 
+  2136fa:	41 33 ac 93 00 04 00 	xor    ebp,DWORD PTR [r11+rdx*4+0x400]
+  213701:	00 
+  213702:	89 da                	mov    edx,ebx
+  213704:	c1 ea 0e             	shr    edx,0xe
+  213707:	81 e2 fc 03 00 00    	and    edx,0x3fc
+  21370d:	42 33 ac 1a 00 08 00 	xor    ebp,DWORD PTR [rdx+r11*1+0x800]
+  213714:	00 
+  213715:	c1 eb 18             	shr    ebx,0x18
+  213718:	41 33 2c 9b          	xor    ebp,DWORD PTR [r11+rbx*4]
+  21371c:	41 c1 c2 18          	rol    r10d,0x18
+  213720:	45 31 c2             	xor    r10d,r8d
+  213723:	44 31 d1             	xor    ecx,r10d
+  213726:	43 8b 54 bc 44       	mov    edx,DWORD PTR [r12+r15*4+0x44]
+  21372b:	31 ca                	xor    edx,ecx
+  21372d:	44 0f b6 c2          	movzx  r8d,dl
+  213731:	0f b6 de             	movzx  ebx,dh
+  213734:	41 89 d2             	mov    r10d,edx
+  213737:	41 c1 ea 0e          	shr    r10d,0xe
+  21373b:	41 81 e2 fc 03 00 00 	and    r10d,0x3fc
+  213742:	41 8b 9c 9b 00 04 00 	mov    ebx,DWORD PTR [r11+rbx*4+0x400]
+  213749:	00 
+  21374a:	43 33 1c 83          	xor    ebx,DWORD PTR [r11+r8*4]
+  21374e:	43 33 9c 1a 00 0c 00 	xor    ebx,DWORD PTR [r10+r11*1+0xc00]
+  213755:	00 
+  213756:	c1 ea 18             	shr    edx,0x18
+  213759:	41 33 9c 93 00 08 00 	xor    ebx,DWORD PTR [r11+rdx*4+0x800]
+  213760:	00 
+  213761:	31 eb                	xor    ebx,ebp
+  213763:	c1 c5 18             	rol    ebp,0x18
+  213766:	44 31 cd             	xor    ebp,r9d
+  213769:	31 d8                	xor    eax,ebx
+  21376b:	31 eb                	xor    ebx,ebp
+  21376d:	49 83 ff f4          	cmp    r15,0xfffffffffffffff4
+  213771:	0f 84 84 00 00 00    	je     2137fb <Camellia_decrypt+0x45b>
+  213777:	49 8d 57 0c          	lea    rdx,[r15+0xc]
+  21377b:	4d 8d 47 0e          	lea    r8,[r15+0xe]
+  21377f:	49 39 d0             	cmp    r8,rdx
+  213782:	0f 82 50 01 00 00    	jb     2138d8 <Camellia_decrypt+0x538>
+  213788:	49 83 f8 43          	cmp    r8,0x43
+  21378c:	0f 87 27 01 00 00    	ja     2138b9 <Camellia_decrypt+0x519>
+  213792:	4d 8d 47 0d          	lea    r8,[r15+0xd]
+  213796:	49 39 d0             	cmp    r8,rdx
+  213799:	0f 82 ff 00 00 00    	jb     21389e <Camellia_decrypt+0x4fe>
+  21379f:	49 83 f8 43          	cmp    r8,0x43
+  2137a3:	0f 87 07 01 00 00    	ja     2138b0 <Camellia_decrypt+0x510>
+  2137a9:	4d 8d 47 0f          	lea    r8,[r15+0xf]
+  2137ad:	49 39 d0             	cmp    r8,rdx
+  2137b0:	0f 82 f1 00 00 00    	jb     2138a7 <Camellia_decrypt+0x507>
+  2137b6:	47 8b 4c bc 38       	mov    r9d,DWORD PTR [r12+r15*4+0x38]
+  2137bb:	41 21 c1             	and    r9d,eax
+  2137be:	41 d1 c1             	rol    r9d,1
+  2137c1:	41 31 d9             	xor    r9d,ebx
+  2137c4:	47 8b 54 bc 34       	mov    r10d,DWORD PTR [r12+r15*4+0x34]
+  2137c9:	41 09 ca             	or     r10d,ecx
+  2137cc:	45 31 f2             	xor    r10d,r14d
+  2137cf:	43 8b 6c bc 3c       	mov    ebp,DWORD PTR [r12+r15*4+0x3c]
+  2137d4:	44 09 cd             	or     ebp,r9d
+  2137d7:	31 c5                	xor    ebp,eax
+  2137d9:	43 8b 44 bc 30       	mov    eax,DWORD PTR [r12+r15*4+0x30]
+  2137de:	44 21 d0             	and    eax,r10d
+  2137e1:	d1 c0                	rol    eax,1
+  2137e3:	31 c8                	xor    eax,ecx
+  2137e5:	49 8d 4f 0a          	lea    rcx,[r15+0xa]
+  2137e9:	4c 39 f9             	cmp    rcx,r15
+  2137ec:	4d 8d 7f f0          	lea    r15,[r15-0x10]
+  2137f0:	0f 83 4a fc ff ff    	jae    213440 <Camellia_decrypt+0xa0>
+  2137f6:	e9 e4 00 00 00       	jmp    2138df <Camellia_decrypt+0x53f>
+  2137fb:	45 33 34 24          	xor    r14d,DWORD PTR [r12]
+  2137ff:	41 33 4c 24 04       	xor    ecx,DWORD PTR [r12+0x4]
+  213804:	41 33 44 24 08       	xor    eax,DWORD PTR [r12+0x8]
+  213809:	41 33 5c 24 0c       	xor    ebx,DWORD PTR [r12+0xc]
+  21380e:	44 89 f2             	mov    edx,r14d
+  213811:	c1 ea 18             	shr    edx,0x18
+  213814:	88 16                	mov    BYTE PTR [rsi],dl
+  213816:	44 89 f2             	mov    edx,r14d
+  213819:	c1 ea 10             	shr    edx,0x10
+  21381c:	88 56 01             	mov    BYTE PTR [rsi+0x1],dl
+  21381f:	44 89 f2             	mov    edx,r14d
+  213822:	88 76 02             	mov    BYTE PTR [rsi+0x2],dh
+  213825:	88 56 03             	mov    BYTE PTR [rsi+0x3],dl
+  213828:	89 ca                	mov    edx,ecx
+  21382a:	c1 ea 18             	shr    edx,0x18
+  21382d:	88 56 04             	mov    BYTE PTR [rsi+0x4],dl
+  213830:	89 ca                	mov    edx,ecx
+  213832:	c1 ea 10             	shr    edx,0x10
+  213835:	88 56 05             	mov    BYTE PTR [rsi+0x5],dl
+  213838:	88 6e 06             	mov    BYTE PTR [rsi+0x6],ch
+  21383b:	88 4e 07             	mov    BYTE PTR [rsi+0x7],cl
+  21383e:	89 c1                	mov    ecx,eax
+  213840:	c1 e9 18             	shr    ecx,0x18
+  213843:	88 4e 08             	mov    BYTE PTR [rsi+0x8],cl
+  213846:	89 c1                	mov    ecx,eax
+  213848:	c1 e9 10             	shr    ecx,0x10
+  21384b:	88 4e 09             	mov    BYTE PTR [rsi+0x9],cl
+  21384e:	88 66 0a             	mov    BYTE PTR [rsi+0xa],ah
+  213851:	88 46 0b             	mov    BYTE PTR [rsi+0xb],al
+  213854:	89 d8                	mov    eax,ebx
+  213856:	c1 e8 18             	shr    eax,0x18
+  213859:	88 46 0c             	mov    BYTE PTR [rsi+0xc],al
+  21385c:	89 d8                	mov    eax,ebx
+  21385e:	c1 e8 10             	shr    eax,0x10
+  213861:	88 46 0d             	mov    BYTE PTR [rsi+0xd],al
+  213864:	88 7e 0e             	mov    BYTE PTR [rsi+0xe],bh
+  213867:	88 5e 0f             	mov    BYTE PTR [rsi+0xf],bl
+  21386a:	48 83 c4 08          	add    rsp,0x8
+  21386e:	5b                   	pop    rbx
+  21386f:	41 5c                	pop    r12
+  213871:	41 5d                	pop    r13
+  213873:	41 5e                	pop    r14
+  213875:	41 5f                	pop    r15
+  213877:	5d                   	pop    rbp
+  213878:	c3                   	ret
+  213879:	48 8d 0d f8 b2 60 00 	lea    rcx,[rip+0x60b2f8]        # 81eb78 <anon.0ec28c8051915372a7f93747e15cd319.214.llvm.14757520186848287924+0x180>
+  213880:	be 44 00 00 00       	mov    esi,0x44
+  213885:	ba 44 00 00 00       	mov    edx,0x44
+  21388a:	4c 89 c7             	mov    rdi,r8
+  21388d:	ff 15 7d b0 6c 00    	call   QWORD PTR [rip+0x6cb07d]        # 8de910 <_DYNAMIC+0x3610>
+  213893:	eb 77                	jmp    21390c <Camellia_decrypt+0x56c>
+  213895:	48 8d 3d 4c b2 60 00 	lea    rdi,[rip+0x60b24c]        # 81eae8 <anon.0ec28c8051915372a7f93747e15cd319.214.llvm.14757520186848287924+0xf0>
+  21389c:	eb 41                	jmp    2138df <Camellia_decrypt+0x53f>
+  21389e:	48 8d 3d 8b b2 60 00 	lea    rdi,[rip+0x60b28b]        # 81eb30 <anon.0ec28c8051915372a7f93747e15cd319.214.llvm.14757520186848287924+0x138>
+  2138a5:	eb 38                	jmp    2138df <Camellia_decrypt+0x53f>
+  2138a7:	48 8d 3d b2 b2 60 00 	lea    rdi,[rip+0x60b2b2]        # 81eb60 <anon.0ec28c8051915372a7f93747e15cd319.214.llvm.14757520186848287924+0x168>
+  2138ae:	eb 2f                	jmp    2138df <Camellia_decrypt+0x53f>
+  2138b0:	49 c7 c0 ff ff ff ff 	mov    r8,0xffffffffffffffff
+  2138b7:	eb 0b                	jmp    2138c4 <Camellia_decrypt+0x524>
+  2138b9:	48 8d 05 58 b2 60 00 	lea    rax,[rip+0x60b258]        # 81eb18 <anon.0ec28c8051915372a7f93747e15cd319.214.llvm.14757520186848287924+0x120>
+  2138c0:	48 89 04 24          	mov    QWORD PTR [rsp],rax
+  2138c4:	be 44 00 00 00       	mov    esi,0x44
+  2138c9:	4c 89 c7             	mov    rdi,r8
+  2138cc:	48 8b 14 24          	mov    rdx,QWORD PTR [rsp]
+  2138d0:	ff 15 9a a2 6c 00    	call   QWORD PTR [rip+0x6ca29a]        # 8ddb70 <_DYNAMIC+0x2870>
+  2138d6:	eb 34                	jmp    21390c <Camellia_decrypt+0x56c>
+  2138d8:	48 8d 3d 21 b2 60 00 	lea    rdi,[rip+0x60b221]        # 81eb00 <anon.0ec28c8051915372a7f93747e15cd319.214.llvm.14757520186848287924+0x108>
+  2138df:	ff 15 cb 9a 6c 00    	call   QWORD PTR [rip+0x6c9acb]        # 8dd3b0 <_DYNAMIC+0x20b0>
+  2138e5:	eb 25                	jmp    21390c <Camellia_decrypt+0x56c>
+  2138e7:	48 8d 3d 9a b1 60 00 	lea    rdi,[rip+0x60b19a]        # 81ea88 <anon.0ec28c8051915372a7f93747e15cd319.214.llvm.14757520186848287924+0x90>
+  2138ee:	ff 15 4c 95 6c 00    	call   QWORD PTR [rip+0x6c954c]        # 8dce40 <_DYNAMIC+0x1b40>
+  2138f4:	eb 16                	jmp    21390c <Camellia_decrypt+0x56c>
+  2138f6:	48 8d 05 a3 b1 60 00 	lea    rax,[rip+0x60b1a3]        # 81eaa0 <anon.0ec28c8051915372a7f93747e15cd319.214.llvm.14757520186848287924+0xa8>
+  2138fd:	eb c1                	jmp    2138c0 <Camellia_decrypt+0x520>
+  2138ff:	48 8d 3d b2 b1 60 00 	lea    rdi,[rip+0x60b1b2]        # 81eab8 <anon.0ec28c8051915372a7f93747e15cd319.214.llvm.14757520186848287924+0xc0>
+  213906:	ff 15 0c 91 6c 00    	call   QWORD PTR [rip+0x6c910c]        # 8dca18 <_DYNAMIC+0x1718>
+  21390c:	0f 0b                	ud2
+  21390e:	ff 15 2c 9f 6c 00    	call   QWORD PTR [rip+0x6c9f2c]        # 8dd840 <_DYNAMIC+0x2540>
+
+### Camellia_set_key [camellia key schedule]  0x213e00..0x21478d
+
+court/tmp/pfp68/final/libcrypto.so.3:     file format elf64-x86-64
+
+
+Disassembly of section .text:
+
+0000000000213e00 <Camellia_set_key>:
+  213e00:	b8 ff ff ff ff       	mov    eax,0xffffffff
+  213e05:	48 85 ff             	test   rdi,rdi
+  213e08:	0f 84 7e 09 00 00    	je     21478c <Camellia_set_key+0x98c>
+  213e0e:	48 85 d2             	test   rdx,rdx
+  213e11:	0f 84 75 09 00 00    	je     21478c <Camellia_set_key+0x98c>
+  213e17:	81 fe 80 00 00 00    	cmp    esi,0x80
+  213e1d:	74 19                	je     213e38 <Camellia_set_key+0x38>
+  213e1f:	81 fe c0 00 00 00    	cmp    esi,0xc0
+  213e25:	74 11                	je     213e38 <Camellia_set_key+0x38>
+  213e27:	b8 fe ff ff ff       	mov    eax,0xfffffffe
+  213e2c:	81 fe 00 01 00 00    	cmp    esi,0x100
+  213e32:	0f 85 54 09 00 00    	jne    21478c <Camellia_set_key+0x98c>
+  213e38:	55                   	push   rbp
+  213e39:	41 57                	push   r15
+  213e3b:	41 56                	push   r14
+  213e3d:	41 55                	push   r13
+  213e3f:	41 54                	push   r12
+  213e41:	53                   	push   rbx
+  213e42:	0f b6 07             	movzx  eax,BYTE PTR [rdi]
+  213e45:	c1 e0 18             	shl    eax,0x18
+  213e48:	44 0f b6 47 01       	movzx  r8d,BYTE PTR [rdi+0x1]
+  213e4d:	41 c1 e0 10          	shl    r8d,0x10
+  213e51:	41 09 c0             	or     r8d,eax
+  213e54:	0f b7 47 02          	movzx  eax,WORD PTR [rdi+0x2]
+  213e58:	0f b7 4f 06          	movzx  ecx,WORD PTR [rdi+0x6]
+  213e5c:	66 c1 c0 08          	rol    ax,0x8
+  213e60:	44 0f b7 d8          	movzx  r11d,ax
+  213e64:	44 89 44 24 e4       	mov    DWORD PTR [rsp-0x1c],r8d
+  213e69:	45 09 c3             	or     r11d,r8d
+  213e6c:	0f b6 47 04          	movzx  eax,BYTE PTR [rdi+0x4]
+  213e70:	c1 e0 18             	shl    eax,0x18
+  213e73:	44 0f b6 47 05       	movzx  r8d,BYTE PTR [rdi+0x5]
+  213e78:	41 c1 e0 10          	shl    r8d,0x10
+  213e7c:	66 c1 c1 08          	rol    cx,0x8
+  213e80:	41 09 c0             	or     r8d,eax
+  213e83:	44 0f b7 d1          	movzx  r10d,cx
+  213e87:	44 89 44 24 e0       	mov    DWORD PTR [rsp-0x20],r8d
+  213e8c:	45 09 c2             	or     r10d,r8d
+  213e8f:	0f b6 47 08          	movzx  eax,BYTE PTR [rdi+0x8]
+  213e93:	c1 e0 18             	shl    eax,0x18
+  213e96:	0f b6 4f 09          	movzx  ecx,BYTE PTR [rdi+0x9]
+  213e9a:	c1 e1 10             	shl    ecx,0x10
+  213e9d:	09 c1                	or     ecx,eax
+  213e9f:	0f b7 47 0a          	movzx  eax,WORD PTR [rdi+0xa]
+  213ea3:	66 c1 c0 08          	rol    ax,0x8
+  213ea7:	44 0f b7 c0          	movzx  r8d,ax
+  213eab:	89 4c 24 dc          	mov    DWORD PTR [rsp-0x24],ecx
+  213eaf:	41 09 c8             	or     r8d,ecx
+  213eb2:	0f b6 47 0c          	movzx  eax,BYTE PTR [rdi+0xc]
+  213eb6:	c1 e0 18             	shl    eax,0x18
+  213eb9:	44 0f b6 4f 0d       	movzx  r9d,BYTE PTR [rdi+0xd]
+  213ebe:	41 c1 e1 10          	shl    r9d,0x10
+  213ec2:	0f b7 4f 0e          	movzx  ecx,WORD PTR [rdi+0xe]
+  213ec6:	66 c1 c1 08          	rol    cx,0x8
+  213eca:	41 09 c1             	or     r9d,eax
+  213ecd:	44 0f b7 e1          	movzx  r12d,cx
+  213ed1:	44 89 4c 24 d8       	mov    DWORD PTR [rsp-0x28],r9d
+  213ed6:	45 09 cc             	or     r12d,r9d
+  213ed9:	44 89 1a             	mov    DWORD PTR [rdx],r11d
+  213edc:	44 89 52 04          	mov    DWORD PTR [rdx+0x4],r10d
+  213ee0:	44 89 42 08          	mov    DWORD PTR [rdx+0x8],r8d
+  213ee4:	44 89 62 0c          	mov    DWORD PTR [rdx+0xc],r12d
+  213ee8:	45 89 e1             	mov    r9d,r12d
+  213eeb:	45 89 c6             	mov    r14d,r8d
+  213eee:	44 89 54 24 d4       	mov    DWORD PTR [rsp-0x2c],r10d
+  213ef3:	44 89 d0             	mov    eax,r10d
+  213ef6:	45 89 df             	mov    r15d,r11d
+  213ef9:	81 fe 80 00 00 00    	cmp    esi,0x80
+  213eff:	74 4c                	je     213f4d <Camellia_set_key+0x14d>
+  213f01:	44 8b 7f 10          	mov    r15d,DWORD PTR [rdi+0x10]
+  213f05:	41 0f cf             	bswap  r15d
+  213f08:	44 89 7a 20          	mov    DWORD PTR [rdx+0x20],r15d
+  213f0c:	8b 47 14             	mov    eax,DWORD PTR [rdi+0x14]
+  213f0f:	0f c8                	bswap  eax
+  213f11:	89 42 24             	mov    DWORD PTR [rdx+0x24],eax
+  213f14:	81 fe c0 00 00 00    	cmp    esi,0xc0
+  213f1a:	75 0e                	jne    213f2a <Camellia_set_key+0x12a>
+  213f1c:	45 89 fe             	mov    r14d,r15d
+  213f1f:	41 f7 d6             	not    r14d
+  213f22:	41 89 c1             	mov    r9d,eax
+  213f25:	41 f7 d1             	not    r9d
+  213f28:	eb 0e                	jmp    213f38 <Camellia_set_key+0x138>
+  213f2a:	44 8b 77 18          	mov    r14d,DWORD PTR [rdi+0x18]
+  213f2e:	44 8b 4f 1c          	mov    r9d,DWORD PTR [rdi+0x1c]
+  213f32:	41 0f ce             	bswap  r14d
+  213f35:	41 0f c9             	bswap  r9d
+  213f38:	44 89 72 28          	mov    DWORD PTR [rdx+0x28],r14d
+  213f3c:	44 89 4a 2c          	mov    DWORD PTR [rdx+0x2c],r9d
+  213f40:	45 31 df             	xor    r15d,r11d
+  213f43:	33 44 24 d4          	xor    eax,DWORD PTR [rsp-0x2c]
+  213f47:	45 31 c6             	xor    r14d,r8d
+  213f4a:	45 31 e1             	xor    r9d,r12d
+  213f4d:	44 89 f9             	mov    ecx,r15d
+  213f50:	81 f1 7f 66 9e a0    	xor    ecx,0xa09e667f
+  213f56:	0f b6 f9             	movzx  edi,cl
+  213f59:	4c 8d 2d a8 79 48 00 	lea    r13,[rip+0x4879a8]        # 69b908 <_RNvNtCsfBoMNNx3tZr_10openssl_rs13cipher_tables13CAMELLIA_SBOX>
+  213f60:	89 c3                	mov    ebx,eax
+  213f62:	81 f3 8b 90 cc 3b    	xor    ebx,0x3bcc908b
+  213f68:	0f b6 ed             	movzx  ebp,ch
+  213f6b:	45 8b 94 ad 00 0c 00 	mov    r10d,DWORD PTR [r13+rbp*4+0xc00]
+  213f72:	00 
+  213f73:	45 33 94 bd 00 04 00 	xor    r10d,DWORD PTR [r13+rdi*4+0x400]
+  213f7a:	00 
+  213f7b:	89 cf                	mov    edi,ecx
+  213f7d:	c1 ef 0e             	shr    edi,0xe
+  213f80:	81 e7 fc 03 00 00    	and    edi,0x3fc
+  213f86:	46 33 94 2f 00 08 00 	xor    r10d,DWORD PTR [rdi+r13*1+0x800]
+  213f8d:	00 
+  213f8e:	44 89 dd             	mov    ebp,r11d
+  213f91:	44 0f b6 db          	movzx  r11d,bl
+  213f95:	c1 e9 18             	shr    ecx,0x18
+  213f98:	45 33 54 8d 00       	xor    r10d,DWORD PTR [r13+rcx*4+0x0]
+  213f9d:	0f b6 cf             	movzx  ecx,bh
+  213fa0:	41 8b bc 8d 00 04 00 	mov    edi,DWORD PTR [r13+rcx*4+0x400]
+  213fa7:	00 
+  213fa8:	43 33 7c 9d 00       	xor    edi,DWORD PTR [r13+r11*4+0x0]
+  213fad:	41 89 eb             	mov    r11d,ebp
+  213fb0:	89 d9                	mov    ecx,ebx
+  213fb2:	c1 e9 0e             	shr    ecx,0xe
+  213fb5:	81 e1 fc 03 00 00    	and    ecx,0x3fc
+  213fbb:	42 33 bc 29 00 0c 00 	xor    edi,DWORD PTR [rcx+r13*1+0xc00]
+  213fc2:	00 
+  213fc3:	c1 eb 18             	shr    ebx,0x18
+  213fc6:	41 33 bc 9d 00 08 00 	xor    edi,DWORD PTR [r13+rbx*4+0x800]
+  213fcd:	00 
+  213fce:	44 31 d7             	xor    edi,r10d
+  213fd1:	41 c1 c2 18          	rol    r10d,0x18
+  213fd5:	41 31 fe             	xor    r14d,edi
+  213fd8:	44 31 cf             	xor    edi,r9d
+  213fdb:	44 31 d7             	xor    edi,r10d
+  213fde:	44 89 f1             	mov    ecx,r14d
+  213fe1:	81 f1 58 e8 7a b6    	xor    ecx,0xb67ae858
+  213fe7:	44 0f b6 d1          	movzx  r10d,cl
+  213feb:	89 fb                	mov    ebx,edi
+  213fed:	81 f3 b2 73 aa 4c    	xor    ebx,0x4caa73b2
+  213ff3:	0f b6 ed             	movzx  ebp,ch
+  213ff6:	45 8b 8c ad 00 0c 00 	mov    r9d,DWORD PTR [r13+rbp*4+0xc00]
+  213ffd:	00 
+  213ffe:	47 33 8c 95 00 04 00 	xor    r9d,DWORD PTR [r13+r10*4+0x400]
+  214005:	00 
+  214006:	41 89 ca             	mov    r10d,ecx
+  214009:	41 c1 ea 0e          	shr    r10d,0xe
+  21400d:	41 81 e2 fc 03 00 00 	and    r10d,0x3fc
+  214014:	47 33 8c 2a 00 08 00 	xor    r9d,DWORD PTR [r10+r13*1+0x800]
+  21401b:	00 
+  21401c:	44 0f b6 d3          	movzx  r10d,bl
+  214020:	c1 e9 18             	shr    ecx,0x18
+  214023:	45 33 4c 8d 00       	xor    r9d,DWORD PTR [r13+rcx*4+0x0]
+  214028:	0f b6 cf             	movzx  ecx,bh
+  21402b:	41 8b 8c 8d 00 04 00 	mov    ecx,DWORD PTR [r13+rcx*4+0x400]
+  214032:	00 
+  214033:	43 33 4c 95 00       	xor    ecx,DWORD PTR [r13+r10*4+0x0]
+  214038:	41 89 da             	mov    r10d,ebx
+  21403b:	41 c1 ea 0e          	shr    r10d,0xe
+  21403f:	41 81 e2 fc 03 00 00 	and    r10d,0x3fc
+  214046:	43 33 8c 2a 00 0c 00 	xor    ecx,DWORD PTR [r10+r13*1+0xc00]
+  21404d:	00 
+  21404e:	c1 eb 18             	shr    ebx,0x18
+  214051:	41 33 8c 9d 00 08 00 	xor    ecx,DWORD PTR [r13+rbx*4+0x800]
+  214058:	00 
+  214059:	44 31 c9             	xor    ecx,r9d
+  21405c:	41 c1 c1 18          	rol    r9d,0x18
+  214060:	45 31 df             	xor    r15d,r11d
+  214063:	41 31 cf             	xor    r15d,ecx
+  214066:	33 44 24 d4          	xor    eax,DWORD PTR [rsp-0x2c]
+  21406a:	44 31 c8             	xor    eax,r9d
+  21406d:	31 c8                	xor    eax,ecx
+  21406f:	44 89 f9             	mov    ecx,r15d
+  214072:	81 f1 2f 37 ef c6    	xor    ecx,0xc6ef372f
+  214078:	44 0f b6 d1          	movzx  r10d,cl
+  21407c:	89 c3                	mov    ebx,eax
+  21407e:	81 f3 be 82 4f e9    	xor    ebx,0xe94f82be
+  214084:	0f b6 ed             	movzx  ebp,ch
+  214087:	45 8b 8c ad 00 0c 00 	mov    r9d,DWORD PTR [r13+rbp*4+0xc00]
+  21408e:	00 
+  21408f:	47 33 8c 95 00 04 00 	xor    r9d,DWORD PTR [r13+r10*4+0x400]
+  214096:	00 
+  214097:	41 89 ca             	mov    r10d,ecx
+  21409a:	41 c1 ea 0e          	shr    r10d,0xe
+  21409e:	41 81 e2 fc 03 00 00 	and    r10d,0x3fc
+  2140a5:	47 33 8c 2a 00 08 00 	xor    r9d,DWORD PTR [r10+r13*1+0x800]
+  2140ac:	00 
+  2140ad:	44 0f b6 d3          	movzx  r10d,bl
+  2140b1:	c1 e9 18             	shr    ecx,0x18
+  2140b4:	45 33 4c 8d 00       	xor    r9d,DWORD PTR [r13+rcx*4+0x0]
+  2140b9:	0f b6 cf             	movzx  ecx,bh
+  2140bc:	41 8b 8c 8d 00 04 00 	mov    ecx,DWORD PTR [r13+rcx*4+0x400]
+  2140c3:	00 
+  2140c4:	43 33 4c 95 00       	xor    ecx,DWORD PTR [r13+r10*4+0x0]
+  2140c9:	41 89 da             	mov    r10d,ebx
+  2140cc:	41 c1 ea 0e          	shr    r10d,0xe
+  2140d0:	41 81 e2 fc 03 00 00 	and    r10d,0x3fc
+  2140d7:	43 33 8c 2a 00 0c 00 	xor    ecx,DWORD PTR [r10+r13*1+0xc00]
+  2140de:	00 
+  2140df:	c1 eb 18             	shr    ebx,0x18
+  2140e2:	41 33 8c 9d 00 08 00 	xor    ecx,DWORD PTR [r13+rbx*4+0x800]
+  2140e9:	00 
+  2140ea:	44 31 c9             	xor    ecx,r9d
+  2140ed:	41 c1 c1 18          	rol    r9d,0x18
+  2140f1:	45 31 c6             	xor    r14d,r8d
+  2140f4:	41 31 ce             	xor    r14d,ecx
+  2140f7:	44 31 e7             	xor    edi,r12d
+  2140fa:	44 31 cf             	xor    edi,r9d
+  2140fd:	31 cf                	xor    edi,ecx
+  2140ff:	44 89 f1             	mov    ecx,r14d
+  214102:	81 f1 a5 53 ff 54    	xor    ecx,0x54ff53a5
+  214108:	44 0f b6 d1          	movzx  r10d,cl
+  21410c:	89 fb                	mov    ebx,edi
+  21410e:	81 f3 1c 6f d3 f1    	xor    ebx,0xf1d36f1c
+  214114:	0f b6 ed             	movzx  ebp,ch
+  214117:	45 8b 8c ad 00 0c 00 	mov    r9d,DWORD PTR [r13+rbp*4+0xc00]
+  21411e:	00 
+  21411f:	47 33 8c 95 00 04 00 	xor    r9d,DWORD PTR [r13+r10*4+0x400]
+  214126:	00 
+  214127:	41 89 ca             	mov    r10d,ecx
+  21412a:	41 c1 ea 0e          	shr    r10d,0xe
+  21412e:	41 81 e2 fc 03 00 00 	and    r10d,0x3fc
+  214135:	47 33 8c 2a 00 08 00 	xor    r9d,DWORD PTR [r10+r13*1+0x800]
+  21413c:	00 
+  21413d:	44 0f b6 d3          	movzx  r10d,bl
+  214141:	c1 e9 18             	shr    ecx,0x18
+  214144:	45 33 4c 8d 00       	xor    r9d,DWORD PTR [r13+rcx*4+0x0]
+  214149:	0f b6 cf             	movzx  ecx,bh
+  21414c:	44 89 e5             	mov    ebp,r12d
+  21414f:	45 8b a4 8d 00 04 00 	mov    r12d,DWORD PTR [r13+rcx*4+0x400]
+  214156:	00 
+  214157:	47 33 64 95 00       	xor    r12d,DWORD PTR [r13+r10*4+0x0]
+  21415c:	89 d9                	mov    ecx,ebx
+  21415e:	c1 e9 0e             	shr    ecx,0xe
+  214161:	81 e1 fc 03 00 00    	and    ecx,0x3fc
+  214167:	46 33 a4 29 00 0c 00 	xor    r12d,DWORD PTR [rcx+r13*1+0xc00]
+  21416e:	00 
+  21416f:	c1 eb 18             	shr    ebx,0x18
+  214172:	45 33 a4 9d 00 08 00 	xor    r12d,DWORD PTR [r13+rbx*4+0x800]
+  214179:	00 
+  21417a:	45 31 cc             	xor    r12d,r9d
+  21417d:	41 c1 c1 18          	rol    r9d,0x18
+  214181:	41 31 c1             	xor    r9d,eax
+  214184:	45 31 e7             	xor    r15d,r12d
+  214187:	45 31 cc             	xor    r12d,r9d
+  21418a:	81 fe 80 00 00 00    	cmp    esi,0x80
+  214190:	0f 85 fb 01 00 00    	jne    214391 <Camellia_set_key+0x591>
+  214196:	44 89 7a 10          	mov    DWORD PTR [rdx+0x10],r15d
+  21419a:	44 89 62 14          	mov    DWORD PTR [rdx+0x14],r12d
+  21419e:	44 89 72 18          	mov    DWORD PTR [rdx+0x18],r14d
+  2141a2:	89 7a 1c             	mov    DWORD PTR [rdx+0x1c],edi
+  2141a5:	44 89 f8             	mov    eax,r15d
+  2141a8:	44 0f a4 e0 0f       	shld   eax,r12d,0xf
+  2141ad:	45 0f a4 f4 0f       	shld   r12d,r14d,0xf
+  2141b2:	41 0f a4 fe 0f       	shld   r14d,edi,0xf
+  2141b7:	44 0f a4 ff 0f       	shld   edi,r15d,0xf
+  2141bc:	89 42 30             	mov    DWORD PTR [rdx+0x30],eax
+  2141bf:	44 89 62 34          	mov    DWORD PTR [rdx+0x34],r12d
+  2141c3:	44 89 72 38          	mov    DWORD PTR [rdx+0x38],r14d
+  2141c7:	89 7a 3c             	mov    DWORD PTR [rdx+0x3c],edi
+  2141ca:	89 c1                	mov    ecx,eax
+  2141cc:	44 0f a4 e1 0f       	shld   ecx,r12d,0xf
+  2141d1:	45 0f a4 f4 0f       	shld   r12d,r14d,0xf
+  2141d6:	41 0f a4 fe 0f       	shld   r14d,edi,0xf
+  2141db:	0f a4 c7 0f          	shld   edi,eax,0xf
+  2141df:	89 4a 40             	mov    DWORD PTR [rdx+0x40],ecx
+  2141e2:	44 89 62 44          	mov    DWORD PTR [rdx+0x44],r12d
+  2141e6:	44 89 72 48          	mov    DWORD PTR [rdx+0x48],r14d
+  2141ea:	89 c8                	mov    eax,ecx
+  2141ec:	44 0f a4 e0 0f       	shld   eax,r12d,0xf
+  2141f1:	45 0f a4 f4 0f       	shld   r12d,r14d,0xf
+  2141f6:	41 0f a4 fe 0f       	shld   r14d,edi,0xf
+  2141fb:	89 7a 4c             	mov    DWORD PTR [rdx+0x4c],edi
+  2141fe:	0f a4 cf 0f          	shld   edi,ecx,0xf
+  214202:	89 42 60             	mov    DWORD PTR [rdx+0x60],eax
+  214205:	44 89 62 64          	mov    DWORD PTR [rdx+0x64],r12d
+  214209:	89 c1                	mov    ecx,eax
+  21420b:	44 0f a4 e1 0f       	shld   ecx,r12d,0xf
+  214210:	45 0f a4 f4 0f       	shld   r12d,r14d,0xf
+  214215:	41 0f a4 fe 0f       	shld   r14d,edi,0xf
+  21421a:	0f a4 c7 0f          	shld   edi,eax,0xf
+  21421e:	89 4a 70             	mov    DWORD PTR [rdx+0x70],ecx
+  214221:	44 89 62 74          	mov    DWORD PTR [rdx+0x74],r12d
+  214225:	44 89 72 78          	mov    DWORD PTR [rdx+0x78],r14d
+  214229:	89 7a 7c             	mov    DWORD PTR [rdx+0x7c],edi
+  21422c:	44 89 e0             	mov    eax,r12d
+  21422f:	44 0f a4 f0 02       	shld   eax,r14d,0x2
+  214234:	41 0f a4 fe 02       	shld   r14d,edi,0x2
+  214239:	0f a4 cf 02          	shld   edi,ecx,0x2
+  21423d:	41 0f ac cc 1e       	shrd   r12d,ecx,0x1e
+  214242:	89 82 a0 00 00 00    	mov    DWORD PTR [rdx+0xa0],eax
+  214248:	44 89 b2 a4 00 00 00 	mov    DWORD PTR [rdx+0xa4],r14d
+  21424f:	89 ba a8 00 00 00    	mov    DWORD PTR [rdx+0xa8],edi
+  214255:	44 89 a2 ac 00 00 00 	mov    DWORD PTR [rdx+0xac],r12d
+  21425c:	89 c1                	mov    ecx,eax
+  21425e:	44 0f a4 f1 11       	shld   ecx,r14d,0x11
+  214263:	41 0f a4 fe 11       	shld   r14d,edi,0x11
+  214268:	44 0f a4 e7 11       	shld   edi,r12d,0x11
+  21426d:	41 0f a4 c4 11       	shld   r12d,eax,0x11
+  214272:	89 8a c0 00 00 00    	mov    DWORD PTR [rdx+0xc0],ecx
+  214278:	44 89 b2 c4 00 00 00 	mov    DWORD PTR [rdx+0xc4],r14d
+  21427f:	89 ba c8 00 00 00    	mov    DWORD PTR [rdx+0xc8],edi
+  214285:	44 89 a2 cc 00 00 00 	mov    DWORD PTR [rdx+0xcc],r12d
+  21428c:	8b 44 24 e0          	mov    eax,DWORD PTR [rsp-0x20]
+  214290:	41 0f a4 c3 0f       	shld   r11d,eax,0xf
+  214295:	8b 44 24 dc          	mov    eax,DWORD PTR [rsp-0x24]
+  214299:	8b 74 24 d4          	mov    esi,DWORD PTR [rsp-0x2c]
+  21429d:	0f a4 c6 0f          	shld   esi,eax,0xf
+  2142a1:	8b 44 24 d8          	mov    eax,DWORD PTR [rsp-0x28]
+  2142a5:	41 0f a4 c0 0f       	shld   r8d,eax,0xf
+  2142aa:	8b 44 24 e4          	mov    eax,DWORD PTR [rsp-0x1c]
+  2142ae:	0f a4 c5 0f          	shld   ebp,eax,0xf
+  2142b2:	44 89 5a 20          	mov    DWORD PTR [rdx+0x20],r11d
+  2142b6:	89 72 24             	mov    DWORD PTR [rdx+0x24],esi
+  2142b9:	44 89 42 28          	mov    DWORD PTR [rdx+0x28],r8d
+  2142bd:	44 89 d8             	mov    eax,r11d
+  2142c0:	0f a4 f0 1e          	shld   eax,esi,0x1e
+  2142c4:	44 0f a4 c6 1e       	shld   esi,r8d,0x1e
+  2142c9:	41 0f a4 e8 1e       	shld   r8d,ebp,0x1e
+  2142ce:	89 6a 2c             	mov    DWORD PTR [rdx+0x2c],ebp
+  2142d1:	44 0f a4 dd 1e       	shld   ebp,r11d,0x1e
+  2142d6:	89 42 50             	mov    DWORD PTR [rdx+0x50],eax
+  2142d9:	89 72 54             	mov    DWORD PTR [rdx+0x54],esi
+  2142dc:	44 89 42 58          	mov    DWORD PTR [rdx+0x58],r8d
+  2142e0:	89 6a 5c             	mov    DWORD PTR [rdx+0x5c],ebp
+  2142e3:	89 c1                	mov    ecx,eax
+  2142e5:	0f a4 f1 0f          	shld   ecx,esi,0xf
+  2142e9:	44 0f a4 c6 0f       	shld   esi,r8d,0xf
+  2142ee:	41 0f a4 e8 0f       	shld   r8d,ebp,0xf
+  2142f3:	0f a4 c5 0f          	shld   ebp,eax,0xf
+  2142f7:	44 89 42 68          	mov    DWORD PTR [rdx+0x68],r8d
+  2142fb:	89 6a 6c             	mov    DWORD PTR [rdx+0x6c],ebp
+  2142fe:	89 c8                	mov    eax,ecx
+  214300:	0f a4 f0 11          	shld   eax,esi,0x11
+  214304:	44 0f a4 c6 11       	shld   esi,r8d,0x11
+  214309:	41 0f a4 e8 11       	shld   r8d,ebp,0x11
+  21430e:	0f a4 cd 11          	shld   ebp,ecx,0x11
+  214312:	89 82 80 00 00 00    	mov    DWORD PTR [rdx+0x80],eax
+  214318:	89 b2 84 00 00 00    	mov    DWORD PTR [rdx+0x84],esi
+  21431e:	44 89 82 88 00 00 00 	mov    DWORD PTR [rdx+0x88],r8d
+  214325:	89 aa 8c 00 00 00    	mov    DWORD PTR [rdx+0x8c],ebp
+  21432b:	89 c1                	mov    ecx,eax
+  21432d:	0f a4 f1 11          	shld   ecx,esi,0x11
+  214331:	44 0f a4 c6 11       	shld   esi,r8d,0x11
+  214336:	41 0f a4 e8 11       	shld   r8d,ebp,0x11
+  21433b:	0f a4 c5 11          	shld   ebp,eax,0x11
+  21433f:	89 8a 90 00 00 00    	mov    DWORD PTR [rdx+0x90],ecx
+  214345:	89 b2 94 00 00 00    	mov    DWORD PTR [rdx+0x94],esi
+  21434b:	44 89 82 98 00 00 00 	mov    DWORD PTR [rdx+0x98],r8d
+  214352:	89 c8                	mov    eax,ecx
+  214354:	0f a4 f0 11          	shld   eax,esi,0x11
+  214358:	44 0f a4 c6 11       	shld   esi,r8d,0x11
+  21435d:	89 f3                	mov    ebx,esi
+  21435f:	41 0f a4 e8 11       	shld   r8d,ebp,0x11
+  214364:	89 aa 9c 00 00 00    	mov    DWORD PTR [rdx+0x9c],ebp
+  21436a:	0f a4 cd 11          	shld   ebp,ecx,0x11
+  21436e:	be 03 00 00 00       	mov    esi,0x3
+  214373:	bf bc 00 00 00       	mov    edi,0xbc
+  214378:	41 b9 b8 00 00 00    	mov    r9d,0xb8
+  21437e:	b9 b4 00 00 00       	mov    ecx,0xb4
+  214383:	41 ba b0 00 00 00    	mov    r10d,0xb0
+  214389:	41 89 eb             	mov    r11d,ebp
+  21438c:	e9 da 03 00 00       	jmp    21476b <Camellia_set_key+0x96b>
+  214391:	8b 72 20             	mov    esi,DWORD PTR [rdx+0x20]
+  214394:	89 74 24 ec          	mov    DWORD PTR [rsp-0x14],esi
+  214398:	44 31 fe             	xor    esi,r15d
+  21439b:	89 f0                	mov    eax,esi
+  21439d:	35 fa 27 e5 10       	xor    eax,0x10e527fa
+  2143a2:	44 89 7c 24 f8       	mov    DWORD PTR [rsp-0x8],r15d
+  2143a7:	0f b6 cc             	movzx  ecx,ah
+  2143aa:	45 8b 8c 8d 00 0c 00 	mov    r9d,DWORD PTR [r13+rcx*4+0xc00]
+  2143b1:	00 
+  2143b2:	0f b6 c8             	movzx  ecx,al
+  2143b5:	45 33 8c 8d 00 04 00 	xor    r9d,DWORD PTR [r13+rcx*4+0x400]
+  2143bc:	00 
+  2143bd:	89 c1                	mov    ecx,eax
+  2143bf:	c1 e9 0e             	shr    ecx,0xe
+  2143c2:	81 e1 fc 03 00 00    	and    ecx,0x3fc
+  2143c8:	46 33 8c 29 00 08 00 	xor    r9d,DWORD PTR [rcx+r13*1+0x800]
+  2143cf:	00 
+  2143d0:	c1 e8 18             	shr    eax,0x18
+  2143d3:	45 33 4c 85 00       	xor    r9d,DWORD PTR [r13+rax*4+0x0]
+  2143d8:	8b 42 24             	mov    eax,DWORD PTR [rdx+0x24]
+  2143db:	89 c1                	mov    ecx,eax
+  2143dd:	44 31 e1             	xor    ecx,r12d
+  2143e0:	89 4c 24 e8          	mov    DWORD PTR [rsp-0x18],ecx
+  2143e4:	81 f1 1d 2d 68 de    	xor    ecx,0xde682d1d
+  2143ea:	0f b6 dd             	movzx  ebx,ch
+  2143ed:	45 8b 94 9d 00 04 00 	mov    r10d,DWORD PTR [r13+rbx*4+0x400]
+  2143f4:	00 
+  2143f5:	44 89 5c 24 fc       	mov    DWORD PTR [rsp-0x4],r11d
+  2143fa:	44 0f b6 d9          	movzx  r11d,cl
+  2143fe:	47 33 54 9d 00       	xor    r10d,DWORD PTR [r13+r11*4+0x0]
+  214403:	41 89 cb             	mov    r11d,ecx
+  214406:	41 c1 eb 0e          	shr    r11d,0xe
+  21440a:	41 81 e3 fc 03 00 00 	and    r11d,0x3fc
+  214411:	47 33 94 2b 00 0c 00 	xor    r10d,DWORD PTR [r11+r13*1+0xc00]
+  214418:	00 
+  214419:	c1 e9 18             	shr    ecx,0x18
+  21441c:	45 33 94 8d 00 08 00 	xor    r10d,DWORD PTR [r13+rcx*4+0x800]
+  214423:	00 
+  214424:	45 31 ca             	xor    r10d,r9d
+  214427:	41 c1 c1 18          	rol    r9d,0x18
+  21442b:	44 8b 5a 2c          	mov    r11d,DWORD PTR [rdx+0x2c]
+  21442f:	44 89 44 24 f4       	mov    DWORD PTR [rsp-0xc],r8d
+  214434:	41 89 f8             	mov    r8d,edi
+  214437:	45 31 d8             	xor    r8d,r11d
+  21443a:	45 31 c8             	xor    r8d,r9d
+  21443d:	44 8b 4a 28          	mov    r9d,DWORD PTR [rdx+0x28]
+  214441:	89 6c 24 f0          	mov    DWORD PTR [rsp-0x10],ebp
+  214445:	44 89 cd             	mov    ebp,r9d
+  214448:	44 31 f5             	xor    ebp,r14d
+  21444b:	44 31 d5             	xor    ebp,r10d
+  21444e:	89 e9                	mov    ecx,ebp
+  214450:	81 f1 c2 88 56 b0    	xor    ecx,0xb05688c2
+  214456:	0f b6 dd             	movzx  ebx,ch
+  214459:	45 8b bc 9d 00 0c 00 	mov    r15d,DWORD PTR [r13+rbx*4+0xc00]
+  214460:	00 
+  214461:	0f b6 d9             	movzx  ebx,cl
+  214464:	45 33 bc 9d 00 04 00 	xor    r15d,DWORD PTR [r13+rbx*4+0x400]
+  21446b:	00 
+  21446c:	89 cb                	mov    ebx,ecx
+  21446e:	c1 eb 0e             	shr    ebx,0xe
+  214471:	81 e3 fc 03 00 00    	and    ebx,0x3fc
+  214477:	46 33 bc 2b 00 08 00 	xor    r15d,DWORD PTR [rbx+r13*1+0x800]
+  21447e:	00 
+  21447f:	45 31 d0             	xor    r8d,r10d
+  214482:	c1 e9 18             	shr    ecx,0x18
+  214485:	45 33 7c 8d 00       	xor    r15d,DWORD PTR [r13+rcx*4+0x0]
+  21448a:	44 89 c1             	mov    ecx,r8d
+  21448d:	81 f1 fd c1 e6 b3    	xor    ecx,0xb3e6c1fd
+  214493:	0f b6 dd             	movzx  ebx,ch
+  214496:	45 8b 94 9d 00 04 00 	mov    r10d,DWORD PTR [r13+rbx*4+0x400]
+  21449d:	00 
+  21449e:	0f b6 d9             	movzx  ebx,cl
+  2144a1:	45 33 54 9d 00       	xor    r10d,DWORD PTR [r13+rbx*4+0x0]
+  2144a6:	89 cb                	mov    ebx,ecx
+  2144a8:	c1 eb 0e             	shr    ebx,0xe
+  2144ab:	81 e3 fc 03 00 00    	and    ebx,0x3fc
+  2144b1:	46 33 94 2b 00 0c 00 	xor    r10d,DWORD PTR [rbx+r13*1+0xc00]
+  2144b8:	00 
+  2144b9:	c1 e9 18             	shr    ecx,0x18
+  2144bc:	45 33 94 8d 00 08 00 	xor    r10d,DWORD PTR [r13+rcx*4+0x800]
+  2144c3:	00 
+  2144c4:	8b 4c 24 ec          	mov    ecx,DWORD PTR [rsp-0x14]
+  2144c8:	41 89 cd             	mov    r13d,ecx
+  2144cb:	41 0f a4 c5 0f       	shld   r13d,eax,0xf
+  2144d0:	44 0f a4 c8 0f       	shld   eax,r9d,0xf
+  2144d5:	45 0f a4 d9 0f       	shld   r9d,r11d,0xf
+  2144da:	41 0f a4 cb 0f       	shld   r11d,ecx,0xf
+  2144df:	45 31 fa             	xor    r10d,r15d
+  2144e2:	41 c1 c7 18          	rol    r15d,0x18
+  2144e6:	44 33 7c 24 e8       	xor    r15d,DWORD PTR [rsp-0x18]
+  2144eb:	44 31 d6             	xor    esi,r10d
+  2144ee:	45 31 fa             	xor    r10d,r15d
+  2144f1:	89 72 10             	mov    DWORD PTR [rdx+0x10],esi
+  2144f4:	44 89 52 14          	mov    DWORD PTR [rdx+0x14],r10d
+  2144f8:	89 6a 18             	mov    DWORD PTR [rdx+0x18],ebp
+  2144fb:	89 f1                	mov    ecx,esi
+  2144fd:	44 0f a4 d1 1e       	shld   ecx,r10d,0x1e
+  214502:	41 0f a4 ea 1e       	shld   r10d,ebp,0x1e
+  214507:	44 0f a4 c5 1e       	shld   ebp,r8d,0x1e
+  21450c:	44 89 42 1c          	mov    DWORD PTR [rdx+0x1c],r8d
+  214510:	44 0f ac c6 02       	shrd   esi,r8d,0x2
+  214515:	89 4a 50             	mov    DWORD PTR [rdx+0x50],ecx
+  214518:	44 89 52 54          	mov    DWORD PTR [rdx+0x54],r10d
+  21451c:	89 6a 58             	mov    DWORD PTR [rdx+0x58],ebp
+  21451f:	89 72 5c             	mov    DWORD PTR [rdx+0x5c],esi
+  214522:	41 89 c8             	mov    r8d,ecx
+  214525:	45 0f a4 d0 1e       	shld   r8d,r10d,0x1e
+  21452a:	41 0f a4 ea 1e       	shld   r10d,ebp,0x1e
+  21452f:	0f a4 f5 1e          	shld   ebp,esi,0x1e
+  214533:	0f a4 ce 1e          	shld   esi,ecx,0x1e
+  214537:	44 89 82 a0 00 00 00 	mov    DWORD PTR [rdx+0xa0],r8d
+  21453e:	44 89 92 a4 00 00 00 	mov    DWORD PTR [rdx+0xa4],r10d
+  214545:	89 aa a8 00 00 00    	mov    DWORD PTR [rdx+0xa8],ebp
+  21454b:	89 b2 ac 00 00 00    	mov    DWORD PTR [rdx+0xac],esi
+  214551:	44 89 d1             	mov    ecx,r10d
+  214554:	0f a4 e9 13          	shld   ecx,ebp,0x13
+  214558:	0f a4 f5 13          	shld   ebp,esi,0x13
+  21455c:	44 0f a4 c6 13       	shld   esi,r8d,0x13
+  214561:	45 0f ac c2 0d       	shrd   r10d,r8d,0xd
+  214566:	89 8a 00 01 00 00    	mov    DWORD PTR [rdx+0x100],ecx
+  21456c:	89 aa 04 01 00 00    	mov    DWORD PTR [rdx+0x104],ebp
+  214572:	89 b2 08 01 00 00    	mov    DWORD PTR [rdx+0x108],esi
+  214578:	44 89 92 0c 01 00 00 	mov    DWORD PTR [rdx+0x10c],r10d
+  21457f:	44 89 6a 20          	mov    DWORD PTR [rdx+0x20],r13d
+  214583:	89 42 24             	mov    DWORD PTR [rdx+0x24],eax
+  214586:	44 89 4a 28          	mov    DWORD PTR [rdx+0x28],r9d
+  21458a:	44 89 e9             	mov    ecx,r13d
+  21458d:	0f a4 c1 0f          	shld   ecx,eax,0xf
+  214591:	44 0f a4 c8 0f       	shld   eax,r9d,0xf
+  214596:	45 0f a4 d9 0f       	shld   r9d,r11d,0xf
+  21459b:	44 89 5a 2c          	mov    DWORD PTR [rdx+0x2c],r11d
+  21459f:	45 0f a4 eb 0f       	shld   r11d,r13d,0xf
+  2145a4:	89 4a 40             	mov    DWORD PTR [rdx+0x40],ecx
+  2145a7:	89 42 44             	mov    DWORD PTR [rdx+0x44],eax
+  2145aa:	44 89 4a 48          	mov    DWORD PTR [rdx+0x48],r9d
+  2145ae:	44 89 5a 4c          	mov    DWORD PTR [rdx+0x4c],r11d
+  2145b2:	89 ce                	mov    esi,ecx
+  2145b4:	0f a4 c6 1e          	shld   esi,eax,0x1e
+  2145b8:	44 0f a4 c8 1e       	shld   eax,r9d,0x1e
+  2145bd:	45 0f a4 d9 1e       	shld   r9d,r11d,0x1e
+  2145c2:	41 0f a4 cb 1e       	shld   r11d,ecx,0x1e
+  2145c7:	89 b2 90 00 00 00    	mov    DWORD PTR [rdx+0x90],esi
+  2145cd:	89 82 94 00 00 00    	mov    DWORD PTR [rdx+0x94],eax
+  2145d3:	44 89 8a 98 00 00 00 	mov    DWORD PTR [rdx+0x98],r9d
+  2145da:	44 89 9a 9c 00 00 00 	mov    DWORD PTR [rdx+0x9c],r11d
+  2145e1:	89 c1                	mov    ecx,eax
+  2145e3:	44 0f a4 c9 02       	shld   ecx,r9d,0x2
+  2145e8:	45 0f a4 d9 02       	shld   r9d,r11d,0x2
+  2145ed:	41 0f a4 f3 02       	shld   r11d,esi,0x2
+  2145f2:	0f ac f0 1e          	shrd   eax,esi,0x1e
+  2145f6:	89 8a d0 00 00 00    	mov    DWORD PTR [rdx+0xd0],ecx
+  2145fc:	44 89 8a d4 00 00 00 	mov    DWORD PTR [rdx+0xd4],r9d
+  214603:	44 89 9a d8 00 00 00 	mov    DWORD PTR [rdx+0xd8],r11d
+  21460a:	8b 74 24 f8          	mov    esi,DWORD PTR [rsp-0x8]
+  21460e:	89 f1                	mov    ecx,esi
+  214610:	44 0f a4 e1 0f       	shld   ecx,r12d,0xf
+  214615:	45 0f a4 f4 0f       	shld   r12d,r14d,0xf
+  21461a:	41 0f a4 fe 0f       	shld   r14d,edi,0xf
+  21461f:	89 82 dc 00 00 00    	mov    DWORD PTR [rdx+0xdc],eax
+  214625:	0f a4 f7 0f          	shld   edi,esi,0xf
+  214629:	89 4a 30             	mov    DWORD PTR [rdx+0x30],ecx
+  21462c:	44 89 62 34          	mov    DWORD PTR [rdx+0x34],r12d
+  214630:	44 89 72 38          	mov    DWORD PTR [rdx+0x38],r14d
+  214634:	89 7a 3c             	mov    DWORD PTR [rdx+0x3c],edi
+  214637:	89 c8                	mov    eax,ecx
+  214639:	44 0f a4 e0 1e       	shld   eax,r12d,0x1e
+  21463e:	45 0f a4 f4 1e       	shld   r12d,r14d,0x1e
+  214643:	41 0f a4 fe 1e       	shld   r14d,edi,0x1e
+  214648:	0f a4 cf 1e          	shld   edi,ecx,0x1e
+  21464c:	89 42 70             	mov    DWORD PTR [rdx+0x70],eax
+  21464f:	44 89 62 74          	mov    DWORD PTR [rdx+0x74],r12d
+  214653:	44 89 72 78          	mov    DWORD PTR [rdx+0x78],r14d
+  214657:	89 7a 7c             	mov    DWORD PTR [rdx+0x7c],edi
+  21465a:	44 89 a2 c0 00 00 00 	mov    DWORD PTR [rdx+0xc0],r12d
+  214661:	44 89 b2 c4 00 00 00 	mov    DWORD PTR [rdx+0xc4],r14d
+  214668:	89 ba c8 00 00 00    	mov    DWORD PTR [rdx+0xc8],edi
+  21466e:	89 82 cc 00 00 00    	mov    DWORD PTR [rdx+0xcc],eax
+  214674:	44 89 e1             	mov    ecx,r12d
+  214677:	44 0f a4 f1 11       	shld   ecx,r14d,0x11
+  21467c:	41 0f a4 fe 11       	shld   r14d,edi,0x11
+  214681:	0f a4 c7 11          	shld   edi,eax,0x11
+  214685:	41 0f ac c4 0f       	shrd   r12d,eax,0xf
+  21468a:	89 8a e0 00 00 00    	mov    DWORD PTR [rdx+0xe0],ecx
+  214690:	44 89 b2 e4 00 00 00 	mov    DWORD PTR [rdx+0xe4],r14d
+  214697:	89 ba e8 00 00 00    	mov    DWORD PTR [rdx+0xe8],edi
+  21469d:	44 89 a2 ec 00 00 00 	mov    DWORD PTR [rdx+0xec],r12d
+  2146a4:	8b 44 24 dc          	mov    eax,DWORD PTR [rsp-0x24]
+  2146a8:	8b 4c 24 d4          	mov    ecx,DWORD PTR [rsp-0x2c]
+  2146ac:	0f a4 c1 0d          	shld   ecx,eax,0xd
+  2146b0:	8b 44 24 d8          	mov    eax,DWORD PTR [rsp-0x28]
+  2146b4:	8b 74 24 f4          	mov    esi,DWORD PTR [rsp-0xc]
+  2146b8:	0f a4 c6 0d          	shld   esi,eax,0xd
+  2146bc:	8b 44 24 e4          	mov    eax,DWORD PTR [rsp-0x1c]
+  2146c0:	8b 5c 24 f0          	mov    ebx,DWORD PTR [rsp-0x10]
+  2146c4:	0f a4 c3 0d          	shld   ebx,eax,0xd
+  2146c8:	8b 44 24 e0          	mov    eax,DWORD PTR [rsp-0x20]
+  2146cc:	8b 6c 24 fc          	mov    ebp,DWORD PTR [rsp-0x4]
+  2146d0:	0f a4 c5 0d          	shld   ebp,eax,0xd
+  2146d4:	89 4a 60             	mov    DWORD PTR [rdx+0x60],ecx
+  2146d7:	89 72 64             	mov    DWORD PTR [rdx+0x64],esi
+  2146da:	89 5a 68             	mov    DWORD PTR [rdx+0x68],ebx
+  2146dd:	89 c8                	mov    eax,ecx
+  2146df:	0f a4 f0 0f          	shld   eax,esi,0xf
+  2146e3:	0f a4 de 0f          	shld   esi,ebx,0xf
+  2146e7:	0f a4 eb 0f          	shld   ebx,ebp,0xf
+  2146eb:	89 6a 6c             	mov    DWORD PTR [rdx+0x6c],ebp
+  2146ee:	0f a4 cd 0f          	shld   ebp,ecx,0xf
+  2146f2:	89 82 80 00 00 00    	mov    DWORD PTR [rdx+0x80],eax
+  2146f8:	89 b2 84 00 00 00    	mov    DWORD PTR [rdx+0x84],esi
+  2146fe:	89 9a 88 00 00 00    	mov    DWORD PTR [rdx+0x88],ebx
+  214704:	89 aa 8c 00 00 00    	mov    DWORD PTR [rdx+0x8c],ebp
+  21470a:	89 c1                	mov    ecx,eax
+  21470c:	0f a4 f1 11          	shld   ecx,esi,0x11
+  214710:	0f a4 de 11          	shld   esi,ebx,0x11
+  214714:	0f a4 eb 11          	shld   ebx,ebp,0x11
+  214718:	0f a4 c5 11          	shld   ebp,eax,0x11
+  21471c:	89 8a b0 00 00 00    	mov    DWORD PTR [rdx+0xb0],ecx
+  214722:	89 b2 b4 00 00 00    	mov    DWORD PTR [rdx+0xb4],esi
+  214728:	89 9a b8 00 00 00    	mov    DWORD PTR [rdx+0xb8],ebx
+  21472e:	89 aa bc 00 00 00    	mov    DWORD PTR [rdx+0xbc],ebp
+  214734:	89 f0                	mov    eax,esi
+  214736:	41 89 f0             	mov    r8d,esi
+  214739:	0f a4 d8 02          	shld   eax,ebx,0x2
+  21473d:	0f a4 eb 02          	shld   ebx,ebp,0x2
+  214741:	0f a4 cd 02          	shld   ebp,ecx,0x2
+  214745:	41 0f ac c8 1e       	shrd   r8d,ecx,0x1e
+  21474a:	be 04 00 00 00       	mov    esi,0x4
+  21474f:	bf fc 00 00 00       	mov    edi,0xfc
+  214754:	41 b9 f8 00 00 00    	mov    r9d,0xf8
+  21475a:	b9 f4 00 00 00       	mov    ecx,0xf4
+  21475f:	41 ba f0 00 00 00    	mov    r10d,0xf0
+  214765:	45 89 c3             	mov    r11d,r8d
+  214768:	41 89 e8             	mov    r8d,ebp
+  21476b:	42 89 04 12          	mov    DWORD PTR [rdx+r10*1],eax
+  21476f:	89 1c 0a             	mov    DWORD PTR [rdx+rcx*1],ebx
+  214772:	46 89 04 0a          	mov    DWORD PTR [rdx+r9*1],r8d
+  214776:	44 89 1c 3a          	mov    DWORD PTR [rdx+rdi*1],r11d
+  21477a:	89 b2 10 01 00 00    	mov    DWORD PTR [rdx+0x110],esi
+  214780:	31 c0                	xor    eax,eax
+  214782:	5b                   	pop    rbx
+  214783:	41 5c                	pop    r12
+  214785:	41 5d                	pop    r13
+  214787:	41 5e                	pop    r14
+  214789:	41 5f                	pop    r15
+  21478b:	5d                   	pop    rbp
+  21478c:	c3                   	ret
+
+### openssl_rs::aria::ossl_aria_encrypt [aria data path]  0x49f610..0x49fb65
+
+court/tmp/pfp68/final/libcrypto.so.3:     file format elf64-x86-64
+
+
+Disassembly of section .text:
+
+000000000049f610 <_RNvNtCsfBoMNNx3tZr_10openssl_rs4aria17ossl_aria_encrypt>:
+  49f610:	55                   	push   rbp
+  49f611:	41 57                	push   r15
+  49f613:	41 56                	push   r14
+  49f615:	41 55                	push   r13
+  49f617:	41 54                	push   r12
+  49f619:	53                   	push   rbx
+  49f61a:	48 83 ec 28          	sub    rsp,0x28
+  49f61e:	48 85 ff             	test   rdi,rdi
+  49f621:	0f 94 c0             	sete   al
+  49f624:	48 85 f6             	test   rsi,rsi
+  49f627:	0f 94 c1             	sete   cl
+  49f62a:	08 c1                	or     cl,al
+  49f62c:	48 85 d2             	test   rdx,rdx
+  49f62f:	0f 94 c0             	sete   al
+  49f632:	08 c8                	or     al,cl
+  49f634:	0f 85 0f 05 00 00    	jne    49fb49 <_RNvNtCsfBoMNNx3tZr_10openssl_rs4aria17ossl_aria_encrypt+0x539>
+  49f63a:	44 8b ba 10 01 00 00 	mov    r15d,DWORD PTR [rdx+0x110]
+  49f641:	49 83 ff 10          	cmp    r15,0x10
+  49f645:	0f 87 fe 04 00 00    	ja     49fb49 <_RNvNtCsfBoMNNx3tZr_10openssl_rs4aria17ossl_aria_encrypt+0x539>
+  49f64b:	b8 00 50 01 00       	mov    eax,0x15000
+  49f650:	44 0f a3 f8          	bt     eax,r15d
+  49f654:	0f 83 ef 04 00 00    	jae    49fb49 <_RNvNtCsfBoMNNx3tZr_10openssl_rs4aria17ossl_aria_encrypt+0x539>
+  49f65a:	48 89 74 24 20       	mov    QWORD PTR [rsp+0x20],rsi
+  49f65f:	8b 1f                	mov    ebx,DWORD PTR [rdi]
+  49f661:	8b 4f 04             	mov    ecx,DWORD PTR [rdi+0x4]
+  49f664:	0f cb                	bswap  ebx
+  49f666:	0f c9                	bswap  ecx
+  49f668:	8b 47 08             	mov    eax,DWORD PTR [rdi+0x8]
+  49f66b:	0f c8                	bswap  eax
+  49f66d:	8b 6f 0c             	mov    ebp,DWORD PTR [rdi+0xc]
+  49f670:	0f cd                	bswap  ebp
+  49f672:	33 1a                	xor    ebx,DWORD PTR [rdx]
+  49f674:	33 4a 04             	xor    ecx,DWORD PTR [rdx+0x4]
+  49f677:	33 42 08             	xor    eax,DWORD PTR [rdx+0x8]
+  49f67a:	33 6a 0c             	xor    ebp,DWORD PTR [rdx+0xc]
+  49f67d:	41 89 d8             	mov    r8d,ebx
+  49f680:	0f b6 f7             	movzx  esi,bh
+  49f683:	41 89 d9             	mov    r9d,ebx
+  49f686:	41 c1 e9 18          	shr    r9d,0x18
+  49f68a:	4c 8d 2d 57 76 22 00 	lea    r13,[rip+0x227657]        # 6c6ce8 <_RNvNtCsfBoMNNx3tZr_10openssl_rs4aria2S1>
+  49f691:	41 c1 e8 0e          	shr    r8d,0xe
+  49f695:	41 81 e0 fc 03 00 00 	and    r8d,0x3fc
+  49f69c:	48 8d 3d 45 7a 22 00 	lea    rdi,[rip+0x227a45]        # 6c70e8 <_RNvNtCsfBoMNNx3tZr_10openssl_rs4aria2S2>
+  49f6a3:	45 8b 14 38          	mov    r10d,DWORD PTR [r8+rdi*1]
+  49f6a7:	4c 8d 05 3a 7e 22 00 	lea    r8,[rip+0x227e3a]        # 6c74e8 <_RNvNtCsfBoMNNx3tZr_10openssl_rs4aria2X1>
+  49f6ae:	47 33 54 8d 00       	xor    r10d,DWORD PTR [r13+r9*4+0x0]
+  49f6b3:	45 33 14 b0          	xor    r10d,DWORD PTR [r8+rsi*4]
+  49f6b7:	0f b6 f3             	movzx  esi,bl
+  49f6ba:	4c 8d 0d 27 82 22 00 	lea    r9,[rip+0x228227]        # 6c78e8 <_RNvNtCsfBoMNNx3tZr_10openssl_rs4aria2X2>
+  49f6c1:	45 33 14 b1          	xor    r10d,DWORD PTR [r9+rsi*4]
+  49f6c5:	89 ce                	mov    esi,ecx
+  49f6c7:	0f b6 dd             	movzx  ebx,ch
+  49f6ca:	44 0f b6 d9          	movzx  r11d,cl
+  49f6ce:	41 89 ce             	mov    r14d,ecx
+  49f6d1:	41 c1 ee 18          	shr    r14d,0x18
+  49f6d5:	c1 ee 0e             	shr    esi,0xe
+  49f6d8:	81 e6 fc 03 00 00    	and    esi,0x3fc
+  49f6de:	8b 0c 3e             	mov    ecx,DWORD PTR [rsi+rdi*1]
+  49f6e1:	43 33 4c b5 00       	xor    ecx,DWORD PTR [r13+r14*4+0x0]
+  49f6e6:	41 33 0c 98          	xor    ecx,DWORD PTR [r8+rbx*4]
+  49f6ea:	43 33 0c 99          	xor    ecx,DWORD PTR [r9+r11*4]
+  49f6ee:	89 c6                	mov    esi,eax
+  49f6f0:	0f b6 dc             	movzx  ebx,ah
+  49f6f3:	44 0f b6 f0          	movzx  r14d,al
+  49f6f7:	c1 e8 18             	shr    eax,0x18
+  49f6fa:	c1 ee 0e             	shr    esi,0xe
+  49f6fd:	81 e6 fc 03 00 00    	and    esi,0x3fc
+  49f703:	44 8b 1c 3e          	mov    r11d,DWORD PTR [rsi+rdi*1]
+  49f707:	45 33 5c 85 00       	xor    r11d,DWORD PTR [r13+rax*4+0x0]
+  49f70c:	45 33 1c 98          	xor    r11d,DWORD PTR [r8+rbx*4]
+  49f710:	47 33 1c b1          	xor    r11d,DWORD PTR [r9+r14*4]
+  49f714:	89 eb                	mov    ebx,ebp
+  49f716:	89 e8                	mov    eax,ebp
+  49f718:	0f b6 f7             	movzx  esi,bh
+  49f71b:	40 0f b6 dd          	movzx  ebx,bpl
+  49f71f:	41 89 ee             	mov    r14d,ebp
+  49f722:	41 c1 ee 18          	shr    r14d,0x18
+  49f726:	c1 e8 0e             	shr    eax,0xe
+  49f729:	25 fc 03 00 00       	and    eax,0x3fc
+  49f72e:	8b 04 38             	mov    eax,DWORD PTR [rax+rdi*1]
+  49f731:	43 33 44 b5 00       	xor    eax,DWORD PTR [r13+r14*4+0x0]
+  49f736:	41 33 04 b0          	xor    eax,DWORD PTR [r8+rsi*4]
+  49f73a:	41 33 04 99          	xor    eax,DWORD PTR [r9+rbx*4]
+  49f73e:	44 31 d9             	xor    ecx,r11d
+  49f741:	41 31 c3             	xor    r11d,eax
+  49f744:	31 c8                	xor    eax,ecx
+  49f746:	44 31 d1             	xor    ecx,r10d
+  49f749:	44 89 dd             	mov    ebp,r11d
+  49f74c:	31 cd                	xor    ebp,ecx
+  49f74e:	45 31 d3             	xor    r11d,r10d
+  49f751:	41 0f cb             	bswap  r11d
+  49f754:	41 c1 cb 10          	ror    r11d,0x10
+  49f758:	c1 c5 10             	rol    ebp,0x10
+  49f75b:	0f c8                	bswap  eax
+  49f75d:	41 31 eb             	xor    r11d,ebp
+  49f760:	31 c5                	xor    ebp,eax
+  49f762:	33 42 1c             	xor    eax,DWORD PTR [rdx+0x1c]
+  49f765:	44 31 d8             	xor    eax,r11d
+  49f768:	41 31 cb             	xor    r11d,ecx
+  49f76b:	33 4a 14             	xor    ecx,DWORD PTR [rdx+0x14]
+  49f76e:	31 e9                	xor    ecx,ebp
+  49f770:	33 6a 18             	xor    ebp,DWORD PTR [rdx+0x18]
+  49f773:	8b 5a 10             	mov    ebx,DWORD PTR [rdx+0x10]
+  49f776:	44 31 db             	xor    ebx,r11d
+  49f779:	44 31 dd             	xor    ebp,r11d
+  49f77c:	4c 89 7c 24 10       	mov    QWORD PTR [rsp+0x10],r15
+  49f781:	45 89 fa             	mov    r10d,r15d
+  49f784:	41 f7 da             	neg    r10d
+  49f787:	49 8d 72 01          	lea    rsi,[r10+0x1]
+  49f78b:	48 89 74 24 08       	mov    QWORD PTR [rsp+0x8],rsi
+  49f790:	49 83 c2 02          	add    r10,0x2
+  49f794:	48 89 54 24 18       	mov    QWORD PTR [rsp+0x18],rdx
+  49f799:	4c 8d 72 3c          	lea    r14,[rdx+0x3c]
+  49f79d:	89 ea                	mov    edx,ebp
+  49f79f:	45 31 ff             	xor    r15d,r15d
+  49f7a2:	66 66 66 66 66 2e 0f 	data16 data16 data16 data16 cs nop WORD PTR [rax+rax*1+0x0]
+  49f7a9:	1f 84 00 00 00 00 00 
+  49f7b0:	45 39 fa             	cmp    r10d,r15d
+  49f7b3:	0f 84 de 01 00 00    	je     49f997 <_RNvNtCsfBoMNNx3tZr_10openssl_rs4aria17ossl_aria_encrypt+0x387>
+  49f7b9:	49 83 ff 04          	cmp    r15,0x4
+  49f7bd:	0f 84 95 03 00 00    	je     49fb58 <_RNvNtCsfBoMNNx3tZr_10openssl_rs4aria17ossl_aria_encrypt+0x548>
+  49f7c3:	41 89 c3             	mov    r11d,eax
+  49f7c6:	0f b6 ec             	movzx  ebp,ah
+  49f7c9:	0f b6 f0             	movzx  esi,al
+  49f7cc:	c1 e8 0e             	shr    eax,0xe
+  49f7cf:	25 fc 03 00 00       	and    eax,0x3fc
+  49f7d4:	41 c1 eb 18          	shr    r11d,0x18
+  49f7d8:	47 8b 24 98          	mov    r12d,DWORD PTR [r8+r11*4]
+  49f7dc:	46 33 24 08          	xor    r12d,DWORD PTR [rax+r9*1]
+  49f7e0:	45 33 64 ad 00       	xor    r12d,DWORD PTR [r13+rbp*4+0x0]
+  49f7e5:	44 33 24 b7          	xor    r12d,DWORD PTR [rdi+rsi*4]
+  49f7e9:	89 d0                	mov    eax,edx
+  49f7eb:	0f b6 f6             	movzx  esi,dh
+  49f7ee:	0f b6 ea             	movzx  ebp,dl
+  49f7f1:	c1 ea 0e             	shr    edx,0xe
+  49f7f4:	81 e2 fc 03 00 00    	and    edx,0x3fc
+  49f7fa:	c1 e8 18             	shr    eax,0x18
+  49f7fd:	45 8b 1c 80          	mov    r11d,DWORD PTR [r8+rax*4]
+  49f801:	46 33 1c 0a          	xor    r11d,DWORD PTR [rdx+r9*1]
+  49f805:	45 33 5c b5 00       	xor    r11d,DWORD PTR [r13+rsi*4+0x0]
+  49f80a:	44 33 1c af          	xor    r11d,DWORD PTR [rdi+rbp*4]
+  49f80e:	89 c8                	mov    eax,ecx
+  49f810:	0f b6 d5             	movzx  edx,ch
+  49f813:	0f b6 f1             	movzx  esi,cl
+  49f816:	c1 e9 0e             	shr    ecx,0xe
+  49f819:	81 e1 fc 03 00 00    	and    ecx,0x3fc
+  49f81f:	42 8b 2c 09          	mov    ebp,DWORD PTR [rcx+r9*1]
+  49f823:	c1 e8 18             	shr    eax,0x18
+  49f826:	41 33 2c 80          	xor    ebp,DWORD PTR [r8+rax*4]
+  49f82a:	41 33 6c 95 00       	xor    ebp,DWORD PTR [r13+rdx*4+0x0]
+  49f82f:	33 2c b7             	xor    ebp,DWORD PTR [rdi+rsi*4]
+  49f832:	44 31 dd             	xor    ebp,r11d
+  49f835:	89 d8                	mov    eax,ebx
+  49f837:	0f b6 d7             	movzx  edx,bh
+  49f83a:	0f b6 f3             	movzx  esi,bl
+  49f83d:	c1 eb 0e             	shr    ebx,0xe
+  49f840:	81 e3 fc 03 00 00    	and    ebx,0x3fc
+  49f846:	c1 e8 18             	shr    eax,0x18
+  49f849:	41 8b 0c 80          	mov    ecx,DWORD PTR [r8+rax*4]
+  49f84d:	42 33 0c 0b          	xor    ecx,DWORD PTR [rbx+r9*1]
+  49f851:	41 33 4c 95 00       	xor    ecx,DWORD PTR [r13+rdx*4+0x0]
+  49f856:	33 0c b7             	xor    ecx,DWORD PTR [rdi+rsi*4]
+  49f859:	45 31 e3             	xor    r11d,r12d
+  49f85c:	89 c8                	mov    eax,ecx
+  49f85e:	44 31 d8             	xor    eax,r11d
+  49f861:	0f c8                	bswap  eax
+  49f863:	31 e9                	xor    ecx,ebp
+  49f865:	41 31 cb             	xor    r11d,ecx
+  49f868:	44 31 d8             	xor    eax,r11d
+  49f86b:	41 8b 5e f0          	mov    ebx,DWORD PTR [r14-0x10]
+  49f86f:	44 31 e5             	xor    ebp,r12d
+  49f872:	0f cd                	bswap  ebp
+  49f874:	c1 cd 10             	ror    ebp,0x10
+  49f877:	31 c3                	xor    ebx,eax
+  49f879:	31 eb                	xor    ebx,ebp
+  49f87b:	89 da                	mov    edx,ebx
+  49f87d:	89 de                	mov    esi,ebx
+  49f87f:	c1 ee 0e             	shr    esi,0xe
+  49f882:	81 e6 fc 03 00 00    	and    esi,0x3fc
+  49f888:	c1 ea 18             	shr    edx,0x18
+  49f88b:	41 8b 54 95 00       	mov    edx,DWORD PTR [r13+rdx*4+0x0]
+  49f890:	33 14 3e             	xor    edx,DWORD PTR [rsi+rdi*1]
+  49f893:	0f b6 f7             	movzx  esi,bh
+  49f896:	0f b6 db             	movzx  ebx,bl
+  49f899:	41 33 14 b0          	xor    edx,DWORD PTR [r8+rsi*4]
+  49f89d:	41 33 14 99          	xor    edx,DWORD PTR [r9+rbx*4]
+  49f8a1:	c1 c1 10             	rol    ecx,0x10
+  49f8a4:	31 c8                	xor    eax,ecx
+  49f8a6:	41 8b 5e ec          	mov    ebx,DWORD PTR [r14-0x14]
+  49f8aa:	31 c3                	xor    ebx,eax
+  49f8ac:	44 31 dd             	xor    ebp,r11d
+  49f8af:	31 eb                	xor    ebx,ebp
+  49f8b1:	89 de                	mov    esi,ebx
+  49f8b3:	41 89 db             	mov    r11d,ebx
+  49f8b6:	41 c1 eb 0e          	shr    r11d,0xe
+  49f8ba:	41 81 e3 fc 03 00 00 	and    r11d,0x3fc
+  49f8c1:	c1 ee 18             	shr    esi,0x18
+  49f8c4:	45 8b 64 b5 00       	mov    r12d,DWORD PTR [r13+rsi*4+0x0]
+  49f8c9:	45 33 24 3b          	xor    r12d,DWORD PTR [r11+rdi*1]
+  49f8cd:	0f b6 f7             	movzx  esi,bh
+  49f8d0:	45 33 24 b0          	xor    r12d,DWORD PTR [r8+rsi*4]
+  49f8d4:	0f b6 f3             	movzx  esi,bl
+  49f8d7:	45 33 24 b1          	xor    r12d,DWORD PTR [r9+rsi*4]
+  49f8db:	41 33 4e e8          	xor    ecx,DWORD PTR [r14-0x18]
+  49f8df:	31 e9                	xor    ecx,ebp
+  49f8e1:	89 ce                	mov    esi,ecx
+  49f8e3:	41 89 cb             	mov    r11d,ecx
+  49f8e6:	41 c1 eb 0e          	shr    r11d,0xe
+  49f8ea:	41 81 e3 fc 03 00 00 	and    r11d,0x3fc
+  49f8f1:	45 8b 1c 3b          	mov    r11d,DWORD PTR [r11+rdi*1]
+  49f8f5:	c1 ee 18             	shr    esi,0x18
+  49f8f8:	45 33 5c b5 00       	xor    r11d,DWORD PTR [r13+rsi*4+0x0]
+  49f8fd:	0f b6 f5             	movzx  esi,ch
+  49f900:	0f b6 c9             	movzx  ecx,cl
+  49f903:	45 33 1c b0          	xor    r11d,DWORD PTR [r8+rsi*4]
+  49f907:	45 33 1c 89          	xor    r11d,DWORD PTR [r9+rcx*4]
+  49f90b:	41 33 46 e4          	xor    eax,DWORD PTR [r14-0x1c]
+  49f90f:	89 c1                	mov    ecx,eax
+  49f911:	89 c6                	mov    esi,eax
+  49f913:	c1 ee 0e             	shr    esi,0xe
+  49f916:	81 e6 fc 03 00 00    	and    esi,0x3fc
+  49f91c:	c1 e9 18             	shr    ecx,0x18
+  49f91f:	41 8b 4c 8d 00       	mov    ecx,DWORD PTR [r13+rcx*4+0x0]
+  49f924:	33 0c 3e             	xor    ecx,DWORD PTR [rsi+rdi*1]
+  49f927:	0f b6 f4             	movzx  esi,ah
+  49f92a:	41 33 0c b0          	xor    ecx,DWORD PTR [r8+rsi*4]
+  49f92e:	0f b6 c0             	movzx  eax,al
+  49f931:	45 31 e3             	xor    r11d,r12d
+  49f934:	41 33 0c 81          	xor    ecx,DWORD PTR [r9+rax*4]
+  49f938:	89 cb                	mov    ebx,ecx
+  49f93a:	44 31 d9             	xor    ecx,r11d
+  49f93d:	44 89 d8             	mov    eax,r11d
+  49f940:	31 d0                	xor    eax,edx
+  49f942:	0f c8                	bswap  eax
+  49f944:	41 31 d4             	xor    r12d,edx
+  49f947:	44 31 e3             	xor    ebx,r12d
+  49f94a:	0f cb                	bswap  ebx
+  49f94c:	c1 cb 10             	ror    ebx,0x10
+  49f94f:	41 31 cc             	xor    r12d,ecx
+  49f952:	41 c1 c4 10          	rol    r12d,0x10
+  49f956:	44 31 e3             	xor    ebx,r12d
+  49f959:	41 31 c4             	xor    r12d,eax
+  49f95c:	41 33 06             	xor    eax,DWORD PTR [r14]
+  49f95f:	31 d8                	xor    eax,ebx
+  49f961:	31 cb                	xor    ebx,ecx
+  49f963:	41 8b 56 fc          	mov    edx,DWORD PTR [r14-0x4]
+  49f967:	44 31 e2             	xor    edx,r12d
+  49f96a:	31 da                	xor    edx,ebx
+  49f96c:	41 33 4e f8          	xor    ecx,DWORD PTR [r14-0x8]
+  49f970:	41 33 5e f4          	xor    ebx,DWORD PTR [r14-0xc]
+  49f974:	44 31 e1             	xor    ecx,r12d
+  49f977:	49 83 c7 fe          	add    r15,0xfffffffffffffffe
+  49f97b:	49 83 c6 20          	add    r14,0x20
+  49f97f:	44 39 7c 24 08       	cmp    DWORD PTR [rsp+0x8],r15d
+  49f984:	0f 85 26 fe ff ff    	jne    49f7b0 <_RNvNtCsfBoMNNx3tZr_10openssl_rs4aria17ossl_aria_encrypt+0x1a0>
+  49f98a:	48 8d 3d d7 6c 3f 00 	lea    rdi,[rip+0x3f6cd7]        # 896668 <anon.940e565698dcfa264dce3499de65af85.503.llvm.6471542228366918689+0x1e0>
+  49f991:	ff 15 81 d0 43 00    	call   QWORD PTR [rip+0x43d081]        # 8dca18 <_DYNAMIC+0x1718>
+  49f997:	41 89 da             	mov    r10d,ebx
+  49f99a:	41 89 db             	mov    r11d,ebx
+  49f99d:	0f b6 ef             	movzx  ebp,bh
+  49f9a0:	0f b6 f3             	movzx  esi,bl
+  49f9a3:	41 c1 ea 18          	shr    r10d,0x18
+  49f9a7:	47 8b 14 90          	mov    r10d,DWORD PTR [r8+r10*4]
+  49f9ab:	41 c1 eb 0e          	shr    r11d,0xe
+  49f9af:	41 81 e3 fc 03 00 00 	and    r11d,0x3fc
+  49f9b6:	47 8b 1c 0b          	mov    r11d,DWORD PTR [r11+r9*1]
+  49f9ba:	41 8b 5c ad 00       	mov    ebx,DWORD PTR [r13+rbp*4+0x0]
+  49f9bf:	41 c1 e2 18          	shl    r10d,0x18
+  49f9c3:	41 c1 e3 08          	shl    r11d,0x8
+  49f9c7:	41 81 e3 00 00 ff 00 	and    r11d,0xff0000
+  49f9ce:	45 09 d3             	or     r11d,r10d
+  49f9d1:	c1 e3 08             	shl    ebx,0x8
+  49f9d4:	41 89 ce             	mov    r14d,ecx
+  49f9d7:	41 89 cf             	mov    r15d,ecx
+  49f9da:	0f b6 ed             	movzx  ebp,ch
+  49f9dd:	44 0f b6 d1          	movzx  r10d,cl
+  49f9e1:	0f b7 cb             	movzx  ecx,bx
+  49f9e4:	44 09 d9             	or     ecx,r11d
+  49f9e7:	0f b6 34 b7          	movzx  esi,BYTE PTR [rdi+rsi*4]
+  49f9eb:	09 f1                	or     ecx,esi
+  49f9ed:	41 c1 ee 18          	shr    r14d,0x18
+  49f9f1:	43 8b 34 b0          	mov    esi,DWORD PTR [r8+r14*4]
+  49f9f5:	41 c1 ef 0e          	shr    r15d,0xe
+  49f9f9:	41 81 e7 fc 03 00 00 	and    r15d,0x3fc
+  49fa00:	47 8b 1c 0f          	mov    r11d,DWORD PTR [r15+r9*1]
+  49fa04:	41 8b 5c ad 00       	mov    ebx,DWORD PTR [r13+rbp*4+0x0]
+  49fa09:	c1 e6 18             	shl    esi,0x18
+  49fa0c:	41 c1 e3 08          	shl    r11d,0x8
+  49fa10:	41 81 e3 00 00 ff 00 	and    r11d,0xff0000
+  49fa17:	41 09 f3             	or     r11d,esi
+  49fa1a:	c1 e3 08             	shl    ebx,0x8
+  49fa1d:	41 89 d6             	mov    r14d,edx
+  49fa20:	41 89 d7             	mov    r15d,edx
+  49fa23:	0f b6 f6             	movzx  esi,dh
+  49fa26:	0f b6 d2             	movzx  edx,dl
+  49fa29:	48 89 54 24 08       	mov    QWORD PTR [rsp+0x8],rdx
+  49fa2e:	0f b7 d3             	movzx  edx,bx
+  49fa31:	44 09 da             	or     edx,r11d
+  49fa34:	4c 8b 5c 24 10       	mov    r11,QWORD PTR [rsp+0x10]
+  49fa39:	49 c1 e3 04          	shl    r11,0x4
+  49fa3d:	48 8b 6c 24 18       	mov    rbp,QWORD PTR [rsp+0x18]
+  49fa42:	42 33 4c 1d 00       	xor    ecx,DWORD PTR [rbp+r11*1+0x0]
+  49fa47:	46 0f b6 14 97       	movzx  r10d,BYTE PTR [rdi+r10*4]
+  49fa4c:	44 09 d2             	or     edx,r10d
+  49fa4f:	41 c1 ee 18          	shr    r14d,0x18
+  49fa53:	43 8b 1c b0          	mov    ebx,DWORD PTR [r8+r14*4]
+  49fa57:	41 c1 ef 0e          	shr    r15d,0xe
+  49fa5b:	41 81 e7 fc 03 00 00 	and    r15d,0x3fc
+  49fa62:	47 8b 14 0f          	mov    r10d,DWORD PTR [r15+r9*1]
+  49fa66:	41 8b 74 b5 00       	mov    esi,DWORD PTR [r13+rsi*4+0x0]
+  49fa6b:	c1 e3 18             	shl    ebx,0x18
+  49fa6e:	41 c1 e2 08          	shl    r10d,0x8
+  49fa72:	41 81 e2 00 00 ff 00 	and    r10d,0xff0000
+  49fa79:	41 09 da             	or     r10d,ebx
+  49fa7c:	c1 e6 08             	shl    esi,0x8
+  49fa7f:	41 89 c6             	mov    r14d,eax
+  49fa82:	41 89 c7             	mov    r15d,eax
+  49fa85:	0f b6 dc             	movzx  ebx,ah
+  49fa88:	44 0f b6 e0          	movzx  r12d,al
+  49fa8c:	0f b7 c6             	movzx  eax,si
+  49fa8f:	44 09 d0             	or     eax,r10d
+  49fa92:	42 33 54 1d 04       	xor    edx,DWORD PTR [rbp+r11*1+0x4]
+  49fa97:	48 8b 74 24 08       	mov    rsi,QWORD PTR [rsp+0x8]
+  49fa9c:	0f b6 34 b7          	movzx  esi,BYTE PTR [rdi+rsi*4]
+  49faa0:	09 f0                	or     eax,esi
+  49faa2:	42 33 44 1d 08       	xor    eax,DWORD PTR [rbp+r11*1+0x8]
+  49faa7:	41 c1 ee 18          	shr    r14d,0x18
+  49faab:	43 8b 34 b0          	mov    esi,DWORD PTR [r8+r14*4]
+  49faaf:	41 c1 ef 0e          	shr    r15d,0xe
+  49fab3:	41 81 e7 fc 03 00 00 	and    r15d,0x3fc
+  49faba:	47 8b 04 0f          	mov    r8d,DWORD PTR [r15+r9*1]
+  49fabe:	45 8b 4c 9d 00       	mov    r9d,DWORD PTR [r13+rbx*4+0x0]
+  49fac3:	42 0f b6 3c a7       	movzx  edi,BYTE PTR [rdi+r12*4]
+  49fac8:	c1 e6 18             	shl    esi,0x18
+  49facb:	41 c1 e0 08          	shl    r8d,0x8
+  49facf:	41 81 e0 00 00 ff 00 	and    r8d,0xff0000
+  49fad6:	41 09 f0             	or     r8d,esi
+  49fad9:	41 c1 e1 08          	shl    r9d,0x8
+  49fadd:	41 0f b7 d9          	movzx  ebx,r9w
+  49fae1:	44 09 c3             	or     ebx,r8d
+  49fae4:	09 fb                	or     ebx,edi
+  49fae6:	42 33 5c 1d 0c       	xor    ebx,DWORD PTR [rbp+r11*1+0xc]
+  49faeb:	89 ce                	mov    esi,ecx
+  49faed:	c1 ee 18             	shr    esi,0x18
+  49faf0:	48 8b 7c 24 20       	mov    rdi,QWORD PTR [rsp+0x20]
+  49faf5:	40 88 37             	mov    BYTE PTR [rdi],sil
+  49faf8:	89 ce                	mov    esi,ecx
+  49fafa:	c1 ee 10             	shr    esi,0x10
+  49fafd:	40 88 77 01          	mov    BYTE PTR [rdi+0x1],sil
+  49fb01:	88 6f 02             	mov    BYTE PTR [rdi+0x2],ch
+  49fb04:	88 4f 03             	mov    BYTE PTR [rdi+0x3],cl
+  49fb07:	89 d1                	mov    ecx,edx
+  49fb09:	c1 e9 18             	shr    ecx,0x18
+  49fb0c:	88 4f 04             	mov    BYTE PTR [rdi+0x4],cl
+  49fb0f:	89 d1                	mov    ecx,edx
+  49fb11:	c1 e9 10             	shr    ecx,0x10
+  49fb14:	88 4f 05             	mov    BYTE PTR [rdi+0x5],cl
+  49fb17:	88 77 06             	mov    BYTE PTR [rdi+0x6],dh
+  49fb1a:	88 57 07             	mov    BYTE PTR [rdi+0x7],dl
+  49fb1d:	89 c1                	mov    ecx,eax
+  49fb1f:	c1 e9 18             	shr    ecx,0x18
+  49fb22:	88 4f 08             	mov    BYTE PTR [rdi+0x8],cl
+  49fb25:	89 c1                	mov    ecx,eax
+  49fb27:	c1 e9 10             	shr    ecx,0x10
+  49fb2a:	88 4f 09             	mov    BYTE PTR [rdi+0x9],cl
+  49fb2d:	88 67 0a             	mov    BYTE PTR [rdi+0xa],ah
+  49fb30:	88 47 0b             	mov    BYTE PTR [rdi+0xb],al
+  49fb33:	89 d8                	mov    eax,ebx
+  49fb35:	c1 e8 18             	shr    eax,0x18
+  49fb38:	88 47 0c             	mov    BYTE PTR [rdi+0xc],al
+  49fb3b:	89 d8                	mov    eax,ebx
+  49fb3d:	c1 e8 10             	shr    eax,0x10
+  49fb40:	88 47 0d             	mov    BYTE PTR [rdi+0xd],al
+  49fb43:	88 7f 0e             	mov    BYTE PTR [rdi+0xe],bh
+  49fb46:	88 5f 0f             	mov    BYTE PTR [rdi+0xf],bl
+  49fb49:	48 83 c4 28          	add    rsp,0x28
+  49fb4d:	5b                   	pop    rbx
+  49fb4e:	41 5c                	pop    r12
+  49fb50:	41 5d                	pop    r13
+  49fb52:	41 5e                	pop    r14
+  49fb54:	41 5f                	pop    r15
+  49fb56:	5d                   	pop    rbp
+  49fb57:	c3                   	ret
+  49fb58:	48 8d 3d f1 6a 3f 00 	lea    rdi,[rip+0x3f6af1]        # 896650 <anon.940e565698dcfa264dce3499de65af85.503.llvm.6471542228366918689+0x1c8>
+  49fb5f:	ff 15 4b d8 43 00    	call   QWORD PTR [rip+0x43d84b]        # 8dd3b0 <_DYNAMIC+0x20b0>
+
+### openssl_rs::aria::ossl_aria_set_encrypt_key [aria key schedule]  0x49fde0..0x4a093e
+
+court/tmp/pfp68/final/libcrypto.so.3:     file format elf64-x86-64
+
+
+Disassembly of section .text:
+
+000000000049fde0 <_RNvNtCsfBoMNNx3tZr_10openssl_rs4aria25ossl_aria_set_encrypt_key>:
+  49fde0:	55                   	push   rbp
+  49fde1:	41 57                	push   r15
+  49fde3:	41 56                	push   r14
+  49fde5:	41 55                	push   r13
+  49fde7:	41 54                	push   r12
+  49fde9:	53                   	push   rbx
+  49fdea:	48 81 ec 88 00 00 00 	sub    rsp,0x88
+  49fdf1:	b8 ff ff ff ff       	mov    eax,0xffffffff
+  49fdf6:	48 85 ff             	test   rdi,rdi
+  49fdf9:	0f 84 ef 0a 00 00    	je     4a08ee <_RNvNtCsfBoMNNx3tZr_10openssl_rs4aria25ossl_aria_set_encrypt_key+0xb0e>
+  49fdff:	48 85 d2             	test   rdx,rdx
+  49fe02:	0f 84 e6 0a 00 00    	je     4a08ee <_RNvNtCsfBoMNNx3tZr_10openssl_rs4aria25ossl_aria_set_encrypt_key+0xb0e>
+  49fe08:	81 fe 80 00 00 00    	cmp    esi,0x80
+  49fe0e:	74 19                	je     49fe29 <_RNvNtCsfBoMNNx3tZr_10openssl_rs4aria25ossl_aria_set_encrypt_key+0x49>
+  49fe10:	81 fe c0 00 00 00    	cmp    esi,0xc0
+  49fe16:	74 11                	je     49fe29 <_RNvNtCsfBoMNNx3tZr_10openssl_rs4aria25ossl_aria_set_encrypt_key+0x49>
+  49fe18:	b8 fe ff ff ff       	mov    eax,0xfffffffe
+  49fe1d:	81 fe 00 01 00 00    	cmp    esi,0x100
+  49fe23:	0f 85 c5 0a 00 00    	jne    4a08ee <_RNvNtCsfBoMNNx3tZr_10openssl_rs4aria25ossl_aria_set_encrypt_key+0xb0e>
+  49fe29:	8d 86 00 01 00 00    	lea    eax,[rsi+0x100]
+  49fe2f:	c1 e8 05             	shr    eax,0x5
+  49fe32:	48 89 94 24 80 00 00 	mov    QWORD PTR [rsp+0x80],rdx
+  49fe39:	00 
+  49fe3a:	89 82 10 01 00 00    	mov    DWORD PTR [rdx+0x110],eax
+  49fe40:	89 f0                	mov    eax,esi
+  49fe42:	c1 e8 04             	shr    eax,0x4
+  49fe45:	83 e0 0c             	and    eax,0xc
+  49fe48:	89 44 24 08          	mov    DWORD PTR [rsp+0x8],eax
+  49fe4c:	41 89 c1             	mov    r9d,eax
+  49fe4f:	41 83 f1 08          	xor    r9d,0x8
+  49fe53:	0f b6 57 01          	movzx  edx,BYTE PTR [rdi+0x1]
+  49fe57:	44 0f b6 47 02       	movzx  r8d,BYTE PTR [rdi+0x2]
+  49fe5c:	0f b6 0f             	movzx  ecx,BYTE PTR [rdi]
+  49fe5f:	c1 e1 18             	shl    ecx,0x18
+  49fe62:	c1 e2 10             	shl    edx,0x10
+  49fe65:	89 4c 24 20          	mov    DWORD PTR [rsp+0x20],ecx
+  49fe69:	09 ca                	or     edx,ecx
+  49fe6b:	41 c1 e0 08          	shl    r8d,0x8
+  49fe6f:	0f b6 4f 03          	movzx  ecx,BYTE PTR [rdi+0x3]
+  49fe73:	89 4c 24 50          	mov    DWORD PTR [rsp+0x50],ecx
+  49fe77:	41 09 c8             	or     r8d,ecx
+  49fe7a:	89 54 24 74          	mov    DWORD PTR [rsp+0x74],edx
+  49fe7e:	41 09 d0             	or     r8d,edx
+  49fe81:	0f b6 6f 05          	movzx  ebp,BYTE PTR [rdi+0x5]
+  49fe85:	0f b6 5f 06          	movzx  ebx,BYTE PTR [rdi+0x6]
+  49fe89:	4c 8d 35 58 7e 22 00 	lea    r14,[rip+0x227e58]        # 6c7ce8 <_RNvNtCsfBoMNNx3tZr_10openssl_rs4aria6KEY_RC>
+  49fe90:	43 8b 0c 8e          	mov    ecx,DWORD PTR [r14+r9*4]
+  49fe94:	44 89 44 24 18       	mov    DWORD PTR [rsp+0x18],r8d
+  49fe99:	44 31 c1             	xor    ecx,r8d
+  49fe9c:	41 89 cb             	mov    r11d,ecx
+  49fe9f:	0f b6 d5             	movzx  edx,ch
+  49fea2:	44 0f b6 c1          	movzx  r8d,cl
+  49fea6:	41 89 ca             	mov    r10d,ecx
+  49fea9:	41 c1 ea 18          	shr    r10d,0x18
+  49fead:	4c 8d 2d 34 6e 22 00 	lea    r13,[rip+0x226e34]        # 6c6ce8 <_RNvNtCsfBoMNNx3tZr_10openssl_rs4aria2S1>
+  49feb4:	41 c1 eb 0e          	shr    r11d,0xe
+  49feb8:	41 81 e3 fc 03 00 00 	and    r11d,0x3fc
+  49febf:	48 8d 05 22 72 22 00 	lea    rax,[rip+0x227222]        # 6c70e8 <_RNvNtCsfBoMNNx3tZr_10openssl_rs4aria2S2>
+  49fec6:	41 8b 0c 03          	mov    ecx,DWORD PTR [r11+rax*1]
+  49feca:	43 33 4c 95 00       	xor    ecx,DWORD PTR [r13+r10*4+0x0]
+  49fecf:	4c 8d 3d 12 76 22 00 	lea    r15,[rip+0x227612]        # 6c74e8 <_RNvNtCsfBoMNNx3tZr_10openssl_rs4aria2X1>
+  49fed6:	41 33 0c 97          	xor    ecx,DWORD PTR [r15+rdx*4]
+  49feda:	4c 8d 25 07 7a 22 00 	lea    r12,[rip+0x227a07]        # 6c78e8 <_RNvNtCsfBoMNNx3tZr_10openssl_rs4aria2X2>
+  49fee1:	43 33 0c 84          	xor    ecx,DWORD PTR [r12+r8*4]
+  49fee5:	0f b6 57 04          	movzx  edx,BYTE PTR [rdi+0x4]
+  49fee9:	c1 e2 18             	shl    edx,0x18
+  49feec:	c1 e5 10             	shl    ebp,0x10
+  49feef:	89 54 24 6c          	mov    DWORD PTR [rsp+0x6c],edx
+  49fef3:	09 d5                	or     ebp,edx
+  49fef5:	c1 e3 08             	shl    ebx,0x8
+  49fef8:	0f b6 57 07          	movzx  edx,BYTE PTR [rdi+0x7]
+  49fefc:	89 54 24 4c          	mov    DWORD PTR [rsp+0x4c],edx
+  49ff00:	09 d3                	or     ebx,edx
+  49ff02:	89 6c 24 70          	mov    DWORD PTR [rsp+0x70],ebp
+  49ff06:	09 eb                	or     ebx,ebp
+  49ff08:	43 8b 54 8e 04       	mov    edx,DWORD PTR [r14+r9*4+0x4]
+  49ff0d:	89 5c 24 14          	mov    DWORD PTR [rsp+0x14],ebx
+  49ff11:	31 da                	xor    edx,ebx
+  49ff13:	41 89 d2             	mov    r10d,edx
+  49ff16:	41 c1 ea 18          	shr    r10d,0x18
+  49ff1a:	41 89 d0             	mov    r8d,edx
+  49ff1d:	41 c1 e8 0e          	shr    r8d,0xe
+  49ff21:	41 81 e0 fc 03 00 00 	and    r8d,0x3fc
+  49ff28:	45 8b 1c 00          	mov    r11d,DWORD PTR [r8+rax*1]
+  49ff2c:	47 33 5c 95 00       	xor    r11d,DWORD PTR [r13+r10*4+0x0]
+  49ff31:	0f b6 de             	movzx  ebx,dh
+  49ff34:	45 33 1c 9f          	xor    r11d,DWORD PTR [r15+rbx*4]
+  49ff38:	0f b6 d2             	movzx  edx,dl
+  49ff3b:	45 33 1c 94          	xor    r11d,DWORD PTR [r12+rdx*4]
+  49ff3f:	0f b6 57 08          	movzx  edx,BYTE PTR [rdi+0x8]
+  49ff43:	c1 e2 18             	shl    edx,0x18
+  49ff46:	44 0f b6 57 09       	movzx  r10d,BYTE PTR [rdi+0x9]
+  49ff4b:	41 c1 e2 10          	shl    r10d,0x10
+  49ff4f:	89 54 24 68          	mov    DWORD PTR [rsp+0x68],edx
+  49ff53:	41 09 d2             	or     r10d,edx
+  49ff56:	44 0f b6 47 0a       	movzx  r8d,BYTE PTR [rdi+0xa]
+  49ff5b:	41 c1 e0 08          	shl    r8d,0x8
+  49ff5f:	0f b6 57 0b          	movzx  edx,BYTE PTR [rdi+0xb]
+  49ff63:	89 54 24 48          	mov    DWORD PTR [rsp+0x48],edx
+  49ff67:	41 09 d0             	or     r8d,edx
+  49ff6a:	44 89 54 24 60       	mov    DWORD PTR [rsp+0x60],r10d
+  49ff6f:	45 09 d0             	or     r8d,r10d
+  49ff72:	43 8b 54 8e 08       	mov    edx,DWORD PTR [r14+r9*4+0x8]
+  49ff77:	4c 89 f5             	mov    rbp,r14
+  49ff7a:	44 89 44 24 10       	mov    DWORD PTR [rsp+0x10],r8d
+  49ff7f:	44 31 c2             	xor    edx,r8d
+  49ff82:	41 89 d2             	mov    r10d,edx
+  49ff85:	41 c1 ea 18          	shr    r10d,0x18
+  49ff89:	41 89 d0             	mov    r8d,edx
+  49ff8c:	41 c1 e8 0e          	shr    r8d,0xe
+  49ff90:	41 81 e0 fc 03 00 00 	and    r8d,0x3fc
+  49ff97:	45 8b 34 00          	mov    r14d,DWORD PTR [r8+rax*1]
+  49ff9b:	47 33 74 95 00       	xor    r14d,DWORD PTR [r13+r10*4+0x0]
+  49ffa0:	0f b6 de             	movzx  ebx,dh
+  49ffa3:	45 33 34 9f          	xor    r14d,DWORD PTR [r15+rbx*4]
+  49ffa7:	0f b6 d2             	movzx  edx,dl
+  49ffaa:	45 33 34 94          	xor    r14d,DWORD PTR [r12+rdx*4]
+  49ffae:	0f b6 57 0c          	movzx  edx,BYTE PTR [rdi+0xc]
+  49ffb2:	c1 e2 18             	shl    edx,0x18
+  49ffb5:	44 0f b6 57 0d       	movzx  r10d,BYTE PTR [rdi+0xd]
+  49ffba:	41 c1 e2 10          	shl    r10d,0x10
+  49ffbe:	89 54 24 64          	mov    DWORD PTR [rsp+0x64],edx
+  49ffc2:	41 09 d2             	or     r10d,edx
+  49ffc5:	0f b6 57 0e          	movzx  edx,BYTE PTR [rdi+0xe]
+  49ffc9:	c1 e2 08             	shl    edx,0x8
+  49ffcc:	44 0f b6 47 0f       	movzx  r8d,BYTE PTR [rdi+0xf]
+  49ffd1:	44 89 44 24 44       	mov    DWORD PTR [rsp+0x44],r8d
+  49ffd6:	44 09 c2             	or     edx,r8d
+  49ffd9:	44 89 54 24 5c       	mov    DWORD PTR [rsp+0x5c],r10d
+  49ffde:	44 09 d2             	or     edx,r10d
+  49ffe1:	42 8b 5c 8d 0c       	mov    ebx,DWORD PTR [rbp+r9*4+0xc]
+  49ffe6:	89 54 24 28          	mov    DWORD PTR [rsp+0x28],edx
+  49ffea:	31 d3                	xor    ebx,edx
+  49ffec:	41 89 d8             	mov    r8d,ebx
+  49ffef:	41 c1 e8 18          	shr    r8d,0x18
+  49fff3:	89 da                	mov    edx,ebx
+  49fff5:	c1 ea 0e             	shr    edx,0xe
+  49fff8:	81 e2 fc 03 00 00    	and    edx,0x3fc
+  49fffe:	8b 14 02             	mov    edx,DWORD PTR [rdx+rax*1]
+  4a0001:	43 33 54 85 00       	xor    edx,DWORD PTR [r13+r8*4+0x0]
+  4a0006:	0f b6 ef             	movzx  ebp,bh
+  4a0009:	41 33 14 af          	xor    edx,DWORD PTR [r15+rbp*4]
+  4a000d:	44 0f b6 c3          	movzx  r8d,bl
+  4a0011:	43 33 14 84          	xor    edx,DWORD PTR [r12+r8*4]
+  4a0015:	45 31 f3             	xor    r11d,r14d
+  4a0018:	41 31 d6             	xor    r14d,edx
+  4a001b:	44 31 da             	xor    edx,r11d
+  4a001e:	41 31 cb             	xor    r11d,ecx
+  4a0021:	45 89 f7             	mov    r15d,r14d
+  4a0024:	41 31 ce             	xor    r14d,ecx
+  4a0027:	45 31 df             	xor    r15d,r11d
+  4a002a:	41 0f ce             	bswap  r14d
+  4a002d:	41 c1 ce 10          	ror    r14d,0x10
+  4a0031:	41 c1 c7 10          	rol    r15d,0x10
+  4a0035:	0f ca                	bswap  edx
+  4a0037:	45 31 fe             	xor    r14d,r15d
+  4a003a:	41 31 d7             	xor    r15d,edx
+  4a003d:	45 89 f2             	mov    r10d,r14d
+  4a0040:	41 31 d6             	xor    r14d,edx
+  4a0043:	45 31 da             	xor    r10d,r11d
+  4a0046:	44 89 d3             	mov    ebx,r10d
+  4a0049:	44 31 fb             	xor    ebx,r15d
+  4a004c:	45 31 c0             	xor    r8d,r8d
+  4a004f:	81 fe 80 00 00 00    	cmp    esi,0x80
+  4a0055:	76 25                	jbe    4a007c <_RNvNtCsfBoMNNx3tZr_10openssl_rs4aria25ossl_aria_set_encrypt_key+0x29c>
+  4a0057:	8b 6f 10             	mov    ebp,DWORD PTR [rdi+0x10]
+  4a005a:	44 8b 47 14          	mov    r8d,DWORD PTR [rdi+0x14]
+  4a005e:	0f cd                	bswap  ebp
+  4a0060:	41 0f c8             	bswap  r8d
+  4a0063:	81 fe c1 00 00 00    	cmp    esi,0xc1
+  4a0069:	72 13                	jb     4a007e <_RNvNtCsfBoMNNx3tZr_10openssl_rs4aria25ossl_aria_set_encrypt_key+0x29e>
+  4a006b:	8b 4f 18             	mov    ecx,DWORD PTR [rdi+0x18]
+  4a006e:	8b 57 1c             	mov    edx,DWORD PTR [rdi+0x1c]
+  4a0071:	0f c9                	bswap  ecx
+  4a0073:	0f ca                	bswap  edx
+  4a0075:	31 cb                	xor    ebx,ecx
+  4a0077:	41 31 d6             	xor    r14d,edx
+  4a007a:	eb 02                	jmp    4a007e <_RNvNtCsfBoMNNx3tZr_10openssl_rs4aria25ossl_aria_set_encrypt_key+0x29e>
+  4a007c:	31 ed                	xor    ebp,ebp
+  4a007e:	41 8d 49 08          	lea    ecx,[r9+0x8]
+  4a0082:	c1 e9 02             	shr    ecx,0x2
+  4a0085:	83 7c 24 08 04       	cmp    DWORD PTR [rsp+0x8],0x4
+  4a008a:	0f 84 70 08 00 00    	je     4a0900 <_RNvNtCsfBoMNNx3tZr_10openssl_rs4aria25ossl_aria_set_encrypt_key+0xb20>
+  4a0090:	41 8d 79 09          	lea    edi,[r9+0x9]
+  4a0094:	c1 ef 02             	shr    edi,0x2
+  4a0097:	41 83 f9 0b          	cmp    r9d,0xb
+  4a009b:	0f 83 74 08 00 00    	jae    4a0915 <_RNvNtCsfBoMNNx3tZr_10openssl_rs4aria25ossl_aria_set_encrypt_key+0xb35>
+  4a00a1:	89 5c 24 0c          	mov    DWORD PTR [rsp+0xc],ebx
+  4a00a5:	48 89 74 24 78       	mov    QWORD PTR [rsp+0x78],rsi
+  4a00aa:	41 8d 41 0b          	lea    eax,[r9+0xb]
+  4a00ae:	c1 e8 02             	shr    eax,0x2
+  4a00b1:	48 89 44 24 38       	mov    QWORD PTR [rsp+0x38],rax
+  4a00b6:	41 83 f9 09          	cmp    r9d,0x9
+  4a00ba:	0f 83 67 08 00 00    	jae    4a0927 <_RNvNtCsfBoMNNx3tZr_10openssl_rs4aria25ossl_aria_set_encrypt_key+0xb47>
+  4a00c0:	44 31 d5             	xor    ebp,r10d
+  4a00c3:	89 6c 24 24          	mov    DWORD PTR [rsp+0x24],ebp
+  4a00c7:	42 8d 14 8d 10 00 00 	lea    edx,[r9*4+0x10]
+  4a00ce:	00 
+  4a00cf:	83 e2 f0             	and    edx,0xfffffff0
+  4a00d2:	48 8d 35 0f 7c 22 00 	lea    rsi,[rip+0x227c0f]        # 6c7ce8 <_RNvNtCsfBoMNNx3tZr_10openssl_rs4aria6KEY_RC>
+  4a00d9:	8b 14 32             	mov    edx,DWORD PTR [rdx+rsi*1]
+  4a00dc:	31 ea                	xor    edx,ebp
+  4a00de:	41 89 d2             	mov    r10d,edx
+  4a00e1:	41 c1 ea 18          	shr    r10d,0x18
+  4a00e5:	89 d3                	mov    ebx,edx
+  4a00e7:	c1 eb 0e             	shr    ebx,0xe
+  4a00ea:	81 e3 fc 03 00 00    	and    ebx,0x3fc
+  4a00f0:	4c 8d 25 f1 77 22 00 	lea    r12,[rip+0x2277f1]        # 6c78e8 <_RNvNtCsfBoMNNx3tZr_10openssl_rs4aria2X2>
+  4a00f7:	42 8b 1c 23          	mov    ebx,DWORD PTR [rbx+r12*1]
+  4a00fb:	48 8d 05 e6 73 22 00 	lea    rax,[rip+0x2273e6]        # 6c74e8 <_RNvNtCsfBoMNNx3tZr_10openssl_rs4aria2X1>
+  4a0102:	42 33 1c 90          	xor    ebx,DWORD PTR [rax+r10*4]
+  4a0106:	45 31 c3             	xor    r11d,r8d
+  4a0109:	0f b6 ee             	movzx  ebp,dh
+  4a010c:	48 8d 35 d5 6b 22 00 	lea    rsi,[rip+0x226bd5]        # 6c6ce8 <_RNvNtCsfBoMNNx3tZr_10openssl_rs4aria2S1>
+  4a0113:	33 1c ae             	xor    ebx,DWORD PTR [rsi+rbp*4]
+  4a0116:	48 89 f5             	mov    rbp,rsi
+  4a0119:	45 31 fb             	xor    r11d,r15d
+  4a011c:	44 89 5c 24 08       	mov    DWORD PTR [rsp+0x8],r11d
+  4a0121:	0f b6 d2             	movzx  edx,dl
+  4a0124:	4c 8d 2d bd 6f 22 00 	lea    r13,[rip+0x226fbd]        # 6c70e8 <_RNvNtCsfBoMNNx3tZr_10openssl_rs4aria2S2>
+  4a012b:	41 33 5c 95 00       	xor    ebx,DWORD PTR [r13+rdx*4+0x0]
+  4a0130:	42 8d 14 8d 14 00 00 	lea    edx,[r9*4+0x14]
+  4a0137:	00 
+  4a0138:	83 e2 f0             	and    edx,0xfffffff0
+  4a013b:	4c 8d 3d a6 7b 22 00 	lea    r15,[rip+0x227ba6]        # 6c7ce8 <_RNvNtCsfBoMNNx3tZr_10openssl_rs4aria6KEY_RC>
+  4a0142:	42 8b 54 3a 04       	mov    edx,DWORD PTR [rdx+r15*1+0x4]
+  4a0147:	44 31 da             	xor    edx,r11d
+  4a014a:	89 d6                	mov    esi,edx
+  4a014c:	c1 ee 18             	shr    esi,0x18
+  4a014f:	41 89 d0             	mov    r8d,edx
+  4a0152:	41 c1 e8 0e          	shr    r8d,0xe
+  4a0156:	41 81 e0 fc 03 00 00 	and    r8d,0x3fc
+  4a015d:	47 8b 14 20          	mov    r10d,DWORD PTR [r8+r12*1]
+  4a0161:	44 33 14 b0          	xor    r10d,DWORD PTR [rax+rsi*4]
+  4a0165:	0f b6 f6             	movzx  esi,dh
+  4a0168:	49 89 eb             	mov    r11,rbp
+  4a016b:	44 33 54 b5 00       	xor    r10d,DWORD PTR [rbp+rsi*4+0x0]
+  4a0170:	0f b6 d2             	movzx  edx,dl
+  4a0173:	45 33 54 95 00       	xor    r10d,DWORD PTR [r13+rdx*4+0x0]
+  4a0178:	42 8d 14 8d 18 00 00 	lea    edx,[r9*4+0x18]
+  4a017f:	00 
+  4a0180:	83 e2 f0             	and    edx,0xfffffff0
+  4a0183:	42 8b 54 3a 08       	mov    edx,DWORD PTR [rdx+r15*1+0x8]
+  4a0188:	33 54 24 0c          	xor    edx,DWORD PTR [rsp+0xc]
+  4a018c:	41 89 d0             	mov    r8d,edx
+  4a018f:	41 c1 e8 18          	shr    r8d,0x18
+  4a0193:	89 d6                	mov    esi,edx
+  4a0195:	c1 ee 0e             	shr    esi,0xe
+  4a0198:	81 e6 fc 03 00 00    	and    esi,0x3fc
+  4a019e:	42 8b 34 26          	mov    esi,DWORD PTR [rsi+r12*1]
+  4a01a2:	42 33 34 80          	xor    esi,DWORD PTR [rax+r8*4]
+  4a01a6:	0f b6 ee             	movzx  ebp,dh
+  4a01a9:	41 33 34 ab          	xor    esi,DWORD PTR [r11+rbp*4]
+  4a01ad:	0f b6 d2             	movzx  edx,dl
+  4a01b0:	41 33 74 95 00       	xor    esi,DWORD PTR [r13+rdx*4+0x0]
+  4a01b5:	42 8d 14 8d 1c 00 00 	lea    edx,[r9*4+0x1c]
+  4a01bc:	00 
+  4a01bd:	83 e2 f0             	and    edx,0xfffffff0
+  4a01c0:	42 8b 54 3a 0c       	mov    edx,DWORD PTR [rdx+r15*1+0xc]
+  4a01c5:	44 31 f2             	xor    edx,r14d
+  4a01c8:	41 89 d0             	mov    r8d,edx
+  4a01cb:	41 c1 e8 18          	shr    r8d,0x18
+  4a01cf:	41 89 d7             	mov    r15d,edx
+  4a01d2:	41 c1 ef 0e          	shr    r15d,0xe
+  4a01d6:	41 81 e7 fc 03 00 00 	and    r15d,0x3fc
+  4a01dd:	43 8b 2c 27          	mov    ebp,DWORD PTR [r15+r12*1]
+  4a01e1:	42 33 2c 80          	xor    ebp,DWORD PTR [rax+r8*4]
+  4a01e5:	0f b6 c6             	movzx  eax,dh
+  4a01e8:	41 33 2c 83          	xor    ebp,DWORD PTR [r11+rax*4]
+  4a01ec:	4d 89 df             	mov    r15,r11
+  4a01ef:	0f b6 c2             	movzx  eax,dl
+  4a01f2:	41 33 6c 85 00       	xor    ebp,DWORD PTR [r13+rax*4+0x0]
+  4a01f7:	41 89 f3             	mov    r11d,esi
+  4a01fa:	41 31 f2             	xor    r10d,esi
+  4a01fd:	41 31 eb             	xor    r11d,ebp
+  4a0200:	44 31 d5             	xor    ebp,r10d
+  4a0203:	41 31 da             	xor    r10d,ebx
+  4a0206:	44 89 d8             	mov    eax,r11d
+  4a0209:	41 31 db             	xor    r11d,ebx
+  4a020c:	44 31 d0             	xor    eax,r10d
+  4a020f:	0f cd                	bswap  ebp
+  4a0211:	c1 cd 10             	ror    ebp,0x10
+  4a0214:	41 c1 c2 10          	rol    r10d,0x10
+  4a0218:	41 0f cb             	bswap  r11d
+  4a021b:	41 31 c3             	xor    r11d,eax
+  4a021e:	31 e8                	xor    eax,ebp
+  4a0220:	44 89 de             	mov    esi,r11d
+  4a0223:	44 31 d6             	xor    esi,r10d
+  4a0226:	44 33 54 24 14       	xor    r10d,DWORD PTR [rsp+0x14]
+  4a022b:	41 31 c2             	xor    r10d,eax
+  4a022e:	44 89 d2             	mov    edx,r10d
+  4a0231:	44 89 54 24 2c       	mov    DWORD PTR [rsp+0x2c],r10d
+  4a0236:	41 89 f2             	mov    r10d,esi
+  4a0239:	33 74 24 10          	xor    esi,DWORD PTR [rsp+0x10]
+  4a023d:	31 c6                	xor    esi,eax
+  4a023f:	89 74 24 30          	mov    DWORD PTR [rsp+0x30],esi
+  4a0243:	44 89 d0             	mov    eax,r10d
+  4a0246:	33 44 24 18          	xor    eax,DWORD PTR [rsp+0x18]
+  4a024a:	89 44 24 34          	mov    DWORD PTR [rsp+0x34],eax
+  4a024e:	c1 e1 04             	shl    ecx,0x4
+  4a0251:	4c 8d 15 90 7a 22 00 	lea    r10,[rip+0x227a90]        # 6c7ce8 <_RNvNtCsfBoMNNx3tZr_10openssl_rs4aria6KEY_RC>
+  4a0258:	42 8b 1c 11          	mov    ebx,DWORD PTR [rcx+r10*1]
+  4a025c:	31 c3                	xor    ebx,eax
+  4a025e:	89 d8                	mov    eax,ebx
+  4a0260:	c1 e8 18             	shr    eax,0x18
+  4a0263:	89 d9                	mov    ecx,ebx
+  4a0265:	c1 e9 0e             	shr    ecx,0xe
+  4a0268:	81 e1 fc 03 00 00    	and    ecx,0x3fc
+  4a026e:	4d 89 e8             	mov    r8,r13
+  4a0271:	46 8b 24 29          	mov    r12d,DWORD PTR [rcx+r13*1]
+  4a0275:	4d 89 fd             	mov    r13,r15
+  4a0278:	45 33 24 87          	xor    r12d,DWORD PTR [r15+rax*4]
+  4a027c:	c1 e7 04             	shl    edi,0x4
+  4a027f:	42 8b 4c 17 04       	mov    ecx,DWORD PTR [rdi+r10*1+0x4]
+  4a0284:	31 d1                	xor    ecx,edx
+  4a0286:	89 c8                	mov    eax,ecx
+  4a0288:	c1 e8 18             	shr    eax,0x18
+  4a028b:	89 ca                	mov    edx,ecx
+  4a028d:	c1 ea 0e             	shr    edx,0xe
+  4a0290:	81 e2 fc 03 00 00    	and    edx,0x3fc
+  4a0296:	46 8b 3c 02          	mov    r15d,DWORD PTR [rdx+r8*1]
+  4a029a:	45 33 7c 85 00       	xor    r15d,DWORD PTR [r13+rax*4+0x0]
+  4a029f:	42 8d 04 8d 28 00 00 	lea    eax,[r9*4+0x28]
+  4a02a6:	00 
+  4a02a7:	83 e0 f0             	and    eax,0xfffffff0
+  4a02aa:	42 8b 54 10 08       	mov    edx,DWORD PTR [rax+r10*1+0x8]
+  4a02af:	31 f2                	xor    edx,esi
+  4a02b1:	89 d0                	mov    eax,edx
+  4a02b3:	c1 e8 18             	shr    eax,0x18
+  4a02b6:	89 d7                	mov    edi,edx
+  4a02b8:	c1 ef 0e             	shr    edi,0xe
+  4a02bb:	81 e7 fc 03 00 00    	and    edi,0x3fc
+  4a02c1:	46 8b 0c 07          	mov    r9d,DWORD PTR [rdi+r8*1]
+  4a02c5:	45 33 4c 85 00       	xor    r9d,DWORD PTR [r13+rax*4+0x0]
+  4a02ca:	44 33 5c 24 28       	xor    r11d,DWORD PTR [rsp+0x28]
+  4a02cf:	41 31 eb             	xor    r11d,ebp
+  4a02d2:	44 89 5c 24 58       	mov    DWORD PTR [rsp+0x58],r11d
+  4a02d7:	48 8b 44 24 38       	mov    rax,QWORD PTR [rsp+0x38]
+  4a02dc:	c1 e0 04             	shl    eax,0x4
+  4a02df:	42 8b 44 10 0c       	mov    eax,DWORD PTR [rax+r10*1+0xc]
+  4a02e4:	44 31 d8             	xor    eax,r11d
+  4a02e7:	89 c7                	mov    edi,eax
+  4a02e9:	c1 ef 0e             	shr    edi,0xe
+  4a02ec:	81 e7 fc 03 00 00    	and    edi,0x3fc
+  4a02f2:	42 8b 3c 07          	mov    edi,DWORD PTR [rdi+r8*1]
+  4a02f6:	89 c5                	mov    ebp,eax
+  4a02f8:	c1 ed 18             	shr    ebp,0x18
+  4a02fb:	41 33 7c ad 00       	xor    edi,DWORD PTR [r13+rbp*4+0x0]
+  4a0300:	0f b6 ef             	movzx  ebp,bh
+  4a0303:	48 8d 35 de 71 22 00 	lea    rsi,[rip+0x2271de]        # 6c74e8 <_RNvNtCsfBoMNNx3tZr_10openssl_rs4aria2X1>
+  4a030a:	44 33 24 ae          	xor    r12d,DWORD PTR [rsi+rbp*4]
+  4a030e:	0f b6 db             	movzx  ebx,bl
+  4a0311:	0f b6 ed             	movzx  ebp,ch
+  4a0314:	44 33 3c ae          	xor    r15d,DWORD PTR [rsi+rbp*4]
+  4a0318:	0f b6 ee             	movzx  ebp,dh
+  4a031b:	44 33 0c ae          	xor    r9d,DWORD PTR [rsi+rbp*4]
+  4a031f:	0f b6 ec             	movzx  ebp,ah
+  4a0322:	33 3c ae             	xor    edi,DWORD PTR [rsi+rbp*4]
+  4a0325:	48 8d 35 bc 75 22 00 	lea    rsi,[rip+0x2275bc]        # 6c78e8 <_RNvNtCsfBoMNNx3tZr_10openssl_rs4aria2X2>
+  4a032c:	44 33 24 9e          	xor    r12d,DWORD PTR [rsi+rbx*4]
+  4a0330:	0f b6 c9             	movzx  ecx,cl
+  4a0333:	44 33 3c 8e          	xor    r15d,DWORD PTR [rsi+rcx*4]
+  4a0337:	0f b6 ca             	movzx  ecx,dl
+  4a033a:	44 33 0c 8e          	xor    r9d,DWORD PTR [rsi+rcx*4]
+  4a033e:	0f b6 c0             	movzx  eax,al
+  4a0341:	33 3c 86             	xor    edi,DWORD PTR [rsi+rax*4]
+  4a0344:	45 31 cf             	xor    r15d,r9d
+  4a0347:	41 31 f9             	xor    r9d,edi
+  4a034a:	44 31 ff             	xor    edi,r15d
+  4a034d:	45 31 e7             	xor    r15d,r12d
+  4a0350:	44 89 ce             	mov    esi,r9d
+  4a0353:	45 31 e1             	xor    r9d,r12d
+  4a0356:	44 89 f5             	mov    ebp,r14d
+  4a0359:	44 8b 64 24 24       	mov    r12d,DWORD PTR [rsp+0x24]
+  4a035e:	44 0f a4 e5 0d       	shld   ebp,r12d,0xd
+  4a0363:	33 6c 24 18          	xor    ebp,DWORD PTR [rsp+0x18]
+  4a0367:	4c 8b ac 24 80 00 00 	mov    r13,QWORD PTR [rsp+0x80]
+  4a036e:	00 
+  4a036f:	41 89 6d 00          	mov    DWORD PTR [r13+0x0],ebp
+  4a0373:	44 89 e0             	mov    eax,r12d
+  4a0376:	8b 54 24 08          	mov    edx,DWORD PTR [rsp+0x8]
+  4a037a:	0f a4 d0 0d          	shld   eax,edx,0xd
+  4a037e:	33 44 24 14          	xor    eax,DWORD PTR [rsp+0x14]
+  4a0382:	8b 54 24 08          	mov    edx,DWORD PTR [rsp+0x8]
+  4a0386:	8b 6c 24 0c          	mov    ebp,DWORD PTR [rsp+0xc]
+  4a038a:	0f a4 ea 0d          	shld   edx,ebp,0xd
+  4a038e:	41 89 45 04          	mov    DWORD PTR [r13+0x4],eax
+  4a0392:	33 54 24 10          	xor    edx,DWORD PTR [rsp+0x10]
+  4a0396:	41 89 55 08          	mov    DWORD PTR [r13+0x8],edx
+  4a039a:	89 e8                	mov    eax,ebp
+  4a039c:	44 0f a4 f0 0d       	shld   eax,r14d,0xd
+  4a03a1:	44 89 74 24 1c       	mov    DWORD PTR [rsp+0x1c],r14d
+  4a03a6:	33 44 24 28          	xor    eax,DWORD PTR [rsp+0x28]
+  4a03aa:	41 89 45 0c          	mov    DWORD PTR [r13+0xc],eax
+  4a03ae:	8b 4c 24 58          	mov    ecx,DWORD PTR [rsp+0x58]
+  4a03b2:	89 c8                	mov    eax,ecx
+  4a03b4:	44 8b 54 24 34       	mov    r10d,DWORD PTR [rsp+0x34]
+  4a03b9:	44 0f a4 d0 0d       	shld   eax,r10d,0xd
+  4a03be:	44 31 e0             	xor    eax,r12d
+  4a03c1:	41 89 45 10          	mov    DWORD PTR [r13+0x10],eax
+  4a03c5:	44 89 d0             	mov    eax,r10d
+  4a03c8:	44 89 d3             	mov    ebx,r10d
+  4a03cb:	44 8b 5c 24 2c       	mov    r11d,DWORD PTR [rsp+0x2c]
+  4a03d0:	44 0f a4 d8 0d       	shld   eax,r11d,0xd
+  4a03d5:	33 44 24 08          	xor    eax,DWORD PTR [rsp+0x8]
+  4a03d9:	41 89 45 14          	mov    DWORD PTR [r13+0x14],eax
+  4a03dd:	44 31 fe             	xor    esi,r15d
+  4a03e0:	41 0f c9             	bswap  r9d
+  4a03e3:	41 c1 c9 10          	ror    r9d,0x10
+  4a03e7:	c1 c6 10             	rol    esi,0x10
+  4a03ea:	44 89 d8             	mov    eax,r11d
+  4a03ed:	44 8b 44 24 30       	mov    r8d,DWORD PTR [rsp+0x30]
+  4a03f2:	44 0f a4 c0 0d       	shld   eax,r8d,0xd
+  4a03f7:	89 ea                	mov    edx,ebp
+  4a03f9:	31 e8                	xor    eax,ebp
+  4a03fb:	41 89 45 18          	mov    DWORD PTR [r13+0x18],eax
+  4a03ff:	0f cf                	bswap  edi
+  4a0401:	41 31 f1             	xor    r9d,esi
+  4a0404:	31 fe                	xor    esi,edi
+  4a0406:	44 31 f7             	xor    edi,r14d
+  4a0409:	44 31 cf             	xor    edi,r9d
+  4a040c:	89 fd                	mov    ebp,edi
+  4a040e:	45 89 ca             	mov    r10d,r9d
+  4a0411:	45 31 fa             	xor    r10d,r15d
+  4a0414:	44 33 7c 24 08       	xor    r15d,DWORD PTR [rsp+0x8]
+  4a0419:	41 31 f7             	xor    r15d,esi
+  4a041c:	44 89 f8             	mov    eax,r15d
+  4a041f:	31 d6                	xor    esi,edx
+  4a0421:	44 31 d6             	xor    esi,r10d
+  4a0424:	41 89 f7             	mov    r15d,esi
+  4a0427:	44 89 e7             	mov    edi,r12d
+  4a042a:	45 31 e2             	xor    r10d,r12d
+  4a042d:	44 89 c2             	mov    edx,r8d
+  4a0430:	0f a4 ca 0d          	shld   edx,ecx,0xd
+  4a0434:	44 31 f2             	xor    edx,r14d
+  4a0437:	41 89 e9             	mov    r9d,ebp
+  4a043a:	45 0f a4 d1 0d       	shld   r9d,r10d,0xd
+  4a043f:	41 89 55 1c          	mov    DWORD PTR [r13+0x1c],edx
+  4a0443:	41 31 d9             	xor    r9d,ebx
+  4a0446:	45 89 4d 20          	mov    DWORD PTR [r13+0x20],r9d
+  4a044a:	44 89 d2             	mov    edx,r10d
+  4a044d:	0f a4 c2 0d          	shld   edx,eax,0xd
+  4a0451:	44 31 da             	xor    edx,r11d
+  4a0454:	41 89 55 24          	mov    DWORD PTR [r13+0x24],edx
+  4a0458:	89 c2                	mov    edx,eax
+  4a045a:	89 44 24 54          	mov    DWORD PTR [rsp+0x54],eax
+  4a045e:	0f a4 f2 0d          	shld   edx,esi,0xd
+  4a0462:	44 31 c2             	xor    edx,r8d
+  4a0465:	41 89 55 28          	mov    DWORD PTR [r13+0x28],edx
+  4a0469:	89 f2                	mov    edx,esi
+  4a046b:	0f a4 ea 0d          	shld   edx,ebp,0xd
+  4a046f:	31 ca                	xor    edx,ecx
+  4a0471:	89 cb                	mov    ebx,ecx
+  4a0473:	41 89 55 2c          	mov    DWORD PTR [r13+0x2c],edx
+  4a0477:	8b 54 24 74          	mov    edx,DWORD PTR [rsp+0x74]
+  4a047b:	8b 4c 24 28          	mov    ecx,DWORD PTR [rsp+0x28]
+  4a047f:	0f ac ca 13          	shrd   edx,ecx,0x13
+  4a0483:	44 31 d2             	xor    edx,r10d
+  4a0486:	41 89 55 30          	mov    DWORD PTR [r13+0x30],edx
+  4a048a:	8b 54 24 70          	mov    edx,DWORD PTR [rsp+0x70]
+  4a048e:	8b 74 24 18          	mov    esi,DWORD PTR [rsp+0x18]
+  4a0492:	0f ac f2 13          	shrd   edx,esi,0x13
+  4a0496:	31 c2                	xor    edx,eax
+  4a0498:	41 89 55 34          	mov    DWORD PTR [r13+0x34],edx
+  4a049c:	8b 54 24 60          	mov    edx,DWORD PTR [rsp+0x60]
+  4a04a0:	44 8b 64 24 14       	mov    r12d,DWORD PTR [rsp+0x14]
+  4a04a5:	44 0f ac e2 13       	shrd   edx,r12d,0x13
+  4a04aa:	44 31 fa             	xor    edx,r15d
+  4a04ad:	44 8b 4c 24 5c       	mov    r9d,DWORD PTR [rsp+0x5c]
+  4a04b2:	8b 44 24 10          	mov    eax,DWORD PTR [rsp+0x10]
+  4a04b6:	41 0f ac c1 13       	shrd   r9d,eax,0x13
+  4a04bb:	41 31 e9             	xor    r9d,ebp
+  4a04be:	41 89 55 38          	mov    DWORD PTR [r13+0x38],edx
+  4a04c2:	44 89 f2             	mov    edx,r14d
+  4a04c5:	0f a4 fa 01          	shld   edx,edi,0x1
+  4a04c9:	45 89 4d 3c          	mov    DWORD PTR [r13+0x3c],r9d
+  4a04cd:	41 89 f9             	mov    r9d,edi
+  4a04d0:	44 8b 5c 24 08       	mov    r11d,DWORD PTR [rsp+0x8]
+  4a04d5:	45 0f a4 d9 01       	shld   r9d,r11d,0x1
+  4a04da:	31 f2                	xor    edx,esi
+  4a04dc:	41 89 f3             	mov    r11d,esi
+  4a04df:	45 31 e1             	xor    r9d,r12d
+  4a04e2:	41 89 55 40          	mov    DWORD PTR [r13+0x40],edx
+  4a04e6:	8b 54 24 08          	mov    edx,DWORD PTR [rsp+0x8]
+  4a04ea:	8b 74 24 0c          	mov    esi,DWORD PTR [rsp+0xc]
+  4a04ee:	0f a4 f2 01          	shld   edx,esi,0x1
+  4a04f2:	31 c2                	xor    edx,eax
+  4a04f4:	45 89 4d 44          	mov    DWORD PTR [r13+0x44],r9d
+  4a04f8:	41 89 f1             	mov    r9d,esi
+  4a04fb:	45 0f a4 f1 01       	shld   r9d,r14d,0x1
+  4a0500:	41 89 cc             	mov    r12d,ecx
+  4a0503:	41 31 c9             	xor    r9d,ecx
+  4a0506:	41 89 55 48          	mov    DWORD PTR [r13+0x48],edx
+  4a050a:	89 da                	mov    edx,ebx
+  4a050c:	44 8b 74 24 34       	mov    r14d,DWORD PTR [rsp+0x34]
+  4a0511:	44 0f a4 f2 01       	shld   edx,r14d,0x1
+  4a0516:	45 89 4d 4c          	mov    DWORD PTR [r13+0x4c],r9d
+  4a051a:	45 89 f1             	mov    r9d,r14d
+  4a051d:	8b 4c 24 2c          	mov    ecx,DWORD PTR [rsp+0x2c]
+  4a0521:	41 0f a4 c9 01       	shld   r9d,ecx,0x1
+  4a0526:	31 fa                	xor    edx,edi
+  4a0528:	44 33 4c 24 08       	xor    r9d,DWORD PTR [rsp+0x8]
+  4a052d:	41 89 55 50          	mov    DWORD PTR [r13+0x50],edx
+  4a0531:	89 ca                	mov    edx,ecx
+  4a0533:	44 0f a4 c2 01       	shld   edx,r8d,0x1
+  4a0538:	31 f2                	xor    edx,esi
+  4a053a:	45 89 4d 54          	mov    DWORD PTR [r13+0x54],r9d
+  4a053e:	45 89 c1             	mov    r9d,r8d
+  4a0541:	41 0f a4 d9 01       	shld   r9d,ebx,0x1
+  4a0546:	89 de                	mov    esi,ebx
+  4a0548:	44 33 4c 24 1c       	xor    r9d,DWORD PTR [rsp+0x1c]
+  4a054d:	41 89 55 58          	mov    DWORD PTR [r13+0x58],edx
+  4a0551:	89 ea                	mov    edx,ebp
+  4a0553:	44 0f a4 d2 01       	shld   edx,r10d,0x1
+  4a0558:	45 89 4d 5c          	mov    DWORD PTR [r13+0x5c],r9d
+  4a055c:	44 31 f2             	xor    edx,r14d
+  4a055f:	41 89 55 60          	mov    DWORD PTR [r13+0x60],edx
+  4a0563:	44 89 d2             	mov    edx,r10d
+  4a0566:	8b 44 24 54          	mov    eax,DWORD PTR [rsp+0x54]
+  4a056a:	0f a4 c2 01          	shld   edx,eax,0x1
+  4a056e:	31 ca                	xor    edx,ecx
+  4a0570:	41 89 55 64          	mov    DWORD PTR [r13+0x64],edx
+  4a0574:	89 c2                	mov    edx,eax
+  4a0576:	44 0f a4 fa 01       	shld   edx,r15d,0x1
+  4a057b:	44 31 c2             	xor    edx,r8d
+  4a057e:	41 89 55 68          	mov    DWORD PTR [r13+0x68],edx
+  4a0582:	44 89 fa             	mov    edx,r15d
+  4a0585:	0f a4 ea 01          	shld   edx,ebp,0x1
+  4a0589:	89 ef                	mov    edi,ebp
+  4a058b:	89 6c 24 38          	mov    DWORD PTR [rsp+0x38],ebp
+  4a058f:	31 da                	xor    edx,ebx
+  4a0591:	41 89 55 6c          	mov    DWORD PTR [r13+0x6c],edx
+  4a0595:	8b 54 24 20          	mov    edx,DWORD PTR [rsp+0x20]
+  4a0599:	44 0f ac e2 1f       	shrd   edx,r12d,0x1f
+  4a059e:	44 31 d2             	xor    edx,r10d
+  4a05a1:	41 89 55 70          	mov    DWORD PTR [r13+0x70],edx
+  4a05a5:	8b 54 24 6c          	mov    edx,DWORD PTR [rsp+0x6c]
+  4a05a9:	44 89 dd             	mov    ebp,r11d
+  4a05ac:	44 0f ac da 1f       	shrd   edx,r11d,0x1f
+  4a05b1:	31 c2                	xor    edx,eax
+  4a05b3:	41 89 55 74          	mov    DWORD PTR [r13+0x74],edx
+  4a05b7:	8b 54 24 68          	mov    edx,DWORD PTR [rsp+0x68]
+  4a05bb:	44 8b 5c 24 14       	mov    r11d,DWORD PTR [rsp+0x14]
+  4a05c0:	44 0f ac da 1f       	shrd   edx,r11d,0x1f
+  4a05c5:	44 31 fa             	xor    edx,r15d
+  4a05c8:	44 8b 4c 24 64       	mov    r9d,DWORD PTR [rsp+0x64]
+  4a05cd:	8b 5c 24 10          	mov    ebx,DWORD PTR [rsp+0x10]
+  4a05d1:	41 0f ac d9 1f       	shrd   r9d,ebx,0x1f
+  4a05d6:	41 31 f9             	xor    r9d,edi
+  4a05d9:	41 89 55 78          	mov    DWORD PTR [r13+0x78],edx
+  4a05dd:	8b 54 24 08          	mov    edx,DWORD PTR [rsp+0x8]
+  4a05e1:	8b 7c 24 0c          	mov    edi,DWORD PTR [rsp+0xc]
+  4a05e5:	0f a4 fa 1d          	shld   edx,edi,0x1d
+  4a05e9:	45 89 4d 7c          	mov    DWORD PTR [r13+0x7c],r9d
+  4a05ed:	41 89 f9             	mov    r9d,edi
+  4a05f0:	8b 7c 24 1c          	mov    edi,DWORD PTR [rsp+0x1c]
+  4a05f4:	41 0f a4 f9 1d       	shld   r9d,edi,0x1d
+  4a05f9:	31 ea                	xor    edx,ebp
+  4a05fb:	45 31 d9             	xor    r9d,r11d
+  4a05fe:	41 89 95 80 00 00 00 	mov    DWORD PTR [r13+0x80],edx
+  4a0605:	8b 54 24 1c          	mov    edx,DWORD PTR [rsp+0x1c]
+  4a0609:	44 8b 44 24 24       	mov    r8d,DWORD PTR [rsp+0x24]
+  4a060e:	44 0f a4 c2 1d       	shld   edx,r8d,0x1d
+  4a0613:	31 da                	xor    edx,ebx
+  4a0615:	45 89 8d 84 00 00 00 	mov    DWORD PTR [r13+0x84],r9d
+  4a061c:	45 89 c1             	mov    r9d,r8d
+  4a061f:	44 8b 5c 24 08       	mov    r11d,DWORD PTR [rsp+0x8]
+  4a0624:	45 0f a4 d9 1d       	shld   r9d,r11d,0x1d
+  4a0629:	45 31 e1             	xor    r9d,r12d
+  4a062c:	41 89 95 88 00 00 00 	mov    DWORD PTR [r13+0x88],edx
+  4a0633:	89 ca                	mov    edx,ecx
+  4a0635:	44 8b 5c 24 30       	mov    r11d,DWORD PTR [rsp+0x30]
+  4a063a:	44 0f a4 da 1d       	shld   edx,r11d,0x1d
+  4a063f:	45 89 8d 8c 00 00 00 	mov    DWORD PTR [r13+0x8c],r9d
+  4a0646:	45 89 d9             	mov    r9d,r11d
+  4a0649:	41 0f a4 f1 1d       	shld   r9d,esi,0x1d
+  4a064e:	44 31 c2             	xor    edx,r8d
+  4a0651:	44 33 4c 24 08       	xor    r9d,DWORD PTR [rsp+0x8]
+  4a0656:	41 89 95 90 00 00 00 	mov    DWORD PTR [r13+0x90],edx
+  4a065d:	89 f2                	mov    edx,esi
+  4a065f:	44 0f a4 f2 1d       	shld   edx,r14d,0x1d
+  4a0664:	8b 5c 24 0c          	mov    ebx,DWORD PTR [rsp+0xc]
+  4a0668:	31 da                	xor    edx,ebx
+  4a066a:	45 89 8d 94 00 00 00 	mov    DWORD PTR [r13+0x94],r9d
+  4a0671:	45 89 f1             	mov    r9d,r14d
+  4a0674:	41 0f a4 c9 1d       	shld   r9d,ecx,0x1d
+  4a0679:	44 33 4c 24 1c       	xor    r9d,DWORD PTR [rsp+0x1c]
+  4a067e:	41 89 95 98 00 00 00 	mov    DWORD PTR [r13+0x98],edx
+  4a0685:	89 c2                	mov    edx,eax
+  4a0687:	44 0f a4 fa 1d       	shld   edx,r15d,0x1d
+  4a068c:	45 89 8d 9c 00 00 00 	mov    DWORD PTR [r13+0x9c],r9d
+  4a0693:	45 89 f9             	mov    r9d,r15d
+  4a0696:	8b 6c 24 38          	mov    ebp,DWORD PTR [rsp+0x38]
+  4a069a:	41 0f a4 e9 1d       	shld   r9d,ebp,0x1d
+  4a069f:	44 31 f2             	xor    edx,r14d
+  4a06a2:	8b 7c 24 1c          	mov    edi,DWORD PTR [rsp+0x1c]
+  4a06a6:	41 89 ce             	mov    r14d,ecx
+  4a06a9:	44 89 f9             	mov    ecx,r15d
+  4a06ac:	41 89 c7             	mov    r15d,eax
+  4a06af:	45 31 f1             	xor    r9d,r14d
+  4a06b2:	41 89 95 a0 00 00 00 	mov    DWORD PTR [r13+0xa0],edx
+  4a06b9:	89 ea                	mov    edx,ebp
+  4a06bb:	44 0f a4 d2 1d       	shld   edx,r10d,0x1d
+  4a06c0:	44 31 da             	xor    edx,r11d
+  4a06c3:	44 8b 5c 24 08       	mov    r11d,DWORD PTR [rsp+0x8]
+  4a06c8:	45 89 8d a4 00 00 00 	mov    DWORD PTR [r13+0xa4],r9d
+  4a06cf:	45 89 d1             	mov    r9d,r10d
+  4a06d2:	41 0f a4 c1 1d       	shld   r9d,eax,0x1d
+  4a06d7:	41 31 f1             	xor    r9d,esi
+  4a06da:	41 89 95 a8 00 00 00 	mov    DWORD PTR [r13+0xa8],edx
+  4a06e1:	8b 54 24 4c          	mov    edx,DWORD PTR [rsp+0x4c]
+  4a06e5:	44 8b 74 24 10       	mov    r14d,DWORD PTR [rsp+0x10]
+  4a06ea:	44 0f a4 f2 1d       	shld   edx,r14d,0x1d
+  4a06ef:	45 89 8d ac 00 00 00 	mov    DWORD PTR [r13+0xac],r9d
+  4a06f6:	44 8b 4c 24 48       	mov    r9d,DWORD PTR [rsp+0x48]
+  4a06fb:	45 0f a4 e1 1d       	shld   r9d,r12d,0x1d
+  4a0700:	44 31 d2             	xor    edx,r10d
+  4a0703:	41 31 c1             	xor    r9d,eax
+  4a0706:	41 89 95 b0 00 00 00 	mov    DWORD PTR [r13+0xb0],edx
+  4a070d:	8b 54 24 44          	mov    edx,DWORD PTR [rsp+0x44]
+  4a0711:	8b 44 24 18          	mov    eax,DWORD PTR [rsp+0x18]
+  4a0715:	0f a4 c2 1d          	shld   edx,eax,0x1d
+  4a0719:	89 4c 24 20          	mov    DWORD PTR [rsp+0x20],ecx
+  4a071d:	31 ca                	xor    edx,ecx
+  4a071f:	45 89 8d b4 00 00 00 	mov    DWORD PTR [r13+0xb4],r9d
+  4a0726:	44 8b 4c 24 50       	mov    r9d,DWORD PTR [rsp+0x50]
+  4a072b:	8b 4c 24 14          	mov    ecx,DWORD PTR [rsp+0x14]
+  4a072f:	41 0f a4 c9 1d       	shld   r9d,ecx,0x1d
+  4a0734:	41 31 e9             	xor    r9d,ebp
+  4a0737:	41 89 95 b8 00 00 00 	mov    DWORD PTR [r13+0xb8],edx
+  4a073e:	44 89 c2             	mov    edx,r8d
+  4a0741:	44 0f a4 da 1f       	shld   edx,r11d,0x1f
+  4a0746:	45 89 8d bc 00 00 00 	mov    DWORD PTR [r13+0xbc],r9d
+  4a074d:	31 c2                	xor    edx,eax
+  4a074f:	41 89 95 c0 00 00 00 	mov    DWORD PTR [r13+0xc0],edx
+  4a0756:	44 89 da             	mov    edx,r11d
+  4a0759:	0f a4 da 1f          	shld   edx,ebx,0x1f
+  4a075d:	31 ca                	xor    edx,ecx
+  4a075f:	41 89 95 c4 00 00 00 	mov    DWORD PTR [r13+0xc4],edx
+  4a0766:	89 da                	mov    edx,ebx
+  4a0768:	0f a4 fa 1f          	shld   edx,edi,0x1f
+  4a076c:	44 31 f2             	xor    edx,r14d
+  4a076f:	41 89 95 c8 00 00 00 	mov    DWORD PTR [r13+0xc8],edx
+  4a0776:	89 fa                	mov    edx,edi
+  4a0778:	44 0f a4 c2 1f       	shld   edx,r8d,0x1f
+  4a077d:	44 31 e2             	xor    edx,r12d
+  4a0780:	41 89 95 cc 00 00 00 	mov    DWORD PTR [r13+0xcc],edx
+  4a0787:	31 c0                	xor    eax,eax
+  4a0789:	48 8b 5c 24 78       	mov    rbx,QWORD PTR [rsp+0x78]
+  4a078e:	81 fb 81 00 00 00    	cmp    ebx,0x81
+  4a0794:	0f 82 54 01 00 00    	jb     4a08ee <_RNvNtCsfBoMNNx3tZr_10openssl_rs4aria25ossl_aria_set_encrypt_key+0xb0e>
+  4a079a:	89 fd                	mov    ebp,edi
+  4a079c:	44 8b 64 24 34       	mov    r12d,DWORD PTR [rsp+0x34]
+  4a07a1:	44 89 e2             	mov    edx,r12d
+  4a07a4:	8b 7c 24 2c          	mov    edi,DWORD PTR [rsp+0x2c]
+  4a07a8:	0f a4 fa 1f          	shld   edx,edi,0x1f
+  4a07ac:	33 54 24 24          	xor    edx,DWORD PTR [rsp+0x24]
+  4a07b0:	41 89 95 d0 00 00 00 	mov    DWORD PTR [r13+0xd0],edx
+  4a07b7:	89 fa                	mov    edx,edi
+  4a07b9:	44 8b 44 24 30       	mov    r8d,DWORD PTR [rsp+0x30]
+  4a07be:	44 0f a4 c2 1f       	shld   edx,r8d,0x1f
+  4a07c3:	44 31 da             	xor    edx,r11d
+  4a07c6:	41 89 95 d4 00 00 00 	mov    DWORD PTR [r13+0xd4],edx
+  4a07cd:	44 89 c2             	mov    edx,r8d
+  4a07d0:	0f a4 f2 1f          	shld   edx,esi,0x1f
+  4a07d4:	33 54 24 0c          	xor    edx,DWORD PTR [rsp+0xc]
+  4a07d8:	41 89 f1             	mov    r9d,esi
+  4a07db:	45 0f a4 e1 1f       	shld   r9d,r12d,0x1f
+  4a07e0:	41 89 95 d8 00 00 00 	mov    DWORD PTR [r13+0xd8],edx
+  4a07e7:	41 31 e9             	xor    r9d,ebp
+  4a07ea:	45 89 8d dc 00 00 00 	mov    DWORD PTR [r13+0xdc],r9d
+  4a07f1:	44 89 d2             	mov    edx,r10d
+  4a07f4:	44 0f a4 fa 1f       	shld   edx,r15d,0x1f
+  4a07f9:	44 31 e2             	xor    edx,r12d
+  4a07fc:	41 89 95 e0 00 00 00 	mov    DWORD PTR [r13+0xe0],edx
+  4a0803:	44 89 fa             	mov    edx,r15d
+  4a0806:	8b 4c 24 20          	mov    ecx,DWORD PTR [rsp+0x20]
+  4a080a:	0f a4 ca 1f          	shld   edx,ecx,0x1f
+  4a080e:	31 fa                	xor    edx,edi
+  4a0810:	41 89 95 e4 00 00 00 	mov    DWORD PTR [r13+0xe4],edx
+  4a0817:	89 ca                	mov    edx,ecx
+  4a0819:	8b 4c 24 38          	mov    ecx,DWORD PTR [rsp+0x38]
+  4a081d:	0f a4 ca 1f          	shld   edx,ecx,0x1f
+  4a0821:	44 31 c2             	xor    edx,r8d
+  4a0824:	41 89 c8             	mov    r8d,ecx
+  4a0827:	45 0f a4 d0 1f       	shld   r8d,r10d,0x1f
+  4a082c:	41 89 95 e8 00 00 00 	mov    DWORD PTR [r13+0xe8],edx
+  4a0833:	41 31 f0             	xor    r8d,esi
+  4a0836:	45 89 85 ec 00 00 00 	mov    DWORD PTR [r13+0xec],r8d
+  4a083d:	81 fb c1 00 00 00    	cmp    ebx,0xc1
+  4a0843:	0f 82 a5 00 00 00    	jb     4a08ee <_RNvNtCsfBoMNNx3tZr_10openssl_rs4aria25ossl_aria_set_encrypt_key+0xb0e>
+  4a0849:	8b 54 24 14          	mov    edx,DWORD PTR [rsp+0x14]
+  4a084d:	8b 74 24 50          	mov    esi,DWORD PTR [rsp+0x50]
+  4a0851:	0f a4 d6 1f          	shld   esi,edx,0x1f
+  4a0855:	44 31 d6             	xor    esi,r10d
+  4a0858:	44 8b 54 24 4c       	mov    r10d,DWORD PTR [rsp+0x4c]
+  4a085d:	44 8b 44 24 10       	mov    r8d,DWORD PTR [rsp+0x10]
+  4a0862:	45 0f a4 c2 1f       	shld   r10d,r8d,0x1f
+  4a0867:	41 89 b5 f0 00 00 00 	mov    DWORD PTR [r13+0xf0],esi
+  4a086e:	45 31 fa             	xor    r10d,r15d
+  4a0871:	8b 74 24 48          	mov    esi,DWORD PTR [rsp+0x48]
+  4a0875:	44 8b 4c 24 28       	mov    r9d,DWORD PTR [rsp+0x28]
+  4a087a:	44 0f a4 ce 1f       	shld   esi,r9d,0x1f
+  4a087f:	45 89 95 f4 00 00 00 	mov    DWORD PTR [r13+0xf4],r10d
+  4a0886:	33 74 24 20          	xor    esi,DWORD PTR [rsp+0x20]
+  4a088a:	8b 4c 24 44          	mov    ecx,DWORD PTR [rsp+0x44]
+  4a088e:	44 8b 54 24 18       	mov    r10d,DWORD PTR [rsp+0x18]
+  4a0893:	44 0f a4 d1 1f       	shld   ecx,r10d,0x1f
+  4a0898:	41 89 b5 f8 00 00 00 	mov    DWORD PTR [r13+0xf8],esi
+  4a089f:	33 4c 24 38          	xor    ecx,DWORD PTR [rsp+0x38]
+  4a08a3:	41 89 8d fc 00 00 00 	mov    DWORD PTR [r13+0xfc],ecx
+  4a08aa:	8b 4c 24 24          	mov    ecx,DWORD PTR [rsp+0x24]
+  4a08ae:	89 ce                	mov    esi,ecx
+  4a08b0:	44 0f a4 de 13       	shld   esi,r11d,0x13
+  4a08b5:	44 31 d6             	xor    esi,r10d
+  4a08b8:	41 89 b5 00 01 00 00 	mov    DWORD PTR [r13+0x100],esi
+  4a08bf:	8b 74 24 0c          	mov    esi,DWORD PTR [rsp+0xc]
+  4a08c3:	41 0f a4 f3 13       	shld   r11d,esi,0x13
+  4a08c8:	41 31 d3             	xor    r11d,edx
+  4a08cb:	45 89 9d 04 01 00 00 	mov    DWORD PTR [r13+0x104],r11d
+  4a08d2:	0f a4 ee 13          	shld   esi,ebp,0x13
+  4a08d6:	44 31 c6             	xor    esi,r8d
+  4a08d9:	41 89 b5 08 01 00 00 	mov    DWORD PTR [r13+0x108],esi
+  4a08e0:	0f a4 cd 13          	shld   ebp,ecx,0x13
+  4a08e4:	44 31 cd             	xor    ebp,r9d
+  4a08e7:	41 89 ad 0c 01 00 00 	mov    DWORD PTR [r13+0x10c],ebp
+  4a08ee:	48 81 c4 88 00 00 00 	add    rsp,0x88
+  4a08f5:	5b                   	pop    rbx
+  4a08f6:	41 5c                	pop    r12
+  4a08f8:	41 5d                	pop    r13
+  4a08fa:	41 5e                	pop    r14
+  4a08fc:	41 5f                	pop    r15
+  4a08fe:	5d                   	pop    rbp
+  4a08ff:	c3                   	ret
+  4a0900:	48 8d 15 e9 50 3f 00 	lea    rdx,[rip+0x3f50e9]        # 8959f0 <anon.940e565698dcfa264dce3499de65af85.389.llvm.6471542228366918689+0x18>
+  4a0907:	be 05 00 00 00       	mov    esi,0x5
+  4a090c:	48 89 cf             	mov    rdi,rcx
+  4a090f:	ff 15 5b d2 43 00    	call   QWORD PTR [rip+0x43d25b]        # 8ddb70 <_DYNAMIC+0x2870>
+  4a0915:	48 8d 15 d4 50 3f 00 	lea    rdx,[rip+0x3f50d4]        # 8959f0 <anon.940e565698dcfa264dce3499de65af85.389.llvm.6471542228366918689+0x18>
+  4a091c:	be 05 00 00 00       	mov    esi,0x5
+  4a0921:	ff 15 49 d2 43 00    	call   QWORD PTR [rip+0x43d249]        # 8ddb70 <_DYNAMIC+0x2870>
+  4a0927:	48 8d 15 c2 50 3f 00 	lea    rdx,[rip+0x3f50c2]        # 8959f0 <anon.940e565698dcfa264dce3499de65af85.389.llvm.6471542228366918689+0x18>
+  4a092e:	be 05 00 00 00       	mov    esi,0x5
+  4a0933:	48 8b 7c 24 38       	mov    rdi,QWORD PTR [rsp+0x38]
+  4a0938:	ff 15 32 d2 43 00    	call   QWORD PTR [rip+0x43d232]        # 8ddb70 <_DYNAMIC+0x2870>
+
+### openssl_rs::sm4::ossl_sm4_encrypt [sm4 data path]  0x2234e0..0x223a8c
+
+court/tmp/pfp68/final/libcrypto.so.3:     file format elf64-x86-64
+
+
+Disassembly of section .text:
+
+00000000002234e0 <_RNvNtCsfBoMNNx3tZr_10openssl_rs3sm416ossl_sm4_encrypt>:
+  2234e0:	55                   	push   rbp
+  2234e1:	41 57                	push   r15
+  2234e3:	41 56                	push   r14
+  2234e5:	41 55                	push   r13
+  2234e7:	41 54                	push   r12
+  2234e9:	53                   	push   rbx
+  2234ea:	48 81 ec e8 00 00 00 	sub    rsp,0xe8
+  2234f1:	44 8b 07             	mov    r8d,DWORD PTR [rdi]
+  2234f4:	44 8b 5f 04          	mov    r11d,DWORD PTR [rdi+0x4]
+  2234f8:	41 0f c8             	bswap  r8d
+  2234fb:	41 0f cb             	bswap  r11d
+  2234fe:	8b 4f 08             	mov    ecx,DWORD PTR [rdi+0x8]
+  223501:	0f c9                	bswap  ecx
+  223503:	44 8b 4f 0c          	mov    r9d,DWORD PTR [rdi+0xc]
+  223507:	41 0f c9             	bswap  r9d
+  22350a:	8b 3a                	mov    edi,DWORD PTR [rdx]
+  22350c:	31 cf                	xor    edi,ecx
+  22350e:	44 89 c8             	mov    eax,r9d
+  223511:	44 31 d8             	xor    eax,r11d
+  223514:	31 f8                	xor    eax,edi
+  223516:	0f b6 f8             	movzx  edi,al
+  223519:	41 89 c2             	mov    r10d,eax
+  22351c:	0f b6 dc             	movzx  ebx,ah
+  22351f:	c1 e8 18             	shr    eax,0x18
+  223522:	4c 8d 2d ab ad 44 00 	lea    r13,[rip+0x44adab]        # 66e2d4 <_RNvNtCsfBoMNNx3tZr_10openssl_rs3sm45SM4_S>
+  223529:	42 0f b6 04 28       	movzx  eax,BYTE PTR [rax+r13*1]
+  22352e:	c1 e0 18             	shl    eax,0x18
+  223531:	41 c1 ea 10          	shr    r10d,0x10
+  223535:	45 0f b6 d2          	movzx  r10d,r10b
+  223539:	47 0f b6 14 2a       	movzx  r10d,BYTE PTR [r10+r13*1]
+  22353e:	41 c1 e2 10          	shl    r10d,0x10
+  223542:	41 09 c2             	or     r10d,eax
+  223545:	42 0f b6 04 2b       	movzx  eax,BYTE PTR [rbx+r13*1]
+  22354a:	c1 e0 08             	shl    eax,0x8
+  22354d:	44 09 d0             	or     eax,r10d
+  223550:	42 0f b6 3c 2f       	movzx  edi,BYTE PTR [rdi+r13*1]
+  223555:	09 c7                	or     edi,eax
+  223557:	89 f8                	mov    eax,edi
+  223559:	41 89 fa             	mov    r10d,edi
+  22355c:	41 89 fe             	mov    r14d,edi
+  22355f:	41 c1 c6 18          	rol    r14d,0x18
+  223563:	41 31 fe             	xor    r14d,edi
+  223566:	c1 c7 02             	rol    edi,0x2
+  223569:	c1 c0 0a             	rol    eax,0xa
+  22356c:	41 c1 c2 12          	rol    r10d,0x12
+  223570:	44 31 c7             	xor    edi,r8d
+  223573:	41 31 c2             	xor    r10d,eax
+  223576:	41 31 fa             	xor    r10d,edi
+  223579:	45 31 d6             	xor    r14d,r10d
+  22357c:	8b 42 04             	mov    eax,DWORD PTR [rdx+0x4]
+  22357f:	31 c8                	xor    eax,ecx
+  223581:	44 31 c8             	xor    eax,r9d
+  223584:	44 31 f0             	xor    eax,r14d
+  223587:	0f b6 f8             	movzx  edi,al
+  22358a:	41 89 c0             	mov    r8d,eax
+  22358d:	0f b6 dc             	movzx  ebx,ah
+  223590:	c1 e8 18             	shr    eax,0x18
+  223593:	42 0f b6 04 28       	movzx  eax,BYTE PTR [rax+r13*1]
+  223598:	c1 e0 18             	shl    eax,0x18
+  22359b:	41 c1 e8 10          	shr    r8d,0x10
+  22359f:	45 0f b6 c0          	movzx  r8d,r8b
+  2235a3:	47 0f b6 04 28       	movzx  r8d,BYTE PTR [r8+r13*1]
+  2235a8:	41 c1 e0 10          	shl    r8d,0x10
+  2235ac:	41 09 c0             	or     r8d,eax
+  2235af:	42 0f b6 04 2b       	movzx  eax,BYTE PTR [rbx+r13*1]
+  2235b4:	c1 e0 08             	shl    eax,0x8
+  2235b7:	44 09 c0             	or     eax,r8d
+  2235ba:	46 0f b6 3c 2f       	movzx  r15d,BYTE PTR [rdi+r13*1]
+  2235bf:	41 09 c7             	or     r15d,eax
+  2235c2:	44 89 f8             	mov    eax,r15d
+  2235c5:	c1 c0 02             	rol    eax,0x2
+  2235c8:	44 89 ff             	mov    edi,r15d
+  2235cb:	c1 c7 0a             	rol    edi,0xa
+  2235ce:	45 89 f8             	mov    r8d,r15d
+  2235d1:	41 c1 c0 12          	rol    r8d,0x12
+  2235d5:	45 31 fb             	xor    r11d,r15d
+  2235d8:	41 c1 c7 18          	rol    r15d,0x18
+  2235dc:	31 c7                	xor    edi,eax
+  2235de:	45 31 c7             	xor    r15d,r8d
+  2235e1:	41 31 ff             	xor    r15d,edi
+  2235e4:	45 31 df             	xor    r15d,r11d
+  2235e7:	8b 42 08             	mov    eax,DWORD PTR [rdx+0x8]
+  2235ea:	44 31 c8             	xor    eax,r9d
+  2235ed:	44 31 f0             	xor    eax,r14d
+  2235f0:	44 31 f8             	xor    eax,r15d
+  2235f3:	44 0f b6 c0          	movzx  r8d,al
+  2235f7:	89 c7                	mov    edi,eax
+  2235f9:	0f b6 dc             	movzx  ebx,ah
+  2235fc:	c1 e8 18             	shr    eax,0x18
+  2235ff:	42 0f b6 04 28       	movzx  eax,BYTE PTR [rax+r13*1]
+  223604:	c1 e0 18             	shl    eax,0x18
+  223607:	c1 ef 10             	shr    edi,0x10
+  22360a:	40 0f b6 ff          	movzx  edi,dil
+  22360e:	42 0f b6 3c 2f       	movzx  edi,BYTE PTR [rdi+r13*1]
+  223613:	c1 e7 10             	shl    edi,0x10
+  223616:	09 c7                	or     edi,eax
+  223618:	42 0f b6 04 2b       	movzx  eax,BYTE PTR [rbx+r13*1]
+  22361d:	c1 e0 08             	shl    eax,0x8
+  223620:	09 f8                	or     eax,edi
+  223622:	43 0f b6 2c 28       	movzx  ebp,BYTE PTR [r8+r13*1]
+  223627:	09 c5                	or     ebp,eax
+  223629:	89 e8                	mov    eax,ebp
+  22362b:	c1 c0 02             	rol    eax,0x2
+  22362e:	41 89 e8             	mov    r8d,ebp
+  223631:	41 c1 c0 0a          	rol    r8d,0xa
+  223635:	89 ef                	mov    edi,ebp
+  223637:	c1 c7 12             	rol    edi,0x12
+  22363a:	31 e9                	xor    ecx,ebp
+  22363c:	c1 c5 18             	rol    ebp,0x18
+  22363f:	41 31 c0             	xor    r8d,eax
+  223642:	31 fd                	xor    ebp,edi
+  223644:	44 31 c5             	xor    ebp,r8d
+  223647:	31 cd                	xor    ebp,ecx
+  223649:	48 89 54 24 08       	mov    QWORD PTR [rsp+0x8],rdx
+  22364e:	8b 42 0c             	mov    eax,DWORD PTR [rdx+0xc]
+  223651:	44 31 f0             	xor    eax,r14d
+  223654:	44 31 f8             	xor    eax,r15d
+  223657:	31 e8                	xor    eax,ebp
+  223659:	0f b6 c8             	movzx  ecx,al
+  22365c:	89 c2                	mov    edx,eax
+  22365e:	0f b6 fc             	movzx  edi,ah
+  223661:	c1 e8 18             	shr    eax,0x18
+  223664:	42 0f b6 04 28       	movzx  eax,BYTE PTR [rax+r13*1]
+  223669:	c1 e0 18             	shl    eax,0x18
+  22366c:	c1 ea 10             	shr    edx,0x10
+  22366f:	0f b6 d2             	movzx  edx,dl
+  223672:	42 0f b6 14 2a       	movzx  edx,BYTE PTR [rdx+r13*1]
+  223677:	c1 e2 10             	shl    edx,0x10
+  22367a:	09 c2                	or     edx,eax
+  22367c:	42 0f b6 04 2f       	movzx  eax,BYTE PTR [rdi+r13*1]
+  223681:	c1 e0 08             	shl    eax,0x8
+  223684:	09 d0                	or     eax,edx
+  223686:	46 0f b6 24 29       	movzx  r12d,BYTE PTR [rcx+r13*1]
+  22368b:	41 09 c4             	or     r12d,eax
+  22368e:	44 89 e0             	mov    eax,r12d
+  223691:	c1 c0 02             	rol    eax,0x2
+  223694:	44 89 e1             	mov    ecx,r12d
+  223697:	c1 c1 0a             	rol    ecx,0xa
+  22369a:	48 89 74 24 10       	mov    QWORD PTR [rsp+0x10],rsi
+  22369f:	44 89 e2             	mov    edx,r12d
+  2236a2:	c1 c2 12             	rol    edx,0x12
+  2236a5:	31 c1                	xor    ecx,eax
+  2236a7:	45 31 e1             	xor    r9d,r12d
+  2236aa:	41 c1 c4 18          	rol    r12d,0x18
+  2236ae:	41 31 d4             	xor    r12d,edx
+  2236b1:	41 31 cc             	xor    r12d,ecx
+  2236b4:	45 31 cc             	xor    r12d,r9d
+  2236b7:	48 8d 7c 24 28       	lea    rdi,[rsp+0x28]
+  2236bc:	48 8d 35 2d d3 44 00 	lea    rsi,[rip+0x44d32d]        # 6709f0 <_RNvNtCsfBoMNNx3tZr_10openssl_rs3sm411SM4_SBOX_T3+0x4c4>
+  2236c3:	ba c0 00 00 00       	mov    edx,0xc0
+  2236c8:	ff 15 0a 9e 6b 00    	call   QWORD PTR [rip+0x6b9e0a]        # 8dd4d8 <memcpy@GLIBC_2.14>
+  2236ce:	ba 28 00 00 00       	mov    edx,0x28
+  2236d3:	48 8b 74 24 08       	mov    rsi,QWORD PTR [rsp+0x8]
+  2236d8:	4c 8d 0d 4d c2 44 00 	lea    r9,[rip+0x44c24d]        # 66f92c <_RNvNtCsfBoMNNx3tZr_10openssl_rs3sm411SM4_SBOX_T0>
+  2236df:	4c 8d 15 46 c6 44 00 	lea    r10,[rip+0x44c646]        # 66fd2c <_RNvNtCsfBoMNNx3tZr_10openssl_rs3sm411SM4_SBOX_T1>
+  2236e6:	4c 8d 1d 3f ca 44 00 	lea    r11,[rip+0x44ca3f]        # 67012c <_RNvNtCsfBoMNNx3tZr_10openssl_rs3sm411SM4_SBOX_T2>
+  2236ed:	4c 8d 2d 38 ce 44 00 	lea    r13,[rip+0x44ce38]        # 67052c <_RNvNtCsfBoMNNx3tZr_10openssl_rs3sm411SM4_SBOX_T3>
+  2236f4:	66 66 66 2e 0f 1f 84 	data16 data16 cs nop WORD PTR [rax+rax*1+0x0]
+  2236fb:	00 00 00 00 00 
+  223700:	4c 8b 04 14          	mov    r8,QWORD PTR [rsp+rdx*1]
+  223704:	49 83 f8 1f          	cmp    r8,0x1f
+  223708:	0f 87 69 03 00 00    	ja     223a77 <_RNvNtCsfBoMNNx3tZr_10openssl_rs3sm416ossl_sm4_encrypt+0x597>
+  22370e:	48 8b 4c 14 08       	mov    rcx,QWORD PTR [rsp+rdx*1+0x8]
+  223713:	48 83 f9 20          	cmp    rcx,0x20
+  223717:	0f 83 45 03 00 00    	jae    223a62 <_RNvNtCsfBoMNNx3tZr_10openssl_rs3sm416ossl_sm4_encrypt+0x582>
+  22371d:	48 8b 44 14 10       	mov    rax,QWORD PTR [rsp+rdx*1+0x10]
+  223722:	48 83 f8 20          	cmp    rax,0x20
+  223726:	0f 83 21 03 00 00    	jae    223a4d <_RNvNtCsfBoMNNx3tZr_10openssl_rs3sm416ossl_sm4_encrypt+0x56d>
+  22372c:	48 8b 7c 14 18       	mov    rdi,QWORD PTR [rsp+rdx*1+0x18]
+  223731:	48 83 ff 20          	cmp    rdi,0x20
+  223735:	0f 83 00 03 00 00    	jae    223a3b <_RNvNtCsfBoMNNx3tZr_10openssl_rs3sm416ossl_sm4_encrypt+0x55b>
+  22373b:	46 8b 04 86          	mov    r8d,DWORD PTR [rsi+r8*4]
+  22373f:	41 31 e8             	xor    r8d,ebp
+  223742:	44 89 e3             	mov    ebx,r12d
+  223745:	44 31 fb             	xor    ebx,r15d
+  223748:	44 31 c3             	xor    ebx,r8d
+  22374b:	41 89 d8             	mov    r8d,ebx
+  22374e:	41 c1 e8 18          	shr    r8d,0x18
+  223752:	47 33 34 81          	xor    r14d,DWORD PTR [r9+r8*4]
+  223756:	41 89 d8             	mov    r8d,ebx
+  223759:	41 c1 e8 0e          	shr    r8d,0xe
+  22375d:	41 81 e0 fc 03 00 00 	and    r8d,0x3fc
+  223764:	47 33 34 10          	xor    r14d,DWORD PTR [r8+r10*1]
+  223768:	44 0f b6 c3          	movzx  r8d,bl
+  22376c:	0f b6 df             	movzx  ebx,bh
+  22376f:	45 33 34 9b          	xor    r14d,DWORD PTR [r11+rbx*4]
+  223773:	47 33 74 85 00       	xor    r14d,DWORD PTR [r13+r8*4+0x0]
+  223778:	8b 0c 8e             	mov    ecx,DWORD PTR [rsi+rcx*4]
+  22377b:	31 e9                	xor    ecx,ebp
+  22377d:	44 31 e1             	xor    ecx,r12d
+  223780:	44 31 f1             	xor    ecx,r14d
+  223783:	41 89 c8             	mov    r8d,ecx
+  223786:	89 cb                	mov    ebx,ecx
+  223788:	c1 eb 18             	shr    ebx,0x18
+  22378b:	41 8b 1c 99          	mov    ebx,DWORD PTR [r9+rbx*4]
+  22378f:	41 c1 e8 0e          	shr    r8d,0xe
+  223793:	41 81 e0 fc 03 00 00 	and    r8d,0x3fc
+  22379a:	43 33 1c 10          	xor    ebx,DWORD PTR [r8+r10*1]
+  22379e:	41 89 e8             	mov    r8d,ebp
+  2237a1:	0f b6 ed             	movzx  ebp,ch
+  2237a4:	41 33 1c ab          	xor    ebx,DWORD PTR [r11+rbp*4]
+  2237a8:	44 89 c5             	mov    ebp,r8d
+  2237ab:	0f b6 c9             	movzx  ecx,cl
+  2237ae:	41 33 5c 8d 00       	xor    ebx,DWORD PTR [r13+rcx*4+0x0]
+  2237b3:	41 31 df             	xor    r15d,ebx
+  2237b6:	8b 04 86             	mov    eax,DWORD PTR [rsi+rax*4]
+  2237b9:	44 31 e0             	xor    eax,r12d
+  2237bc:	44 31 f0             	xor    eax,r14d
+  2237bf:	44 31 f8             	xor    eax,r15d
+  2237c2:	89 c1                	mov    ecx,eax
+  2237c4:	41 89 c0             	mov    r8d,eax
+  2237c7:	41 c1 e8 0e          	shr    r8d,0xe
+  2237cb:	41 81 e0 fc 03 00 00 	and    r8d,0x3fc
+  2237d2:	47 8b 04 10          	mov    r8d,DWORD PTR [r8+r10*1]
+  2237d6:	c1 e9 18             	shr    ecx,0x18
+  2237d9:	45 33 04 89          	xor    r8d,DWORD PTR [r9+rcx*4]
+  2237dd:	0f b6 cc             	movzx  ecx,ah
+  2237e0:	45 33 04 8b          	xor    r8d,DWORD PTR [r11+rcx*4]
+  2237e4:	0f b6 c0             	movzx  eax,al
+  2237e7:	45 33 44 85 00       	xor    r8d,DWORD PTR [r13+rax*4+0x0]
+  2237ec:	44 31 c5             	xor    ebp,r8d
+  2237ef:	8b 04 be             	mov    eax,DWORD PTR [rsi+rdi*4]
+  2237f2:	44 31 f0             	xor    eax,r14d
+  2237f5:	44 31 f8             	xor    eax,r15d
+  2237f8:	31 e8                	xor    eax,ebp
+  2237fa:	89 c1                	mov    ecx,eax
+  2237fc:	89 c7                	mov    edi,eax
+  2237fe:	c1 ef 18             	shr    edi,0x18
+  223801:	41 8b 3c b9          	mov    edi,DWORD PTR [r9+rdi*4]
+  223805:	c1 e9 0e             	shr    ecx,0xe
+  223808:	81 e1 fc 03 00 00    	and    ecx,0x3fc
+  22380e:	42 33 3c 11          	xor    edi,DWORD PTR [rcx+r10*1]
+  223812:	0f b6 cc             	movzx  ecx,ah
+  223815:	41 33 3c 8b          	xor    edi,DWORD PTR [r11+rcx*4]
+  223819:	0f b6 c0             	movzx  eax,al
+  22381c:	41 33 7c 85 00       	xor    edi,DWORD PTR [r13+rax*4+0x0]
+  223821:	41 31 fc             	xor    r12d,edi
+  223824:	48 83 c2 20          	add    rdx,0x20
+  223828:	48 81 fa e8 00 00 00 	cmp    rdx,0xe8
+  22382f:	0f 85 cb fe ff ff    	jne    223700 <_RNvNtCsfBoMNNx3tZr_10openssl_rs3sm416ossl_sm4_encrypt+0x220>
+  223835:	4c 8b 4c 24 08       	mov    r9,QWORD PTR [rsp+0x8]
+  22383a:	41 8b 49 70          	mov    ecx,DWORD PTR [r9+0x70]
+  22383e:	44 31 f9             	xor    ecx,r15d
+  223841:	31 e9                	xor    ecx,ebp
+  223843:	44 31 e1             	xor    ecx,r12d
+  223846:	0f b6 c1             	movzx  eax,cl
+  223849:	89 ca                	mov    edx,ecx
+  22384b:	0f b6 f5             	movzx  esi,ch
+  22384e:	c1 e9 18             	shr    ecx,0x18
+  223851:	4c 8d 15 7c aa 44 00 	lea    r10,[rip+0x44aa7c]        # 66e2d4 <_RNvNtCsfBoMNNx3tZr_10openssl_rs3sm45SM4_S>
+  223858:	42 0f b6 0c 11       	movzx  ecx,BYTE PTR [rcx+r10*1]
+  22385d:	c1 e1 18             	shl    ecx,0x18
+  223860:	c1 ea 10             	shr    edx,0x10
+  223863:	0f b6 d2             	movzx  edx,dl
+  223866:	42 0f b6 14 12       	movzx  edx,BYTE PTR [rdx+r10*1]
+  22386b:	c1 e2 10             	shl    edx,0x10
+  22386e:	09 ca                	or     edx,ecx
+  223870:	42 0f b6 0c 16       	movzx  ecx,BYTE PTR [rsi+r10*1]
+  223875:	c1 e1 08             	shl    ecx,0x8
+  223878:	09 d1                	or     ecx,edx
+  22387a:	42 0f b6 04 10       	movzx  eax,BYTE PTR [rax+r10*1]
+  22387f:	09 c8                	or     eax,ecx
+  223881:	89 c1                	mov    ecx,eax
+  223883:	c1 c1 02             	rol    ecx,0x2
+  223886:	89 c2                	mov    edx,eax
+  223888:	c1 c2 0a             	rol    edx,0xa
+  22388b:	89 c6                	mov    esi,eax
+  22388d:	c1 c6 12             	rol    esi,0x12
+  223890:	41 31 c6             	xor    r14d,eax
+  223893:	c1 c0 18             	rol    eax,0x18
+  223896:	31 ca                	xor    edx,ecx
+  223898:	31 f0                	xor    eax,esi
+  22389a:	31 d0                	xor    eax,edx
+  22389c:	44 31 f0             	xor    eax,r14d
+  22389f:	41 8b 51 74          	mov    edx,DWORD PTR [r9+0x74]
+  2238a3:	31 ea                	xor    edx,ebp
+  2238a5:	44 31 e2             	xor    edx,r12d
+  2238a8:	31 c2                	xor    edx,eax
+  2238aa:	0f b6 ca             	movzx  ecx,dl
+  2238ad:	89 d6                	mov    esi,edx
+  2238af:	0f b6 fe             	movzx  edi,dh
+  2238b2:	c1 ea 18             	shr    edx,0x18
+  2238b5:	42 0f b6 14 12       	movzx  edx,BYTE PTR [rdx+r10*1]
+  2238ba:	c1 e2 18             	shl    edx,0x18
+  2238bd:	c1 ee 10             	shr    esi,0x10
+  2238c0:	40 0f b6 f6          	movzx  esi,sil
+  2238c4:	42 0f b6 34 16       	movzx  esi,BYTE PTR [rsi+r10*1]
+  2238c9:	c1 e6 10             	shl    esi,0x10
+  2238cc:	09 d6                	or     esi,edx
+  2238ce:	42 0f b6 14 17       	movzx  edx,BYTE PTR [rdi+r10*1]
+  2238d3:	c1 e2 08             	shl    edx,0x8
+  2238d6:	09 f2                	or     edx,esi
+  2238d8:	42 0f b6 0c 11       	movzx  ecx,BYTE PTR [rcx+r10*1]
+  2238dd:	09 d1                	or     ecx,edx
+  2238df:	89 ca                	mov    edx,ecx
+  2238e1:	c1 c2 02             	rol    edx,0x2
+  2238e4:	89 ce                	mov    esi,ecx
+  2238e6:	c1 c6 0a             	rol    esi,0xa
+  2238e9:	89 cf                	mov    edi,ecx
+  2238eb:	c1 c7 12             	rol    edi,0x12
+  2238ee:	41 31 cf             	xor    r15d,ecx
+  2238f1:	c1 c1 18             	rol    ecx,0x18
+  2238f4:	31 d6                	xor    esi,edx
+  2238f6:	31 f9                	xor    ecx,edi
+  2238f8:	31 f1                	xor    ecx,esi
+  2238fa:	44 31 f9             	xor    ecx,r15d
+  2238fd:	41 8b 51 78          	mov    edx,DWORD PTR [r9+0x78]
+  223901:	44 31 e2             	xor    edx,r12d
+  223904:	31 c2                	xor    edx,eax
+  223906:	31 ca                	xor    edx,ecx
+  223908:	0f b6 f2             	movzx  esi,dl
+  22390b:	89 d7                	mov    edi,edx
+  22390d:	0f b6 de             	movzx  ebx,dh
+  223910:	c1 ea 18             	shr    edx,0x18
+  223913:	42 0f b6 14 12       	movzx  edx,BYTE PTR [rdx+r10*1]
+  223918:	c1 e2 18             	shl    edx,0x18
+  22391b:	c1 ef 10             	shr    edi,0x10
+  22391e:	40 0f b6 ff          	movzx  edi,dil
+  223922:	42 0f b6 3c 17       	movzx  edi,BYTE PTR [rdi+r10*1]
+  223927:	c1 e7 10             	shl    edi,0x10
+  22392a:	09 d7                	or     edi,edx
+  22392c:	46 0f b6 04 13       	movzx  r8d,BYTE PTR [rbx+r10*1]
+  223931:	41 c1 e0 08          	shl    r8d,0x8
+  223935:	41 09 f8             	or     r8d,edi
+  223938:	42 0f b6 14 16       	movzx  edx,BYTE PTR [rsi+r10*1]
+  22393d:	44 09 c2             	or     edx,r8d
+  223940:	89 d6                	mov    esi,edx
+  223942:	c1 c6 02             	rol    esi,0x2
+  223945:	89 d7                	mov    edi,edx
+  223947:	c1 c7 0a             	rol    edi,0xa
+  22394a:	41 89 d0             	mov    r8d,edx
+  22394d:	41 c1 c0 12          	rol    r8d,0x12
+  223951:	31 d5                	xor    ebp,edx
+  223953:	c1 c2 18             	rol    edx,0x18
+  223956:	31 f7                	xor    edi,esi
+  223958:	44 31 c2             	xor    edx,r8d
+  22395b:	31 fa                	xor    edx,edi
+  22395d:	31 ea                	xor    edx,ebp
+  22395f:	41 8b 59 7c          	mov    ebx,DWORD PTR [r9+0x7c]
+  223963:	31 c3                	xor    ebx,eax
+  223965:	31 cb                	xor    ebx,ecx
+  223967:	31 d3                	xor    ebx,edx
+  223969:	0f b6 f3             	movzx  esi,bl
+  22396c:	89 df                	mov    edi,ebx
+  22396e:	0f b6 ef             	movzx  ebp,bh
+  223971:	41 89 d8             	mov    r8d,ebx
+  223974:	41 c1 e8 18          	shr    r8d,0x18
+  223978:	47 0f b6 04 10       	movzx  r8d,BYTE PTR [r8+r10*1]
+  22397d:	41 c1 e0 18          	shl    r8d,0x18
+  223981:	c1 ef 10             	shr    edi,0x10
+  223984:	40 0f b6 ff          	movzx  edi,dil
+  223988:	42 0f b6 3c 17       	movzx  edi,BYTE PTR [rdi+r10*1]
+  22398d:	c1 e7 10             	shl    edi,0x10
+  223990:	44 09 c7             	or     edi,r8d
+  223993:	46 0f b6 44 15 00    	movzx  r8d,BYTE PTR [rbp+r10*1+0x0]
+  223999:	41 c1 e0 08          	shl    r8d,0x8
+  22399d:	41 09 f8             	or     r8d,edi
+  2239a0:	42 0f b6 1c 16       	movzx  ebx,BYTE PTR [rsi+r10*1]
+  2239a5:	44 09 c3             	or     ebx,r8d
+  2239a8:	89 de                	mov    esi,ebx
+  2239aa:	c1 c6 02             	rol    esi,0x2
+  2239ad:	89 df                	mov    edi,ebx
+  2239af:	c1 c7 0a             	rol    edi,0xa
+  2239b2:	41 89 d8             	mov    r8d,ebx
+  2239b5:	41 c1 c0 12          	rol    r8d,0x12
+  2239b9:	41 31 dc             	xor    r12d,ebx
+  2239bc:	c1 c3 18             	rol    ebx,0x18
+  2239bf:	31 f7                	xor    edi,esi
+  2239c1:	44 31 c3             	xor    ebx,r8d
+  2239c4:	31 fb                	xor    ebx,edi
+  2239c6:	44 31 e3             	xor    ebx,r12d
+  2239c9:	89 de                	mov    esi,ebx
+  2239cb:	c1 ee 18             	shr    esi,0x18
+  2239ce:	48 8b 7c 24 10       	mov    rdi,QWORD PTR [rsp+0x10]
+  2239d3:	40 88 37             	mov    BYTE PTR [rdi],sil
+  2239d6:	89 de                	mov    esi,ebx
+  2239d8:	c1 ee 10             	shr    esi,0x10
+  2239db:	40 88 77 01          	mov    BYTE PTR [rdi+0x1],sil
+  2239df:	88 7f 02             	mov    BYTE PTR [rdi+0x2],bh
+  2239e2:	88 5f 03             	mov    BYTE PTR [rdi+0x3],bl
+  2239e5:	89 d6                	mov    esi,edx
+  2239e7:	c1 ee 18             	shr    esi,0x18
+  2239ea:	40 88 77 04          	mov    BYTE PTR [rdi+0x4],sil
+  2239ee:	89 d6                	mov    esi,edx
+  2239f0:	c1 ee 10             	shr    esi,0x10
+  2239f3:	40 88 77 05          	mov    BYTE PTR [rdi+0x5],sil
+  2239f7:	88 77 06             	mov    BYTE PTR [rdi+0x6],dh
+  2239fa:	88 57 07             	mov    BYTE PTR [rdi+0x7],dl
+  2239fd:	89 ca                	mov    edx,ecx
+  2239ff:	c1 ea 18             	shr    edx,0x18
+  223a02:	88 57 08             	mov    BYTE PTR [rdi+0x8],dl
+  223a05:	89 ca                	mov    edx,ecx
+  223a07:	c1 ea 10             	shr    edx,0x10
+  223a0a:	88 57 09             	mov    BYTE PTR [rdi+0x9],dl
+  223a0d:	88 6f 0a             	mov    BYTE PTR [rdi+0xa],ch
+  223a10:	88 4f 0b             	mov    BYTE PTR [rdi+0xb],cl
+  223a13:	89 c1                	mov    ecx,eax
+  223a15:	c1 e9 18             	shr    ecx,0x18
+  223a18:	88 4f 0c             	mov    BYTE PTR [rdi+0xc],cl
+  223a1b:	89 c1                	mov    ecx,eax
+  223a1d:	c1 e9 10             	shr    ecx,0x10
+  223a20:	88 4f 0d             	mov    BYTE PTR [rdi+0xd],cl
+  223a23:	88 67 0e             	mov    BYTE PTR [rdi+0xe],ah
+  223a26:	88 47 0f             	mov    BYTE PTR [rdi+0xf],al
+  223a29:	48 81 c4 e8 00 00 00 	add    rsp,0xe8
+  223a30:	5b                   	pop    rbx
+  223a31:	41 5c                	pop    r12
+  223a33:	41 5d                	pop    r13
+  223a35:	41 5e                	pop    r14
+  223a37:	41 5f                	pop    r15
+  223a39:	5d                   	pop    rbp
+  223a3a:	c3                   	ret
+  223a3b:	48 8d 15 2e b0 5f 00 	lea    rdx,[rip+0x5fb02e]        # 81ea70 <anon.0ec28c8051915372a7f93747e15cd319.214.llvm.14757520186848287924+0x78>
+  223a42:	be 20 00 00 00       	mov    esi,0x20
+  223a47:	ff 15 23 a1 6b 00    	call   QWORD PTR [rip+0x6ba123]        # 8ddb70 <_DYNAMIC+0x2870>
+  223a4d:	48 8d 15 04 b0 5f 00 	lea    rdx,[rip+0x5fb004]        # 81ea58 <anon.0ec28c8051915372a7f93747e15cd319.214.llvm.14757520186848287924+0x60>
+  223a54:	be 20 00 00 00       	mov    esi,0x20
+  223a59:	48 89 c7             	mov    rdi,rax
+  223a5c:	ff 15 0e a1 6b 00    	call   QWORD PTR [rip+0x6ba10e]        # 8ddb70 <_DYNAMIC+0x2870>
+  223a62:	48 8d 15 d7 af 5f 00 	lea    rdx,[rip+0x5fafd7]        # 81ea40 <anon.0ec28c8051915372a7f93747e15cd319.214.llvm.14757520186848287924+0x48>
+  223a69:	be 20 00 00 00       	mov    esi,0x20
+  223a6e:	48 89 cf             	mov    rdi,rcx
+  223a71:	ff 15 f9 a0 6b 00    	call   QWORD PTR [rip+0x6ba0f9]        # 8ddb70 <_DYNAMIC+0x2870>
+  223a77:	48 8d 15 aa af 5f 00 	lea    rdx,[rip+0x5fafaa]        # 81ea28 <anon.0ec28c8051915372a7f93747e15cd319.214.llvm.14757520186848287924+0x30>
+  223a7e:	be 20 00 00 00       	mov    esi,0x20
+  223a83:	4c 89 c7             	mov    rdi,r8
+  223a86:	ff 15 e4 a0 6b 00    	call   QWORD PTR [rip+0x6ba0e4]        # 8ddb70 <_DYNAMIC+0x2870>
+
+### openssl_rs::sm4::ossl_sm4_decrypt [sm4 data path (decrypt)]  0x222f30..0x2234db
+
+court/tmp/pfp68/final/libcrypto.so.3:     file format elf64-x86-64
+
+
+Disassembly of section .text:
+
+0000000000222f30 <_RNvNtCsfBoMNNx3tZr_10openssl_rs3sm416ossl_sm4_decrypt>:
+  222f30:	55                   	push   rbp
+  222f31:	41 57                	push   r15
+  222f33:	41 56                	push   r14
+  222f35:	41 55                	push   r13
+  222f37:	41 54                	push   r12
+  222f39:	53                   	push   rbx
+  222f3a:	48 81 ec e8 00 00 00 	sub    rsp,0xe8
+  222f41:	44 8b 07             	mov    r8d,DWORD PTR [rdi]
+  222f44:	44 8b 5f 04          	mov    r11d,DWORD PTR [rdi+0x4]
+  222f48:	41 0f c8             	bswap  r8d
+  222f4b:	41 0f cb             	bswap  r11d
+  222f4e:	8b 4f 08             	mov    ecx,DWORD PTR [rdi+0x8]
+  222f51:	0f c9                	bswap  ecx
+  222f53:	44 8b 4f 0c          	mov    r9d,DWORD PTR [rdi+0xc]
+  222f57:	41 0f c9             	bswap  r9d
+  222f5a:	8b 7a 7c             	mov    edi,DWORD PTR [rdx+0x7c]
+  222f5d:	31 cf                	xor    edi,ecx
+  222f5f:	44 89 c8             	mov    eax,r9d
+  222f62:	44 31 d8             	xor    eax,r11d
+  222f65:	31 f8                	xor    eax,edi
+  222f67:	0f b6 f8             	movzx  edi,al
+  222f6a:	41 89 c2             	mov    r10d,eax
+  222f6d:	0f b6 dc             	movzx  ebx,ah
+  222f70:	c1 e8 18             	shr    eax,0x18
+  222f73:	4c 8d 2d 5a b3 44 00 	lea    r13,[rip+0x44b35a]        # 66e2d4 <_RNvNtCsfBoMNNx3tZr_10openssl_rs3sm45SM4_S>
+  222f7a:	42 0f b6 04 28       	movzx  eax,BYTE PTR [rax+r13*1]
+  222f7f:	c1 e0 18             	shl    eax,0x18
+  222f82:	41 c1 ea 10          	shr    r10d,0x10
+  222f86:	45 0f b6 d2          	movzx  r10d,r10b
+  222f8a:	47 0f b6 14 2a       	movzx  r10d,BYTE PTR [r10+r13*1]
+  222f8f:	41 c1 e2 10          	shl    r10d,0x10
+  222f93:	41 09 c2             	or     r10d,eax
+  222f96:	42 0f b6 04 2b       	movzx  eax,BYTE PTR [rbx+r13*1]
+  222f9b:	c1 e0 08             	shl    eax,0x8
+  222f9e:	44 09 d0             	or     eax,r10d
+  222fa1:	42 0f b6 3c 2f       	movzx  edi,BYTE PTR [rdi+r13*1]
+  222fa6:	09 c7                	or     edi,eax
+  222fa8:	89 f8                	mov    eax,edi
+  222faa:	41 89 fa             	mov    r10d,edi
+  222fad:	41 89 fe             	mov    r14d,edi
+  222fb0:	41 c1 c6 18          	rol    r14d,0x18
+  222fb4:	41 31 fe             	xor    r14d,edi
+  222fb7:	c1 c7 02             	rol    edi,0x2
+  222fba:	c1 c0 0a             	rol    eax,0xa
+  222fbd:	41 c1 c2 12          	rol    r10d,0x12
+  222fc1:	44 31 c7             	xor    edi,r8d
+  222fc4:	41 31 c2             	xor    r10d,eax
+  222fc7:	41 31 fa             	xor    r10d,edi
+  222fca:	45 31 d6             	xor    r14d,r10d
+  222fcd:	8b 42 78             	mov    eax,DWORD PTR [rdx+0x78]
+  222fd0:	31 c8                	xor    eax,ecx
+  222fd2:	44 31 c8             	xor    eax,r9d
+  222fd5:	44 31 f0             	xor    eax,r14d
+  222fd8:	0f b6 f8             	movzx  edi,al
+  222fdb:	41 89 c0             	mov    r8d,eax
+  222fde:	0f b6 dc             	movzx  ebx,ah
+  222fe1:	c1 e8 18             	shr    eax,0x18
+  222fe4:	42 0f b6 04 28       	movzx  eax,BYTE PTR [rax+r13*1]
+  222fe9:	c1 e0 18             	shl    eax,0x18
+  222fec:	41 c1 e8 10          	shr    r8d,0x10
+  222ff0:	45 0f b6 c0          	movzx  r8d,r8b
+  222ff4:	47 0f b6 04 28       	movzx  r8d,BYTE PTR [r8+r13*1]
+  222ff9:	41 c1 e0 10          	shl    r8d,0x10
+  222ffd:	41 09 c0             	or     r8d,eax
+  223000:	42 0f b6 04 2b       	movzx  eax,BYTE PTR [rbx+r13*1]
+  223005:	c1 e0 08             	shl    eax,0x8
+  223008:	44 09 c0             	or     eax,r8d
+  22300b:	46 0f b6 3c 2f       	movzx  r15d,BYTE PTR [rdi+r13*1]
+  223010:	41 09 c7             	or     r15d,eax
+  223013:	44 89 f8             	mov    eax,r15d
+  223016:	c1 c0 02             	rol    eax,0x2
+  223019:	44 89 ff             	mov    edi,r15d
+  22301c:	c1 c7 0a             	rol    edi,0xa
+  22301f:	45 89 f8             	mov    r8d,r15d
+  223022:	41 c1 c0 12          	rol    r8d,0x12
+  223026:	45 31 fb             	xor    r11d,r15d
+  223029:	41 c1 c7 18          	rol    r15d,0x18
+  22302d:	31 c7                	xor    edi,eax
+  22302f:	45 31 c7             	xor    r15d,r8d
+  223032:	41 31 ff             	xor    r15d,edi
+  223035:	45 31 df             	xor    r15d,r11d
+  223038:	8b 42 74             	mov    eax,DWORD PTR [rdx+0x74]
+  22303b:	44 31 c8             	xor    eax,r9d
+  22303e:	44 31 f0             	xor    eax,r14d
+  223041:	44 31 f8             	xor    eax,r15d
+  223044:	44 0f b6 c0          	movzx  r8d,al
+  223048:	89 c7                	mov    edi,eax
+  22304a:	0f b6 dc             	movzx  ebx,ah
+  22304d:	c1 e8 18             	shr    eax,0x18
+  223050:	42 0f b6 04 28       	movzx  eax,BYTE PTR [rax+r13*1]
+  223055:	c1 e0 18             	shl    eax,0x18
+  223058:	c1 ef 10             	shr    edi,0x10
+  22305b:	40 0f b6 ff          	movzx  edi,dil
+  22305f:	42 0f b6 3c 2f       	movzx  edi,BYTE PTR [rdi+r13*1]
+  223064:	c1 e7 10             	shl    edi,0x10
+  223067:	09 c7                	or     edi,eax
+  223069:	42 0f b6 04 2b       	movzx  eax,BYTE PTR [rbx+r13*1]
+  22306e:	c1 e0 08             	shl    eax,0x8
+  223071:	09 f8                	or     eax,edi
+  223073:	43 0f b6 2c 28       	movzx  ebp,BYTE PTR [r8+r13*1]
+  223078:	09 c5                	or     ebp,eax
+  22307a:	89 e8                	mov    eax,ebp
+  22307c:	c1 c0 02             	rol    eax,0x2
+  22307f:	41 89 e8             	mov    r8d,ebp
+  223082:	41 c1 c0 0a          	rol    r8d,0xa
+  223086:	89 ef                	mov    edi,ebp
+  223088:	c1 c7 12             	rol    edi,0x12
+  22308b:	31 e9                	xor    ecx,ebp
+  22308d:	c1 c5 18             	rol    ebp,0x18
+  223090:	41 31 c0             	xor    r8d,eax
+  223093:	31 fd                	xor    ebp,edi
+  223095:	44 31 c5             	xor    ebp,r8d
+  223098:	31 cd                	xor    ebp,ecx
+  22309a:	48 89 54 24 08       	mov    QWORD PTR [rsp+0x8],rdx
+  22309f:	8b 42 70             	mov    eax,DWORD PTR [rdx+0x70]
+  2230a2:	44 31 f0             	xor    eax,r14d
+  2230a5:	44 31 f8             	xor    eax,r15d
+  2230a8:	31 e8                	xor    eax,ebp
+  2230aa:	0f b6 c8             	movzx  ecx,al
+  2230ad:	89 c2                	mov    edx,eax
+  2230af:	0f b6 fc             	movzx  edi,ah
+  2230b2:	c1 e8 18             	shr    eax,0x18
+  2230b5:	42 0f b6 04 28       	movzx  eax,BYTE PTR [rax+r13*1]
+  2230ba:	c1 e0 18             	shl    eax,0x18
+  2230bd:	c1 ea 10             	shr    edx,0x10
+  2230c0:	0f b6 d2             	movzx  edx,dl
+  2230c3:	42 0f b6 14 2a       	movzx  edx,BYTE PTR [rdx+r13*1]
+  2230c8:	c1 e2 10             	shl    edx,0x10
+  2230cb:	09 c2                	or     edx,eax
+  2230cd:	42 0f b6 04 2f       	movzx  eax,BYTE PTR [rdi+r13*1]
+  2230d2:	c1 e0 08             	shl    eax,0x8
+  2230d5:	09 d0                	or     eax,edx
+  2230d7:	46 0f b6 24 29       	movzx  r12d,BYTE PTR [rcx+r13*1]
+  2230dc:	41 09 c4             	or     r12d,eax
+  2230df:	44 89 e0             	mov    eax,r12d
+  2230e2:	c1 c0 02             	rol    eax,0x2
+  2230e5:	44 89 e1             	mov    ecx,r12d
+  2230e8:	c1 c1 0a             	rol    ecx,0xa
+  2230eb:	48 89 74 24 10       	mov    QWORD PTR [rsp+0x10],rsi
+  2230f0:	44 89 e2             	mov    edx,r12d
+  2230f3:	c1 c2 12             	rol    edx,0x12
+  2230f6:	31 c1                	xor    ecx,eax
+  2230f8:	45 31 e1             	xor    r9d,r12d
+  2230fb:	41 c1 c4 18          	rol    r12d,0x18
+  2230ff:	41 31 d4             	xor    r12d,edx
+  223102:	41 31 cc             	xor    r12d,ecx
+  223105:	45 31 cc             	xor    r12d,r9d
+  223108:	48 8d 7c 24 28       	lea    rdi,[rsp+0x28]
+  22310d:	48 8d 35 1c d8 44 00 	lea    rsi,[rip+0x44d81c]        # 670930 <_RNvNtCsfBoMNNx3tZr_10openssl_rs3sm411SM4_SBOX_T3+0x404>
+  223114:	ba c0 00 00 00       	mov    edx,0xc0
+  223119:	ff 15 b9 a3 6b 00    	call   QWORD PTR [rip+0x6ba3b9]        # 8dd4d8 <memcpy@GLIBC_2.14>
+  22311f:	ba 28 00 00 00       	mov    edx,0x28
+  223124:	48 8b 74 24 08       	mov    rsi,QWORD PTR [rsp+0x8]
+  223129:	4c 8d 0d fc c7 44 00 	lea    r9,[rip+0x44c7fc]        # 66f92c <_RNvNtCsfBoMNNx3tZr_10openssl_rs3sm411SM4_SBOX_T0>
+  223130:	4c 8d 15 f5 cb 44 00 	lea    r10,[rip+0x44cbf5]        # 66fd2c <_RNvNtCsfBoMNNx3tZr_10openssl_rs3sm411SM4_SBOX_T1>
+  223137:	4c 8d 1d ee cf 44 00 	lea    r11,[rip+0x44cfee]        # 67012c <_RNvNtCsfBoMNNx3tZr_10openssl_rs3sm411SM4_SBOX_T2>
+  22313e:	4c 8d 2d e7 d3 44 00 	lea    r13,[rip+0x44d3e7]        # 67052c <_RNvNtCsfBoMNNx3tZr_10openssl_rs3sm411SM4_SBOX_T3>
+  223145:	66 66 2e 0f 1f 84 00 	data16 cs nop WORD PTR [rax+rax*1+0x0]
+  22314c:	00 00 00 00 
+  223150:	4c 8b 04 14          	mov    r8,QWORD PTR [rsp+rdx*1]
+  223154:	49 83 f8 1f          	cmp    r8,0x1f
+  223158:	0f 87 68 03 00 00    	ja     2234c6 <_RNvNtCsfBoMNNx3tZr_10openssl_rs3sm416ossl_sm4_decrypt+0x596>
+  22315e:	48 8b 4c 14 08       	mov    rcx,QWORD PTR [rsp+rdx*1+0x8]
+  223163:	48 83 f9 20          	cmp    rcx,0x20
+  223167:	0f 83 44 03 00 00    	jae    2234b1 <_RNvNtCsfBoMNNx3tZr_10openssl_rs3sm416ossl_sm4_decrypt+0x581>
+  22316d:	48 8b 44 14 10       	mov    rax,QWORD PTR [rsp+rdx*1+0x10]
+  223172:	48 83 f8 20          	cmp    rax,0x20
+  223176:	0f 83 20 03 00 00    	jae    22349c <_RNvNtCsfBoMNNx3tZr_10openssl_rs3sm416ossl_sm4_decrypt+0x56c>
+  22317c:	48 8b 7c 14 18       	mov    rdi,QWORD PTR [rsp+rdx*1+0x18]
+  223181:	48 83 ff 20          	cmp    rdi,0x20
+  223185:	0f 83 ff 02 00 00    	jae    22348a <_RNvNtCsfBoMNNx3tZr_10openssl_rs3sm416ossl_sm4_decrypt+0x55a>
+  22318b:	46 8b 04 86          	mov    r8d,DWORD PTR [rsi+r8*4]
+  22318f:	41 31 e8             	xor    r8d,ebp
+  223192:	44 89 e3             	mov    ebx,r12d
+  223195:	44 31 fb             	xor    ebx,r15d
+  223198:	44 31 c3             	xor    ebx,r8d
+  22319b:	41 89 d8             	mov    r8d,ebx
+  22319e:	41 c1 e8 18          	shr    r8d,0x18
+  2231a2:	47 33 34 81          	xor    r14d,DWORD PTR [r9+r8*4]
+  2231a6:	41 89 d8             	mov    r8d,ebx
+  2231a9:	41 c1 e8 0e          	shr    r8d,0xe
+  2231ad:	41 81 e0 fc 03 00 00 	and    r8d,0x3fc
+  2231b4:	47 33 34 10          	xor    r14d,DWORD PTR [r8+r10*1]
+  2231b8:	44 0f b6 c3          	movzx  r8d,bl
+  2231bc:	0f b6 df             	movzx  ebx,bh
+  2231bf:	45 33 34 9b          	xor    r14d,DWORD PTR [r11+rbx*4]
+  2231c3:	47 33 74 85 00       	xor    r14d,DWORD PTR [r13+r8*4+0x0]
+  2231c8:	8b 0c 8e             	mov    ecx,DWORD PTR [rsi+rcx*4]
+  2231cb:	31 e9                	xor    ecx,ebp
+  2231cd:	44 31 e1             	xor    ecx,r12d
+  2231d0:	44 31 f1             	xor    ecx,r14d
+  2231d3:	41 89 c8             	mov    r8d,ecx
+  2231d6:	89 cb                	mov    ebx,ecx
+  2231d8:	c1 eb 18             	shr    ebx,0x18
+  2231db:	41 8b 1c 99          	mov    ebx,DWORD PTR [r9+rbx*4]
+  2231df:	41 c1 e8 0e          	shr    r8d,0xe
+  2231e3:	41 81 e0 fc 03 00 00 	and    r8d,0x3fc
+  2231ea:	43 33 1c 10          	xor    ebx,DWORD PTR [r8+r10*1]
+  2231ee:	41 89 e8             	mov    r8d,ebp
+  2231f1:	0f b6 ed             	movzx  ebp,ch
+  2231f4:	41 33 1c ab          	xor    ebx,DWORD PTR [r11+rbp*4]
+  2231f8:	44 89 c5             	mov    ebp,r8d
+  2231fb:	0f b6 c9             	movzx  ecx,cl
+  2231fe:	41 33 5c 8d 00       	xor    ebx,DWORD PTR [r13+rcx*4+0x0]
+  223203:	41 31 df             	xor    r15d,ebx
+  223206:	8b 04 86             	mov    eax,DWORD PTR [rsi+rax*4]
+  223209:	44 31 e0             	xor    eax,r12d
+  22320c:	44 31 f0             	xor    eax,r14d
+  22320f:	44 31 f8             	xor    eax,r15d
+  223212:	89 c1                	mov    ecx,eax
+  223214:	41 89 c0             	mov    r8d,eax
+  223217:	41 c1 e8 0e          	shr    r8d,0xe
+  22321b:	41 81 e0 fc 03 00 00 	and    r8d,0x3fc
+  223222:	47 8b 04 10          	mov    r8d,DWORD PTR [r8+r10*1]
+  223226:	c1 e9 18             	shr    ecx,0x18
+  223229:	45 33 04 89          	xor    r8d,DWORD PTR [r9+rcx*4]
+  22322d:	0f b6 cc             	movzx  ecx,ah
+  223230:	45 33 04 8b          	xor    r8d,DWORD PTR [r11+rcx*4]
+  223234:	0f b6 c0             	movzx  eax,al
+  223237:	45 33 44 85 00       	xor    r8d,DWORD PTR [r13+rax*4+0x0]
+  22323c:	44 31 c5             	xor    ebp,r8d
+  22323f:	8b 04 be             	mov    eax,DWORD PTR [rsi+rdi*4]
+  223242:	44 31 f0             	xor    eax,r14d
+  223245:	44 31 f8             	xor    eax,r15d
+  223248:	31 e8                	xor    eax,ebp
+  22324a:	89 c1                	mov    ecx,eax
+  22324c:	89 c7                	mov    edi,eax
+  22324e:	c1 ef 18             	shr    edi,0x18
+  223251:	41 8b 3c b9          	mov    edi,DWORD PTR [r9+rdi*4]
+  223255:	c1 e9 0e             	shr    ecx,0xe
+  223258:	81 e1 fc 03 00 00    	and    ecx,0x3fc
+  22325e:	42 33 3c 11          	xor    edi,DWORD PTR [rcx+r10*1]
+  223262:	0f b6 cc             	movzx  ecx,ah
+  223265:	41 33 3c 8b          	xor    edi,DWORD PTR [r11+rcx*4]
+  223269:	0f b6 c0             	movzx  eax,al
+  22326c:	41 33 7c 85 00       	xor    edi,DWORD PTR [r13+rax*4+0x0]
+  223271:	41 31 fc             	xor    r12d,edi
+  223274:	48 83 c2 20          	add    rdx,0x20
+  223278:	48 81 fa e8 00 00 00 	cmp    rdx,0xe8
+  22327f:	0f 85 cb fe ff ff    	jne    223150 <_RNvNtCsfBoMNNx3tZr_10openssl_rs3sm416ossl_sm4_decrypt+0x220>
+  223285:	4c 8b 4c 24 08       	mov    r9,QWORD PTR [rsp+0x8]
+  22328a:	41 8b 49 0c          	mov    ecx,DWORD PTR [r9+0xc]
+  22328e:	44 31 f9             	xor    ecx,r15d
+  223291:	31 e9                	xor    ecx,ebp
+  223293:	44 31 e1             	xor    ecx,r12d
+  223296:	0f b6 c1             	movzx  eax,cl
+  223299:	89 ca                	mov    edx,ecx
+  22329b:	0f b6 f5             	movzx  esi,ch
+  22329e:	c1 e9 18             	shr    ecx,0x18
+  2232a1:	4c 8d 15 2c b0 44 00 	lea    r10,[rip+0x44b02c]        # 66e2d4 <_RNvNtCsfBoMNNx3tZr_10openssl_rs3sm45SM4_S>
+  2232a8:	42 0f b6 0c 11       	movzx  ecx,BYTE PTR [rcx+r10*1]
+  2232ad:	c1 e1 18             	shl    ecx,0x18
+  2232b0:	c1 ea 10             	shr    edx,0x10
+  2232b3:	0f b6 d2             	movzx  edx,dl
+  2232b6:	42 0f b6 14 12       	movzx  edx,BYTE PTR [rdx+r10*1]
+  2232bb:	c1 e2 10             	shl    edx,0x10
+  2232be:	09 ca                	or     edx,ecx
+  2232c0:	42 0f b6 0c 16       	movzx  ecx,BYTE PTR [rsi+r10*1]
+  2232c5:	c1 e1 08             	shl    ecx,0x8
+  2232c8:	09 d1                	or     ecx,edx
+  2232ca:	42 0f b6 04 10       	movzx  eax,BYTE PTR [rax+r10*1]
+  2232cf:	09 c8                	or     eax,ecx
+  2232d1:	89 c1                	mov    ecx,eax
+  2232d3:	c1 c1 02             	rol    ecx,0x2
+  2232d6:	89 c2                	mov    edx,eax
+  2232d8:	c1 c2 0a             	rol    edx,0xa
+  2232db:	89 c6                	mov    esi,eax
+  2232dd:	c1 c6 12             	rol    esi,0x12
+  2232e0:	41 31 c6             	xor    r14d,eax
+  2232e3:	c1 c0 18             	rol    eax,0x18
+  2232e6:	31 ca                	xor    edx,ecx
+  2232e8:	31 f0                	xor    eax,esi
+  2232ea:	31 d0                	xor    eax,edx
+  2232ec:	44 31 f0             	xor    eax,r14d
+  2232ef:	41 8b 51 08          	mov    edx,DWORD PTR [r9+0x8]
+  2232f3:	31 ea                	xor    edx,ebp
+  2232f5:	44 31 e2             	xor    edx,r12d
+  2232f8:	31 c2                	xor    edx,eax
+  2232fa:	0f b6 ca             	movzx  ecx,dl
+  2232fd:	89 d6                	mov    esi,edx
+  2232ff:	0f b6 fe             	movzx  edi,dh
+  223302:	c1 ea 18             	shr    edx,0x18
+  223305:	42 0f b6 14 12       	movzx  edx,BYTE PTR [rdx+r10*1]
+  22330a:	c1 e2 18             	shl    edx,0x18
+  22330d:	c1 ee 10             	shr    esi,0x10
+  223310:	40 0f b6 f6          	movzx  esi,sil
+  223314:	42 0f b6 34 16       	movzx  esi,BYTE PTR [rsi+r10*1]
+  223319:	c1 e6 10             	shl    esi,0x10
+  22331c:	09 d6                	or     esi,edx
+  22331e:	42 0f b6 14 17       	movzx  edx,BYTE PTR [rdi+r10*1]
+  223323:	c1 e2 08             	shl    edx,0x8
+  223326:	09 f2                	or     edx,esi
+  223328:	42 0f b6 0c 11       	movzx  ecx,BYTE PTR [rcx+r10*1]
+  22332d:	09 d1                	or     ecx,edx
+  22332f:	89 ca                	mov    edx,ecx
+  223331:	c1 c2 02             	rol    edx,0x2
+  223334:	89 ce                	mov    esi,ecx
+  223336:	c1 c6 0a             	rol    esi,0xa
+  223339:	89 cf                	mov    edi,ecx
+  22333b:	c1 c7 12             	rol    edi,0x12
+  22333e:	41 31 cf             	xor    r15d,ecx
+  223341:	c1 c1 18             	rol    ecx,0x18
+  223344:	31 d6                	xor    esi,edx
+  223346:	31 f9                	xor    ecx,edi
+  223348:	31 f1                	xor    ecx,esi
+  22334a:	44 31 f9             	xor    ecx,r15d
+  22334d:	41 8b 51 04          	mov    edx,DWORD PTR [r9+0x4]
+  223351:	44 31 e2             	xor    edx,r12d
+  223354:	31 c2                	xor    edx,eax
+  223356:	31 ca                	xor    edx,ecx
+  223358:	0f b6 f2             	movzx  esi,dl
+  22335b:	89 d7                	mov    edi,edx
+  22335d:	0f b6 de             	movzx  ebx,dh
+  223360:	c1 ea 18             	shr    edx,0x18
+  223363:	42 0f b6 14 12       	movzx  edx,BYTE PTR [rdx+r10*1]
+  223368:	c1 e2 18             	shl    edx,0x18
+  22336b:	c1 ef 10             	shr    edi,0x10
+  22336e:	40 0f b6 ff          	movzx  edi,dil
+  223372:	42 0f b6 3c 17       	movzx  edi,BYTE PTR [rdi+r10*1]
+  223377:	c1 e7 10             	shl    edi,0x10
+  22337a:	09 d7                	or     edi,edx
+  22337c:	46 0f b6 04 13       	movzx  r8d,BYTE PTR [rbx+r10*1]
+  223381:	41 c1 e0 08          	shl    r8d,0x8
+  223385:	41 09 f8             	or     r8d,edi
+  223388:	42 0f b6 14 16       	movzx  edx,BYTE PTR [rsi+r10*1]
+  22338d:	44 09 c2             	or     edx,r8d
+  223390:	89 d6                	mov    esi,edx
+  223392:	c1 c6 02             	rol    esi,0x2
+  223395:	89 d7                	mov    edi,edx
+  223397:	c1 c7 0a             	rol    edi,0xa
+  22339a:	41 89 d0             	mov    r8d,edx
+  22339d:	41 c1 c0 12          	rol    r8d,0x12
+  2233a1:	31 d5                	xor    ebp,edx
+  2233a3:	c1 c2 18             	rol    edx,0x18
+  2233a6:	31 f7                	xor    edi,esi
+  2233a8:	44 31 c2             	xor    edx,r8d
+  2233ab:	31 fa                	xor    edx,edi
+  2233ad:	31 ea                	xor    edx,ebp
+  2233af:	41 8b 19             	mov    ebx,DWORD PTR [r9]
+  2233b2:	31 c3                	xor    ebx,eax
+  2233b4:	31 cb                	xor    ebx,ecx
+  2233b6:	31 d3                	xor    ebx,edx
+  2233b8:	0f b6 f3             	movzx  esi,bl
+  2233bb:	89 df                	mov    edi,ebx
+  2233bd:	0f b6 ef             	movzx  ebp,bh
+  2233c0:	41 89 d8             	mov    r8d,ebx
+  2233c3:	41 c1 e8 18          	shr    r8d,0x18
+  2233c7:	47 0f b6 04 10       	movzx  r8d,BYTE PTR [r8+r10*1]
+  2233cc:	41 c1 e0 18          	shl    r8d,0x18
+  2233d0:	c1 ef 10             	shr    edi,0x10
+  2233d3:	40 0f b6 ff          	movzx  edi,dil
+  2233d7:	42 0f b6 3c 17       	movzx  edi,BYTE PTR [rdi+r10*1]
+  2233dc:	c1 e7 10             	shl    edi,0x10
+  2233df:	44 09 c7             	or     edi,r8d
+  2233e2:	46 0f b6 44 15 00    	movzx  r8d,BYTE PTR [rbp+r10*1+0x0]
+  2233e8:	41 c1 e0 08          	shl    r8d,0x8
+  2233ec:	41 09 f8             	or     r8d,edi
+  2233ef:	42 0f b6 1c 16       	movzx  ebx,BYTE PTR [rsi+r10*1]
+  2233f4:	44 09 c3             	or     ebx,r8d
+  2233f7:	89 de                	mov    esi,ebx
+  2233f9:	c1 c6 02             	rol    esi,0x2
+  2233fc:	89 df                	mov    edi,ebx
+  2233fe:	c1 c7 0a             	rol    edi,0xa
+  223401:	41 89 d8             	mov    r8d,ebx
+  223404:	41 c1 c0 12          	rol    r8d,0x12
+  223408:	41 31 dc             	xor    r12d,ebx
+  22340b:	c1 c3 18             	rol    ebx,0x18
+  22340e:	31 f7                	xor    edi,esi
+  223410:	44 31 c3             	xor    ebx,r8d
+  223413:	31 fb                	xor    ebx,edi
+  223415:	44 31 e3             	xor    ebx,r12d
+  223418:	89 de                	mov    esi,ebx
+  22341a:	c1 ee 18             	shr    esi,0x18
+  22341d:	48 8b 7c 24 10       	mov    rdi,QWORD PTR [rsp+0x10]
+  223422:	40 88 37             	mov    BYTE PTR [rdi],sil
+  223425:	89 de                	mov    esi,ebx
+  223427:	c1 ee 10             	shr    esi,0x10
+  22342a:	40 88 77 01          	mov    BYTE PTR [rdi+0x1],sil
+  22342e:	88 7f 02             	mov    BYTE PTR [rdi+0x2],bh
+  223431:	88 5f 03             	mov    BYTE PTR [rdi+0x3],bl
+  223434:	89 d6                	mov    esi,edx
+  223436:	c1 ee 18             	shr    esi,0x18
+  223439:	40 88 77 04          	mov    BYTE PTR [rdi+0x4],sil
+  22343d:	89 d6                	mov    esi,edx
+  22343f:	c1 ee 10             	shr    esi,0x10
+  223442:	40 88 77 05          	mov    BYTE PTR [rdi+0x5],sil
+  223446:	88 77 06             	mov    BYTE PTR [rdi+0x6],dh
+  223449:	88 57 07             	mov    BYTE PTR [rdi+0x7],dl
+  22344c:	89 ca                	mov    edx,ecx
+  22344e:	c1 ea 18             	shr    edx,0x18
+  223451:	88 57 08             	mov    BYTE PTR [rdi+0x8],dl
+  223454:	89 ca                	mov    edx,ecx
+  223456:	c1 ea 10             	shr    edx,0x10
+  223459:	88 57 09             	mov    BYTE PTR [rdi+0x9],dl
+  22345c:	88 6f 0a             	mov    BYTE PTR [rdi+0xa],ch
+  22345f:	88 4f 0b             	mov    BYTE PTR [rdi+0xb],cl
+  223462:	89 c1                	mov    ecx,eax
+  223464:	c1 e9 18             	shr    ecx,0x18
+  223467:	88 4f 0c             	mov    BYTE PTR [rdi+0xc],cl
+  22346a:	89 c1                	mov    ecx,eax
+  22346c:	c1 e9 10             	shr    ecx,0x10
+  22346f:	88 4f 0d             	mov    BYTE PTR [rdi+0xd],cl
+  223472:	88 67 0e             	mov    BYTE PTR [rdi+0xe],ah
+  223475:	88 47 0f             	mov    BYTE PTR [rdi+0xf],al
+  223478:	48 81 c4 e8 00 00 00 	add    rsp,0xe8
+  22347f:	5b                   	pop    rbx
+  223480:	41 5c                	pop    r12
+  223482:	41 5d                	pop    r13
+  223484:	41 5e                	pop    r14
+  223486:	41 5f                	pop    r15
+  223488:	5d                   	pop    rbp
+  223489:	c3                   	ret
+  22348a:	48 8d 15 df b5 5f 00 	lea    rdx,[rip+0x5fb5df]        # 81ea70 <anon.0ec28c8051915372a7f93747e15cd319.214.llvm.14757520186848287924+0x78>
+  223491:	be 20 00 00 00       	mov    esi,0x20
+  223496:	ff 15 d4 a6 6b 00    	call   QWORD PTR [rip+0x6ba6d4]        # 8ddb70 <_DYNAMIC+0x2870>
+  22349c:	48 8d 15 b5 b5 5f 00 	lea    rdx,[rip+0x5fb5b5]        # 81ea58 <anon.0ec28c8051915372a7f93747e15cd319.214.llvm.14757520186848287924+0x60>
+  2234a3:	be 20 00 00 00       	mov    esi,0x20
+  2234a8:	48 89 c7             	mov    rdi,rax
+  2234ab:	ff 15 bf a6 6b 00    	call   QWORD PTR [rip+0x6ba6bf]        # 8ddb70 <_DYNAMIC+0x2870>
+  2234b1:	48 8d 15 88 b5 5f 00 	lea    rdx,[rip+0x5fb588]        # 81ea40 <anon.0ec28c8051915372a7f93747e15cd319.214.llvm.14757520186848287924+0x48>
+  2234b8:	be 20 00 00 00       	mov    esi,0x20
+  2234bd:	48 89 cf             	mov    rdi,rcx
+  2234c0:	ff 15 aa a6 6b 00    	call   QWORD PTR [rip+0x6ba6aa]        # 8ddb70 <_DYNAMIC+0x2870>
+  2234c6:	48 8d 15 5b b5 5f 00 	lea    rdx,[rip+0x5fb55b]        # 81ea28 <anon.0ec28c8051915372a7f93747e15cd319.214.llvm.14757520186848287924+0x30>
+  2234cd:	be 20 00 00 00       	mov    esi,0x20
+  2234d2:	4c 89 c7             	mov    rdi,r8
+  2234d5:	ff 15 95 a6 6b 00    	call   QWORD PTR [rip+0x6ba695]        # 8ddb70 <_DYNAMIC+0x2870>
+
+### openssl_rs::sm4::ossl_sm4_set_key [sm4 key schedule]  0x223a90..0x223cb2
+
+court/tmp/pfp68/final/libcrypto.so.3:     file format elf64-x86-64
+
+
+Disassembly of section .text:
+
+0000000000223a90 <_RNvNtCsfBoMNNx3tZr_10openssl_rs3sm416ossl_sm4_set_key>:
+  223a90:	55                   	push   rbp
+  223a91:	41 57                	push   r15
+  223a93:	41 56                	push   r14
+  223a95:	53                   	push   rbx
+  223a96:	8b 07                	mov    eax,DWORD PTR [rdi]
+  223a98:	44 8b 77 04          	mov    r14d,DWORD PTR [rdi+0x4]
+  223a9c:	0f c8                	bswap  eax
+  223a9e:	35 c6 ba b1 a3       	xor    eax,0xa3b1bac6
+  223aa3:	41 0f ce             	bswap  r14d
+  223aa6:	41 81 f6 50 33 aa 56 	xor    r14d,0x56aa3350
+  223aad:	8b 57 08             	mov    edx,DWORD PTR [rdi+0x8]
+  223ab0:	0f ca                	bswap  edx
+  223ab2:	81 f2 97 91 7d 67    	xor    edx,0x677d9197
+  223ab8:	8b 7f 0c             	mov    edi,DWORD PTR [rdi+0xc]
+  223abb:	0f cf                	bswap  edi
+  223abd:	81 f7 dc 22 70 b2    	xor    edi,0xb27022dc
+  223ac3:	49 c7 c0 fc ff ff ff 	mov    r8,0xfffffffffffffffc
+  223aca:	4c 8d 0d 83 e8 44 00 	lea    r9,[rip+0x44e883]        # 672354 <_RNvNvNtCsfBoMNNx3tZr_10openssl_rs3sm416ossl_sm4_set_key2CK>
+  223ad1:	4c 8d 15 fc a7 44 00 	lea    r10,[rip+0x44a7fc]        # 66e2d4 <_RNvNtCsfBoMNNx3tZr_10openssl_rs3sm45SM4_S>
+  223ad8:	0f 1f 84 00 00 00 00 	nop    DWORD PTR [rax+rax*1+0x0]
+  223adf:	00 
+  223ae0:	47 8b 5c 81 10       	mov    r11d,DWORD PTR [r9+r8*4+0x10]
+  223ae5:	41 31 d3             	xor    r11d,edx
+  223ae8:	89 fb                	mov    ebx,edi
+  223aea:	44 31 f3             	xor    ebx,r14d
+  223aed:	44 31 db             	xor    ebx,r11d
+  223af0:	44 0f b6 db          	movzx  r11d,bl
+  223af4:	89 dd                	mov    ebp,ebx
+  223af6:	0f b6 cf             	movzx  ecx,bh
+  223af9:	c1 eb 18             	shr    ebx,0x18
+  223afc:	42 0f b6 1c 13       	movzx  ebx,BYTE PTR [rbx+r10*1]
+  223b01:	c1 e3 18             	shl    ebx,0x18
+  223b04:	c1 ed 10             	shr    ebp,0x10
+  223b07:	44 0f b6 fd          	movzx  r15d,bpl
+  223b0b:	43 0f b6 2c 17       	movzx  ebp,BYTE PTR [r15+r10*1]
+  223b10:	c1 e5 10             	shl    ebp,0x10
+  223b13:	09 dd                	or     ebp,ebx
+  223b15:	42 0f b6 0c 11       	movzx  ecx,BYTE PTR [rcx+r10*1]
+  223b1a:	c1 e1 08             	shl    ecx,0x8
+  223b1d:	09 e9                	or     ecx,ebp
+  223b1f:	47 0f b6 1c 13       	movzx  r11d,BYTE PTR [r11+r10*1]
+  223b24:	41 09 cb             	or     r11d,ecx
+  223b27:	44 89 d9             	mov    ecx,r11d
+  223b2a:	c1 c1 0d             	rol    ecx,0xd
+  223b2d:	31 c1                	xor    ecx,eax
+  223b2f:	44 89 d8             	mov    eax,r11d
+  223b32:	c1 c0 17             	rol    eax,0x17
+  223b35:	44 31 d8             	xor    eax,r11d
+  223b38:	31 c8                	xor    eax,ecx
+  223b3a:	43 8b 5c 81 14       	mov    ebx,DWORD PTR [r9+r8*4+0x14]
+  223b3f:	31 d3                	xor    ebx,edx
+  223b41:	31 fb                	xor    ebx,edi
+  223b43:	31 c3                	xor    ebx,eax
+  223b45:	44 0f b6 db          	movzx  r11d,bl
+  223b49:	89 d9                	mov    ecx,ebx
+  223b4b:	0f b6 ef             	movzx  ebp,bh
+  223b4e:	c1 eb 18             	shr    ebx,0x18
+  223b51:	42 0f b6 1c 13       	movzx  ebx,BYTE PTR [rbx+r10*1]
+  223b56:	c1 e3 18             	shl    ebx,0x18
+  223b59:	c1 e9 10             	shr    ecx,0x10
+  223b5c:	0f b6 c9             	movzx  ecx,cl
+  223b5f:	42 0f b6 0c 11       	movzx  ecx,BYTE PTR [rcx+r10*1]
+  223b64:	c1 e1 10             	shl    ecx,0x10
+  223b67:	09 d9                	or     ecx,ebx
+  223b69:	42 0f b6 5c 15 00    	movzx  ebx,BYTE PTR [rbp+r10*1+0x0]
+  223b6f:	c1 e3 08             	shl    ebx,0x8
+  223b72:	09 cb                	or     ebx,ecx
+  223b74:	43 0f b6 0c 13       	movzx  ecx,BYTE PTR [r11+r10*1]
+  223b79:	09 d9                	or     ecx,ebx
+  223b7b:	41 89 cb             	mov    r11d,ecx
+  223b7e:	41 c1 c3 0d          	rol    r11d,0xd
+  223b82:	41 31 ce             	xor    r14d,ecx
+  223b85:	c1 c1 17             	rol    ecx,0x17
+  223b88:	44 31 d9             	xor    ecx,r11d
+  223b8b:	41 31 ce             	xor    r14d,ecx
+  223b8e:	43 8b 5c 81 18       	mov    ebx,DWORD PTR [r9+r8*4+0x18]
+  223b93:	31 fb                	xor    ebx,edi
+  223b95:	31 c3                	xor    ebx,eax
+  223b97:	44 31 f3             	xor    ebx,r14d
+  223b9a:	44 0f b6 db          	movzx  r11d,bl
+  223b9e:	89 d9                	mov    ecx,ebx
+  223ba0:	0f b6 ef             	movzx  ebp,bh
+  223ba3:	c1 eb 18             	shr    ebx,0x18
+  223ba6:	42 0f b6 1c 13       	movzx  ebx,BYTE PTR [rbx+r10*1]
+  223bab:	c1 e3 18             	shl    ebx,0x18
+  223bae:	c1 e9 10             	shr    ecx,0x10
+  223bb1:	0f b6 c9             	movzx  ecx,cl
+  223bb4:	42 0f b6 0c 11       	movzx  ecx,BYTE PTR [rcx+r10*1]
+  223bb9:	c1 e1 10             	shl    ecx,0x10
+  223bbc:	09 d9                	or     ecx,ebx
+  223bbe:	42 0f b6 5c 15 00    	movzx  ebx,BYTE PTR [rbp+r10*1+0x0]
+  223bc4:	c1 e3 08             	shl    ebx,0x8
+  223bc7:	09 cb                	or     ebx,ecx
+  223bc9:	43 0f b6 0c 13       	movzx  ecx,BYTE PTR [r11+r10*1]
+  223bce:	09 d9                	or     ecx,ebx
+  223bd0:	41 89 cb             	mov    r11d,ecx
+  223bd3:	41 c1 c3 0d          	rol    r11d,0xd
+  223bd7:	31 ca                	xor    edx,ecx
+  223bd9:	c1 c1 17             	rol    ecx,0x17
+  223bdc:	44 31 d9             	xor    ecx,r11d
+  223bdf:	31 ca                	xor    edx,ecx
+  223be1:	43 8b 5c 81 1c       	mov    ebx,DWORD PTR [r9+r8*4+0x1c]
+  223be6:	31 c3                	xor    ebx,eax
+  223be8:	44 31 f3             	xor    ebx,r14d
+  223beb:	31 d3                	xor    ebx,edx
+  223bed:	44 0f b6 db          	movzx  r11d,bl
+  223bf1:	89 d9                	mov    ecx,ebx
+  223bf3:	0f b6 ef             	movzx  ebp,bh
+  223bf6:	c1 eb 18             	shr    ebx,0x18
+  223bf9:	42 0f b6 1c 13       	movzx  ebx,BYTE PTR [rbx+r10*1]
+  223bfe:	c1 e3 18             	shl    ebx,0x18
+  223c01:	c1 e9 10             	shr    ecx,0x10
+  223c04:	0f b6 c9             	movzx  ecx,cl
+  223c07:	42 0f b6 0c 11       	movzx  ecx,BYTE PTR [rcx+r10*1]
+  223c0c:	c1 e1 10             	shl    ecx,0x10
+  223c0f:	09 d9                	or     ecx,ebx
+  223c11:	42 0f b6 5c 15 00    	movzx  ebx,BYTE PTR [rbp+r10*1+0x0]
+  223c17:	c1 e3 08             	shl    ebx,0x8
+  223c1a:	09 cb                	or     ebx,ecx
+  223c1c:	43 0f b6 0c 13       	movzx  ecx,BYTE PTR [r11+r10*1]
+  223c21:	09 d9                	or     ecx,ebx
+  223c23:	41 89 cb             	mov    r11d,ecx
+  223c26:	41 c1 c3 0d          	rol    r11d,0xd
+  223c2a:	31 cf                	xor    edi,ecx
+  223c2c:	c1 c1 17             	rol    ecx,0x17
+  223c2f:	44 31 d9             	xor    ecx,r11d
+  223c32:	31 cf                	xor    edi,ecx
+  223c34:	42 89 44 86 10       	mov    DWORD PTR [rsi+r8*4+0x10],eax
+  223c39:	46 89 74 86 14       	mov    DWORD PTR [rsi+r8*4+0x14],r14d
+  223c3e:	42 89 54 86 18       	mov    DWORD PTR [rsi+r8*4+0x18],edx
+  223c43:	42 89 7c 86 1c       	mov    DWORD PTR [rsi+r8*4+0x1c],edi
+  223c48:	49 83 c0 04          	add    r8,0x4
+  223c4c:	49 83 f8 1c          	cmp    r8,0x1c
+  223c50:	0f 82 8a fe ff ff    	jb     223ae0 <_RNvNtCsfBoMNNx3tZr_10openssl_rs3sm416ossl_sm4_set_key+0x50>
+  223c56:	c6 44 24 ec 00       	mov    BYTE PTR [rsp-0x14],0x0
+  223c5b:	c6 44 24 ff 00       	mov    BYTE PTR [rsp-0x1],0x0
+  223c60:	c6 44 24 f6 00       	mov    BYTE PTR [rsp-0xa],0x0
+  223c65:	c6 44 24 fe 00       	mov    BYTE PTR [rsp-0x2],0x0
+  223c6a:	c6 44 24 e8 00       	mov    BYTE PTR [rsp-0x18],0x0
+  223c6f:	c6 44 24 fd 00       	mov    BYTE PTR [rsp-0x3],0x0
+  223c74:	c6 44 24 f4 00       	mov    BYTE PTR [rsp-0xc],0x0
+  223c79:	c6 44 24 fc 00       	mov    BYTE PTR [rsp-0x4],0x0
+  223c7e:	c6 44 24 e4 00       	mov    BYTE PTR [rsp-0x1c],0x0
+  223c83:	c6 44 24 fb 00       	mov    BYTE PTR [rsp-0x5],0x0
+  223c88:	c6 44 24 f2 00       	mov    BYTE PTR [rsp-0xe],0x0
+  223c8d:	c6 44 24 fa 00       	mov    BYTE PTR [rsp-0x6],0x0
+  223c92:	c6 44 24 e0 00       	mov    BYTE PTR [rsp-0x20],0x0
+  223c97:	c6 44 24 f9 00       	mov    BYTE PTR [rsp-0x7],0x0
+  223c9c:	c6 44 24 f0 00       	mov    BYTE PTR [rsp-0x10],0x0
+  223ca1:	c6 44 24 f8 00       	mov    BYTE PTR [rsp-0x8],0x0
+  223ca6:	b8 01 00 00 00       	mov    eax,0x1
+  223cab:	5b                   	pop    rbx
+  223cac:	41 5e                	pop    r14
+  223cae:	41 5f                	pop    r15
+  223cb0:	5d                   	pop    rbp
+  223cb1:	c3                   	ret
+

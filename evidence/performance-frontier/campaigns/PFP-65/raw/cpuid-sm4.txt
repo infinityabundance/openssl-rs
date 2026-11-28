@@ -1,0 +1,3 @@
+cpuid.7.0.ebx=0x219c27eb bit5(AVX2)=1
+cpuid.7.1.eax=0x00000810 bit2(SM4)=0
+HWSM4_CAPABLE_X86_64=0

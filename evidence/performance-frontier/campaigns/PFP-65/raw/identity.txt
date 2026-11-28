@@ -1,0 +1,18 @@
+source_branch=staging
+source_head=5d14d7964c0adea5a37c9a6c00bcc14305bcf1c1
+worktree=modified (src/sm4.rs modified, src/sm4/portable.rs added; not committed)
+shipped_dso=court/tmp/pfp68/final/libcrypto.so.3
+shipped_dso_sha256=f53e2622112379f9a74b584a336b52cf282b7b38c83949efacb3a1a33c9ad926
+converted_dso=court/tmp/pfp65/final/libcrypto.so.3
+converted_dso_sha256=316b0adfa42135353c7115aa1880a852069020fe3923800e683ffd3fe6ffb42e
+authority_src=forensics/authorities/src/openssl-3.6.4
+authority_dso_sha256=611e511db4273c4b6b522031fd171efce71b80661bb8310c2a21dfd18ec0efd2
+cpu=13th Gen Intel(R) Core(TM) i9-13900K
+cpu_flags=aes avx2 gfni vaes (no avx512, no sm4)
+note=the PFP-64 receipt names court/tmp/pfp68/final as the shipped DSO; the
+     source files this batch adjudicates (src/sm4.rs, src/camellia.rs,
+     src/aria.rs, src/cipher_tables.rs) are unchanged between the PFP-68 source
+     commit c27e9373 and HEAD 5d14d796 (git log over that range is empty).
+     court/tmp/pfp56/libcrypto.so.3 (5b52e473...) is a PFP-56 benchmark
+     candidate from an intermediate worktree (source c1a100a8), not the
+     distribution artefact.

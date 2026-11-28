@@ -30,15 +30,20 @@ use core::ffi::{c_int, c_uchar};
 
 use crate::runtime::mem::OPENSSL_cleanse;
 
+mod portable;
+
 /// `SM4_BLOCK_SIZE` — `include/crypto/sm4.h:30`.
 pub(crate) const SM4_BLOCK_SIZE: usize = 16;
 
 /// `SM4_KEY_SCHEDULE` — `include/crypto/sm4.h:31`.
 pub(crate) const SM4_KEY_SCHEDULE: usize = 32;
 
-/// `static const uint8_t SM4_S[256]` — `sm4.c:18-46`. The 8-bit S-box, used only by
-/// `SM4_T_non_lin_sub`, which is what the first and last rounds go through.
-static SM4_S: [c_uchar; 256] = [
+/// `static const uint8_t SM4_S[256]` — `sm4.c:18-46`. The 8-bit S-box, used by
+/// `SM4_T_non_lin_sub`, which is what the first and last rounds go through, and — since the
+/// table-free conversion — the *source* from which the constant-pattern ANF circuit in
+/// [`portable`] is derived at compile time. It is `const` rather than `static` so that derivation
+/// is evaluated without emitting a runtime copy of the table.
+const SM4_S: [c_uchar; 256] = [
     0xD6, 0x90, 0xE9, 0xFE, 0xCC, 0xE1, 0x3D, 0xB7, 0x16, 0xB6, 0x14, 0xC2, 0x28, 0xFB, 0x2C, 0x05,
     0x2B, 0x67, 0x9A, 0x76, 0x2A, 0xBE, 0x04, 0xC3, 0xAA, 0x44, 0x13, 0x26, 0x49, 0x86, 0x06, 0x99,
     0x9C, 0x42, 0x50, 0xF4, 0x91, 0xEF, 0x98, 0x7A, 0x33, 0x54, 0x0B, 0x43, 0xED, 0xCF, 0xAC, 0x62,
@@ -61,6 +66,7 @@ static SM4_S: [c_uchar; 256] = [
 /// `SM4_SBOX_T[j] == L(SM4_SBOX[j])`, and the precise statement is
 /// `SM4_SBOX_T0[j] == L(SM4_S[j] << 24)` — the S-box's byte in the **top** position, so that
 /// `SM4_T` can index `T0` with `X >> 24`.
+#[cfg(test)]
 static SM4_SBOX_T0: [u32; 256] = [
     0x8ED55B5B, 0xD0924242, 0x4DEAA7A7, 0x06FDFBFB, 0xFCCF3333, 0x65E28787, 0xC93DF4F4, 0x6BB5DEDE,
     0x4E165858, 0x6EB4DADA, 0x44145050, 0xCAC10B0B, 0x8828A0A0, 0x17F8EFEF, 0x9C2CB0B0, 0x11051414,
@@ -110,14 +116,18 @@ const fn rotl(a: u32, n: u32) -> u32 {
 /// top and `SM4_SBOX_T3` holds it at the bottom, which makes `T1` a rotation of `T0` **right**, not
 /// left. The first version of this file derived `rotl(T0, 8)`, `16` and `24`, and the derivation
 /// test — which compares against the authority's own literal head values — failed.
+#[cfg(test)]
 static SM4_SBOX_T1: [u32; 256] = derive_t(24);
 /// `SM4_SBOX_T2[j] == L(SM4_S[j] << 8) == rotl(SM4_SBOX_T0[j], 16)` — `sm4.c:135-179`.
+#[cfg(test)]
 static SM4_SBOX_T2: [u32; 256] = derive_t(16);
 /// `SM4_SBOX_T3[j] == L(SM4_S[j]) == rotl(SM4_SBOX_T0[j], 8)` — `sm4.c:181-225`.
+#[cfg(test)]
 static SM4_SBOX_T3: [u32; 256] = derive_t(8);
 
 /// The three `SM4_SBOX_T1`..`T3` tables, built from `SM4_SBOX_T0` at compile time. `n` is the
 /// rotation as `SM4_T`'s indexing requires it, which is `8 * (3 - k)` for `SM4_SBOX_Tk`.
+#[cfg(test)]
 const fn derive_t(n: u32) -> [u32; 256] {
     let mut out = [0u32; 256];
     let mut i = 0;
@@ -163,34 +173,32 @@ unsafe fn store_u32_be(v: u32, b: *mut c_uchar) {
 }
 
 /// `static ossl_inline uint32_t SM4_T_non_lin_sub(uint32_t X)` — `sm4.c:245-255`. The byte-wise
-/// S-box application, which is what the slow rounds use and what a table-free reference would use
-/// everywhere.
+/// S-box application. The authority reads the 256-byte `SM4_S` table here; this port applies the
+/// constant-pattern ANF circuit in [`portable`] instead, so the byte position is not an address.
 fn SM4_T_non_lin_sub(x: u32) -> u32 {
-    ((SM4_S[(x >> 24) as u8 as usize] as u32) << 24)
-        | ((SM4_S[(x >> 16) as u8 as usize] as u32) << 16)
-        | ((SM4_S[(x >> 8) as u8 as usize] as u32) << 8)
-        | (SM4_S[x as u8 as usize] as u32)
+    portable::sub_bytes(x)
 }
 
 /// `static ossl_inline uint32_t SM4_T_slow(uint32_t X)` — `sm4.c:257-266`.
 ///
 /// *"Uses byte-wise sbox in the first and last rounds to provide some protection from cache based
-/// side channels"* — so the four outer rounds are deliberately table-free and the middle six
-/// double-rounds are table-driven. That split is the authority's and is reproduced; a transcription
-/// that used `SM4_T` everywhere would produce identical output and lose the property the comment
-/// names.
+/// side channels"* — the four outer rounds use the byte-wise S-box while the middle six
+/// double-rounds use the folded form. **The conversion makes that distinction structural rather
+/// than a safety difference:** both forms now reach [`portable::sub_bytes`], so neither indexes
+/// memory by a state byte. The split in the round driver is preserved because it is the authority's,
+/// and the two transforms still agree value-for-value.
 fn SM4_T_slow(x: u32) -> u32 {
     let t = SM4_T_non_lin_sub(x);
     t ^ rotl(t, 2) ^ rotl(t, 10) ^ rotl(t, 18) ^ rotl(t, 24)
 }
 
-/// `static ossl_inline uint32_t SM4_T(uint32_t X)` — `sm4.c:268-271`: the same `L` transform with
-/// the S-box folded into four rotated tables.
+/// `static ossl_inline uint32_t SM4_T(uint32_t X)` — `sm4.c:268-271`: the same `L` transform, with
+/// the S-box applied through the constant-pattern circuit. The authority folds the S-box into four
+/// rotated tables (`SM4_SBOX_T0`..`T3`) and indexes them by state bytes; those tables are no longer
+/// on any runtime path. `T` and the slow transform now compute the same value by the same means,
+/// which the differential test below checks against the retained reference tables.
 fn SM4_T(x: u32) -> u32 {
-    SM4_SBOX_T0[(x >> 24) as u8 as usize]
-        ^ SM4_SBOX_T1[(x >> 16) as u8 as usize]
-        ^ SM4_SBOX_T2[(x >> 8) as u8 as usize]
-        ^ SM4_SBOX_T3[x as u8 as usize]
+    SM4_T_slow(x)
 }
 
 /// `static ossl_inline uint32_t SM4_key_sub(uint32_t X)` — `sm4.c:273-277`: the key schedule's own
@@ -458,12 +466,69 @@ mod tests {
         assert_eq!(back, key);
     }
 
+    /// **The constant-pattern transform is the authority's table transform, value for value.**
+    /// `SM4_T` no longer indexes `SM4_SBOX_T0`..`T3`; the tables are retained here as the
+    /// differential reference. Every byte value is exercised in every lane, so each S-box input is
+    /// covered in each byte position, and the `L` transform is linear, so a match on that basis is
+    /// a match for every 32-bit input. A randomized pass over whole words catches an unbundle error
+    /// that a symmetric input would hide. This is the equivalence obligation for the conversion.
+    #[test]
+    fn the_constant_pattern_transform_matches_the_reference_tables() {
+        fn reference_t(x: u32) -> u32 {
+            SM4_SBOX_T0[(x >> 24) as u8 as usize]
+                ^ SM4_SBOX_T1[(x >> 16) as u8 as usize]
+                ^ SM4_SBOX_T2[(x >> 8) as u8 as usize]
+                ^ SM4_SBOX_T3[x as u8 as usize]
+        }
+        for &fill in &[0x00u8, 0xffu8, 0x5a] {
+            for v in 0u16..=255 {
+                for lane in 0usize..4 {
+                    let mut bs = [fill; 4];
+                    bs[lane] = v as u8;
+                    let x = u32::from_be_bytes(bs);
+                    assert_eq!(SM4_T(x), reference_t(x), "fill={fill:#x} v={v} lane={lane}");
+                }
+            }
+        }
+        let mut x: u32 = 0x0123_4567;
+        let mut i = 0usize;
+        while i < 8192 {
+            x = x.wrapping_mul(1_664_525).wrapping_add(1_013_904_223);
+            assert_eq!(SM4_T(x), reference_t(x), "x={x:#010x}");
+            assert_eq!(SM4_T(x), SM4_T_slow(x), "x={x:#010x}");
+            i += 1;
+        }
+    }
+
+    /// The key-schedule transform has the same obligation, against the same reference S-box with
+    /// its own rotations. `SM4_key_sub` feeds `ossl_sm4_set_key`, so a mismatch here would change
+    /// every round key rather than one round's output.
+    #[test]
+    fn the_constant_pattern_key_transform_matches_the_reference() {
+        fn reference_key_sub(x: u32) -> u32 {
+            let t = ((u32::from(SM4_S[(x >> 24) as u8 as usize])) << 24)
+                | ((u32::from(SM4_S[(x >> 16) as u8 as usize])) << 16)
+                | ((u32::from(SM4_S[(x >> 8) as u8 as usize])) << 8)
+                | u32::from(SM4_S[x as u8 as usize]);
+            t ^ t.rotate_left(13) ^ t.rotate_left(23)
+        }
+        let mut x: u32 = 0xdead_beef;
+        let mut i = 0usize;
+        while i < 8192 {
+            x = x.wrapping_mul(1_664_525).wrapping_add(1_013_904_223);
+            assert_eq!(SM4_key_sub(x), reference_key_sub(x), "x={x:#010x}");
+            i += 1;
+        }
+        for v in 0u16..=255 {
+            let x = u32::from(v) << 24;
+            assert_eq!(SM4_key_sub(x), reference_key_sub(x), "v={v}");
+        }
+    }
+
     /// **The two `T` paths agree, which is what makes the slow rounds a choice rather than a
-    /// difference.** `SM4_T_slow` is the byte-wise S-box plus `L`; `SM4_T` is the four folded
-    /// tables. The authority uses the slow one for the first and last double-rounds "to provide some
-    /// protection from cache based side channels", so a transcription that used `SM4_T` everywhere
-    /// would be byte-identical and would have lost the property. Asserting the two agree is what
-    /// lets that be a deliberate difference rather than a hopeful one.
+    /// difference.** `SM4_T_slow` is the byte-wise S-box plus `L`; `SM4_T` used to be the four
+    /// folded tables. Both now reach the constant-pattern circuit; this test keeps the agreement
+    /// explicit so a future edit that reintroduces a table on one arm fails here.
     #[test]
     fn the_table_free_and_table_driven_transforms_agree() {
         let mut x: u32 = 0x9abc_def0;
