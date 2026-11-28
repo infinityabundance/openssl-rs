@@ -5989,4 +5989,157 @@ mod tests {
         );
         assert_eq!(ext_kdk_entry_count(second_addr as *mut Rsa), 0);
     }
+
+    /// PFP-56: RSA public encrypt and public decrypt/verify carry no
+    /// `BN_FLG_CONSTTIME` operand, so `BN_mod_exp_mont` selects the variable-time
+    /// core and its loop bound is the public exponent's bit length. `e = 65537`
+    /// is 17 bits; no modulus-width ladder is entered on this hot path. The
+    /// hypothesis that a modulus-width ladder runs here is therefore refuted by
+    /// observation, not by argument.
+    #[test]
+    fn rsa_public_operations_use_the_public_exponent_bit_length() {
+        use crate::bn::arith::ladder_probe;
+        use crate::rsa::gen::RSA_generate_key_ex;
+        use crate::rsa::object::{
+            RSA_free, RSA_new, RSA_private_encrypt, RSA_public_decrypt, RSA_public_encrypt,
+            RSA_size,
+        };
+
+        const MSG: &[u8] = b"PFP56";
+        // SAFETY: every object and buffer below is this test's own and live.
+        unsafe {
+            let e = BN_new();
+            assert_eq!(BN_set_word(e, 65537), 1);
+            let rsa = RSA_new();
+            assert_eq!(RSA_generate_key_ex(rsa, 1024, e, ptr::null_mut()), 1);
+            let num = RSA_size(rsa) as usize;
+
+            let mut ct = vec![0u8; num];
+            ladder_probe::reset();
+            assert_eq!(
+                RSA_public_encrypt(
+                    MSG.len() as c_int,
+                    MSG.as_ptr(),
+                    ct.as_mut_ptr(),
+                    rsa,
+                    RSA_PKCS1_PADDING
+                ),
+                num as c_int
+            );
+            assert_eq!(
+                ladder_probe::ladder_bits(),
+                Vec::<usize>::new(),
+                "public encrypt enters no ladder"
+            );
+            assert_eq!(
+                ladder_probe::vartime_bits(),
+                vec![17],
+                "65537 bits, from the exponent alone"
+            );
+
+            // `RSA_public_decrypt` checks PKCS#1 **type 1**, so build the block
+            // with the private operation first; the measurement starts after it.
+            let mut sig = vec![0u8; num];
+            assert_eq!(
+                RSA_private_encrypt(
+                    MSG.len() as c_int,
+                    MSG.as_ptr(),
+                    sig.as_mut_ptr(),
+                    rsa,
+                    RSA_PKCS1_PADDING
+                ),
+                num as c_int
+            );
+
+            let mut out = vec![0u8; num];
+            ladder_probe::reset();
+            assert_eq!(
+                RSA_public_decrypt(
+                    num as c_int,
+                    sig.as_ptr(),
+                    out.as_mut_ptr(),
+                    rsa,
+                    RSA_PKCS1_PADDING
+                ),
+                MSG.len() as c_int
+            );
+            assert_eq!(&out[..MSG.len()], MSG);
+            assert_eq!(
+                ladder_probe::ladder_bits(),
+                Vec::<usize>::new(),
+                "public decrypt/verify enters no ladder"
+            );
+            assert_eq!(ladder_probe::vartime_bits(), vec![17]);
+
+            RSA_free(rsa);
+        }
+    }
+
+    /// PFP-56: the paired CRT exponentiation is sized by each prime's limb count
+    /// (the exponent's own modulus), not the full RSA modulus. A 1024-bit key has
+    /// 512-bit primes: 8 limbs, 512 iterations per half.
+    #[test]
+    fn rsa_crt_pair_uses_each_primes_limb_count() {
+        use crate::bn::arith::ladder_probe;
+        use crate::bn::mont::BN_mod_exp_mont_consttime_x2;
+        use crate::rsa::gen::RSA_generate_key_ex;
+        use crate::rsa::object::{RSA_free, RSA_get0_crt_params, RSA_get0_factors, RSA_new};
+
+        // SAFETY: every object and buffer below is this test's own and live.
+        unsafe {
+            let e = BN_new();
+            assert_eq!(BN_set_word(e, 65537), 1);
+            let rsa = RSA_new();
+            assert_eq!(RSA_generate_key_ex(rsa, 1024, e, ptr::null_mut()), 1);
+
+            let mut p: *const BigNum = ptr::null();
+            let mut q: *const BigNum = ptr::null();
+            RSA_get0_factors(rsa, &mut p, &mut q);
+            let mut dmp1: *const BigNum = ptr::null();
+            let mut dmq1: *const BigNum = ptr::null();
+            let mut iqmp: *const BigNum = ptr::null();
+            RSA_get0_crt_params(rsa, &mut dmp1, &mut dmq1, &mut iqmp);
+            assert!(!p.is_null() && !q.is_null() && !dmp1.is_null() && !dmq1.is_null());
+            assert_eq!(BN_num_bits(p), 512);
+            assert_eq!(BN_num_bits(q), 512);
+
+            let a1 = BN_new();
+            let a2 = BN_new();
+            let r1 = BN_new();
+            let r2 = BN_new();
+            assert!(!a1.is_null() && !a2.is_null() && !r1.is_null() && !r2.is_null());
+            assert_eq!(BN_set_word(a1, 2), 1);
+            assert_eq!(BN_set_word(a2, 2), 1);
+
+            ladder_probe::reset();
+            assert_eq!(
+                BN_mod_exp_mont_consttime_x2(
+                    r1,
+                    a1,
+                    dmp1,
+                    p,
+                    ptr::null_mut(),
+                    r2,
+                    a2,
+                    dmq1,
+                    q,
+                    ptr::null_mut(),
+                    ptr::null_mut()
+                ),
+                1
+            );
+            assert_eq!(
+                ladder_probe::ladder_bits(),
+                vec![512, 512],
+                "each half runs its prime's 8 limbs"
+            );
+            assert_eq!(ladder_probe::vartime_bits(), Vec::<usize>::new());
+
+            BN_free(a1);
+            BN_free(a2);
+            BN_free(r1);
+            BN_free(r2);
+            RSA_free(rsa);
+        }
+    }
 }

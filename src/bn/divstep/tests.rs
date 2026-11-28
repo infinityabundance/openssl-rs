@@ -431,6 +431,86 @@ fn pfp10_large_differential() {
     assert_eq!(c.mismatches, 0);
 }
 
+/// Two odd 512-bit factors; their product is an odd 1024-bit composite.
+fn fixed_composite_1024() -> (Vec<Limb>, Vec<Limb>, Vec<Limb>) {
+    let mut p = vec![0x9e37_79b9_7f4a_7c15u64; 8];
+    let mut q = vec![0xc2b2_ae3d_27d4_eb4fu64; 8];
+    p[0] |= 1;
+    q[0] |= 1;
+    p[7] |= 1 << 63;
+    q[7] |= 1 << 63;
+    let m = limbs::mul(&p, &q);
+    (m, p, q)
+}
+
+/// The square of the RFC 7919 DH-1024 prime: an odd 2048-bit composite with a
+/// known large factor, so a non-invertible operand is easy to construct.
+fn fixed_composite_2048() -> (Vec<Limb>, Vec<Limb>, Vec<Limb>) {
+    let p = dh_1024();
+    let m = limbs::mul(&p, &p);
+    (m, p.clone(), p)
+}
+
+#[test]
+fn composite_moduli_match_the_gcd_oracle() {
+    // PFP-58: the blinding inverse takes an odd *composite*. Primality is not
+    // required for correctness; the invertibility mask reports gcd != 1.
+    for (label, (m, p, q), limbs_wanted) in [
+        ("composite-1024", fixed_composite_1024(), 16usize),
+        ("composite-2048", fixed_composite_2048(), 32usize),
+    ] {
+        assert_eq!(m.len(), limbs_wanted, "{label}: width");
+        assert_eq!(m[0] & 1, 1, "{label}: odd");
+
+        let corners = vec![
+            Vec::new(),
+            vec![0],
+            vec![1],
+            sub_small(&m, 1),
+            sub_small(&m, 2),
+            p.clone(),
+            q.clone(),
+        ];
+
+        for a in corners {
+            let base = limbs::mod_inverse_consttime_with_mask(&a, &m).expect("odd modulus");
+            let div = mod_inverse_divstep_with_mask(&a, &m).expect("odd modulus");
+            assert_eq!(base.1, div.1, "{label}: mask for a={a:?}");
+            if div.1 != 0 {
+                assert_eq!(base.0, div.0, "{label}: coefficient for a={a:?}");
+                assert_eq!(
+                    reduce(&limbs::mul(&a, &div.0), &m),
+                    vec![1],
+                    "{label}: round trip"
+                );
+            }
+        }
+
+        let mut rng = Rng::new(0x5046_500A ^ limbs_wanted as u64);
+        let cases = if limbs_wanted == 16 { 96 } else { 48 };
+        let mut invertible = 0usize;
+        for _ in 0..cases {
+            let a = reduce(&rng.limbs(m.len()), &m);
+            let base = limbs::mod_inverse_consttime_with_mask(&a, &m).expect("odd modulus");
+            let div = mod_inverse_divstep_with_mask(&a, &m).expect("odd modulus");
+            assert_eq!(base.1, div.1, "{label}: random mask");
+            if div.1 != 0 {
+                invertible += 1;
+                assert_eq!(base.0, div.0, "{label}: random coefficient");
+                assert_eq!(
+                    reduce(&limbs::mul(&a, &div.0), &m),
+                    vec![1],
+                    "{label}: random round trip"
+                );
+            }
+        }
+        assert!(
+            invertible > 0,
+            "{label}: population must contain invertible operands"
+        );
+    }
+}
+
 // ---------------------------------------------------------------------------
 // The bound
 // ---------------------------------------------------------------------------
@@ -827,4 +907,219 @@ fn bench_case<FF, FG, FD>(
             emit.row(domain, size, name, rep, ns);
         }
     }
+}
+
+// ---------------------------------------------------------------------------
+// PFP-58 measurement: composite modulus, then the end-to-end private op
+// ---------------------------------------------------------------------------
+
+/// A real RSA modulus `n = p * q` at `bits`, for the composite-modulus
+/// measurements. The factors are kept so a non-invertible operand can be built.
+fn rsa_composite(bits: usize) -> (Vec<Limb>, Vec<Limb>, Vec<Limb>) {
+    use crate::bn::bignum::{parts, BN_free, BN_new, BN_set_word, BigNum};
+    use crate::rsa::gen::RSA_generate_key_ex;
+    use crate::rsa::object::{RSA_free, RSA_get0_factors, RSA_get0_key, RSA_new};
+    use core::ffi::c_int;
+
+    // SAFETY: every object is created here and released here; the borrowed
+    // pointers are live until their limbs have been copied.
+    unsafe {
+        let e = BN_new();
+        assert!(!e.is_null());
+        assert_eq!(BN_set_word(e, 65537), 1);
+        let rsa = RSA_new();
+        assert!(!rsa.is_null());
+        assert_eq!(
+            RSA_generate_key_ex(rsa, bits as c_int, e, std::ptr::null_mut()),
+            1
+        );
+        let (mut n, mut ee, mut d): (*const BigNum, *const BigNum, *const BigNum) =
+            (std::ptr::null(), std::ptr::null(), std::ptr::null());
+        RSA_get0_key(rsa, &mut n, &mut ee, &mut d);
+        let (mut p, mut q): (*const BigNum, *const BigNum) = (std::ptr::null(), std::ptr::null());
+        RSA_get0_factors(rsa, &mut p, &mut q);
+        assert!(!n.is_null() && !p.is_null() && !q.is_null());
+        let (nl, _) = parts(Some(&*n));
+        let (pl, _) = parts(Some(&*p));
+        let (ql, _) = parts(Some(&*q));
+        RSA_free(rsa);
+        BN_free(e);
+        (nl, pl, ql)
+    }
+}
+
+/// Paired composite-modulus inversion: fixed-iteration binary GCD against the
+/// Bernstein-Yang half-delta divstep, same process, same operand population.
+///
+/// Run explicitly with `PFP58_INV_RAW=<path> cargo test --lib -- --exact
+/// bn::divstep::tests::pfp58_composite_inverse_bench --nocapture`. The test is a
+/// no-op without the variable, so the ordinary gate does not time anything.
+#[test]
+fn pfp58_composite_inverse_bench() {
+    let Some(path) = std::env::var_os("PFP58_INV_RAW") else {
+        return;
+    };
+    const REPS: usize = 15;
+    let mut emit = Emit {
+        out: String::new(),
+        sink: Some(std::path::PathBuf::from(path)),
+    };
+    let mut rng = Rng::new(0x5046_5008);
+
+    for (bits, iterations, cases) in [(1024usize, 16usize, 8usize), (2048, 4, 8)] {
+        let (m, _p, _q) = rsa_composite(bits);
+        assert_eq!(m.len() * 64, bits, "RSA modulus width");
+        assert_eq!(m[0] & 1, 1, "RSA modulus is odd");
+        let xs = inputs(&mut rng, &m, cases);
+        let m2 = m.clone();
+        let domain = if bits == 1024 {
+            "composite-1024"
+        } else {
+            "composite-2048"
+        };
+
+        // Warm-up, not recorded.
+        std::hint::black_box(batch_ns(iterations, cases, |i| {
+            checksum(
+                &limbs::mod_inverse_consttime_with_mask(&xs[i], &m2)
+                    .expect("odd")
+                    .0,
+            )
+        }));
+        std::hint::black_box(batch_ns(iterations, cases, |i| {
+            checksum(&mod_inverse_divstep_with_mask(&xs[i], &m2).expect("odd").0)
+        }));
+
+        for rep in 0..REPS {
+            for slot in 0..2 {
+                let which = (slot + rep) % 2;
+                let ns = if which == 0 {
+                    batch_ns(iterations, cases, |i| {
+                        checksum(
+                            &limbs::mod_inverse_consttime_with_mask(&xs[i], &m2)
+                                .expect("odd")
+                                .0,
+                        )
+                    })
+                } else {
+                    batch_ns(iterations, cases, |i| {
+                        checksum(&mod_inverse_divstep_with_mask(&xs[i], &m2).expect("odd").0)
+                    })
+                };
+                emit.row(
+                    domain,
+                    bits,
+                    if which == 0 { "gcd" } else { "divstep" },
+                    rep,
+                    ns,
+                );
+            }
+        }
+    }
+    emit.finish();
+}
+
+/// End-to-end RSA private operation through the 32-call blinding refresh, with
+/// the inverse selected by the test-only switch. Paired blocks of 320 calls (ten
+/// refreshes) alternate between the two inverses in one process and one key.
+///
+/// Run explicitly with `PFP58_E2E_RAW=<path> cargo test --lib -- --exact
+/// bn::divstep::tests::pfp58_end_to_end_bench --nocapture`. A no-op otherwise.
+#[test]
+fn pfp58_end_to_end_bench() {
+    let Some(path) = std::env::var_os("PFP58_E2E_RAW") else {
+        return;
+    };
+    use crate::bn::bignum::{BN_free, BN_new, BN_set_word};
+    use crate::rsa::gen::RSA_generate_key_ex;
+    use crate::rsa::object::{
+        RSA_free, RSA_new, RSA_private_decrypt, RSA_public_encrypt, RSA_size,
+    };
+    use core::ffi::c_int;
+
+    const BLOCK: usize = 320;
+    const REPS: usize = 15;
+    let msg = b"PFP58-end-to-end";
+    let mut emit = Emit {
+        out: String::new(),
+        sink: Some(std::path::PathBuf::from(path)),
+    };
+
+    // SAFETY: every object and buffer is created and released here, and the
+    // ciphertext/plaintext buffers are `RSA_size` bytes as the entry points
+    // require. No pointer outlives this block.
+    unsafe {
+        let e = BN_new();
+        assert!(!e.is_null());
+        assert_eq!(BN_set_word(e, 65537), 1);
+        let rsa = RSA_new();
+        assert!(!rsa.is_null());
+        assert_eq!(RSA_generate_key_ex(rsa, 2048, e, std::ptr::null_mut()), 1);
+        let num = RSA_size(rsa) as usize;
+        let mut ct = vec![0u8; num];
+        let clen = RSA_public_encrypt(
+            msg.len() as c_int,
+            msg.as_ptr(),
+            ct.as_mut_ptr(),
+            rsa,
+            crate::evp::pkey_ctx::RSA_PKCS1_PADDING,
+        );
+        assert_eq!(clen, num as c_int);
+        let mut out = vec![0u8; num];
+
+        let decrypt = |out: &mut [u8]| {
+            RSA_private_decrypt(
+                num as c_int,
+                ct.as_ptr(),
+                out.as_mut_ptr(),
+                rsa,
+                crate::evp::pkey_ctx::RSA_PKCS1_PADDING,
+            )
+        };
+
+        // Warm-up: settle the blinding store past its fresh state.
+        crate::bn::blinding::pfp58_set_use_divstep(false);
+        for _ in 0..64 {
+            assert_eq!(decrypt(&mut out), msg.len() as c_int);
+        }
+
+        // Per-call series: the refresh outliers must still appear at the
+        // authority's 32-call schedule.
+        for _call in 0..96 {
+            let start = std::time::Instant::now();
+            let r = decrypt(&mut out);
+            let ns = start.elapsed().as_nanos() as f64;
+            assert_eq!(r, msg.len() as c_int);
+            emit.row("schedule", 2048, "gcd", _call, ns);
+        }
+
+        for rep in 0..REPS {
+            let order = if rep % 2 == 0 {
+                [false, true]
+            } else {
+                [true, false]
+            };
+            for use_divstep in order {
+                crate::bn::blinding::pfp58_set_use_divstep(use_divstep);
+                let start = std::time::Instant::now();
+                for _ in 0..BLOCK {
+                    let r = decrypt(&mut out);
+                    std::hint::black_box(&out);
+                    assert_eq!(r, msg.len() as c_int);
+                }
+                let ns = start.elapsed().as_nanos() as f64 / BLOCK as f64;
+                emit.row(
+                    "e2e",
+                    2048,
+                    if use_divstep { "divstep" } else { "gcd" },
+                    rep,
+                    ns,
+                );
+            }
+        }
+
+        RSA_free(rsa);
+        BN_free(e);
+    }
+    emit.finish();
 }

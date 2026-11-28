@@ -1,0 +1,15 @@
+==221== Memcheck, a memory error detector
+==221== Copyright (C) 2002-2022, and GNU GPL'd, by Julian Seward et al.
+==221== Using Valgrind-3.19.0 and LibVEX; rerun with -h for copyright info
+==221== Command: /work/court/tmp/pfp45/test-target/debug/deps/openssl_rs-bcfdf4d0f51f39b5 --exact bn::limbs::tests::ctgrind_rem_consttime_secret_dividend --nocapture --test-threads=1
+==221== Parent PID: 214
+==221== 
+==221== 
+==221== HEAP SUMMARY:
+==221==     in use at exit: 592 bytes in 2 blocks
+==221==   total heap usage: 315 allocs, 313 frees, 445,046 bytes allocated
+==221== 
+==221== For a detailed leak analysis, rerun with: --leak-check=full
+==221== 
+==221== For lists of detected and suppressed errors, rerun with: -s
+==221== ERROR SUMMARY: 0 errors from 0 contexts (suppressed: 0 from 0)

@@ -1,0 +1,15 @@
+workload   arm       n    median_us
+out2400    before   15     3047.469
+out2400    after    15     2682.476
+out2400    auth     15     1469.112
+in225      before   15      461.634
+in225      after    15      455.619
+in225      auth     15      179.854
+
+workload   ratio                   median                    range
+out2400    after/before            0.8643 [0.7241, 0.9170]
+out2400    auth/after              0.5464 [0.5158, 0.9042]
+out2400    auth/before             0.4740 [0.4055, 0.7981]
+in225      after/before            0.9770 [0.4714, 1.0318]
+in225      auth/after              0.3978 [0.3805, 1.0672]
+in225      auth/before             0.3920 [0.1838, 1.0290]

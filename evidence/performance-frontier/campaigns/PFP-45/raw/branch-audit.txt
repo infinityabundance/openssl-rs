@@ -1,0 +1,2 @@
+rem_consttime_size=0x5d4 cond_jumps=31 jmp=12 cmov=0 setcc=9 div=0 cpuid=0
+note=hot loops branch only on public lengths, indices and loop counters; setcc are carry/borrow data writes (ct_sub_into) and never reach control; no cmov, no div, no cpuid

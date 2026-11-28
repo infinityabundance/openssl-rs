@@ -1,0 +1,4 @@
+--- dividend_taint.log
+origins: none
+--- negative_control.log
+==227== Conditional jump or move depends on uninitialised value(s)
