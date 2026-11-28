@@ -1,0 +1,15 @@
+Artifact: artifacts/phase2/libcrypto.so.3 sha256 8fc08a5d...e88eea1
+Symbol: openssl_rs::bn::divstep::mod_inverse_divstep, size 0x1d55
+Instruction-identical to the release staticlib symbol (normalised diff).
+Reachable in the DSO: one call 0x43de23 -> 0x38a3d0 inside
+openssl_rs::bn::blinding::create_param_impl.
+Conditional transfers on secret state inside the fixed-step loop: 0 jcc, 0 cmov.
+Secret-derived setcc: delta==0 mask materialisation (1/step); no control transfer.
+Secret-derived jcc per inversion: 1, the authorised invertibility/no-inverse
+declassification (source: mod_inverse_divstep's `if invertible == 0`), the same
+role as the baseline mod_inverse_consttime. It is not per-step.
+Secret-derived addresses: none (all loop indices and slice lengths are public).
+ctgrind final: 4 contexts, all in ctgrind_control_canary; 0 in divstep.
+ctgrind before barriers: 1 context in mod_inverse_divstep_with_mask, 3543 errors.
+Firing control: ctgrind_control_canary, 4 contexts in the same valgrind run.
+dudect: NOT_RUN on this venue. No constant-time claim is made from source.

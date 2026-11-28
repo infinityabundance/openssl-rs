@@ -1,0 +1,3505 @@
+
+openssl_rs-8537f30519a00a67.openssl_rs.b5bd89b8f057016f-cgu.00.rcgu.o:     file format elf64-x86-64
+
+
+Disassembly of section .text.CAST_cbc_encrypt:
+
+Disassembly of section .text.CAST_cfb64_encrypt:
+
+Disassembly of section .text.CAST_decrypt:
+
+Disassembly of section .text.CAST_ecb_encrypt:
+
+Disassembly of section .text.CAST_encrypt:
+
+Disassembly of section .text.CAST_ofb64_encrypt:
+
+Disassembly of section .text.CAST_set_key:
+
+Disassembly of section .text.CRYPTO_ccm128_aad:
+
+Disassembly of section .text.CRYPTO_ccm128_decrypt:
+
+Disassembly of section .text.CRYPTO_ccm128_decrypt_ccm64:
+
+Disassembly of section .text.CRYPTO_ccm128_encrypt:
+
+Disassembly of section .text.CRYPTO_ccm128_encrypt_ccm64:
+
+Disassembly of section .text.CRYPTO_ccm128_init:
+
+Disassembly of section .text.CRYPTO_ccm128_setiv:
+
+Disassembly of section .text.CRYPTO_ccm128_tag:
+
+Disassembly of section .text.DSA_generate_parameters_ex:
+
+Disassembly of section .text.ECDH_KDF_X9_62:
+
+Disassembly of section .text.ECDSA_SIG_free:
+
+Disassembly of section .text.ECDSA_SIG_get0:
+
+Disassembly of section .text.ECDSA_SIG_get0_r:
+
+Disassembly of section .text.ECDSA_SIG_get0_s:
+
+Disassembly of section .text.ECDSA_SIG_new:
+
+Disassembly of section .text.ECDSA_SIG_set0:
+
+Disassembly of section .text.ECDSA_do_sign:
+
+Disassembly of section .text.ECDSA_do_sign_ex:
+
+Disassembly of section .text.ECDSA_do_verify:
+
+Disassembly of section .text.ECDSA_sign:
+
+Disassembly of section .text.ECDSA_sign_ex:
+
+Disassembly of section .text.ECDSA_sign_setup:
+
+Disassembly of section .text.ECDSA_verify:
+
+Disassembly of section .text.ENGINE_get_table_flags:
+
+Disassembly of section .text.ENGINE_set_table_flags:
+
+Disassembly of section .text.EVP_PKEY_asn1_add0:
+
+Disassembly of section .text.EVP_PKEY_asn1_add_alias:
+
+Disassembly of section .text.EVP_PKEY_asn1_copy:
+
+Disassembly of section .text.EVP_PKEY_asn1_find:
+
+Disassembly of section .text.EVP_PKEY_asn1_find_str:
+
+Disassembly of section .text.EVP_PKEY_asn1_free:
+
+Disassembly of section .text.EVP_PKEY_asn1_get0:
+
+Disassembly of section .text.EVP_PKEY_asn1_get0_info:
+
+Disassembly of section .text.EVP_PKEY_asn1_get_count:
+
+Disassembly of section .text.EVP_PKEY_asn1_new:
+
+Disassembly of section .text.EVP_PKEY_asn1_set_check:
+
+Disassembly of section .text.EVP_PKEY_asn1_set_ctrl:
+
+Disassembly of section .text.EVP_PKEY_asn1_set_free:
+
+Disassembly of section .text.EVP_PKEY_asn1_set_get_priv_key:
+
+Disassembly of section .text.EVP_PKEY_asn1_set_get_pub_key:
+
+Disassembly of section .text.EVP_PKEY_asn1_set_item:
+
+Disassembly of section .text.EVP_PKEY_asn1_set_param:
+
+Disassembly of section .text.EVP_PKEY_asn1_set_param_check:
+
+Disassembly of section .text.EVP_PKEY_asn1_set_private:
+
+Disassembly of section .text.EVP_PKEY_asn1_set_public:
+
+Disassembly of section .text.EVP_PKEY_asn1_set_public_check:
+
+Disassembly of section .text.EVP_PKEY_asn1_set_security_bits:
+
+Disassembly of section .text.EVP_PKEY_asn1_set_set_priv_key:
+
+Disassembly of section .text.EVP_PKEY_asn1_set_set_pub_key:
+
+Disassembly of section .text.EVP_PKEY_asn1_set_siginf:
+
+Disassembly of section .text.EVP_PKEY_type:
+
+Disassembly of section .text.EVP_bf_cbc:
+
+Disassembly of section .text.EVP_bf_cfb64:
+
+Disassembly of section .text.EVP_bf_ecb:
+
+Disassembly of section .text.EVP_bf_ofb:
+
+Disassembly of section .text.EVP_des_cbc:
+
+Disassembly of section .text.EVP_des_cfb1:
+
+Disassembly of section .text.EVP_des_cfb64:
+
+Disassembly of section .text.EVP_des_cfb8:
+
+Disassembly of section .text.EVP_des_ecb:
+
+Disassembly of section .text.EVP_des_ofb:
+
+Disassembly of section .text.OCSP_CERTID_dup:
+
+Disassembly of section .text.OCSP_cert_id_new:
+
+Disassembly of section .text.OCSP_cert_to_id:
+
+Disassembly of section .text.OCSP_id_cmp:
+
+Disassembly of section .text.OCSP_id_issuer_cmp:
+
+Disassembly of section .text.PEM_read_X509:
+
+Disassembly of section .text.PEM_read_bio_X509:
+
+Disassembly of section .text.PEM_write_X509:
+
+Disassembly of section .text.PEM_write_bio_X509:
+
+Disassembly of section .text.PKCS12_SAFEBAG_get0_attrs:
+
+Disassembly of section .text.PKCS12_SAFEBAG_set0_attrs:
+
+Disassembly of section .text.PKCS12_add1_attr_by_NID:
+
+Disassembly of section .text.PKCS12_add1_attr_by_txt:
+
+Disassembly of section .text.PKCS12_add_CSPName_asc:
+
+Disassembly of section .text.PKCS12_add_friendlyname_asc:
+
+Disassembly of section .text.PKCS12_add_friendlyname_uni:
+
+Disassembly of section .text.PKCS12_add_friendlyname_utf8:
+
+Disassembly of section .text.PKCS12_add_localkeyid:
+
+Disassembly of section .text.PKCS12_get_attr_gen:
+
+Disassembly of section .text.PKCS12_get_friendlyname:
+
+Disassembly of section .text.PKCS8_add_keyusage:
+
+Disassembly of section .text.RAND_OpenSSL:
+
+Disassembly of section .text.RAND_add:
+
+Disassembly of section .text.RAND_bytes:
+
+Disassembly of section .text.RAND_bytes_ex:
+
+Disassembly of section .text.RAND_file_name:
+
+Disassembly of section .text.RAND_get0_primary:
+
+Disassembly of section .text.RAND_get0_private:
+
+Disassembly of section .text.RAND_get0_public:
+
+Disassembly of section .text.RAND_get_rand_method:
+
+Disassembly of section .text.RAND_keep_random_devices_open:
+
+Disassembly of section .text.RAND_load_file:
+
+Disassembly of section .text.RAND_poll:
+
+Disassembly of section .text.RAND_priv_bytes:
+
+Disassembly of section .text.RAND_priv_bytes_ex:
+
+Disassembly of section .text.RAND_pseudo_bytes:
+
+Disassembly of section .text.RAND_seed:
+
+Disassembly of section .text.RAND_set0_private:
+
+Disassembly of section .text.RAND_set0_public:
+
+Disassembly of section .text.RAND_set1_random_provider:
+
+Disassembly of section .text.RAND_set_DRBG_type:
+
+Disassembly of section .text.RAND_set_rand_engine:
+
+Disassembly of section .text.RAND_set_rand_method:
+
+Disassembly of section .text.RAND_set_seed_source_type:
+
+Disassembly of section .text.RAND_status:
+
+Disassembly of section .text.RAND_write_file:
+
+Disassembly of section .text.X509_ALGORS_it:
+
+Disassembly of section .text.X509_ALGOR_cmp:
+
+Disassembly of section .text.X509_ALGOR_copy:
+
+Disassembly of section .text.X509_ALGOR_dup:
+
+Disassembly of section .text.X509_ALGOR_free:
+
+Disassembly of section .text.X509_ALGOR_get0:
+
+Disassembly of section .text.X509_ALGOR_it:
+
+Disassembly of section .text.X509_ALGOR_new:
+
+Disassembly of section .text.X509_ALGOR_set0:
+
+Disassembly of section .text.X509_ALGOR_set_md:
+
+Disassembly of section .text.X509_CRL_INFO_free:
+
+Disassembly of section .text.X509_CRL_INFO_it:
+
+Disassembly of section .text.X509_CRL_INFO_new:
+
+Disassembly of section .text.X509_CRL_METHOD_free:
+
+Disassembly of section .text.X509_CRL_METHOD_new:
+
+Disassembly of section .text.X509_CRL_add0_revoked:
+
+Disassembly of section .text.X509_CRL_dup:
+
+Disassembly of section .text.X509_CRL_free:
+
+Disassembly of section .text.X509_CRL_get0_by_cert:
+
+Disassembly of section .text.X509_CRL_get0_by_serial:
+
+Disassembly of section .text.X509_CRL_get_meth_data:
+
+Disassembly of section .text.X509_CRL_it:
+
+Disassembly of section .text.X509_CRL_new:
+
+Disassembly of section .text.X509_CRL_new_ex:
+
+Disassembly of section .text.X509_CRL_set_default_method:
+
+Disassembly of section .text.X509_CRL_up_ref:
+
+Disassembly of section .text.X509_CRL_verify:
+
+Disassembly of section .text.X509_REVOKED_dup:
+
+Disassembly of section .text.X509_REVOKED_free:
+
+Disassembly of section .text.X509_REVOKED_it:
+
+Disassembly of section .text.X509_REVOKED_new:
+
+Disassembly of section .text.X509_certificate_type:
+
+Disassembly of section .text._RINvMNtNtNtCs9k3SxhrAWiO_3std4sync6poison7condvarNtB3_7Condvar12wait_timeoutNtNtNtCsfBoMNNx3tZr_10openssl_rs3rsa4ossl11ExtKdkStoreEB1i_:
+
+Disassembly of section .text._RINvMNtNtNtCs9k3SxhrAWiO_3std4sync6poison7condvarNtB3_7Condvar4waitNtNtNtCsfBoMNNx3tZr_10openssl_rs7runtime6thread9LockStateEB19_:
+
+Disassembly of section .text._RINvMNtNtNtCs9k3SxhrAWiO_3std4sync6poison7condvarNtB3_7Condvar4waitbECsfBoMNNx3tZr_10openssl_rs:
+
+Disassembly of section .text._RINvNtCs9k3SxhrAWiO_3std2fs4readRNtNtCs6i54tJFfzR_5alloc6string6StringECsfBoMNNx3tZr_10openssl_rs:
+
+Disassembly of section .text._RINvNtCs9k3SxhrAWiO_3std2fs5writeReRShECsfBoMNNx3tZr_10openssl_rs:
+
+Disassembly of section .text._RINvNtCs9k3SxhrAWiO_3std2fs8metadataReECsfBoMNNx3tZr_10openssl_rs:
+
+Disassembly of section .text._RINvNtCsgxBkk5gSRhY_4core3ptr9drop_glueINtNtB4_6option6OptionNtNtNtCsfBoMNNx3tZr_10openssl_rs2ec5field21ScalarLadderWorkspaceEEB13_:
+
+Disassembly of section .text._RINvNtCsgxBkk5gSRhY_4core3ptr9drop_glueINtNtNtCsfBoMNNx3tZr_10openssl_rs2ec4p25610P256LadderINtBE_4MontNtBE_11FieldDomainEEEBI_:
+
+Disassembly of section .text._RINvNtCsgxBkk5gSRhY_4core3ptr9drop_glueINtNtNtCsfBoMNNx3tZr_10openssl_rs2ec4p25614P256ProjectiveINtBE_4MontNtBE_11FieldDomainEEEBI_:
+
+Disassembly of section .text._RINvNtCsgxBkk5gSRhY_4core3ptr9drop_glueINtNtNtCsfBoMNNx3tZr_10openssl_rs4asn15owned10OwnedBlockaEEBI_:
+
+Disassembly of section .text._RINvNtCsgxBkk5gSRhY_4core3ptr9drop_glueINtNtNtCsfBoMNNx3tZr_10openssl_rs7runtime6secret9SecretBufyEEBI_:
+
+Disassembly of section .text._RINvNtCsgxBkk5gSRhY_4core3ptr9drop_glueINtNtNtCsfBoMNNx3tZr_10openssl_rs8provider4rand8OwnedCtxNtBE_8ProvDrbgEEBI_:
+
+Disassembly of section .text._RINvNtCsgxBkk5gSRhY_4core3ptr9drop_glueINtNtNtNtCs9k3SxhrAWiO_3std4sync6poison5mutex10MutexGuardNtNtNtCsfBoMNNx3tZr_10openssl_rs3evp9pkey_asn110AppMethodsEEB1C_.llvm.2479223849020213779:
+
+Disassembly of section .text._RINvNtCsgxBkk5gSRhY_4core3ptr9drop_glueNtNtNtCsfBoMNNx3tZr_10openssl_rs2ec5field11LadderSlotsEBH_:
+
+Disassembly of section .text._RINvNtCsgxBkk5gSRhY_4core3ptr9drop_glueNtNtNtCsfBoMNNx3tZr_10openssl_rs2ec5field12FieldScratchEBH_:
+
+Disassembly of section .text._RINvNtCsgxBkk5gSRhY_4core3ptr9drop_glueNtNtNtCsfBoMNNx3tZr_10openssl_rs4rand8rand_lib9RawGlobalEBH_.llvm.2479223849020213779:
+
+Disassembly of section .text._RINvNtCsgxBkk5gSRhY_4core3ptr9drop_glueNtNtNtCsfBoMNNx3tZr_10openssl_rs7slh_dsa3dsa8MsgBlockEBH_:
+
+Disassembly of section .text._RINvNtCsgxBkk5gSRhY_4core3ptr9drop_glueNtNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf8OwnedBufEBH_:
+
+Disassembly of section .text._RINvNtCsgxBkk5gSRhY_4core3ptr9drop_glueNtNtNtNtCsfBoMNNx3tZr_10openssl_rs2ec4p25610fixed_base6AffineEBJ_:
+
+Disassembly of section .text._RINvNtCsgxBkk5gSRhY_4core3ptr9drop_glueSINtNtNtCsfBoMNNx3tZr_10openssl_rs2ec4p25614P256ProjectiveINtBF_4MontNtBF_11FieldDomainEEEBJ_:
+
+Disassembly of section .text._RINvNtNtCsfBoMNNx3tZr_10openssl_rs2ec4mult15p256_ladder_runINtNtB4_4p2564MontNtBY_11FieldDomainEEB6_:
+
+Disassembly of section .text._RINvNtNtCsfBoMNNx3tZr_10openssl_rs3aes8portable12bp_sub_bytestEB6_:
+
+Disassembly of section .text._RINvNtNtCsfBoMNNx3tZr_10openssl_rs3aes8portable16bp_inv_sub_bytestEB6_:
+
+Disassembly of section .text._RINvNtNtNtCsfBoMNNx3tZr_10openssl_rs2ec4p25610fixed_base11build_tableINtB4_4MontNtB4_11FieldDomainEEB8_:
+
+Disassembly of section .text._RINvNtNtNtCsfBoMNNx3tZr_10openssl_rs2ec4p25610fixed_base7rcb_addINtB4_4MontNtB4_11FieldDomainEEB8_:
+
+Disassembly of section .text._RINvNtNtNtCsfBoMNNx3tZr_10openssl_rs2ec4p25610fixed_base9table_mulINtB4_4MontNtB4_11FieldDomainEEB8_:
+
+Disassembly of section .text._RINvNtNtNtCsfBoMNNx3tZr_10openssl_rs2ec4p25610fixed_base9to_affineINtB4_4MontNtB4_11FieldDomainEEB8_:
+
+Disassembly of section .text._RINvNvNtNtNtCsfBoMNNx3tZr_10openssl_rs2ec4p25610fixed_base11build_table7advanceINtB6_4MontNtB6_11FieldDomainEEBa_:
+
+Disassembly of section .text._RNvMNtNtCsfBoMNNx3tZr_10openssl_rs6engine9eng_tableNtB2_15EngineTableSlot4load:
+
+Disassembly of section .text._RNvMs0_NtNtCsfBoMNNx3tZr_10openssl_rs2ec5fieldNtB5_21ScalarLadderWorkspace3new:
+
+Disassembly of section .text._RNvMs_NtNtCsfBoMNNx3tZr_10openssl_rs2ec5fieldNtB4_12FieldScratch10add_assign:
+
+Disassembly of section .text._RNvMs_NtNtCsfBoMNNx3tZr_10openssl_rs2ec5fieldNtB4_12FieldScratch10mul_assign:
+
+Disassembly of section .text._RNvMs_NtNtCsfBoMNNx3tZr_10openssl_rs2ec5fieldNtB4_12FieldScratch10shift_left:
+
+Disassembly of section .text._RNvMs_NtNtCsfBoMNNx3tZr_10openssl_rs2ec5fieldNtB4_12FieldScratch10sqr_assign:
+
+Disassembly of section .text._RNvMs_NtNtCsfBoMNNx3tZr_10openssl_rs2ec5fieldNtB4_12FieldScratch10sub_assign:
+
+Disassembly of section .text._RNvMs_NtNtCsfBoMNNx3tZr_10openssl_rs2ec5fieldNtB4_12FieldScratch14sub_rev_assign:
+
+Disassembly of section .text._RNvMs_NtNtCsfBoMNNx3tZr_10openssl_rs2ec5fieldNtB4_12FieldScratch20conditional_subtract.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvMs_NtNtCsfBoMNNx3tZr_10openssl_rs2ec5fieldNtB4_12FieldScratch3add:
+
+Disassembly of section .text._RNvMs_NtNtCsfBoMNNx3tZr_10openssl_rs2ec5fieldNtB4_12FieldScratch3mul:
+
+Disassembly of section .text._RNvMs_NtNtCsfBoMNNx3tZr_10openssl_rs2ec5fieldNtB4_12FieldScratch3sqr:
+
+Disassembly of section .text._RNvMs_NtNtCsfBoMNNx3tZr_10openssl_rs2ec5fieldNtB4_12FieldScratch3sub:
+
+Disassembly of section .text._RNvMs_NtNtCsfBoMNNx3tZr_10openssl_rs2ec5fieldNtB4_12FieldScratch6double:
+
+Disassembly of section .text._RNvMs_NtNtCsfBoMNNx3tZr_10openssl_rs2ec5fieldNtB4_12FieldScratch6reduce.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvMsi_NtNtCsfBoMNNx3tZr_10openssl_rs2ec4p256INtB5_9P256FieldINtB5_4MontNtB5_11FieldDomainEE10add_assignB9_:
+
+Disassembly of section .text._RNvMsi_NtNtCsfBoMNNx3tZr_10openssl_rs2ec4p256INtB5_9P256FieldINtB5_4MontNtB5_11FieldDomainEE10sub_assignB9_:
+
+Disassembly of section .text._RNvMsi_NtNtCsfBoMNNx3tZr_10openssl_rs2ec4p256INtB5_9P256FieldINtB5_4MontNtB5_11FieldDomainEE12to_canonicalB9_:
+
+Disassembly of section .text._RNvMsi_NtNtCsfBoMNNx3tZr_10openssl_rs2ec4p256INtB5_9P256FieldINtB5_4MontNtB5_11FieldDomainEE13double_assignB9_:
+
+Disassembly of section .text._RNvMsi_NtNtCsfBoMNNx3tZr_10openssl_rs2ec4p256INtB5_9P256FieldINtB5_4MontNtB5_11FieldDomainEE14from_canonicalB9_:
+
+Disassembly of section .text._RNvMsj_NtNtCsfBoMNNx3tZr_10openssl_rs2ec4p256NtB5_10P256Scalar22from_canonical_reduced:
+
+Disassembly of section .text._RNvMsl_NtNtCsfBoMNNx3tZr_10openssl_rs2ec4p256INtB5_10P256LadderINtB5_4MontNtB5_11FieldDomainEE3newB9_:
+
+Disassembly of section .text._RNvMsl_NtNtCsfBoMNNx3tZr_10openssl_rs2ec4p256INtB5_10P256LadderINtB5_4MontNtB5_11FieldDomainEE4loadB9_:
+
+Disassembly of section .text._RNvMsl_NtNtCsfBoMNNx3tZr_10openssl_rs2ec4p256INtB5_10P256LadderINtB5_4MontNtB5_11FieldDomainEE5cswapB9_:
+
+Disassembly of section .text._RNvNtCsfBoMNNx3tZr_10openssl_rs6chacha14ChaCha20_ctr32:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs2ec3kdf19ossl_ecdh_kdf_X9_63:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs2ec4mult12wnaf_mul_err:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs2ec4mult14ec_point_cswap:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs2ec4mult16ossl_ec_wNAF_mul:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs2ec4mult19EC_ec_pre_comp_free:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs2ec4mult19ec_point_ladder_pre:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs2ec4mult20ec_point_ladder_step:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs2ec4mult25ossl_ec_scalar_mul_ladder:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs2ec4mult28ossl_ec_wNAF_precompute_mult:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs2ec4p25612wide_mul_x86:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs2ec4p25616mont_reduce_into:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs2ec4smpl24ec_method_field_is_plain:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs2ec5field10copy_fixed:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs3aes8portable13decrypt_block:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs3aes8portable13encrypt_block:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs3aes8portable18expand_encrypt_key:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs3aes8portable7gf8_inv:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs3aes8portable8fix_keys:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs3aes8portable8sub_word:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs3evp4e_bf11bf_init_key:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs3evp4e_bf13bf_cbc_cipher:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs3evp4e_bf13bf_ecb_cipher:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs3evp4e_bf13bf_ofb_cipher:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs3evp4e_bf14bf_get_asn1_iv:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs3evp4e_bf14bf_set_asn1_iv:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs3evp4e_bf15bf_cfb64_cipher:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs3evp5e_des11des_ctrl_fn:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs3evp5e_des12des_init_key:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs3evp5e_des14des_cbc_cipher:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs3evp5e_des14des_ecb_cipher:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs3evp5e_des14des_ofb_cipher:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs3evp5e_des15des_cfb1_cipher:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs3evp5e_des15des_cfb8_cipher:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs3evp5e_des16des_cfb64_cipher:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs3evp6c_allc27openssl_add_all_ciphers_int:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs3evp9pkey_asn19ameth_cmp.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs3ffc7backend16ffc_fromdata_err:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs3ffc7backend24ossl_ffc_params_fromdata:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs3pem8pem_x5098d2i_void.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs3pem8pem_x5098i2d_void.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs4asn17x_algor22ossl_x509_algor_get_md:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs4asn17x_algor24ossl_X509_ALGOR_from_nid:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs4asn17x_algor26ossl_x509_algor_md_to_mgf1:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs4asn17x_algor27ossl_x509_algor_mgf1_decode:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs4asn17x_algor27ossl_x509_algor_new_from_md:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs4rand4unix11cleanup_shm:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs4rand4unix19close_random_device:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs4rand4unix24ossl_pool_add_nonce_data:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs4rand4unix25ossl_pool_acquire_entropy:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs4rand8rand_lib10drbg_bytes:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs4rand8rand_lib11drbg_status:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs4rand8rand_lib12do_rand_init.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs4rand8rand_lib13rand_new_drbg.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs4rand8rand_lib17ossl_rand_ctx_new:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs4rand8rand_lib18ossl_rand_ctx_free:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs4rand8rand_lib21ossl_rand_get0_public.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs4rand8rand_lib22ossl_rand_get0_primary.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs4rand8rand_lib22ossl_rand_get0_private.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs4rand8rand_lib24rand_delete_thread_state.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs4rand8rand_lib31ossl_rand_get0_seed_noncreating:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs4rand8rand_lib8drbg_add:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs4rand8rand_lib9drbg_seed:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs4x5095x_crl10crl_inf_cb.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs4x5095x_crl14def_crl_lookup:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs4x5095x_crl14def_crl_verify:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs4x5095x_crl16X509_REVOKED_cmp.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs4x5095x_crl6crl_cb.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs4x5099v3_soa_id18i2r_SOA_IDENTIFIER.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs4x5099v3_soa_id18i2s_SOA_IDENTIFIER:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs4x5099v3_soa_id18r2i_SOA_IDENTIFIER:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs5modes3ccm10ccm_finish:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs5modes3ccm9ctr64_add:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs6engine9eng_table15engine_pile_cmp:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs6engine9eng_table16engine_pile_hash:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs6engine9eng_table17int_unregister_cb.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs6engine9eng_table18engine_table_doall:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs6engine9eng_table20engine_table_cleanup:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs6engine9eng_table20int_cleanup_cb_doall.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs6engine9eng_table21engine_table_register:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs6engine9eng_table23engine_table_unregister:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs6engine9eng_table24ossl_engine_table_select:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs6engine9eng_table30engine_table_unregister_locked:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs6engine9eng_table8int_dall.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs7runtime10dso_shared11crypto_free:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs7runtime10dso_shared12conf_ssl_get:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs7runtime10dso_shared13crypto_malloc:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs7runtime10dso_shared13err_state_ptr:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs7runtime10dso_shared14crypto_realloc:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs7runtime10dso_shared16conf_ssl_get_cmd:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs7runtime10dso_shared18conf_ssl_name_find:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs7runtime10dso_shared19openssl_init_crypto:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs7runtime3cpu10has_pclmul:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs7runtime3cpu14parse_override:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs7runtime3cpu4init:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs7runtime3cpu7has_adx:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs7runtime3cpu7has_aes:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs7runtime3cpu7has_sha:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs7runtime3cpu8has_avx2:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs7runtime3cpu8has_bmi2:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs7runtime3cpu8has_vaes:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs7runtime3rcu17ossl_rcu_lock_new:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs7runtime3rcu18ossl_rcu_lock_free:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs7runtime3rcu18ossl_rcu_read_lock:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs7runtime3rcu19ossl_rcu_uptr_deref:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs7runtime3rcu19ossl_rcu_write_lock:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs7runtime3rcu19rcu_lock_new_unwind.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs7runtime3rcu20ossl_rcu_assign_uptr:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs7runtime3rcu20ossl_rcu_read_unlock:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs7runtime3rcu20ossl_synchronize_rcu:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs7runtime3rcu21ossl_rcu_write_unlock:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs7runtime3rcu24ossl_rcu_free_local_data:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs7slh_dsa3dsa10msg_encode:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs7slh_dsa3dsa12get_tree_ids:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs7slh_dsa3dsa17ossl_slh_dsa_sign:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs7slh_dsa3dsa19ossl_slh_dsa_verify:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider13core_dispatch14core_get_nonce.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider13core_dispatch14core_new_error.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider13core_dispatch15core_get_libctx.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider13core_dispatch15core_get_params.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider13core_dispatch15core_obj_create.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider13core_dispatch15core_vset_error.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider13core_dispatch16core_get_entropy.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider13core_dispatch17core_thread_start.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider13core_dispatch18core_cleanup_nonce.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider13core_dispatch18core_count_to_mark.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider13core_dispatch18core_obj_add_sigid.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider13core_dispatch19core_get_user_nonce.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider13core_dispatch19core_set_error_mark.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider13core_dispatch20core_cleanup_entropy.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider13core_dispatch20core_gettable_params.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider13core_dispatch20core_set_error_debug.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider13core_dispatch21core_get_user_entropy.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider13core_dispatch22core_pop_error_to_mark.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider13core_dispatch23core_provider_get0_name.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider13core_dispatch25core_cleanup_user_entropy.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider13core_dispatch25core_provider_free_intern.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider13core_dispatch26core_clear_last_error_mark.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider13core_dispatch27core_indicator_get_callback.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider13core_dispatch27core_provider_get0_dispatch.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider13core_dispatch27core_provider_up_ref_intern.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider13core_dispatch27core_self_test_get_callback.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider13core_dispatch31core_provider_get0_provider_ctx.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider14decode_pem2der14pem2der_decode.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider14decode_pem2der14pem2der_newctx.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider14decode_pem2der15pem2der_freectx.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider14decode_pem2der19pem2der_pass_helper:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider14decode_pem2der22pem2der_set_ctx_params.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider14decode_pem2der27pem2der_settable_ctx_params.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider16mac_legacy_kmgmt10mac_export.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider16mac_legacy_kmgmt10mac_import.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider16mac_legacy_kmgmt12mac_gen_init.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider16mac_legacy_kmgmt12mac_new_cmac.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider16mac_legacy_kmgmt13cmac_gen_init.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider16mac_legacy_kmgmt14mac_get_params.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider16mac_legacy_kmgmt14mac_set_params.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider16mac_legacy_kmgmt15mac_gen_cleanup.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider16mac_legacy_kmgmt16mac_key_fromdata:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider16mac_legacy_kmgmt18mac_gen_set_params.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider16mac_legacy_kmgmt18mac_imexport_types.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider16mac_legacy_kmgmt19cmac_gen_set_params.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider16mac_legacy_kmgmt19cmac_imexport_types.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider16mac_legacy_kmgmt19mac_gettable_params.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider16mac_legacy_kmgmt19mac_settable_params.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider16mac_legacy_kmgmt20cmac_gettable_params.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider16mac_legacy_kmgmt23mac_gen_settable_params.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider16mac_legacy_kmgmt24cmac_gen_settable_params.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider16mac_legacy_kmgmt7mac_gen.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider16mac_legacy_kmgmt7mac_has.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider16mac_legacy_kmgmt7mac_new.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider16mac_legacy_kmgmt8mac_free.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider16mac_legacy_kmgmt9mac_match.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf10fill_block:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf10hkdf_reset.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf10kbkdf_free.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf10pbkdf1_dup:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf10pbkdf1_new:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf10pbkdf2_dup.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf10pbkdf2_new.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf10pvk_derive:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf10sshkdf_dup.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf10sshkdf_new.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf10sskdf_free.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf11find_alg_id:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf11hkdf_expand:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf11kbkdf_reset.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf11krb5kdf_dup.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf11krb5kdf_new.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf11pbkdf1_free:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf11pbkdf2_free.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf11sshkdf_free.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf11sskdf_reset.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf11x942kdf_dup.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf11x942kdf_new.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf12blake2b_long:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf12fill_segment:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf12krb5kdf_free.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf12pbkdf1_reset:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf12pbkdf2_reset.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf12sshkdf_reset.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf12sskdf_derive.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf12tls13_derive.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf12tls1_prf_dup.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf12tls1_prf_new.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf12x942kdf_free.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf13krb5kdf_reset.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf13pbkdf1_derive:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf13pkcs12kdf_dup.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf13pkcs12kdf_new.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf13tls1_prf_free.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf13x942kdf_reset.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf14kdf_scrypt_dup.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf14kdf_scrypt_new.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf14pkcs12kdf_free.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf14sskdf_hash_kdm:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf14tls1_prf_reset.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf14x942kdf_derive.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf14x963kdf_derive.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf15argon2_finalize:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf15hkdf_ctx_derive.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf15hkdf_sha256_new.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf15hkdf_sha384_new.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf15hkdf_sha512_new.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf15kbkdf_kmac_init:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf15kdf_argon2_free.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf15kdf_argon2d_new.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf15kdf_argon2i_new.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf15kdf_scrypt_free.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf15pbkdf1_set_skey:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf15pkcs12kdf_reset.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf15tls1_prf_p_hash:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf16fill_segment_thr:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf16kbkdf_ctx_derive.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf16kdf_argon2_reset.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf16kdf_argon2id_new.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf16kdf_scrypt_reset.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf16scrypt_block_mix:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf16x942kdf_hash_kdm:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf17argon2_initialize:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf17hmac_drbg_kdf_dup.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf17hmac_drbg_kdf_new.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf17kdf_argon2_derive.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf17pbkdf2_ctx_derive.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf17scrypt_set_digest:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf17sshkdf_ctx_derive.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf18fill_memory_blocks:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf18hmac_drbg_kdf_free.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf18kbkdf_derive_inner:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf18krb5kdf_ctx_derive.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf18pbkdf1_derive_skey:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf18pvk_get_ctx_params:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf18pvk_set_ctx_params:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf18set_property_query:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf19hmac_drbg_kdf_reset.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf19tls1_prf_ctx_derive.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf20kbkdf_get_ctx_params.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf20kbkdf_set_ctx_params.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf20pkcs12kdf_ctx_derive.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf20sskdf_set_ctx_params.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf20tls13_set_ctx_params.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf21argon2_release_memory:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf21argon2_set_ctx_params:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf21der_encode_sharedinfo:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf21kdf_scrypt_ctx_derive.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf21pbkdf1_set_ctx_params:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf21pbkdf2_get_ctx_params.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf21pbkdf2_set_ctx_params.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf21sshkdf_get_ctx_params.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf21sshkdf_set_ctx_params.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf21x942_encode_otherinfo:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf22krb5kdf_fixup_des3_key:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf22krb5kdf_get_ctx_params.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf22krb5kdf_set_ctx_params.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf22prov_tls13_hkdf_expand:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf22x942kdf_get_ctx_params.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf22x942kdf_set_ctx_params.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf22x963kdf_set_ctx_params.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf23hkdf_ctx_set_ctx_params.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf23pvk_gettable_ctx_params:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf23pvk_settable_ctx_params:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf23tls1_prf_get_ctx_params.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf23tls1_prf_set_ctx_params.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf24hkdf_gettable_ctx_params.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf24hkdf_settable_ctx_params.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf24hmac_drbg_kdf_ctx_derive.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf24kdf_argon2_ctx_set_lanes:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf24pkcs12kdf_get_ctx_params.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf24pkcs12kdf_set_ctx_params.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf25kbkdf_gettable_ctx_params.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf25kbkdf_settable_ctx_params.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf25kdf_argon2_ctx_set_m_cost:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf25kdf_argon2_ctx_set_t_cost:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf25kdf_argon2_get_ctx_params.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf25kdf_argon2_set_ctx_params.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf25kdf_scrypt_get_ctx_params.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf25kdf_scrypt_set_ctx_params.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf25sskdf_settable_ctx_params.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf25tls13_settable_ctx_params.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf26hkdf_common_get_ctx_params.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf26hkdf_common_set_ctx_params:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf26kdf_argon2_ctx_set_threads:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf26pbkdf1_gettable_ctx_params:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf26pbkdf1_settable_ctx_params:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf26pbkdf2_gettable_ctx_params.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf26pbkdf2_settable_ctx_params.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf26sshkdf_gettable_ctx_params.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf26sshkdf_settable_ctx_params.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf27krb5kdf_gettable_ctx_params.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf27krb5kdf_settable_ctx_params.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf27sskdf_common_get_ctx_params.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf27sskdf_common_set_ctx_params:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf27sskdf_set_ctx_params_decode:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf27x942kdf_gettable_ctx_params.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf27x942kdf_settable_ctx_params.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf27x963kdf_settable_ctx_params.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf28hmac_drbg_kdf_get_ctx_params.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf28hmac_drbg_kdf_set_ctx_params.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf28tls1_prf_gettable_ctx_params.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf28tls1_prf_settable_ctx_params.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf29pkcs12kdf_gettable_ctx_params.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf29pkcs12kdf_settable_ctx_params.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf30kdf_argon2_gettable_ctx_params.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf30kdf_argon2_settable_ctx_params.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf30kdf_scrypt_gettable_ctx_params.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf30kdf_scrypt_settable_ctx_params.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf32hkdf_fixed_digest_set_ctx_params.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf32sskdf_common_gettable_ctx_params.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf33hmac_drbg_kdf_gettable_ctx_params.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf33hmac_drbg_kdf_settable_ctx_params.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf37hkdf_fixed_digest_settable_ctx_params.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf7blake2b:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf7pvk_dup:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf7pvk_new:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf8argon2_g:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf8hkdf_dup.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf8hkdf_new.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf8pvk_free:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf9hkdf_free.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf9kbkdf_dup.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf9kbkdf_new.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf9pvk_reset:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf9sskdf_dup.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdf9sskdf_new.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider4rand10ctr_update:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider4rand11get_entropy:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider4rand12drbg_ctr_new:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider4rand13add_hash_to_v:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider4rand13drbg_ctr_free.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider4rand13drbg_hash_new:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider4rand13drbg_hmac_new:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider4rand14ctr_BCC_update:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider4rand14drbg_hash_free.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider4rand14drbg_hmac_free.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider4rand14ossl_drbg_lock.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider4rand15cleanup_entropy:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider4rand15drbg_ctr_reseed:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider4rand16drbg_hash_reseed:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider4rand16drbg_hmac_reseed:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider4rand16ossl_drbg_unlock.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider4rand17drbg_ctr_generate:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider4rand18drbg_hash_generate:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider4rand18drbg_hmac_generate:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider4rand18ossl_drbg_get_seed.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider4rand18ossl_rand_drbg_new:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider4rand19ossl_drbg_hmac_init:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider4rand19prov_drbg_get_nonce:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider4rand20drbg_ctr_instantiate:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider4rand20drbg_ctr_new_wrapper.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider4rand20ossl_drbg_clear_seed.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider4rand21drbg_hash_instantiate:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider4rand21drbg_hash_new_wrapper.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider4rand21drbg_hmac_instantiate:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider4rand21drbg_hmac_new_wrapper.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider4rand22drbg_ctr_uninstantiate:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider4rand23drbg_ctr_get_ctx_params.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider4rand23drbg_ctr_reseed_wrapper.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider4rand23drbg_ctr_set_ctx_params.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider4rand23drbg_hash_uninstantiate:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider4rand23drbg_hmac_uninstantiate:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider4rand23get_parent_reseed_count:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider4rand23ossl_drbg_hmac_generate:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider4rand23ossl_prov_drbg_generate:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider4rand24drbg_hash_get_ctx_params.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider4rand24drbg_hash_set_ctx_params.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider4rand24drbg_hmac_get_ctx_params.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider4rand24drbg_hmac_set_ctx_params.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider4rand24ossl_drbg_enable_locking.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider4rand24ossl_drbg_get_ctx_params:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider4rand25drbg_ctr_generate_wrapper.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider4rand26ossl_prov_drbg_instantiate:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider4rand27drbg_ctr_verify_zeroization.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider4rand28drbg_ctr_gettable_ctx_params.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider4rand28drbg_ctr_instantiate_wrapper.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider4rand28drbg_ctr_settable_ctx_params.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider4rand28drbg_hash_verify_zeroization.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider4rand28drbg_hmac_verify_zeroization.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider4rand28ossl_prov_drbg_nonce_ctx_new:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider4rand29drbg_hash_gettable_ctx_params.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider4rand29drbg_hash_instantiate_wrapper.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider4rand29drbg_hash_settable_ctx_params.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider4rand29drbg_hmac_gettable_ctx_params.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider4rand29drbg_hmac_instantiate_wrapper.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider4rand29drbg_hmac_settable_ctx_params.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider4rand29ossl_prov_drbg_nonce_ctx_free:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider4rand30drbg_ctr_set_ctx_params_locked:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider4rand30drbg_ctr_uninstantiate_wrapper.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider4rand30ossl_prov_drbg_reseed_unlocked:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider4rand31drbg_ctr_set_ctx_params_decoder:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider4rand31drbg_hash_set_ctx_params_locked:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider4rand31drbg_hash_uninstantiate_wrapper.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider4rand31drbg_hmac_set_ctx_params_locked:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider4rand31drbg_hmac_uninstantiate_wrapper.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider4rand32drbg_hash_set_ctx_params_decoder:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider4rand32drbg_hmac_set_ctx_params_decoder:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider4rand7do_hmac:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider4rand7hash_df:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7keymgmt10dh_newdata.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7keymgmt11dh_freedata.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7keymgmt11dh_gen_init.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7keymgmt11dh_validate.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7keymgmt11dhx_newdata.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7keymgmt11kdf_newdata.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7keymgmt12dhx_gen_init.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7keymgmt12kdf_freedata.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7keymgmt13dh_get_params.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7keymgmt13dh_set_params.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7keymgmt14dh_gen_cleanup.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7keymgmt15dh_export_types.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7keymgmt17dh_gen_set_params.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7keymgmt18dh_gettable_params.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7keymgmt18dh_settable_params.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7keymgmt18dhx_gen_set_params.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7keymgmt19dh_gen_set_template.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7keymgmt22dh_gen_settable_params.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7keymgmt23dhx_gen_settable_params.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7keymgmt24dh_gen_common_set_params:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7keymgmt24dhx_query_operation_name.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7keymgmt6dh_dup.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7keymgmt6dh_gen.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7keymgmt6dh_has.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7keymgmt7dh_load.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7keymgmt7kdf_has.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7keymgmt8dh_gencb:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7keymgmt8dh_match.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7keymgmt9dh_export.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7keymgmt9dh_import.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7rsa_sig10clean_tbuf:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7rsa_sig10rsa_dupctx.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7rsa_sig10rsa_newctx.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7rsa_sig10rsa_verify.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7rsa_sig10setup_tbuf:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7rsa_sig11rsa_freectx.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7rsa_sig12rsa_setup_md:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7rsa_sig13rsa_sign_init.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7rsa_sig15rsa_verify_init.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7rsa_sig17rsa_check_padding:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7rsa_sig17rsa_setup_mgf1_md:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7rsa_sig17rsa_sign_directly:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7rsa_sig17rsa_sm3_sign_init.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7rsa_sig18rsa_get_ctx_params.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7rsa_sig18rsa_set_ctx_params.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7rsa_sig18rsa_sha1_sign_init.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7rsa_sig18rsa_verify_recover.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7rsa_sig19rsa_signverify_init:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7rsa_sig19rsa_sm3_verify_init.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7rsa_sig19rsa_verify_directly:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7rsa_sig20rsa_check_parameters:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7rsa_sig20rsa_digest_sign_init.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7rsa_sig20rsa_sha1_verify_init.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7rsa_sig20rsa_sha224_sign_init.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7rsa_sig20rsa_sha256_sign_init.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7rsa_sig20rsa_sha384_sign_init.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7rsa_sig20rsa_sha512_sign_init.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7rsa_sig21rsa_digest_sign_final.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7rsa_sig21rsa_get_ctx_md_params.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7rsa_sig21rsa_set_ctx_md_params.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7rsa_sig22rsa_digest_sign_update.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7rsa_sig22rsa_digest_verify_init.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7rsa_sig22rsa_sha224_verify_init.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7rsa_sig22rsa_sha256_verify_init.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7rsa_sig22rsa_sha384_verify_init.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7rsa_sig22rsa_sha3_224_sign_init.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7rsa_sig22rsa_sha3_256_sign_init.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7rsa_sig22rsa_sha3_384_sign_init.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7rsa_sig22rsa_sha3_512_sign_init.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7rsa_sig22rsa_sha512_verify_init.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7rsa_sig22rsa_sign_message_final.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7rsa_sig23rsa_digest_verify_final.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7rsa_sig23rsa_gettable_ctx_params.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7rsa_sig23rsa_ripemd160_sign_init.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7rsa_sig23rsa_settable_ctx_params.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7rsa_sig23rsa_verify_recover_init.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7rsa_sig24rsa_sha3_224_verify_init.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7rsa_sig24rsa_sha3_256_verify_init.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7rsa_sig24rsa_sha3_384_verify_init.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7rsa_sig24rsa_sha3_512_verify_init.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7rsa_sig24rsa_sha512_224_sign_init.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7rsa_sig24rsa_sha512_256_sign_init.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7rsa_sig24rsa_verify_message_final.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7rsa_sig25rsa_ripemd160_verify_init.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7rsa_sig25rsa_sigalg_set_ctx_params.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7rsa_sig25rsa_sm3_sign_message_init.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7rsa_sig26rsa_digest_signverify_init:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7rsa_sig26rsa_gettable_ctx_md_params.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7rsa_sig26rsa_settable_ctx_md_params.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7rsa_sig26rsa_sha1_sign_message_init.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7rsa_sig26rsa_sha512_224_verify_init.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7rsa_sig26rsa_sha512_256_verify_init.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7rsa_sig26rsa_sigalg_query_key_types.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7rsa_sig26rsa_sigalg_signverify_init:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7rsa_sig27rsa_sm3_verify_message_init.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7rsa_sig27rsa_sm3_verify_recover_init.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7rsa_sig28rsa_sha1_verify_message_init.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7rsa_sig28rsa_sha1_verify_recover_init.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7rsa_sig28rsa_sha224_sign_message_init.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7rsa_sig28rsa_sha256_sign_message_init.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7rsa_sig28rsa_sha384_sign_message_init.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7rsa_sig28rsa_sha512_sign_message_init.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7rsa_sig29rsa_signverify_message_update.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7rsa_sig30rsa_sha224_verify_message_init.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7rsa_sig30rsa_sha224_verify_recover_init.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7rsa_sig30rsa_sha256_verify_message_init.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7rsa_sig30rsa_sha256_verify_recover_init.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7rsa_sig30rsa_sha384_verify_message_init.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7rsa_sig30rsa_sha384_verify_recover_init.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7rsa_sig30rsa_sha3_224_sign_message_init.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7rsa_sig30rsa_sha3_256_sign_message_init.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7rsa_sig30rsa_sha3_384_sign_message_init.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7rsa_sig30rsa_sha3_512_sign_message_init.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7rsa_sig30rsa_sha512_verify_message_init.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7rsa_sig30rsa_sha512_verify_recover_init.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7rsa_sig30rsa_sigalg_settable_ctx_params.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7rsa_sig31rsa_ripemd160_sign_message_init.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7rsa_sig32rsa_sha3_224_verify_message_init.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7rsa_sig32rsa_sha3_224_verify_recover_init.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7rsa_sig32rsa_sha3_256_verify_message_init.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7rsa_sig32rsa_sha3_256_verify_recover_init.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7rsa_sig32rsa_sha3_384_verify_message_init.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7rsa_sig32rsa_sha3_384_verify_recover_init.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7rsa_sig32rsa_sha3_512_verify_message_init.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7rsa_sig32rsa_sha3_512_verify_recover_init.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7rsa_sig32rsa_sha512_224_sign_message_init.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7rsa_sig32rsa_sha512_256_sign_message_init.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7rsa_sig33rsa_ripemd160_verify_message_init.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7rsa_sig33rsa_ripemd160_verify_recover_init.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7rsa_sig34rsa_sha512_224_verify_message_init.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7rsa_sig34rsa_sha512_224_verify_recover_init.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7rsa_sig34rsa_sha512_256_verify_message_init.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7rsa_sig34rsa_sha512_256_verify_recover_init.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7rsa_sig4atoi:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider7rsa_sig8rsa_sign.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider9dsa_kmgmt10dsa_export.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider9dsa_kmgmt10dsa_import.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider9dsa_kmgmt11dsa_newdata.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider9dsa_kmgmt12dsa_freedata.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider9dsa_kmgmt12dsa_gen_init.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider9dsa_kmgmt12dsa_validate.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider9dsa_kmgmt14dsa_get_params.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider9dsa_kmgmt15dsa_gen_cleanup.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider9dsa_kmgmt16dsa_export_types.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider9dsa_kmgmt16dsa_set_gen_seed:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider9dsa_kmgmt18dsa_gen_get_params.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider9dsa_kmgmt18dsa_gen_set_params.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider9dsa_kmgmt19dsa_gettable_params.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider9dsa_kmgmt23dsa_gen_gettable_params.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider9dsa_kmgmt23dsa_gen_settable_params.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider9dsa_kmgmt7dsa_dup.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider9dsa_kmgmt7dsa_gen.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider9dsa_kmgmt7dsa_has.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider9dsa_kmgmt9dsa_gencb:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider9dsa_kmgmt9dsa_match.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider9rsa_kmgmt10rsa_export.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider9rsa_kmgmt10rsa_import.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider9rsa_kmgmt11rsa_newdata.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider9rsa_kmgmt11rsapss_load.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider9rsa_kmgmt12rsa_freedata.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider9rsa_kmgmt12rsa_gen_init.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider9rsa_kmgmt12rsa_validate.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider9rsa_kmgmt14rsa_get_params.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider9rsa_kmgmt14rsapss_newdata.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider9rsa_kmgmt15rsa_gen_cleanup.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider9rsa_kmgmt15rsapss_gen_init.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider9rsa_kmgmt16rsa_export_types.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider9rsa_kmgmt18rsa_gen_set_params.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider9rsa_kmgmt19rsa_gettable_params.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider9rsa_kmgmt23rsa_gen_settable_params.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider9rsa_kmgmt24rsa_query_operation_name.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider9rsa_kmgmt26rsapss_gen_settable_params.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider9rsa_kmgmt7rsa_dup.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider9rsa_kmgmt7rsa_gen.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider9rsa_kmgmt7rsa_has.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider9rsa_kmgmt8gen_init:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider9rsa_kmgmt8rsa_load.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider9rsa_kmgmt9rsa_gencb:
+
+Disassembly of section .text._RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider9rsa_kmgmt9rsa_match.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtNtCsfBoMNNx3tZr_10openssl_rs2ec4p25610fixed_base10tracked_gx:
+
+Disassembly of section .text._RNvNtNtNtCsfBoMNNx3tZr_10openssl_rs2ec4p25610fixed_base10tracked_gy:
+
+Disassembly of section .text._RNvNtNtNtCsfBoMNNx3tZr_10openssl_rs2ec4p25610fixed_base17try_inverse_order:
+
+Disassembly of section .text._RNvNtNtNtCsfBoMNNx3tZr_10openssl_rs2ec4p25610fixed_base6admits:
+
+Disassembly of section .text._RNvNtNtNtCsfBoMNNx3tZr_10openssl_rs2ec4p25610fixed_base9tracked_b:
+
+Disassembly of section .text._RNvNtNtNtCsfBoMNNx3tZr_10openssl_rs6digest6blake27blake2b14param_set_salt:
+
+Disassembly of section .text._RNvNtNtNtCsfBoMNNx3tZr_10openssl_rs6digest6blake27blake2b18param_set_personal:
+
+Disassembly of section .text._RNvNtNtNtCsfBoMNNx3tZr_10openssl_rs6digest6blake27blake2b4init:
+
+Disassembly of section .text._RNvNtNtNtCsfBoMNNx3tZr_10openssl_rs6digest6blake27blake2b6final_:
+
+Disassembly of section .text._RNvNtNtNtCsfBoMNNx3tZr_10openssl_rs6digest6blake27blake2b6update:
+
+Disassembly of section .text._RNvNtNtNtCsfBoMNNx3tZr_10openssl_rs6digest6blake27blake2b8compress.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtNtCsfBoMNNx3tZr_10openssl_rs6digest6blake27blake2b8init_key:
+
+Disassembly of section .text._RNvNtNtNtCsfBoMNNx3tZr_10openssl_rs7runtime3bio8core_bio20ossl_core_bio_up_ref.llvm.2479223849020213779:
+
+Disassembly of section .text._RNvNtNtNtCsfBoMNNx3tZr_10openssl_rs8provider6digest4sha110get_params:
+
+Disassembly of section .text._RNvNtNtNtCsfBoMNNx3tZr_10openssl_rs8provider6digest4sha113internal_init:
+
+Disassembly of section .text._RNvNtNtNtCsfBoMNNx3tZr_10openssl_rs8provider6digest4sha114internal_final:
+
+Disassembly of section .text._RNvNtNtNtCsfBoMNNx3tZr_10openssl_rs8provider6digest4sha114set_ctx_params:
+
+Disassembly of section .text._RNvNtNtNtCsfBoMNNx3tZr_10openssl_rs8provider6digest4sha115gettable_params:
+
+Disassembly of section .text._RNvNtNtNtCsfBoMNNx3tZr_10openssl_rs8provider6digest4sha119settable_ctx_params:
+
+Disassembly of section .text._RNvNtNtNtCsfBoMNNx3tZr_10openssl_rs8provider6digest4sha16dupctx:
+
+Disassembly of section .text._RNvNtNtNtCsfBoMNNx3tZr_10openssl_rs8provider6digest4sha16newctx:
+
+Disassembly of section .text._RNvNtNtNtCsfBoMNNx3tZr_10openssl_rs8provider6digest4sha16update:
+
+Disassembly of section .text._RNvNtNtNtCsfBoMNNx3tZr_10openssl_rs8provider6digest4sha17copyctx:
+
+Disassembly of section .text._RNvNtNtNtCsfBoMNNx3tZr_10openssl_rs8provider6digest4sha17freectx:
+
+Disassembly of section .text._RNvXNtNtCsfBoMNNx3tZr_10openssl_rs2ec4multNtB2_11EcPreCompStNtNtNtNtB6_7runtime3bio5owned10CtxDestroy12destroy_body:
+
+Disassembly of section .text._RNvXNtNtCsfBoMNNx3tZr_10openssl_rs4rand8rand_libNtB2_10RandGlobalNtNtNtNtB6_7runtime3bio5owned10CtxDestroy12destroy_body:
+
+Disassembly of section .text._RNvXs0_NtNtCsfBoMNNx3tZr_10openssl_rs3evp9pkey_asn1NtB5_17EvpPkeyAsn1MethodNtNtNtNtB9_7runtime3bio5owned10CtxDestroy12destroy_body:
+
+Disassembly of section .text._RNvXs0_NtNtCsfBoMNNx3tZr_10openssl_rs4rand8rand_libNtB5_9RawGlobalNtNtNtCsgxBkk5gSRhY_4core3ops4drop4Drop4drop:
+
+Disassembly of section .text._RNvXs0_NtNtCsfBoMNNx3tZr_10openssl_rs8provider16mac_legacy_kmgmtNtB5_6MacKeyNtNtNtNtB9_7runtime3bio5owned10CtxDestroy12destroy_body:
+
+Disassembly of section .text._RNvXs0_NtNtCsfBoMNNx3tZr_10openssl_rs8provider7rsa_sigNtB5_11OwnedRsaCtxNtNtNtCsgxBkk5gSRhY_4core3ops4drop4Drop4drop:
+
+Disassembly of section .text._RNvXs1_NtNtCsfBoMNNx3tZr_10openssl_rs8provider16mac_legacy_kmgmtNtB5_9MacGenCtxNtNtNtNtB9_7runtime3bio5owned10CtxDestroy12destroy_body:
+
+Disassembly of section .text._RNvXs1_NtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdfNtB5_8OwnedBufNtNtNtCsgxBkk5gSRhY_4core3ops4drop4Drop4drop:
+
+Disassembly of section .text._RNvXs1_NtNtCsfBoMNNx3tZr_10openssl_rs8provider7keymgmtNtB5_11RawDhGenCtxNtNtNtCsgxBkk5gSRhY_4core3ops4drop4Drop4drop:
+
+Disassembly of section .text._RNvXs2_NtNtCsfBoMNNx3tZr_10openssl_rs8provider4randNtB5_8ProvDrbgNtB5_7DrbgCtx12destroy_body:
+
+Disassembly of section .text._RNvXs2_NtNtCsfBoMNNx3tZr_10openssl_rs8provider4randNtB5_8ProvDrbgNtB5_7DrbgCtx6zalloc:
+
+Disassembly of section .text._RNvXs2_NtNtCsfBoMNNx3tZr_10openssl_rs8provider4randNtB5_8ProvDrbgNtB5_7DrbgCtx7release:
+
+Disassembly of section .text._RNvXs3_NtNtCsfBoMNNx3tZr_10openssl_rs2ec4p256NtB5_11SecretLanesNtNtNtCsgxBkk5gSRhY_4core3ops4drop4Drop4drop:
+
+Disassembly of section .text._RNvXs3_NtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdfNtB5_7KdfX942NtB5_10KdfDestroy12destroy_body:
+
+Disassembly of section .text._RNvXs3_NtNtCsfBoMNNx3tZr_10openssl_rs8provider4randNtB5_19ProvDrbgNonceGlobalNtB5_7DrbgCtx6zalloc:
+
+Disassembly of section .text._RNvXs4_NtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdfNtB5_9KdfPkcs12NtB5_10KdfDestroy12destroy_body:
+
+Disassembly of section .text._RNvXs5_NtNtCsfBoMNNx3tZr_10openssl_rs2ec4p256NtB5_10Canonical4NtNtNtCsgxBkk5gSRhY_4core3ops4drop4Drop4drop:
+
+Disassembly of section .text._RNvXs6_NtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdfNtB5_9KdfPbkdf2NtB5_10KdfDestroy12destroy_body:
+
+Disassembly of section .text._RNvXs6_NtNtCsfBoMNNx3tZr_10openssl_rs8provider4randNtB5_11ProvDrbgCtrNtB5_7DrbgCtx12destroy_body:
+
+Disassembly of section .text._RNvXs6_NtNtCsfBoMNNx3tZr_10openssl_rs8provider4randNtB5_11ProvDrbgCtrNtB5_7DrbgCtx6zalloc:
+
+Disassembly of section .text._RNvXs6_NtNtCsfBoMNNx3tZr_10openssl_rs8provider4randNtB5_11ProvDrbgCtrNtB5_7DrbgCtx7release:
+
+Disassembly of section .text._RNvXs7_NtNtCsfBoMNNx3tZr_10openssl_rs2ec4p256NtB5_11Canonical32NtNtNtCsgxBkk5gSRhY_4core3ops4drop4Drop4drop:
+
+Disassembly of section .text._RNvXs7_NtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdfNtB5_7KdfHkdfNtB5_10KdfDestroy12destroy_body:
+
+Disassembly of section .text._RNvXs7_NtNtCsfBoMNNx3tZr_10openssl_rs8provider4randNtB5_12ProvDrbgHashNtB5_7DrbgCtx12destroy_body:
+
+Disassembly of section .text._RNvXs7_NtNtCsfBoMNNx3tZr_10openssl_rs8provider4randNtB5_12ProvDrbgHashNtB5_7DrbgCtx6zalloc:
+
+Disassembly of section .text._RNvXs7_NtNtCsfBoMNNx3tZr_10openssl_rs8provider4randNtB5_12ProvDrbgHashNtB5_7DrbgCtx7release:
+
+Disassembly of section .text._RNvXs8_NtNtCsfBoMNNx3tZr_10openssl_rs8provider4randNtB5_12ProvDrbgHmacNtB5_7DrbgCtx12destroy_body:
+
+Disassembly of section .text._RNvXs8_NtNtCsfBoMNNx3tZr_10openssl_rs8provider4randNtB5_12ProvDrbgHmacNtB5_7DrbgCtx6zalloc:
+
+Disassembly of section .text._RNvXs8_NtNtCsfBoMNNx3tZr_10openssl_rs8provider4randNtB5_12ProvDrbgHmacNtB5_7DrbgCtx7release:
+
+Disassembly of section .text._RNvXs_NtNtCsfBoMNNx3tZr_10openssl_rs6engine9eng_tableNtB4_10EnginePileNtNtNtNtB8_7runtime3bio5owned10CtxDestroy12destroy_body:
+
+Disassembly of section .text._RNvXs_NtNtCsfBoMNNx3tZr_10openssl_rs7slh_dsa3dsaNtB4_8MsgBlockNtNtNtCsgxBkk5gSRhY_4core3ops4drop4Drop4drop:
+
+Disassembly of section .text._RNvXs_NtNtCsfBoMNNx3tZr_10openssl_rs8provider16mac_legacy_kmgmtNtB4_8OwnedBufNtNtNtCsgxBkk5gSRhY_4core3ops4drop4Drop4drop:
+
+Disassembly of section .text._RNvXs_NtNtCsfBoMNNx3tZr_10openssl_rs8provider7keymgmtNtB4_8DhGenCtxNtNtNtNtB8_7runtime3bio5owned10CtxDestroy12destroy_body:
+
+Disassembly of section .text._RNvXs_NtNtCsfBoMNNx3tZr_10openssl_rs8provider9rsa_kmgmtNtB4_11GenCtxBlockNtNtNtCsgxBkk5gSRhY_4core3ops4drop4Drop4drop:
+
+Disassembly of section .text._RNvXsa_NtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdfNtB5_9KdfScryptNtB5_10KdfDestroy12destroy_body:
+
+Disassembly of section .text._RNvXsc_NtNtCsfBoMNNx3tZr_10openssl_rs2ec4p256INtB5_4MontNtB5_11FieldDomainEINtB5_11FieldKernelBS_E3mulB9_:
+
+Disassembly of section .text._RNvXsc_NtNtCsfBoMNNx3tZr_10openssl_rs2ec4p256INtB5_4MontNtB5_11FieldDomainEINtB5_11FieldKernelBS_E3sqrB9_:
+
+Disassembly of section .text._RNvXsd_NtNtCsfBoMNNx3tZr_10openssl_rs2ec4p256NtB5_7SolinasINtB5_11FieldKernelNtB5_11FieldDomainE10from_limbs:
+
+Disassembly of section .text._RNvXsd_NtNtCsfBoMNNx3tZr_10openssl_rs2ec4p256NtB5_7SolinasINtB5_11FieldKernelNtB5_11FieldDomainE3add:
+
+Disassembly of section .text._RNvXsd_NtNtCsfBoMNNx3tZr_10openssl_rs2ec4p256NtB5_7SolinasINtB5_11FieldKernelNtB5_11FieldDomainE3mul:
+
+Disassembly of section .text._RNvXsd_NtNtCsfBoMNNx3tZr_10openssl_rs2ec4p256NtB5_7SolinasINtB5_11FieldKernelNtB5_11FieldDomainE3sqr:
+
+Disassembly of section .text._RNvXsd_NtNtCsfBoMNNx3tZr_10openssl_rs2ec4p256NtB5_7SolinasINtB5_11FieldKernelNtB5_11FieldDomainE3sub:
+
+Disassembly of section .text._RNvXsd_NtNtCsfBoMNNx3tZr_10openssl_rs2ec4p256NtB5_7SolinasINtB5_11FieldKernelNtB5_11FieldDomainE5cswap:
+
+Disassembly of section .text._RNvXsd_NtNtCsfBoMNNx3tZr_10openssl_rs2ec4p256NtB5_7SolinasINtB5_11FieldKernelNtB5_11FieldDomainE6reduce:
+
+Disassembly of section .text._RNvXsd_NtNtCsfBoMNNx3tZr_10openssl_rs2ec4p256NtB5_7SolinasINtB5_11FieldKernelNtB5_11FieldDomainE6select:
+
+Disassembly of section .text._RNvXsd_NtNtCsfBoMNNx3tZr_10openssl_rs2ec4p256NtB5_7SolinasINtB5_11FieldKernelNtB5_11FieldDomainE8to_limbs:
+
+Disassembly of section .text._RNvXsd_NtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdfNtB5_9KdfArgon2NtB5_10KdfDestroy12destroy_body:
+
+Disassembly of section .text._RNvXse_NtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdfNtB5_9KdfPbkdf1NtB5_10KdfDestroy12destroy_body:
+
+Disassembly of section .text._RNvXsf_NtNtCsfBoMNNx3tZr_10openssl_rs8provider3kdfNtB5_6KdfPvkNtB5_10KdfDestroy12destroy_body:
+
+Disassembly of section .text._RNvXsg_NtNtCsfBoMNNx3tZr_10openssl_rs2ec4p256NtB5_4ArchINtB5_11FieldKernelNtB5_11FieldDomainE3mul:
+
+Disassembly of section .text._RNvXsg_NtNtCsfBoMNNx3tZr_10openssl_rs2ec4p256NtB5_4ArchINtB5_11FieldKernelNtB5_11FieldDomainE3sqr:
+
+Disassembly of section .text.d2i_X509_ALGOR:
+
+Disassembly of section .text.d2i_X509_ALGORS:
+
+Disassembly of section .text.d2i_X509_CRL:
+
+Disassembly of section .text.d2i_X509_CRL_INFO:
+
+Disassembly of section .text.d2i_X509_REVOKED:
+
+Disassembly of section .text.i2d_X509_ALGOR:
+
+Disassembly of section .text.i2d_X509_ALGORS:
+
+Disassembly of section .text.i2d_X509_CRL:
+
+Disassembly of section .text.i2d_X509_CRL_INFO:
+
+Disassembly of section .text.i2d_X509_REVOKED:
+
+Disassembly of section .text.ossl_kdf_data_up_ref:
+
+Disassembly of section .text.ossl_mac_key_new:
+
+Disassembly of section .text.ossl_x509_crl_set0_libctx:
+
+Disassembly of section .text.pfp58_divstep_carrier:
+
+0000000000000000 <pfp58_divstep_carrier>:
+       0:	push   %rbp
+       1:	push   %r15
+       3:	push   %r14
+       5:	push   %r13
+       7:	push   %r12
+       9:	push   %rbx
+       a:	sub    $0x1f8,%rsp
+      11:	test   %rcx,%rcx
+      14:	je     c8 <pfp58_divstep_carrier+0xc8>
+      1a:	mov    %rcx,%rbx
+      1d:	movabs $0x3fffffffffffffc,%rcx
+      27:	testb  $0x1,(%rdx)
+      2a:	sete   %al
+      2d:	add    $0x3,%rcx
+      31:	cmp    %rcx,%rbx
+      34:	seta   %cl
+      37:	or     %al,%cl
+      39:	jne    c8 <pfp58_divstep_carrier+0xc8>
+      3f:	mov    %rdx,0x40(%rsp)
+      44:	mov    %rbx,%rbp
+      47:	shl    $0x6,%rbp
+      4b:	mov    $0xecb,%ecx
+      50:	mov    %rbp,%rax
+      53:	mul    %rcx
+      56:	jo     c8 <pfp58_divstep_carrier+0xc8>
+      58:	cmp    $0xfffffffffffff789,%rax
+      5e:	ja     c8 <pfp58_divstep_carrier+0xc8>
+      60:	mov    %rsi,%r13
+      63:	mov    %rdi,%r15
+      66:	mov    %r9,0x1b0(%rsp)
+      6e:	mov    %r8,0x1b8(%rsp)
+      76:	add    $0x876,%rax
+      7c:	shr    $0x2,%rax
+      80:	movabs $0x4fba3d0a96bc1b69,%rcx
+      8a:	mul    %rcx
+      8d:	mov    %rdx,%r12
+      90:	lea    (%rbx,%rbx,2),%rax
+      94:	add    %rax,%rax
+      97:	lea    0x4(%rax,%rbx,2),%rax
+      9c:	lea    0x4(%rax,%rbx,4),%r14
+      a1:	lea    0x18(%rsp),%rdi
+      a6:	mov    $0x8,%edx
+      ab:	mov    $0x8,%r8d
+      b1:	mov    $0x8,%r9d
+      b7:	xor    %esi,%esi
+      b9:	mov    %r14,%rcx
+      bc:	call   c1 <pfp58_divstep_carrier+0xc1>
+      c1:	cmpb   $0x0,0x18(%rsp)
+      c6:	je     dc <pfp58_divstep_carrier+0xdc>
+      c8:	xor    %eax,%eax
+      ca:	add    $0x1f8,%rsp
+      d1:	pop    %rbx
+      d2:	pop    %r12
+      d4:	pop    %r13
+      d6:	pop    %r14
+      d8:	pop    %r15
+      da:	pop    %rbp
+      db:	ret
+      dc:	mov    %r14,0xe0(%rsp)
+      e4:	shr    $0x7,%r12
+      e8:	mov    %r12,0x1d8(%rsp)
+      f0:	mov    %r13,%r14
+      f3:	mov    0x20(%rsp),%r13
+      f8:	lea    (%rbx,%rbx,2),%r12
+      fc:	shl    $0x5,%r12
+     100:	lea    0x38(%r12),%rdx
+     105:	movq   $0x0,0x188(%rsp)
+     111:	mov    %r13,%rdi
+     114:	xor    %esi,%esi
+     116:	call   *0x0(%rip)        # 11c <pfp58_divstep_carrier+0x11c>
+     11c:	movq   $0x0,0x38(%r13,%r12,1)
+     125:	lea    0x1(%rbx),%rcx
+     129:	lea    0x0(,%rcx,8),%r12
+     131:	add    %r13,%r12
+     134:	lea    0x0(,%rcx,8),%rax
+     13c:	mov    %rax,0x160(%rsp)
+     144:	lea    (%r12,%rcx,8),%rax
+     148:	mov    %rax,0x88(%rsp)
+     150:	lea    (%rax,%rbx,8),%rsi
+     154:	mov    %rsi,0xd0(%rsp)
+     15c:	lea    0x0(,%rbx,8),%rdx
+     164:	lea    (%rsi,%rbx,8),%rax
+     168:	mov    %rax,0xc0(%rsp)
+     170:	lea    0x2(%rbx),%rsi
+     174:	lea    (%rax,%rsi,8),%rax
+     178:	mov    %rax,0x78(%rsp)
+     17d:	lea    (%rax,%rsi,8),%rax
+     181:	mov    %rax,0xa0(%rsp)
+     189:	mov    %rbp,0x50(%rsp)
+     18e:	mov    %r13,%rbp
+     191:	lea    (%rax,%rcx,8),%r13
+     195:	lea    0x0(%r13,%rcx,8),%rax
+     19a:	mov    %rax,0x60(%rsp)
+     19f:	lea    (%rax,%rbx,8),%rax
+     1a3:	mov    %rax,0xe8(%rsp)
+     1ab:	lea    (%rax,%rbx,8),%rax
+     1af:	mov    %rax,0x48(%rsp)
+     1b4:	lea    (%rax,%rbx,8),%rcx
+     1b8:	mov    %rcx,0x68(%rsp)
+     1bd:	mov    %rbp,%rdi
+     1c0:	mov    0x40(%rsp),%rsi
+     1c5:	call   *0x0(%rip)        # 1cb <pfp58_divstep_carrier+0x1cb>
+     1cb:	cmp    %r14,%rbx
+     1ce:	cmovb  %rbx,%r14
+     1d2:	shl    $0x3,%r14
+     1d6:	mov    %r12,%rdi
+     1d9:	mov    %r15,%rsi
+     1dc:	mov    %r14,%rdx
+     1df:	call   *0x0(%rip)        # 1e5 <pfp58_divstep_carrier+0x1e5>
+     1e5:	lea    -0x8(,%rbx,8),%r11
+     1ed:	shr    $0x3,%r11
+     1f1:	cmp    %r11,%rbx
+     1f4:	mov    %r11,%r10
+     1f7:	cmovb  %rbx,%r10
+     1fb:	lea    (%rbx,%rbx,2),%rax
+     1ff:	shl    $0x4,%rax
+     203:	mov    %rax,0x30(%rsp)
+     208:	lea    0x10(%rsp),%r9
+     20d:	inc    %r11
+     210:	movabs $0x7fffffffffffffe,%rax
+     21a:	lea    0x1(%rbx),%rdi
+     21e:	mov    %rdi,%rsi
+     221:	and    %rax,%rsi
+     224:	mov    %rsi,0x120(%rsp)
+     22c:	mov    %edi,%esi
+     22e:	and    $0x3,%esi
+     231:	mov    %rsi,0xf8(%rsp)
+     239:	cmp    %r9,%r13
+     23c:	setb   %sil
+     240:	lea    0x8(%rsp),%rdx
+     245:	mov    0x60(%rsp),%r15
+     24a:	cmp    %r15,%rdx
+     24d:	setb   %dil
+     251:	and    %sil,%dil
+     254:	mov    %dil,0x17(%rsp)
+     259:	mov    0x88(%rsp),%r14
+     261:	mov    0xa0(%rsp),%r8
+     269:	cmp    %r14,%r8
+     26c:	setb   %sil
+     270:	cmp    %r13,%r12
+     273:	setb   %dil
+     277:	and    %sil,%dil
+     27a:	mov    %r12,0x80(%rsp)
+     282:	cmp    %r12,%r8
+     285:	mov    %r8,%r12
+     288:	setb   %sil
+     28c:	cmp    %r13,%rbp
+     28f:	setb   %r8b
+     293:	and    %sil,%r8b
+     296:	or     %dil,%r8b
+     299:	cmp    %r9,%r12
+     29c:	setb   %sil
+     2a0:	mov    %r13,0x110(%rsp)
+     2a8:	cmp    %r13,%rdx
+     2ab:	setb   %dil
+     2af:	and    %sil,%dil
+     2b2:	or     %r8b,%dil
+     2b5:	mov    %dil,0x16(%rsp)
+     2ba:	add    $0xfffffffffffffffe,%rax
+     2be:	lea    0x1(%rbx),%rdx
+     2c2:	and    %rdx,%rax
+     2c5:	mov    %rax,0x100(%rsp)
+     2cd:	mov    %r15,%r12
+     2d0:	cmp    0xd0(%rsp),%r15
+     2d8:	setb   %sil
+     2dc:	mov    0xe8(%rsp),%rcx
+     2e4:	cmp    %rcx,%r14
+     2e7:	mov    %r14,%r15
+     2ea:	setb   %dil
+     2ee:	and    %sil,%dil
+     2f1:	lea    0x40(%rsp),%rax
+     2f6:	cmp    %rax,%r12
+     2f9:	setb   %dl
+     2fc:	lea    0x38(%rsp),%rax
+     301:	cmp    %rcx,%rax
+     304:	mov    %rcx,%rsi
+     307:	setb   %al
+     30a:	and    %dl,%al
+     30c:	or     %dil,%al
+     30f:	mov    %al,0x15(%rsp)
+     313:	mov    %rbx,%rax
+     316:	movabs $0x3fffffffffffffc,%rdi
+     320:	and    %rdi,%rax
+     323:	mov    %rax,0xa8(%rsp)
+     32b:	mov    %ebx,%r14d
+     32e:	and    $0x3,%r14d
+     332:	mov    %r11,0x90(%rsp)
+     33a:	and    $0xfffffffffffffffe,%r11
+     33e:	mov    %r11,0x190(%rsp)
+     346:	lea    0x20(%rsp),%r8
+     34b:	mov    0x48(%rsp),%rdx
+     350:	cmp    %r8,%rdx
+     353:	setb   %cl
+     356:	mov    0x68(%rsp),%r11
+     35b:	lea    0x18(%rsp),%r13
+     360:	cmp    %r11,%r13
+     363:	setb   %al
+     366:	and    %cl,%al
+     368:	mov    %al,0x14(%rsp)
+     36c:	cmp    %r9,%rsi
+     36f:	mov    0x160(%rsp),%r9
+     377:	setb   %cl
+     37a:	lea    0x8(%rsp),%rax
+     37f:	cmp    %rdx,%rax
+     382:	setb   %al
+     385:	and    %cl,%al
+     387:	mov    %al,0x13(%rsp)
+     38b:	mov    0x30(%rsp),%rax
+     390:	add    %rbp,%rax
+     393:	add    $0x20,%rax
+     397:	add    $0x2,%rdi
+     39b:	and    %rbx,%rdi
+     39e:	mov    %rdi,0x140(%rsp)
+     3a6:	mov    %rax,0x108(%rsp)
+     3ae:	cmp    %rax,%rdx
+     3b1:	setb   %al
+     3b4:	cmp    %r11,0x78(%rsp)
+     3b9:	setb   %cl
+     3bc:	and    %al,%cl
+     3be:	cmp    %r8,%rdx
+     3c1:	setb   %al
+     3c4:	mov    %r13,%rsi
+     3c7:	cmp    %r11,%r13
+     3ca:	setb   %dl
+     3cd:	and    %al,%dl
+     3cf:	or     %cl,%dl
+     3d1:	mov    %dl,0x12(%rsp)
+     3d5:	mov    0x50(%rsp),%r13
+     3da:	mov    %rbp,%rax
+     3dd:	add    %r13,%rax
+     3e0:	lea    (%rax,%r10,8),%rax
+     3e4:	add    $0x48,%rax
+     3e8:	cmp    %r8,%r12
+     3eb:	setb   %cl
+     3ee:	cmp    %rax,%rsi
+     3f1:	setb   %al
+     3f4:	and    %cl,%al
+     3f6:	mov    %al,0x11(%rsp)
+     3fa:	lea    0x1(%r10),%rax
+     3fe:	mov    %rax,0x198(%rsp)
+     406:	and    $0x3,%eax
+     409:	mov    $0x4,%ecx
+     40e:	cmove  %rcx,%rax
+     412:	movq   $0x1,(%r15,%rbx,8)
+     41a:	neg    %rax
+     41d:	mov    %r10,0x158(%rsp)
+     425:	lea    (%r10,%rax,1),%rdx
+     429:	inc    %rdx
+     42c:	mov    %rbx,%rsi
+     42f:	shl    $0x5,%rsi
+     433:	movabs $0x3ffffffffffffff0,%r11
+     43d:	and    %r9,%r11
+     440:	imul   $0x38,%rbx,%rax
+     444:	add    %rbp,%rax
+     447:	add    $0x40,%rax
+     44b:	mov    %rax,0x150(%rsp)
+     453:	movabs $0x3fffffffffffffe0,%rax
+     45d:	and    %r9,%rax
+     460:	mov    %rax,0x1d0(%rsp)
+     468:	movabs $0x1fffffffffffffe0,%rax
+     472:	lea    0x0(,%rbx,8),%rdi
+     47a:	and    %rdi,%rax
+     47d:	mov    %rax,0xb8(%rsp)
+     485:	mov    %rbx,%rax
+     488:	shl    $0x4,%rax
+     48c:	add    %rbp,%rax
+     48f:	add    $0x20,%rax
+     493:	mov    %rax,0x30(%rsp)
+     498:	lea    0x50(%rbp,%r13,1),%rax
+     49d:	mov    %rax,0x118(%rsp)
+     4a5:	lea    (%rbx,%rbx,2),%rax
+     4a9:	lea    0x18(,%rax,8),%rax
+     4b1:	add    %rbp,%rax
+     4b4:	mov    %rax,0xc8(%rsp)
+     4bc:	lea    (%rbx,%rbx,4),%rax
+     4c0:	shl    $0x4,%rax
+     4c4:	lea    (%rax,%rbp,1),%r15
+     4c8:	add    $0x48,%r15
+     4cc:	lea    0x50(%rax,%rbp,1),%r13
+     4d1:	lea    (%rbx,%rbx,8),%rax
+     4d5:	lea    0x50(%rbp,%rax,8),%rcx
+     4da:	mov    %rcx,0x98(%rsp)
+     4e2:	lea    0x48(,%rax,8),%rax
+     4ea:	add    %rbp,%rax
+     4ed:	mov    %rax,0x138(%rsp)
+     4f5:	mov    %r14,0x168(%rsp)
+     4fd:	neg    %r14
+     500:	mov    %r14,0x1e8(%rsp)
+     508:	mov    0x88(%rsp),%r8
+     510:	mov    0x68(%rsp),%rax
+     515:	lea    (%rax,%rbx,8),%rax
+     519:	mov    %rax,0x130(%rsp)
+     521:	mov    %rbp,%r10
+     524:	mov    %rdx,0x1c8(%rsp)
+     52c:	lea    (%r12,%rdx,8),%rax
+     530:	mov    %rax,0x1c0(%rsp)
+     538:	mov    %rdi,0x1a0(%rsp)
+     540:	lea    (%rdi,%rdi,4),%rax
+     544:	lea    0x30(%rbp,%rsi,1),%rcx
+     549:	mov    %rcx,0x50(%rsp)
+     54e:	lea    0x18(%rbp,%rsi,1),%rcx
+     553:	mov    %rcx,0x70(%rsp)
+     558:	lea    0x40(%rbp,%rax,1),%rcx
+     55d:	mov    %rcx,0x178(%rsp)
+     565:	mov    %rax,0x1f0(%rsp)
+     56d:	lea    (%rax,%rbp,1),%r14
+     571:	add    $0x28,%r14
+     575:	lea    0x18(,%rbx,8),%rax
+     57d:	add    %rbp,%rax
+     580:	mov    %rax,0x148(%rsp)
+     588:	imul   $0x58,%rbx,%rax
+     58c:	mov    %rax,0x1a8(%rsp)
+     594:	add    %rbp,%rax
+     597:	add    $0x50,%rax
+     59b:	mov    %rax,0xf0(%rsp)
+     5a3:	mov    %rsi,0x180(%rsp)
+     5ab:	lea    0x0(%rbp,%rsi,1),%rax
+     5b0:	mov    %rax,0x1e0(%rsp)
+     5b8:	mov    $0x1,%eax
+     5bd:	mov    %rax,0x128(%rsp)
+     5c5:	lea    0x18(%rsp),%rdx
+     5ca:	mov    %r14,0xb0(%rsp)
+     5d2:	mov    %rbp,0x58(%rsp)
+     5d7:	mov    %r11,0x170(%rsp)
+     5df:	nop
+     5e0:	mov    0x80(%rsp),%rdi
+     5e8:	mov    (%rdi),%rax
+     5eb:	and    $0x1,%eax
+     5ee:	neg    %rax
+     5f1:	mov    %rax,0x38(%rsp)
+     5f6:	lea    0x38(%rsp),%rax
+     5fb:	mov    0x128(%rsp),%rsi
+     603:	mov    %rsi,%rax
+     606:	shr    $0x3f,%rax
+     60a:	mov    %rax,0xd8(%rsp)
+     612:	lea    0xd8(%rsp),%rax
+     61a:	mov    0xd8(%rsp),%rax
+     622:	xor    %ecx,%ecx
+     624:	test   %rsi,%rsi
+     627:	setne  %cl
+     62a:	mov    %rcx,0x18(%rsp)
+     62f:	xor    %ecx,%ecx
+     631:	sub    0x18(%rsp),%rcx
+     636:	dec    %rax
+     639:	and    %rcx,%rax
+     63c:	and    0x38(%rsp),%rax
+     641:	mov    %rax,0x8(%rsp)
+     646:	lea    0x8(%rsp),%rax
+     64b:	mov    -0x8(%r8),%rax
+     64f:	mov    -0x8(%rdi),%rcx
+     653:	mov    0x120(%rsp),%rsi
+     65b:	mov    %r10,%rdx
+     65e:	xor    %edi,%edi
+     660:	mov    0x180(%rsp),%r11
+     668:	nopl   0x0(%rax,%rax,1)
+     670:	mov    (%rdx,%r9,1),%r8
+     674:	sub    (%rdx),%r8
+     677:	mov    %r9,%r12
+     67a:	setb   %r9b
+     67e:	sub    %rdi,%r8
+     681:	setb   %dil
+     685:	mov    %r8,0x10(%rdx,%r11,1)
+     68a:	or     %r9b,%dil
+     68d:	mov    %r12,%r9
+     690:	mov    0x8(%rdx,%r12,1),%r8
+     695:	add    $0xff,%dil
+     699:	sbb    0x8(%rdx),%r8
+     69d:	mov    %r8,0x18(%rdx,%r11,1)
+     6a2:	setb   %r8b
+     6a6:	movzbl %r8b,%edi
+     6aa:	add    $0x10,%rdx
+     6ae:	add    $0xfffffffffffffffe,%rsi
+     6b2:	jne    670 <pfp58_divstep_carrier+0x670>
+     6b4:	lea    0x1(%rbx),%rsi
+     6b8:	test   $0x1,%sil
+     6bc:	je     6e3 <pfp58_divstep_carrier+0x6e3>
+     6be:	mov    (%rdx,%r9,1),%rsi
+     6c2:	sub    (%rdx),%rsi
+     6c5:	setb   %r9b
+     6c9:	sub    %rdi,%rsi
+     6cc:	setb   %r8b
+     6d0:	mov    0x180(%rsp),%rdi
+     6d8:	mov    %rsi,0x10(%rdx,%rdi,1)
+     6dd:	or     %r9b,%r8b
+     6e0:	mov    %r12,%r9
+     6e3:	shr    $0x3f,%rcx
+     6e7:	sar    $0x3f,%rax
+     6eb:	add    %rcx,%rax
+     6ee:	movzbl %r8b,%ecx
+     6f2:	sub    %rcx,%rax
+     6f5:	mov    0xc0(%rsp),%rcx
+     6fd:	mov    %rax,0x8(%rcx,%rbx,8)
+     702:	mov    0x38(%rsp),%rax
+     707:	mov    0x120(%rsp),%rsi
+     70f:	mov    %r10,%rdx
+     712:	xor    %ecx,%ecx
+     714:	mov    0x1f0(%rsp),%r11
+     71c:	nopl   0x0(%rax)
+     720:	mov    (%rdx),%rdi
+     723:	and    %rax,%rdi
+     726:	add    (%rdx,%r9,1),%rdi
+     72a:	setb   %r8b
+     72e:	add    %rcx,%rdi
+     731:	setb   %cl
+     734:	mov    %rdi,0x20(%rdx,%r11,1)
+     739:	or     %r8b,%cl
+     73c:	mov    0x8(%rdx),%rdi
+     740:	and    %rax,%rdi
+     743:	add    $0xff,%cl
+     746:	adc    0x8(%rdx,%r9,1),%rdi
+     74b:	mov    %rdi,0x28(%rdx,%r11,1)
+     750:	setb   %cl
+     753:	movzbl %cl,%ecx
+     756:	add    $0x10,%rdx
+     75a:	add    $0xfffffffffffffffe,%rsi
+     75e:	jne    720 <pfp58_divstep_carrier+0x720>
+     760:	lea    0x1(%rbx),%rsi
+     764:	test   $0x1,%sil
+     768:	mov    0xa0(%rsp),%rsi
+     770:	je     791 <pfp58_divstep_carrier+0x791>
+     772:	mov    (%rdx),%r8
+     775:	and    %rax,%r8
+     778:	add    (%rdx,%r9,1),%r8
+     77c:	setb   %dil
+     780:	add    %rcx,%r8
+     783:	setb   %cl
+     786:	mov    %r8,0x20(%rdx,%r11,1)
+     78b:	or     %dil,%cl
+     78e:	movzbl %cl,%ecx
+     791:	mov    0x80(%rsp),%rdi
+     799:	mov    (%rdi,%rbx,8),%rdx
+     79d:	sar    $0x3f,%rdx
+     7a1:	mov    -0x8(%rdi),%rdi
+     7a5:	sar    $0x3f,%rdi
+     7a9:	and    %rax,%rdi
+     7ac:	add    %rdx,%rdi
+     7af:	add    %rcx,%rdi
+     7b2:	mov    0x78(%rsp),%rax
+     7b7:	mov    %rdi,0x8(%rax,%rbx,8)
+     7bc:	mov    0xc0(%rsp),%r8
+     7c4:	mov    (%r8),%rax
+     7c7:	xor    %ecx,%ecx
+     7c9:	cmp    $0x3,%rbx
+     7cd:	jae    7e0 <pfp58_divstep_carrier+0x7e0>
+     7cf:	mov    0xf8(%rsp),%r11
+     7d7:	jmp    869 <pfp58_divstep_carrier+0x869>
+     7dc:	nopl   0x0(%rax)
+     7e0:	mov    0x100(%rsp),%r11
+     7e8:	nopl   0x0(%rax,%rax,1)
+     7f0:	mov    0x50(%rsp),%rdx
+     7f5:	mov    -0x18(%rdx,%rcx,8),%rdx
+     7fa:	shrd   $0x1,%rdx,%rax
+     7ff:	mov    0x50(%rsp),%rdi
+     804:	mov    -0x10(%rdi,%rcx,8),%rdi
+     809:	mov    0x50(%rsp),%rbp
+     80e:	mov    %rax,-0x20(%rbp,%rcx,8)
+     813:	shrd   $0x1,%rdi,%rdx
+     818:	mov    0x50(%rsp),%rax
+     81d:	mov    %rdx,-0x18(%rax,%rcx,8)
+     822:	mov    0x50(%rsp),%rax
+     827:	mov    -0x8(%rax,%rcx,8),%rdx
+     82c:	shrd   $0x1,%rdx,%rdi
+     831:	mov    0x50(%rsp),%rax
+     836:	mov    %rdi,-0x10(%rax,%rcx,8)
+     83b:	mov    0x50(%rsp),%rax
+     840:	mov    (%rax,%rcx,8),%rax
+     844:	shrd   $0x1,%rax,%rdx
+     849:	mov    0x50(%rsp),%rdi
+     84e:	mov    %rdx,-0x8(%rdi,%rcx,8)
+     853:	add    $0x4,%rcx
+     857:	cmp    %rcx,%r11
+     85a:	jne    7f0 <pfp58_divstep_carrier+0x7f0>
+     85c:	mov    0xf8(%rsp),%r11
+     864:	test   %r11,%r11
+     867:	je     899 <pfp58_divstep_carrier+0x899>
+     869:	mov    0x70(%rsp),%rdx
+     86e:	lea    (%rdx,%rcx,8),%rcx
+     872:	xor    %edx,%edx
+     874:	data16 data16 cs nopw 0x0(%rax,%rax,1)
+     880:	mov    (%rcx,%rdx,8),%rdi
+     884:	shrd   $0x1,%rdi,%rax
+     889:	mov    %rax,-0x8(%rcx,%rdx,8)
+     88e:	inc    %rdx
+     891:	mov    %rdi,%rax
+     894:	cmp    %rdx,%r11
+     897:	jne    880 <pfp58_divstep_carrier+0x880>
+     899:	mov    0x78(%rsp),%rax
+     89e:	sarq   $1,-0x8(%rax)
+     8a2:	mov    (%rax),%rax
+     8a5:	xor    %ecx,%ecx
+     8a7:	cmp    $0x3,%rbx
+     8ab:	jb     91d <pfp58_divstep_carrier+0x91d>
+     8ad:	mov    0x100(%rsp),%r11
+     8b5:	mov    0x178(%rsp),%r14
+     8bd:	nopl   (%rax)
+     8c0:	mov    -0x18(%r14,%rcx,8),%rdx
+     8c5:	shrd   $0x1,%rdx,%rax
+     8ca:	mov    -0x10(%r14,%rcx,8),%rdi
+     8cf:	mov    %rax,-0x20(%r14,%rcx,8)
+     8d4:	shrd   $0x1,%rdi,%rdx
+     8d9:	mov    %rdx,-0x18(%r14,%rcx,8)
+     8de:	mov    -0x8(%r14,%rcx,8),%rdx
+     8e3:	shrd   $0x1,%rdx,%rdi
+     8e8:	mov    %rdi,-0x10(%r14,%rcx,8)
+     8ed:	mov    (%r14,%rcx,8),%rax
+     8f1:	shrd   $0x1,%rax,%rdx
+     8f6:	mov    %rdx,-0x8(%r14,%rcx,8)
+     8fb:	add    $0x4,%rcx
+     8ff:	cmp    %rcx,%r11
+     902:	jne    8c0 <pfp58_divstep_carrier+0x8c0>
+     904:	lea    0x1(%rbx),%rdx
+     908:	test   $0x3,%dl
+     90b:	mov    0xf8(%rsp),%r11
+     913:	mov    0xb0(%rsp),%r14
+     91b:	je     949 <pfp58_divstep_carrier+0x949>
+     91d:	lea    (%r14,%rcx,8),%rcx
+     921:	xor    %edx,%edx
+     923:	data16 data16 data16 cs nopw 0x0(%rax,%rax,1)
+     930:	mov    (%rcx,%rdx,8),%rdi
+     934:	shrd   $0x1,%rdi,%rax
+     939:	mov    %rax,-0x8(%rcx,%rdx,8)
+     93e:	inc    %rdx
+     941:	mov    %rdi,%rax
+     944:	cmp    %rdx,%r11
+     947:	jne    930 <pfp58_divstep_carrier+0x930>
+     949:	sarq   $1,-0x8(%rsi)
+     94d:	cmpb   $0x0,0x17(%rsp)
+     952:	je     970 <pfp58_divstep_carrier+0x970>
+     954:	xor    %ecx,%ecx
+     956:	mov    0x150(%rsp),%r11
+     95e:	mov    0x70(%rsp),%rdi
+     963:	jmp    9ee <pfp58_divstep_carrier+0x9ee>
+     968:	nopl   0x0(%rax,%rax,1)
+     970:	movq   0x8(%rsp),%xmm0
+     976:	pshufd $0x44,%xmm0,%xmm0
+     97b:	movdqa %xmm0,%xmm1
+     97f:	pcmpeqd %xmm2,%xmm2
+     983:	pxor   %xmm2,%xmm1
+     987:	xor    %eax,%eax
+     989:	mov    0x78(%rsp),%rcx
+     98e:	mov    0x110(%rsp),%rdx
+     996:	mov    0x170(%rsp),%rdi
+     99e:	mov    0x150(%rsp),%r11
+     9a6:	cs nopw 0x0(%rax,%rax,1)
+     9b0:	movdqu (%r8,%rax,1),%xmm2
+     9b6:	movdqu (%rcx,%rax,1),%xmm3
+     9bb:	pand   %xmm1,%xmm3
+     9bf:	pand   %xmm0,%xmm2
+     9c3:	por    %xmm3,%xmm2
+     9c7:	movdqu %xmm2,(%rdx,%rax,1)
+     9cc:	add    $0x10,%rax
+     9d0:	cmp    %rax,%rdi
+     9d3:	jne    9b0 <pfp58_divstep_carrier+0x9b0>
+     9d5:	mov    0x120(%rsp),%rax
+     9dd:	mov    %rax,%rcx
+     9e0:	lea    0x1(%rbx),%rdx
+     9e4:	cmp    %rax,%rdx
+     9e7:	mov    0x70(%rsp),%rdi
+     9ec:	je     a6a <pfp58_divstep_carrier+0xa6a>
+     9ee:	mov    %rcx,%rax
+     9f1:	test   $0x1,%bl
+     9f4:	jne    a26 <pfp58_divstep_carrier+0xa26>
+     9f6:	mov    %rcx,%rax
+     9f9:	or     $0x1,%rax
+     9fd:	mov    0x78(%rsp),%rdx
+     a02:	mov    (%rdx,%rcx,8),%rdx
+     a06:	mov    (%r8,%rcx,8),%rdi
+     a0a:	xor    %rdx,%rdi
+     a0d:	and    0x8(%rsp),%rdi
+     a12:	xor    %rdx,%rdi
+     a15:	mov    0x110(%rsp),%rdx
+     a1d:	mov    %rdi,(%rdx,%rcx,8)
+     a21:	mov    0x70(%rsp),%rdi
+     a26:	cmp    %rcx,%rbx
+     a29:	lea    0x1(%rbx),%r8
+     a2d:	je     a6a <pfp58_divstep_carrier+0xa6a>
+     a2f:	nop
+     a30:	mov    -0x8(%r14,%rax,8),%rcx
+     a35:	mov    -0x8(%rdi,%rax,8),%rdx
+     a3a:	xor    %rcx,%rdx
+     a3d:	and    0x8(%rsp),%rdx
+     a42:	xor    %rcx,%rdx
+     a45:	mov    %rdx,-0x8(%r11,%rax,8)
+     a4a:	mov    (%r14,%rax,8),%rcx
+     a4e:	mov    (%rdi,%rax,8),%rdx
+     a52:	xor    %rcx,%rdx
+     a55:	and    0x8(%rsp),%rdx
+     a5a:	xor    %rcx,%rdx
+     a5d:	mov    %rdx,(%r11,%rax,8)
+     a61:	add    $0x2,%rax
+     a65:	cmp    %rax,%r8
+     a68:	jne    a30 <pfp58_divstep_carrier+0xa30>
+     a6a:	cmp    $0x5,%rbx
+     a6e:	setb   %al
+     a71:	or     0x16(%rsp),%al
+     a75:	test   $0x1,%al
+     a77:	je     aa0 <pfp58_divstep_carrier+0xaa0>
+     a79:	xor    %ecx,%ecx
+     a7b:	mov    0x108(%rsp),%r8
+     a83:	mov    0x148(%rsp),%r11
+     a8b:	lea    0x1(%rbx),%r14
+     a8f:	jmp    b31 <pfp58_divstep_carrier+0xb31>
+     a94:	data16 data16 cs nopw 0x0(%rax,%rax,1)
+     aa0:	movq   0x8(%rsp),%xmm0
+     aa6:	pshufd $0x44,%xmm0,%xmm0
+     aab:	movdqa %xmm0,%xmm1
+     aaf:	pcmpeqd %xmm2,%xmm2
+     ab3:	pxor   %xmm2,%xmm1
+     ab7:	xor    %eax,%eax
+     ab9:	mov    0x100(%rsp),%rdx
+     ac1:	mov    0x108(%rsp),%r8
+     ac9:	mov    0x1d0(%rsp),%rcx
+     ad1:	mov    0x148(%rsp),%r11
+     ad9:	lea    0x1(%rbx),%r14
+     add:	nopl   (%rax)
+     ae0:	movdqu -0x10(%r11,%rax,1),%xmm2
+     ae7:	movdqu (%r11,%rax,1),%xmm3
+     aed:	movdqu (%r10,%rax,1),%xmm4
+     af3:	movdqu 0x10(%r10,%rax,1),%xmm5
+     afa:	pand   %xmm0,%xmm2
+     afe:	pand   %xmm0,%xmm3
+     b02:	pand   %xmm1,%xmm4
+     b06:	por    %xmm2,%xmm4
+     b0a:	pand   %xmm1,%xmm5
+     b0e:	por    %xmm3,%xmm5
+     b12:	movdqu %xmm4,0x10(%r8,%rax,1)
+     b19:	movdqu %xmm5,0x20(%r8,%rax,1)
+     b20:	add    $0x20,%rax
+     b24:	cmp    %rax,%rcx
+     b27:	jne    ae0 <pfp58_divstep_carrier+0xae0>
+     b29:	mov    %rdx,%rcx
+     b2c:	cmp    %rdx,%r14
+     b2f:	je     bac <pfp58_divstep_carrier+0xbac>
+     b31:	mov    %rcx,%rax
+     b34:	test   $0x1,%bl
+     b37:	jne    b5f <pfp58_divstep_carrier+0xb5f>
+     b39:	mov    %rcx,%rax
+     b3c:	or     $0x1,%rax
+     b40:	mov    (%r10,%rcx,8),%rdx
+     b44:	mov    0x80(%rsp),%rdi
+     b4c:	mov    (%rdi,%rcx,8),%rdi
+     b50:	xor    %rdx,%rdi
+     b53:	and    0x8(%rsp),%rdi
+     b58:	xor    %rdx,%rdi
+     b5b:	mov    %rdi,(%rsi,%rcx,8)
+     b5f:	cmp    %rcx,%rbx
+     b62:	je     bac <pfp58_divstep_carrier+0xbac>
+     b64:	data16 data16 cs nopw 0x0(%rax,%rax,1)
+     b70:	mov    (%r10,%rax,8),%rcx
+     b74:	mov    -0x10(%r11,%rax,8),%rdx
+     b79:	xor    %rcx,%rdx
+     b7c:	and    0x8(%rsp),%rdx
+     b81:	xor    %rcx,%rdx
+     b84:	mov    %rdx,0x10(%r8,%rax,8)
+     b89:	mov    0x8(%r10,%rax,8),%rcx
+     b8e:	mov    -0x8(%r11,%rax,8),%rdx
+     b93:	xor    %rcx,%rdx
+     b96:	and    0x8(%rsp),%rdx
+     b9b:	xor    %rcx,%rdx
+     b9e:	mov    %rdx,0x18(%r8,%rax,8)
+     ba3:	add    $0x2,%rax
+     ba7:	cmp    %rax,%r14
+     baa:	jne    b70 <pfp58_divstep_carrier+0xb70>
+     bac:	cmp    $0x6,%rbx
+     bb0:	mov    %r10,%rdi
+     bb3:	setb   %r14b
+     bb7:	mov    %r9,%rdx
+     bba:	mov    0x0(%rip),%rbp        # bc1 <pfp58_divstep_carrier+0xbc1>
+     bc1:	call   *%rbp
+     bc3:	mov    0x80(%rsp),%rdi
+     bcb:	mov    0x110(%rsp),%rsi
+     bd3:	mov    0x160(%rsp),%rdx
+     bdb:	call   *%rbp
+     bdd:	mov    0x8(%rsp),%rax
+     be2:	or     0x15(%rsp),%r14b
+     be7:	test   $0x1,%r14b
+     beb:	je     c20 <pfp58_divstep_carrier+0xc20>
+     bed:	xor    %edx,%edx
+     bef:	lea    0x0(,%rbx,8),%r11
+     bf7:	lea    0x1(%rbx),%rcx
+     bfb:	mov    0x80(%rsp),%rsi
+     c03:	lea    (%rsi,%rcx,8),%r14
+     c07:	mov    0x60(%rsp),%r8
+     c0c:	lea    (%r8,%rbx,8),%r10
+     c10:	mov    0x118(%rsp),%r9
+     c18:	jmp    cad <pfp58_divstep_carrier+0xcad>
+     c1d:	nopl   (%rax)
+     c20:	movq   0x38(%rsp),%xmm0
+     c26:	pshufd $0x44,%xmm0,%xmm0
+     c2b:	xor    %ecx,%ecx
+     c2d:	lea    0x0(,%rbx,8),%r11
+     c35:	lea    0x1(%rbx),%rdx
+     c39:	mov    0x80(%rsp),%rsi
+     c41:	lea    (%rsi,%rdx,8),%r14
+     c45:	mov    0x60(%rsp),%r8
+     c4a:	lea    (%r8,%rbx,8),%r10
+     c4e:	mov    0x30(%rsp),%rdx
+     c53:	mov    0xb8(%rsp),%rsi
+     c5b:	mov    0x118(%rsp),%r9
+     c63:	data16 data16 data16 cs nopw 0x0(%rax,%rax,1)
+     c70:	movdqu -0x10(%rdx,%rcx,1),%xmm1
+     c76:	movdqu (%rdx,%rcx,1),%xmm2
+     c7b:	pand   %xmm0,%xmm1
+     c7f:	pand   %xmm0,%xmm2
+     c83:	movdqu %xmm1,-0x10(%r9,%rcx,1)
+     c8a:	movdqu %xmm2,(%r9,%rcx,1)
+     c90:	add    $0x20,%rcx
+     c94:	cmp    %rcx,%rsi
+     c97:	jne    c70 <pfp58_divstep_carrier+0xc70>
+     c99:	mov    0xa8(%rsp),%rcx
+     ca1:	mov    %rcx,%rdx
+     ca4:	cmp    %rcx,%rbx
+     ca7:	je     d43 <pfp58_divstep_carrier+0xd43>
+     cad:	mov    %rdx,%rcx
+     cb0:	cmpq   $0x0,0x168(%rsp)
+     cb9:	je     ce5 <pfp58_divstep_carrier+0xce5>
+     cbb:	mov    0x168(%rsp),%rsi
+     cc3:	mov    %rdx,%rcx
+     cc6:	cs nopw 0x0(%rax,%rax,1)
+     cd0:	mov    0x38(%rsp),%rdi
+     cd5:	and    (%r14,%rcx,8),%rdi
+     cd9:	mov    %rdi,(%r8,%rcx,8)
+     cdd:	inc    %rcx
+     ce0:	dec    %rsi
+     ce3:	jne    cd0 <pfp58_divstep_carrier+0xcd0>
+     ce5:	lea    -0x1(%rbx),%rsi
+     ce9:	sub    %rdx,%rsi
+     cec:	cmp    $0x3,%rsi
+     cf0:	mov    0x30(%rsp),%rsi
+     cf5:	jb     d43 <pfp58_divstep_carrier+0xd43>
+     cf7:	nopw   0x0(%rax,%rax,1)
+     d00:	mov    0x38(%rsp),%rdx
+     d05:	and    -0x10(%rsi,%rcx,8),%rdx
+     d0a:	mov    %rdx,-0x10(%r9,%rcx,8)
+     d0f:	mov    0x38(%rsp),%rdx
+     d14:	and    -0x8(%rsi,%rcx,8),%rdx
+     d19:	mov    %rdx,-0x8(%r9,%rcx,8)
+     d1e:	mov    0x38(%rsp),%rdx
+     d23:	and    (%rsi,%rcx,8),%rdx
+     d27:	mov    %rdx,(%r9,%rcx,8)
+     d2b:	mov    0x38(%rsp),%rdx
+     d30:	and    0x8(%rsi,%rcx,8),%rdx
+     d35:	mov    %rdx,0x8(%r9,%rcx,8)
+     d3a:	add    $0x4,%rcx
+     d3e:	cmp    %rcx,%rbx
+     d41:	jne    d00 <pfp58_divstep_carrier+0xd00>
+     d43:	lea    -0x8(,%rbx,8),%rcx
+     d4b:	xor    %esi,%esi
+     d4d:	test   %rcx,%rcx
+     d50:	je     e40 <pfp58_divstep_carrier+0xe40>
+     d56:	xor    %edi,%edi
+     d58:	mov    %r10,%r9
+     d5b:	jmp    db0 <pfp58_divstep_carrier+0xdb0>
+     d5d:	nopl   (%rax)
+     d60:	mov    0xc8(%rsp),%rsi
+     d68:	mov    (%rsi,%rdx,8),%rsi
+     d6c:	mov    0x30(%rsp),%r10
+     d71:	mov    -0x8(%r10,%rdx,8),%r10
+     d76:	or     %r9b,%r8b
+     d79:	movzbl %r8b,%r8d
+     d7d:	sub    %r10,%rsi
+     d80:	setb   %r9b
+     d84:	sub    %r8,%rsi
+     d87:	setb   %r8b
+     d8b:	mov    %rsi,0x8(%rcx)
+     d8f:	or     %r9b,%r8b
+     d92:	movzbl %r8b,%esi
+     d96:	inc    %rdi
+     d99:	lea    0x10(%rcx),%r9
+     d9d:	cmp    0x190(%rsp),%rdi
+     da5:	mov    0x60(%rsp),%r10
+     daa:	lea    (%r10,%rbx,8),%r10
+     dae:	je     e10 <pfp58_divstep_carrier+0xe10>
+     db0:	mov    %r9,%rcx
+     db3:	mov    %rdi,%rdx
+     db6:	cmp    %rbx,%rdi
+     db9:	jae    de0 <pfp58_divstep_carrier+0xde0>
+     dbb:	mov    0xc8(%rsp),%rdi
+     dc3:	mov    -0x8(%rdi,%rdx,8),%rdi
+     dc8:	mov    0x30(%rsp),%r8
+     dcd:	mov    -0x10(%r8,%rdx,8),%r8
+     dd2:	jmp    de5 <pfp58_divstep_carrier+0xde5>
+     dd4:	data16 data16 cs nopw 0x0(%rax,%rax,1)
+     de0:	xor    %edi,%edi
+     de2:	xor    %r8d,%r8d
+     de5:	sub    %r8,%rdi
+     de8:	setb   %r8b
+     dec:	sub    %rsi,%rdi
+     def:	setb   %r9b
+     df3:	mov    %rdi,(%rcx)
+     df6:	lea    0x1(%rdx),%rdi
+     dfa:	cmp    %rbx,%rdi
+     dfd:	jb     d60 <pfp58_divstep_carrier+0xd60>
+     e03:	xor    %esi,%esi
+     e05:	xor    %r10d,%r10d
+     e08:	jmp    d76 <pfp58_divstep_carrier+0xd76>
+     e0d:	nopl   (%rax)
+     e10:	testb  $0x1,0x90(%rsp)
+     e18:	mov    0x40(%rsp),%r9
+     e1d:	je     e72 <pfp58_divstep_carrier+0xe72>
+     e1f:	add    $0x10,%rcx
+     e23:	add    $0x2,%rdx
+     e27:	cmp    %rbx,%rdx
+     e2a:	jb     e4f <pfp58_divstep_carrier+0xe4f>
+     e2c:	xor    %edi,%edi
+     e2e:	xor    %edx,%edx
+     e30:	jmp    e5f <pfp58_divstep_carrier+0xe5f>
+     e32:	data16 data16 data16 data16 cs nopw 0x0(%rax,%rax,1)
+     e40:	xor    %edx,%edx
+     e42:	mov    %r10,%rcx
+     e45:	mov    0x40(%rsp),%r9
+     e4a:	cmp    %rbx,%rdx
+     e4d:	jae    e2c <pfp58_divstep_carrier+0xe2c>
+     e4f:	mov    0xd0(%rsp),%rdi
+     e57:	mov    (%rdi,%rdx,8),%rdi
+     e5b:	mov    (%r14,%rdx,8),%rdx
+     e5f:	sub    %rdx,%rdi
+     e62:	setb   %dl
+     e65:	sub    %rsi,%rdi
+     e68:	setb   %r8b
+     e6c:	mov    %rdi,(%rcx)
+     e6f:	or     %dl,%r8b
+     e72:	incq   0x188(%rsp)
+     e7a:	mov    $0x4,%ecx
+     e7f:	mov    0x128(%rsp),%rdx
+     e87:	sub    %rdx,%rcx
+     e8a:	add    $0x4,%rdx
+     e8e:	and    %rax,%rcx
+     e91:	not    %rax
+     e94:	and    %rax,%rdx
+     e97:	or     %rcx,%rdx
+     e9a:	mov    %rdx,0x128(%rsp)
+     ea2:	movzbl %r8b,%ecx
+     ea6:	neg    %rcx
+     ea9:	mov    %rcx,0x18(%rsp)
+     eae:	lea    0x18(%rsp),%rcx
+     eb3:	xor    %ecx,%ecx
+     eb5:	xor    %edx,%edx
+     eb7:	mov    0x60(%rsp),%r8
+     ebc:	nopl   0x0(%rax)
+     ec0:	cmp    %rcx,%r11
+     ec3:	je     1d19 <pfp58_divstep_carrier+0x1d19>
+     ec9:	mov    0x18(%rsp),%rsi
+     ece:	and    (%r9,%rcx,1),%rsi
+     ed2:	add    (%r10,%rcx,1),%rsi
+     ed6:	setb   %dil
+     eda:	add    %rdx,%rsi
+     edd:	setb   %dl
+     ee0:	mov    %rsi,(%r10,%rcx,1)
+     ee4:	or     %dil,%dl
+     ee7:	movzbl %dl,%edx
+     eea:	add    $0x8,%rcx
+     eee:	cmp    %rcx,%r11
+     ef1:	jne    ec0 <pfp58_divstep_carrier+0xec0>
+     ef3:	xor    %edx,%edx
+     ef5:	xor    %ecx,%ecx
+     ef7:	nopw   0x0(%rax,%rax,1)
+     f00:	cmp    %rdx,%r11
+     f03:	je     1d2b <pfp58_divstep_carrier+0x1d2b>
+     f09:	mov    (%r8,%rdx,1),%rsi
+     f0d:	mov    0xd0(%rsp),%rdi
+     f15:	add    (%rdi,%rdx,1),%rsi
+     f19:	setb   %dil
+     f1d:	add    %rcx,%rsi
+     f20:	setb   %cl
+     f23:	mov    0x48(%rsp),%r14
+     f28:	mov    %rsi,(%r14,%rdx,1)
+     f2c:	or     %dil,%cl
+     f2f:	movzbl %cl,%ecx
+     f32:	add    $0x8,%rdx
+     f36:	cmp    %rdx,%r11
+     f39:	jne    f00 <pfp58_divstep_carrier+0xf00>
+     f3b:	lea    -0x8(,%rbx,8),%rdx
+     f43:	xor    %edi,%edi
+     f45:	test   %rdx,%rdx
+     f48:	je     1040 <pfp58_divstep_carrier+0x1040>
+     f4e:	xor    %r8d,%r8d
+     f51:	mov    0x48(%rsp),%rdx
+     f56:	lea    (%rdx,%rbx,8),%r10
+     f5a:	mov    0x138(%rsp),%r14
+     f62:	jmp    fb7 <pfp58_divstep_carrier+0xfb7>
+     f64:	data16 data16 cs nopw 0x0(%rax,%rax,1)
+     f70:	mov    (%r15,%rsi,8),%rdi
+     f74:	mov    0x40(%rsp),%r11
+     f79:	mov    0x8(%r11,%rsi,8),%r11
+     f7e:	or     %r10b,%r9b
+     f81:	movzbl %r9b,%r9d
+     f85:	sub    %r11,%rdi
+     f88:	setb   %r10b
+     f8c:	sub    %r9,%rdi
+     f8f:	setb   %r9b
+     f93:	mov    %rdi,0x8(%rdx)
+     f97:	or     %r10b,%r9b
+     f9a:	movzbl %r9b,%edi
+     f9e:	inc    %r8
+     fa1:	lea    0x10(%rdx),%r10
+     fa5:	cmp    0x190(%rsp),%r8
+     fad:	lea    0x0(,%rbx,8),%r11
+     fb5:	je     1010 <pfp58_divstep_carrier+0x1010>
+     fb7:	mov    %r10,%rdx
+     fba:	mov    %r8,%rsi
+     fbd:	cmp    %rbx,%r8
+     fc0:	jae    fe0 <pfp58_divstep_carrier+0xfe0>
+     fc2:	mov    -0x8(%r15,%rsi,8),%r8
+     fc7:	mov    0x40(%rsp),%r9
+     fcc:	mov    (%r9,%rsi,8),%r9
+     fd0:	jmp    fe6 <pfp58_divstep_carrier+0xfe6>
+     fd2:	data16 data16 data16 data16 cs nopw 0x0(%rax,%rax,1)
+     fe0:	xor    %r8d,%r8d
+     fe3:	xor    %r9d,%r9d
+     fe6:	sub    %r9,%r8
+     fe9:	setb   %r9b
+     fed:	sub    %rdi,%r8
+     ff0:	setb   %r10b
+     ff4:	mov    %r8,(%rdx)
+     ff7:	lea    0x1(%rsi),%r8
+     ffb:	cmp    %rbx,%r8
+     ffe:	jb     f70 <pfp58_divstep_carrier+0xf70>
+    1004:	xor    %edi,%edi
+    1006:	xor    %r11d,%r11d
+    1009:	jmp    f7e <pfp58_divstep_carrier+0xf7e>
+    100e:	xchg   %ax,%ax
+    1010:	testb  $0x1,0x90(%rsp)
+    1018:	mov    0x60(%rsp),%r8
+    101d:	lea    (%r8,%rbx,8),%r10
+    1021:	je     1079 <pfp58_divstep_carrier+0x1079>
+    1023:	add    $0x10,%rdx
+    1027:	add    $0x2,%rsi
+    102b:	mov    0x40(%rsp),%r9
+    1030:	cmp    %rbx,%rsi
+    1033:	jb     1058 <pfp58_divstep_carrier+0x1058>
+    1035:	xor    %r8d,%r8d
+    1038:	xor    %esi,%esi
+    103a:	jmp    1065 <pfp58_divstep_carrier+0x1065>
+    103c:	nopl   0x0(%rax)
+    1040:	xor    %esi,%esi
+    1042:	mov    0x48(%rsp),%rdx
+    1047:	lea    (%rdx,%rbx,8),%rdx
+    104b:	mov    0x138(%rsp),%r14
+    1053:	cmp    %rbx,%rsi
+    1056:	jae    1035 <pfp58_divstep_carrier+0x1035>
+    1058:	mov    0x48(%rsp),%r8
+    105d:	mov    (%r8,%rsi,8),%r8
+    1061:	mov    (%r9,%rsi,8),%rsi
+    1065:	sub    %rsi,%r8
+    1068:	setb   %sil
+    106c:	sub    %rdi,%r8
+    106f:	setb   %r9b
+    1073:	mov    %r8,(%rdx)
+    1076:	or     %sil,%r9b
+    1079:	cmp    $0x4,%rbx
+    107d:	setb   %dl
+    1080:	not    %r9b
+    1083:	or     %cl,%r9b
+    1086:	movzbl %r9b,%ecx
+    108a:	and    $0x1,%ecx
+    108d:	neg    %rcx
+    1090:	mov    %rcx,0x18(%rsp)
+    1095:	lea    0x18(%rsp),%r9
+    109a:	or     0x14(%rsp),%dl
+    109e:	test   $0x1,%dl
+    10a1:	je     10b0 <pfp58_divstep_carrier+0x10b0>
+    10a3:	xor    %ecx,%ecx
+    10a5:	mov    0x40(%rsp),%r8
+    10aa:	jmp    113c <pfp58_divstep_carrier+0x113c>
+    10af:	nop
+    10b0:	movq   0x18(%rsp),%xmm0
+    10b6:	pshufd $0x44,%xmm0,%xmm0
+    10bb:	movdqa %xmm0,%xmm1
+    10bf:	pcmpeqd %xmm2,%xmm2
+    10c3:	pxor   %xmm2,%xmm1
+    10c7:	xor    %ecx,%ecx
+    10c9:	mov    0x40(%rsp),%r8
+    10ce:	mov    0xf0(%rsp),%rdx
+    10d6:	mov    0xb8(%rsp),%rsi
+    10de:	xchg   %ax,%ax
+    10e0:	movdqu -0x10(%rdx,%rcx,1),%xmm2
+    10e6:	movdqu (%rdx,%rcx,1),%xmm3
+    10eb:	pand   %xmm0,%xmm2
+    10ef:	pand   %xmm0,%xmm3
+    10f3:	movdqu -0x10(%r13,%rcx,1),%xmm4
+    10fa:	movdqu 0x0(%r13,%rcx,1),%xmm5
+    1101:	pand   %xmm1,%xmm4
+    1105:	por    %xmm2,%xmm4
+    1109:	pand   %xmm1,%xmm5
+    110d:	por    %xmm3,%xmm5
+    1111:	movdqu %xmm4,-0x10(%r13,%rcx,1)
+    1118:	movdqu %xmm5,0x0(%r13,%rcx,1)
+    111f:	add    $0x20,%rcx
+    1123:	cmp    %rcx,%rsi
+    1126:	jne    10e0 <pfp58_divstep_carrier+0x10e0>
+    1128:	mov    0xa8(%rsp),%rdx
+    1130:	mov    %rdx,%rcx
+    1133:	cmp    %rdx,%rbx
+    1136:	je     11bb <pfp58_divstep_carrier+0x11bb>
+    113c:	mov    %rcx,%rdx
+    113f:	or     $0x1,%rdx
+    1143:	test   $0x1,%bl
+    1146:	je     116b <pfp58_divstep_carrier+0x116b>
+    1148:	mov    0x48(%rsp),%r9
+    114d:	mov    (%r9,%rcx,8),%rsi
+    1151:	lea    (%r9,%rbx,8),%rdi
+    1155:	mov    (%rdi,%rcx,8),%rdi
+    1159:	xor    %rsi,%rdi
+    115c:	and    0x18(%rsp),%rdi
+    1161:	xor    %rsi,%rdi
+    1164:	mov    %rdi,(%r9,%rcx,8)
+    1168:	mov    %rdx,%rcx
+    116b:	cmp    %rdx,%rbx
+    116e:	mov    0xf0(%rsp),%r9
+    1176:	je     11bb <pfp58_divstep_carrier+0x11bb>
+    1178:	nopl   0x0(%rax,%rax,1)
+    1180:	mov    -0x8(%r15,%rcx,8),%rdx
+    1185:	mov    -0x10(%r9,%rcx,8),%rsi
+    118a:	xor    %rdx,%rsi
+    118d:	and    0x18(%rsp),%rsi
+    1192:	mov    (%r15,%rcx,8),%rdi
+    1196:	xor    %rdx,%rsi
+    1199:	mov    %rsi,-0x8(%r15,%rcx,8)
+    119e:	mov    -0x8(%r9,%rcx,8),%rdx
+    11a3:	xor    %rdi,%rdx
+    11a6:	and    0x18(%rsp),%rdx
+    11ab:	xor    %rdi,%rdx
+    11ae:	mov    %rdx,(%r15,%rcx,8)
+    11b2:	add    $0x2,%rcx
+    11b6:	cmp    %rcx,%rbx
+    11b9:	jne    1180 <pfp58_divstep_carrier+0x1180>
+    11bb:	cmp    $0x4,%rbx
+    11bf:	setb   %cl
+    11c2:	or     0x13(%rsp),%cl
+    11c6:	test   $0x1,%cl
+    11c9:	je     11f0 <pfp58_divstep_carrier+0x11f0>
+    11cb:	xor    %ecx,%ecx
+    11cd:	mov    0x98(%rsp),%rdi
+    11d5:	mov    0x140(%rsp),%r9
+    11dd:	jmp    1275 <pfp58_divstep_carrier+0x1275>
+    11e2:	data16 data16 data16 data16 cs nopw 0x0(%rax,%rax,1)
+    11f0:	movq   0x8(%rsp),%xmm0
+    11f6:	pshufd $0x44,%xmm0,%xmm0
+    11fb:	movq   %rax,%xmm1
+    1200:	pshufd $0x44,%xmm1,%xmm1
+    1205:	xor    %ecx,%ecx
+    1207:	mov    0x98(%rsp),%rdi
+    120f:	mov    0x140(%rsp),%r9
+    1217:	mov    0xb8(%rsp),%rdx
+    121f:	nop
+    1220:	movdqu -0x10(%r13,%rcx,1),%xmm2
+    1227:	movdqu 0x0(%r13,%rcx,1),%xmm3
+    122e:	movdqu -0x10(%rdi,%rcx,1),%xmm4
+    1234:	movdqu (%rdi,%rcx,1),%xmm5
+    1239:	pand   %xmm0,%xmm4
+    123d:	pand   %xmm0,%xmm5
+    1241:	pand   %xmm1,%xmm2
+    1245:	por    %xmm4,%xmm2
+    1249:	pand   %xmm1,%xmm3
+    124d:	por    %xmm5,%xmm3
+    1251:	movdqu %xmm2,-0x10(%rdi,%rcx,1)
+    1257:	movdqu %xmm3,(%rdi,%rcx,1)
+    125c:	add    $0x20,%rcx
+    1260:	cmp    %rcx,%rdx
+    1263:	jne    1220 <pfp58_divstep_carrier+0x1220>
+    1265:	mov    0xa8(%rsp),%rdx
+    126d:	mov    %rdx,%rcx
+    1270:	cmp    %rdx,%rbx
+    1273:	je     12ea <pfp58_divstep_carrier+0x12ea>
+    1275:	mov    %rcx,%rdx
+    1278:	or     $0x1,%rdx
+    127c:	test   $0x1,%bl
+    127f:	je     12a8 <pfp58_divstep_carrier+0x12a8>
+    1281:	mov    0x8(%rsp),%rsi
+    1286:	and    (%r10,%rcx,8),%rsi
+    128a:	mov    0x48(%rsp),%rdi
+    128f:	mov    (%rdi,%rcx,8),%rdi
+    1293:	and    %rax,%rdi
+    1296:	or     %rsi,%rdi
+    1299:	mov    %rdi,(%r10,%rcx,8)
+    129d:	mov    0x98(%rsp),%rdi
+    12a5:	mov    %rdx,%rcx
+    12a8:	cmp    %rdx,%rbx
+    12ab:	je     12ea <pfp58_divstep_carrier+0x12ea>
+    12ad:	nopl   (%rax)
+    12b0:	mov    0x8(%rsp),%rdx
+    12b5:	and    -0x8(%r14,%rcx,8),%rdx
+    12ba:	mov    -0x8(%r15,%rcx,8),%rsi
+    12bf:	and    %rax,%rsi
+    12c2:	or     %rdx,%rsi
+    12c5:	mov    %rsi,-0x8(%r14,%rcx,8)
+    12ca:	mov    0x8(%rsp),%rdx
+    12cf:	and    (%r14,%rcx,8),%rdx
+    12d3:	mov    (%r15,%rcx,8),%rsi
+    12d7:	and    %rax,%rsi
+    12da:	or     %rdx,%rsi
+    12dd:	mov    %rsi,(%r14,%rcx,8)
+    12e1:	add    $0x2,%rcx
+    12e5:	cmp    %rcx,%rbx
+    12e8:	jne    12b0 <pfp58_divstep_carrier+0x12b0>
+    12ea:	mov    (%r10),%rax
+    12ed:	and    $0x1,%eax
+    12f0:	neg    %rax
+    12f3:	mov    %rax,0x18(%rsp)
+    12f8:	lea    0x18(%rsp),%rax
+    12fd:	lea    -0x1(%rbx),%rax
+    1301:	test   %rax,%rax
+    1304:	je     13e0 <pfp58_divstep_carrier+0x13e0>
+    130a:	xor    %ecx,%ecx
+    130c:	jmp    132f <pfp58_divstep_carrier+0x132f>
+    130e:	xchg   %ax,%ax
+    1310:	mov    (%rdi,%rcx,8),%rdx
+    1314:	shl    $0x3f,%rdx
+    1318:	mov    -0x8(%rdi,%rcx,8),%rsi
+    131d:	shr    $1,%rsi
+    1320:	or     %rdx,%rsi
+    1323:	mov    %rsi,(%r15,%rcx,8)
+    1327:	mov    %rax,%rcx
+    132a:	cmp    %rax,%r9
+    132d:	je     1370 <pfp58_divstep_carrier+0x1370>
+    132f:	lea    0x1(%rcx),%rax
+    1333:	cmp    %rbx,%rax
+    1336:	jae    1350 <pfp58_divstep_carrier+0x1350>
+    1338:	mov    -0x8(%rdi,%rcx,8),%rax
+    133d:	shl    $0x3f,%rax
+    1341:	jmp    1352 <pfp58_divstep_carrier+0x1352>
+    1343:	data16 data16 data16 cs nopw 0x0(%rax,%rax,1)
+    1350:	xor    %eax,%eax
+    1352:	mov    -0x10(%rdi,%rcx,8),%rdx
+    1357:	shr    $1,%rdx
+    135a:	or     %rax,%rdx
+    135d:	mov    %rdx,-0x8(%r15,%rcx,8)
+    1362:	lea    0x2(%rcx),%rax
+    1366:	cmp    %rbx,%rax
+    1369:	jb     1310 <pfp58_divstep_carrier+0x1310>
+    136b:	xor    %edx,%edx
+    136d:	jmp    1318 <pfp58_divstep_carrier+0x1318>
+    136f:	nop
+    1370:	test   $0x1,%bl
+    1373:	mov    0x70(%rsp),%rdi
+    1378:	jne    13e7 <pfp58_divstep_carrier+0x13e7>
+    137a:	lea    -0x1(%rbx),%rax
+    137e:	test   %rax,%rax
+    1381:	je     1422 <pfp58_divstep_carrier+0x1422>
+    1387:	xor    %eax,%eax
+    1389:	xor    %ecx,%ecx
+    138b:	nopl   0x0(%rax,%rax,1)
+    1390:	mov    (%r8,%rcx,8),%rdx
+    1394:	add    -0x8(%r14,%rcx,8),%rdx
+    1399:	setb   %sil
+    139d:	add    %rax,%rdx
+    13a0:	setb   %al
+    13a3:	mov    %rdx,-0x8(%rdi,%rcx,8)
+    13a8:	or     %sil,%al
+    13ab:	mov    0x8(%r8,%rcx,8),%rdx
+    13b0:	add    $0xff,%al
+    13b2:	adc    (%r14,%rcx,8),%rdx
+    13b6:	mov    %rdx,(%rdi,%rcx,8)
+    13ba:	lea    0x2(%rcx),%rcx
+    13be:	setb   %al
+    13c1:	movzbl %al,%eax
+    13c4:	cmp    %rcx,%r9
+    13c7:	jne    1390 <pfp58_divstep_carrier+0x1390>
+    13c9:	test   $0x1,%bl
+    13cc:	mov    0xc0(%rsp),%rdi
+    13d4:	jne    142e <pfp58_divstep_carrier+0x142e>
+    13d6:	jmp    144a <pfp58_divstep_carrier+0x144a>
+    13d8:	nopl   0x0(%rax,%rax,1)
+    13e0:	xor    %eax,%eax
+    13e2:	mov    0x70(%rsp),%rdi
+    13e7:	lea    0x1(%rax),%rcx
+    13eb:	cmp    %rbx,%rcx
+    13ee:	jae    1400 <pfp58_divstep_carrier+0x1400>
+    13f0:	mov    0x8(%r10,%rax,8),%rcx
+    13f5:	shl    $0x3f,%rcx
+    13f9:	jmp    1402 <pfp58_divstep_carrier+0x1402>
+    13fb:	nopl   0x0(%rax,%rax,1)
+    1400:	xor    %ecx,%ecx
+    1402:	mov    (%r10,%rax,8),%rdx
+    1406:	shr    $1,%rdx
+    1409:	or     %rcx,%rdx
+    140c:	mov    0x48(%rsp),%rcx
+    1411:	mov    %rdx,(%rcx,%rax,8)
+    1415:	lea    -0x1(%rbx),%rax
+    1419:	test   %rax,%rax
+    141c:	jne    1387 <pfp58_divstep_carrier+0x1387>
+    1422:	xor    %eax,%eax
+    1424:	xor    %ecx,%ecx
+    1426:	mov    0xc0(%rsp),%rdi
+    142e:	mov    (%r8,%rcx,8),%rdx
+    1432:	add    (%r10,%rcx,8),%rdx
+    1436:	setb   %sil
+    143a:	add    %rax,%rdx
+    143d:	setb   %al
+    1440:	mov    %rdx,(%rdi,%rcx,8)
+    1444:	or     %sil,%al
+    1447:	movzbl %al,%eax
+    144a:	mov    %rax,(%rdi,%rbx,8)
+    144e:	test   $0x3,%bl
+    1451:	mov    0x118(%rsp),%r9
+    1459:	mov    0x1e8(%rsp),%r8
+    1461:	mov    0x178(%rsp),%r14
+    1469:	je     14a0 <pfp58_divstep_carrier+0x14a0>
+    146b:	xor    %ecx,%ecx
+    146d:	mov    0x60(%rsp),%rdi
+    1472:	mov    0x108(%rsp),%rsi
+    147a:	nopw   0x0(%rax,%rax,1)
+    1480:	mov    %rax,%rdx
+    1483:	mov    -0x38(%r14,%rcx,8),%rax
+    1488:	shld   $0x3f,%rax,%rdx
+    148d:	mov    %rdx,-0x8(%rsi,%rcx,8)
+    1492:	dec    %rcx
+    1495:	cmp    %rcx,%r8
+    1498:	jne    1480 <pfp58_divstep_carrier+0x1480>
+    149a:	add    %rbx,%rcx
+    149d:	jmp    14a8 <pfp58_divstep_carrier+0x14a8>
+    149f:	nop
+    14a0:	mov    %rbx,%rcx
+    14a3:	mov    0x60(%rsp),%rdi
+    14a8:	lea    -0x1(%rbx),%rdx
+    14ac:	cmp    $0x3,%rdx
+    14b0:	mov    0xb8(%rsp),%rsi
+    14b8:	mov    0x1e0(%rsp),%r8
+    14c0:	jb     1511 <pfp58_divstep_carrier+0x1511>
+    14c2:	data16 data16 data16 data16 cs nopw 0x0(%rax,%rax,1)
+    14d0:	mov    0x8(%r8,%rcx,8),%rdx
+    14d5:	shld   $0x3f,%rdx,%rax
+    14da:	mov    %rax,-0x28(%r14,%rcx,8)
+    14df:	mov    (%r8,%rcx,8),%rax
+    14e3:	shld   $0x3f,%rax,%rdx
+    14e8:	mov    %rdx,-0x30(%r14,%rcx,8)
+    14ed:	mov    -0x8(%r8,%rcx,8),%rdx
+    14f2:	shld   $0x3f,%rdx,%rax
+    14f7:	mov    %rax,-0x38(%r14,%rcx,8)
+    14fc:	mov    -0x10(%r8,%rcx,8),%rax
+    1501:	shld   $0x3f,%rax,%rdx
+    1506:	mov    %rdx,-0x40(%r14,%rcx,8)
+    150b:	add    $0xfffffffffffffffc,%rcx
+    150f:	jne    14d0 <pfp58_divstep_carrier+0x14d0>
+    1511:	cmp    $0x4,%rbx
+    1515:	setb   %al
+    1518:	or     0x12(%rsp),%al
+    151c:	test   $0x1,%al
+    151e:	je     1530 <pfp58_divstep_carrier+0x1530>
+    1520:	xor    %eax,%eax
+    1522:	mov    0xb0(%rsp),%r14
+    152a:	jmp    15b3 <pfp58_divstep_carrier+0x15b3>
+    152f:	nop
+    1530:	movq   0x18(%rsp),%xmm0
+    1536:	pshufd $0x44,%xmm0,%xmm0
+    153b:	movdqa %xmm0,%xmm1
+    153f:	pcmpeqd %xmm2,%xmm2
+    1543:	pxor   %xmm2,%xmm1
+    1547:	xor    %eax,%eax
+    1549:	nopl   0x0(%rax)
+    1550:	movdqu -0x20(%r14,%rax,1),%xmm2
+    1557:	movdqu -0x10(%r14,%rax,1),%xmm3
+    155e:	pand   %xmm0,%xmm2
+    1562:	pand   %xmm0,%xmm3
+    1566:	movdqu -0x10(%r13,%rax,1),%xmm4
+    156d:	movdqu 0x0(%r13,%rax,1),%xmm5
+    1574:	pand   %xmm1,%xmm4
+    1578:	por    %xmm2,%xmm4
+    157c:	pand   %xmm1,%xmm5
+    1580:	por    %xmm3,%xmm5
+    1584:	movdqu %xmm4,-0x10(%r13,%rax,1)
+    158b:	movdqu %xmm5,0x0(%r13,%rax,1)
+    1592:	add    $0x20,%rax
+    1596:	cmp    %rax,%rsi
+    1599:	jne    1550 <pfp58_divstep_carrier+0x1550>
+    159b:	mov    0xa8(%rsp),%rcx
+    15a3:	mov    %rcx,%rax
+    15a6:	cmp    %rcx,%rbx
+    15a9:	mov    0xb0(%rsp),%r14
+    15b1:	je     162a <pfp58_divstep_carrier+0x162a>
+    15b3:	mov    %rax,%rcx
+    15b6:	or     $0x1,%rcx
+    15ba:	test   $0x1,%bl
+    15bd:	je     15e3 <pfp58_divstep_carrier+0x15e3>
+    15bf:	mov    0x48(%rsp),%r8
+    15c4:	mov    (%r8,%rax,8),%rdx
+    15c8:	mov    0x78(%rsp),%rsi
+    15cd:	mov    (%rsi,%rax,8),%rsi
+    15d1:	xor    %rdx,%rsi
+    15d4:	and    0x18(%rsp),%rsi
+    15d9:	xor    %rdx,%rsi
+    15dc:	mov    %rsi,(%r8,%rax,8)
+    15e0:	mov    %rcx,%rax
+    15e3:	cmp    %rcx,%rbx
+    15e6:	je     162a <pfp58_divstep_carrier+0x162a>
+    15e8:	nopl   0x0(%rax,%rax,1)
+    15f0:	mov    -0x8(%r15,%rax,8),%rcx
+    15f5:	mov    -0x8(%r14,%rax,8),%rdx
+    15fa:	xor    %rcx,%rdx
+    15fd:	and    0x18(%rsp),%rdx
+    1602:	mov    (%r15,%rax,8),%rsi
+    1606:	xor    %rcx,%rdx
+    1609:	mov    %rdx,-0x8(%r15,%rax,8)
+    160e:	mov    (%r14,%rax,8),%rcx
+    1612:	xor    %rsi,%rcx
+    1615:	and    0x18(%rsp),%rcx
+    161a:	xor    %rsi,%rcx
+    161d:	mov    %rcx,(%r15,%rax,8)
+    1621:	add    $0x2,%rax
+    1625:	cmp    %rax,%rbx
+    1628:	jne    15f0 <pfp58_divstep_carrier+0x15f0>
+    162a:	cmpq   $0x4,0x158(%rsp)
+    1633:	setb   %al
+    1636:	mov    0x8(%rsp),%rcx
+    163b:	mov    %rcx,0x18(%rsp)
+    1640:	lea    0x18(%rsp),%rcx
+    1645:	or     0x11(%rsp),%al
+    1649:	test   $0x1,%al
+    164b:	je     1670 <pfp58_divstep_carrier+0x1670>
+    164d:	xor    %eax,%eax
+    164f:	mov    %rdi,%rcx
+    1652:	mov    0x30(%rsp),%rsi
+    1657:	mov    0xc8(%rsp),%rdx
+    165f:	mov    0x88(%rsp),%r14
+    1667:	jmp    1700 <pfp58_divstep_carrier+0x1700>
+    166c:	nopl   0x0(%rax)
+    1670:	movq   0x18(%rsp),%xmm0
+    1676:	pshufd $0x44,%xmm0,%xmm0
+    167b:	movdqa %xmm0,%xmm1
+    167f:	pcmpeqd %xmm2,%xmm2
+    1683:	pxor   %xmm2,%xmm1
+    1687:	xor    %eax,%eax
+    1689:	mov    0x30(%rsp),%rsi
+    168e:	mov    0x1c8(%rsp),%rcx
+    1696:	mov    0xc8(%rsp),%rdx
+    169e:	mov    0x88(%rsp),%r14
+    16a6:	cs nopw 0x0(%rax,%rax,1)
+    16b0:	movdqu -0x8(%rdx,%rax,8),%xmm2
+    16b6:	movdqu 0x8(%rdx,%rax,8),%xmm3
+    16bc:	pand   %xmm0,%xmm2
+    16c0:	pand   %xmm0,%xmm3
+    16c4:	movdqu -0x10(%rsi,%rax,8),%xmm4
+    16ca:	movdqu (%rsi,%rax,8),%xmm5
+    16cf:	pand   %xmm1,%xmm4
+    16d3:	por    %xmm2,%xmm4
+    16d7:	pand   %xmm1,%xmm5
+    16db:	por    %xmm3,%xmm5
+    16df:	movdqu %xmm4,-0x10(%r9,%rax,8)
+    16e6:	movdqu %xmm5,(%r9,%rax,8)
+    16ec:	add    $0x4,%rax
+    16f0:	cmp    %rax,%rcx
+    16f3:	jne    16b0 <pfp58_divstep_carrier+0x16b0>
+    16f5:	mov    %rcx,%rax
+    16f8:	mov    0x1c0(%rsp),%rcx
+    1700:	lea    (%rdx,%rax,8),%rdx
+    1704:	add    $0xfffffffffffffff8,%rdx
+    1708:	lea    (%rsi,%rax,8),%rsi
+    170c:	add    $0xfffffffffffffff0,%rsi
+    1710:	xor    %edi,%edi
+    1712:	data16 data16 data16 data16 cs nopw 0x0(%rax,%rax,1)
+    1720:	cmp    %rax,%rbx
+    1723:	je     1d22 <pfp58_divstep_carrier+0x1d22>
+    1729:	inc    %rax
+    172c:	mov    (%rsi,%rdi,1),%r8
+    1730:	mov    (%rdx,%rdi,1),%r9
+    1734:	xor    %r8,%r9
+    1737:	and    0x18(%rsp),%r9
+    173c:	xor    %r8,%r9
+    173f:	mov    %r9,(%rcx,%rdi,1)
+    1743:	lea    (%rcx,%rdi,1),%r8
+    1747:	add    $0x8,%r8
+    174b:	add    $0x8,%rdi
+    174f:	cmp    %r10,%r8
+    1752:	jne    1720 <pfp58_divstep_carrier+0x1720>
+    1754:	mov    0xd0(%rsp),%rdi
+    175c:	mov    0x48(%rsp),%rsi
+    1761:	mov    %r11,%rdx
+    1764:	mov    0x0(%rip),%rbp        # 176b <pfp58_divstep_carrier+0x176b>
+    176b:	call   *%rbp
+    176d:	mov    %r14,%rdi
+    1770:	mov    0x60(%rsp),%rsi
+    1775:	lea    0x0(,%rbx,8),%rdx
+    177d:	call   *%rbp
+    177f:	mov    %r14,%r8
+    1782:	mov    0x188(%rsp),%rax
+    178a:	cmp    0x1d8(%rsp),%rax
+    1792:	mov    0x58(%rsp),%r10
+    1797:	lea    0x18(%rsp),%rdx
+    179c:	mov    0xb0(%rsp),%r14
+    17a4:	mov    %r12,%r9
+    17a7:	mov    0x170(%rsp),%r11
+    17af:	jne    5e0 <pfp58_divstep_carrier+0x5e0>
+    17b5:	mov    (%r10,%rbx,8),%rax
+    17b9:	sar    $0x3f,%rax
+    17bd:	mov    %rax,0x8(%rsp)
+    17c2:	lea    0x8(%rsp),%rax
+    17c7:	xor    %ecx,%ecx
+    17c9:	xor    %eax,%eax
+    17cb:	mov    0xa0(%rsp),%rdi
+    17d3:	data16 data16 data16 cs nopw 0x0(%rax,%rax,1)
+    17e0:	xor    %edx,%edx
+    17e2:	sub    (%r10,%rax,1),%rdx
+    17e6:	setb   %sil
+    17ea:	sub    %rcx,%rdx
+    17ed:	setb   %cl
+    17f0:	mov    %rdx,(%rdi,%rax,1)
+    17f4:	or     %sil,%cl
+    17f7:	add    $0xff,%cl
+    17fa:	mov    0x8(%r10,%rax,1),%rcx
+    17ff:	mov    $0x0,%edx
+    1804:	sbb    %rcx,%rdx
+    1807:	mov    %rdx,0x8(%rdi,%rax,1)
+    180c:	setb   %cl
+    180f:	movzbl %cl,%ecx
+    1812:	add    $0x10,%rax
+    1816:	cmp    %rax,%r11
+    1819:	jne    17e0 <pfp58_divstep_carrier+0x17e0>
+    181b:	lea    0x1(%rbx),%rdx
+    181f:	test   $0x1,%dl
+    1822:	lea    0x0(,%rbx,8),%r11
+    182a:	mov    0x88(%rsp),%r14
+    1832:	mov    0x158(%rsp),%r15
+    183a:	movabs $0x3ffffffffffffffe,%r12
+    1844:	je     1856 <pfp58_divstep_carrier+0x1856>
+    1846:	neg    %rcx
+    1849:	mov    0x58(%rsp),%rdx
+    184e:	sub    (%rdx,%rax,1),%rcx
+    1852:	mov    %rcx,(%rdi,%rax,1)
+    1856:	mov    0x8(%rsp),%rax
+    185b:	mov    %rax,%rcx
+    185e:	not    %rcx
+    1861:	xor    %esi,%esi
+    1863:	xor    %r9d,%r9d
+    1866:	xor    %edx,%edx
+    1868:	cmp    %rbx,%rsi
+    186b:	jbe    189f <pfp58_divstep_carrier+0x189f>
+    186d:	jmp    18e0 <pfp58_divstep_carrier+0x18e0>
+    186f:	nop
+    1870:	mov    0xd8(%rsp),%r10
+    1878:	mov    (%r10),%r10
+    187b:	and    %rcx,%r10
+    187e:	mov    (%r9),%r9
+    1881:	and    %rax,%r9
+    1884:	or     %r10,%r9
+    1887:	xor    %r10d,%r10d
+    188a:	test   %rdi,%rdi
+    188d:	sete   %r10b
+    1891:	xor    %r9,%r10
+    1894:	or     %r10,%rdx
+    1897:	mov    %r8,%r9
+    189a:	cmp    %rbx,%rsi
+    189d:	ja     18e0 <pfp58_divstep_carrier+0x18e0>
+    189f:	cmp    $0xffffffffffffffff,%r9
+    18a3:	je     1d45 <pfp58_divstep_carrier+0x1d45>
+    18a9:	mov    0x58(%rsp),%rdi
+    18ae:	lea    (%rdi,%rsi,8),%r10
+    18b2:	mov    0xa0(%rsp),%rdi
+    18ba:	lea    (%rdi,%rsi,8),%rdi
+    18be:	inc    %rsi
+    18c1:	lea    0x1(%r9),%r8
+    18c5:	mov    %rdi,0x18(%rsp)
+    18ca:	mov    %r9,%rdi
+    18cd:	lea    0xd8(%rsp),%r9
+    18d5:	jmp    18eb <pfp58_divstep_carrier+0x18eb>
+    18d7:	nopw   0x0(%rax,%rax,1)
+    18e0:	mov    %r9,%r8
+    18e3:	lea    0x18(%rsp),%r9
+    18e8:	xor    %r10d,%r10d
+    18eb:	mov    %r10,(%r9)
+    18ee:	mov    0x18(%rsp),%r9
+    18f3:	test   %r9,%r9
+    18f6:	jne    1870 <pfp58_divstep_carrier+0x1870>
+    18fc:	xor    %eax,%eax
+    18fe:	test   %rdx,%rdx
+    1901:	setne  %al
+    1904:	mov    %rax,0x18(%rsp)
+    1909:	lea    0x18(%rsp),%rax
+    190e:	mov    0x18(%rsp),%rax
+    1913:	lea    -0x8(,%rbx,8),%rcx
+    191b:	test   %rcx,%rcx
+    191e:	jne    1939 <pfp58_divstep_carrier+0x1939>
+    1920:	xor    %esi,%esi
+    1922:	xor    %edx,%edx
+    1924:	mov    0xe8(%rsp),%r10
+    192c:	mov    %r10,%rcx
+    192f:	mov    0x40(%rsp),%r9
+    1934:	jmp    19e7 <pfp58_divstep_carrier+0x19e7>
+    1939:	and    0x90(%rsp),%r12
+    1941:	xor    %esi,%esi
+    1943:	xor    %edi,%edi
+    1945:	mov    0xe8(%rsp),%r10
+    194d:	mov    %r10,%r9
+    1950:	jmp    1996 <pfp58_divstep_carrier+0x1996>
+    1952:	data16 data16 data16 data16 cs nopw 0x0(%rax,%rax,1)
+    1960:	mov    0x30(%rsp),%rsi
+    1965:	mov    -0x8(%rsi,%rdx,8),%rsi
+    196a:	or     %r9b,%r8b
+    196d:	movzbl %r8b,%r8d
+    1971:	neg    %rsi
+    1974:	setb   %r9b
+    1978:	sub    %r8,%rsi
+    197b:	setb   %r8b
+    197f:	mov    %rsi,0x8(%rcx)
+    1983:	or     %r9b,%r8b
+    1986:	movzbl %r8b,%esi
+    198a:	inc    %rdi
+    198d:	lea    0x10(%rcx),%r9
+    1991:	cmp    %r12,%rdi
+    1994:	je     19d0 <pfp58_divstep_carrier+0x19d0>
+    1996:	mov    %r9,%rcx
+    1999:	mov    %rdi,%rdx
+    199c:	cmp    %rbx,%rdi
+    199f:	jae    19b0 <pfp58_divstep_carrier+0x19b0>
+    19a1:	mov    0x30(%rsp),%rdi
+    19a6:	mov    -0x10(%rdi,%rdx,8),%rdi
+    19ab:	jmp    19b2 <pfp58_divstep_carrier+0x19b2>
+    19ad:	nopl   (%rax)
+    19b0:	xor    %edi,%edi
+    19b2:	neg    %rdi
+    19b5:	setb   %r8b
+    19b9:	sub    %rsi,%rdi
+    19bc:	setb   %r9b
+    19c0:	mov    %rdi,(%rcx)
+    19c3:	lea    0x1(%rdx),%rdi
+    19c7:	cmp    %rbx,%rdi
+    19ca:	jb     1960 <pfp58_divstep_carrier+0x1960>
+    19cc:	xor    %esi,%esi
+    19ce:	jmp    196a <pfp58_divstep_carrier+0x196a>
+    19d0:	testb  $0x1,0x90(%rsp)
+    19d8:	mov    0x40(%rsp),%r9
+    19dd:	je     1a08 <pfp58_divstep_carrier+0x1a08>
+    19df:	add    $0x10,%rcx
+    19e3:	add    $0x2,%rdx
+    19e7:	cmp    %rbx,%rdx
+    19ea:	jae    19f2 <pfp58_divstep_carrier+0x19f2>
+    19ec:	mov    (%r14,%rdx,8),%rdx
+    19f0:	jmp    19f4 <pfp58_divstep_carrier+0x19f4>
+    19f2:	xor    %edx,%edx
+    19f4:	neg    %rdx
+    19f7:	setb   %dil
+    19fb:	sub    %rsi,%rdx
+    19fe:	setb   %r8b
+    1a02:	mov    %rdx,(%rcx)
+    1a05:	or     %dil,%r8b
+    1a08:	dec    %rax
+    1a0b:	movzbl %r8b,%ecx
+    1a0f:	neg    %rcx
+    1a12:	mov    %rcx,0x18(%rsp)
+    1a17:	lea    0x18(%rsp),%rcx
+    1a1c:	xor    %ecx,%ecx
+    1a1e:	xor    %edx,%edx
+    1a20:	cmp    %rcx,%r11
+    1a23:	je     1d19 <pfp58_divstep_carrier+0x1d19>
+    1a29:	mov    0x18(%rsp),%rsi
+    1a2e:	and    (%r9,%rcx,1),%rsi
+    1a32:	add    (%r10,%rcx,1),%rsi
+    1a36:	setb   %dil
+    1a3a:	add    %rdx,%rsi
+    1a3d:	setb   %dl
+    1a40:	mov    %rsi,(%r10,%rcx,1)
+    1a44:	or     %dil,%dl
+    1a47:	movzbl %dl,%edx
+    1a4a:	add    $0x8,%rcx
+    1a4e:	cmp    %rcx,%r11
+    1a51:	jne    1a20 <pfp58_divstep_carrier+0x1a20>
+    1a53:	mov    0x8(%rsp),%rcx
+    1a58:	mov    %rcx,0x18(%rsp)
+    1a5d:	lea    0x18(%rsp),%rcx
+    1a62:	cmp    $0x8,%r15
+    1a66:	jae    1a7c <pfp58_divstep_carrier+0x1a7c>
+    1a68:	xor    %edi,%edi
+    1a6a:	mov    0x68(%rsp),%rcx
+    1a6f:	mov    0x130(%rsp),%r8
+    1a77:	jmp    1b60 <pfp58_divstep_carrier+0x1b60>
+    1a7c:	mov    0x1a8(%rsp),%rdx
+    1a84:	add    0x58(%rsp),%rdx
+    1a89:	lea    (%rdx,%r15,8),%rdx
+    1a8d:	add    $0x48,%rdx
+    1a91:	cmp    %rdx,%rcx
+    1a94:	setb   %cl
+    1a97:	lea    0x20(%rsp),%rdx
+    1a9c:	cmp    %rdx,0x68(%rsp)
+    1aa1:	mov    0x130(%rsp),%r8
+    1aa9:	jae    1abb <pfp58_divstep_carrier+0x1abb>
+    1aab:	test   %cl,%cl
+    1aad:	je     1abb <pfp58_divstep_carrier+0x1abb>
+    1aaf:	xor    %edi,%edi
+    1ab1:	mov    0x68(%rsp),%rcx
+    1ab6:	jmp    1b60 <pfp58_divstep_carrier+0x1b60>
+    1abb:	mov    0x198(%rsp),%rdi
+    1ac3:	mov    %edi,%ecx
+    1ac5:	and    $0x3,%ecx
+    1ac8:	mov    $0x4,%edx
+    1acd:	cmovne %rcx,%rdx
+    1ad1:	sub    %rdx,%rdi
+    1ad4:	movq   0x18(%rsp),%xmm0
+    1ada:	pshufd $0x44,%xmm0,%xmm0
+    1adf:	mov    0x68(%rsp),%rcx
+    1ae4:	lea    (%rcx,%rdi,8),%rcx
+    1ae8:	pcmpeqd %xmm1,%xmm1
+    1aec:	pxor   %xmm0,%xmm1
+    1af0:	xor    %edx,%edx
+    1af2:	mov    0x30(%rsp),%rsi
+    1af7:	mov    0x98(%rsp),%r9
+    1aff:	mov    0xf0(%rsp),%r11
+    1b07:	nopw   0x0(%rax,%rax,1)
+    1b10:	movdqu -0x10(%r9,%rdx,8),%xmm2
+    1b17:	movdqu (%r9,%rdx,8),%xmm3
+    1b1d:	pand   %xmm0,%xmm2
+    1b21:	pand   %xmm0,%xmm3
+    1b25:	movdqu -0x10(%rsi,%rdx,8),%xmm4
+    1b2b:	movdqu (%rsi,%rdx,8),%xmm5
+    1b30:	pand   %xmm1,%xmm4
+    1b34:	por    %xmm2,%xmm4
+    1b38:	pand   %xmm1,%xmm5
+    1b3c:	por    %xmm3,%xmm5
+    1b40:	movdqu %xmm4,-0x10(%r11,%rdx,8)
+    1b47:	movdqu %xmm5,(%r11,%rdx,8)
+    1b4d:	add    $0x4,%rdx
+    1b51:	cmp    %rdx,%rdi
+    1b54:	jne    1b10 <pfp58_divstep_carrier+0x1b10>
+    1b56:	cs nopw 0x0(%rax,%rax,1)
+    1b60:	cmp    %rdi,%rbx
+    1b63:	je     1d22 <pfp58_divstep_carrier+0x1d22>
+    1b69:	mov    (%r14,%rdi,8),%rdx
+    1b6d:	mov    (%r10,%rdi,8),%rsi
+    1b71:	inc    %rdi
+    1b74:	xor    %rdx,%rsi
+    1b77:	and    0x18(%rsp),%rsi
+    1b7c:	xor    %rdx,%rsi
+    1b7f:	mov    %rsi,(%rcx)
+    1b82:	add    $0x8,%rcx
+    1b86:	cmp    %r8,%rcx
+    1b89:	jne    1b60 <pfp58_divstep_carrier+0x1b60>
+    1b8b:	mov    %rax,%r14
+    1b8e:	lea    0x18(%rsp),%rdi
+    1b93:	mov    $0x8,%edx
+    1b98:	mov    $0x8,%r8d
+    1b9e:	mov    $0x8,%r9d
+    1ba4:	xor    %esi,%esi
+    1ba6:	mov    %rbx,%rcx
+    1ba9:	call   1bae <pfp58_divstep_carrier+0x1bae>
+    1bae:	cmpl   $0x1,0x18(%rsp)
+    1bb3:	jne    1c1d <pfp58_divstep_carrier+0x1c1d>
+    1bb5:	mov    0xe0(%rsp),%rax
+    1bbd:	lea    0x0(,%rax,8),%rsi
+    1bc5:	shr    $0x3d,%rax
+    1bc9:	setne  %al
+    1bcc:	test   %rsi,%rsi
+    1bcf:	sete   %cl
+    1bd2:	or     %al,%cl
+    1bd4:	mov    0x58(%rsp),%rdi
+    1bd9:	jne    1c0d <pfp58_divstep_carrier+0x1c0d>
+    1bdb:	xor    %eax,%eax
+    1bdd:	movb   $0x0,(%rdi,%rax,1)
+    1be1:	movb   $0x0,0x1(%rdi,%rax,1)
+    1be6:	movb   $0x0,0x2(%rdi,%rax,1)
+    1beb:	movb   $0x0,0x3(%rdi,%rax,1)
+    1bf0:	movb   $0x0,0x4(%rdi,%rax,1)
+    1bf5:	movb   $0x0,0x5(%rdi,%rax,1)
+    1bfa:	movb   $0x0,0x6(%rdi,%rax,1)
+    1bff:	movb   $0x0,0x7(%rdi,%rax,1)
+    1c04:	add    $0x8,%rax
+    1c08:	cmp    %rax,%rsi
+    1c0b:	jne    1bdd <pfp58_divstep_carrier+0x1bdd>
+    1c0d:	mov    $0x8,%edx
+    1c12:	call   *0x0(%rip)        # 1c18 <pfp58_divstep_carrier+0x1c18>
+    1c18:	jmp    c8 <pfp58_divstep_carrier+0xc8>
+    1c1d:	mov    0x20(%rsp),%r15
+    1c22:	cmp    $0x1,%rbx
+    1c26:	jne    1c39 <pfp58_divstep_carrier+0x1c39>
+    1c28:	movq   $0x0,(%r15)
+    1c2f:	lea    0x0(,%rbx,8),%rdx
+    1c37:	jmp    1c5d <pfp58_divstep_carrier+0x1c5d>
+    1c39:	lea    0x0(,%rbx,8),%r12
+    1c41:	lea    -0x8(%r12),%rdx
+    1c46:	mov    %r15,%rdi
+    1c49:	xor    %esi,%esi
+    1c4b:	call   *0x0(%rip)        # 1c51 <pfp58_divstep_carrier+0x1c51>
+    1c51:	mov    %r12,%rdx
+    1c54:	movq   $0x0,-0x8(%r15,%r12,1)
+    1c5d:	mov    %r15,%rdi
+    1c60:	mov    0x68(%rsp),%rsi
+    1c65:	call   *0x0(%rip)        # 1c6b <pfp58_divstep_carrier+0x1c6b>
+    1c6b:	mov    0xe0(%rsp),%rax
+    1c73:	lea    0x0(,%rax,8),%rsi
+    1c7b:	shr    $0x3d,%rax
+    1c7f:	setne  %al
+    1c82:	test   %rsi,%rsi
+    1c85:	sete   %cl
+    1c88:	or     %al,%cl
+    1c8a:	jne    1cc3 <pfp58_divstep_carrier+0x1cc3>
+    1c8c:	xor    %eax,%eax
+    1c8e:	mov    0x58(%rsp),%rcx
+    1c93:	movb   $0x0,(%rcx,%rax,1)
+    1c97:	movb   $0x0,0x1(%rcx,%rax,1)
+    1c9c:	movb   $0x0,0x2(%rcx,%rax,1)
+    1ca1:	movb   $0x0,0x3(%rcx,%rax,1)
+    1ca6:	movb   $0x0,0x4(%rcx,%rax,1)
+    1cab:	movb   $0x0,0x5(%rcx,%rax,1)
+    1cb0:	movb   $0x0,0x6(%rcx,%rax,1)
+    1cb5:	movb   $0x0,0x7(%rcx,%rax,1)
+    1cba:	add    $0x8,%rax
+    1cbe:	cmp    %rax,%rsi
+    1cc1:	jne    1c93 <pfp58_divstep_carrier+0x1c93>
+    1cc3:	mov    0x0(%rip),%r12        # 1cca <pfp58_divstep_carrier+0x1cca>
+    1cca:	mov    $0x8,%edx
+    1ccf:	mov    0x58(%rsp),%rdi
+    1cd4:	call   *%r12
+    1cd7:	mov    0x1b0(%rsp),%rax
+    1cdf:	cmp    %rbx,%rax
+    1ce2:	cmovb  %rax,%rbx
+    1ce6:	shl    $0x3,%rbx
+    1cea:	mov    0x1b8(%rsp),%rdi
+    1cf2:	mov    %r15,%rsi
+    1cf5:	mov    %rbx,%rdx
+    1cf8:	call   *0x0(%rip)        # 1cfe <pfp58_divstep_carrier+0x1cfe>
+    1cfe:	mov    $0x8,%edx
+    1d03:	mov    %r15,%rdi
+    1d06:	mov    0x1a0(%rsp),%rsi
+    1d0e:	call   *%r12
+    1d11:	mov    %r14,%rax
+    1d14:	jmp    ca <pfp58_divstep_carrier+0xca>
+    1d19:	lea    0x0(%rip),%rdx        # 1d20 <pfp58_divstep_carrier+0x1d20>
+    1d20:	jmp    1d32 <pfp58_divstep_carrier+0x1d32>
+    1d22:	lea    0x0(%rip),%rdx        # 1d29 <pfp58_divstep_carrier+0x1d29>
+    1d29:	jmp    1d32 <pfp58_divstep_carrier+0x1d32>
+    1d2b:	lea    0x0(%rip),%rdx        # 1d32 <pfp58_divstep_carrier+0x1d32>
+    1d32:	mov    %rbx,%rdi
+    1d35:	mov    %rbx,%rsi
+    1d38:	mov    0x58(%rsp),%r14
+    1d3d:	call   *0x0(%rip)        # 1d43 <pfp58_divstep_carrier+0x1d43>
+    1d43:	jmp    1d57 <pfp58_divstep_carrier+0x1d57>
+    1d45:	lea    0x0(%rip),%rdi        # 1d4c <pfp58_divstep_carrier+0x1d4c>
+    1d4c:	mov    0x58(%rsp),%r14
+    1d51:	call   *0x0(%rip)        # 1d57 <pfp58_divstep_carrier+0x1d57>
+    1d57:	ud2
+    1d59:	mov    %rax,%rbx
+    1d5c:	mov    0xe0(%rsp),%rdi
+    1d64:	mov    %r14,%rsi
+    1d67:	call   1d6c <pfp58_divstep_carrier+0x1d6c>
+    1d6c:	mov    %rbx,%rdi
+    1d6f:	call   1d74 <.Lanon.2d390263c35aa842ee3345991f767fec.1044>
+
+Disassembly of section .text.pfp58_gcd_carrier:

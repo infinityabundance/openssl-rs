@@ -1,12 +1,17 @@
-//! PFP-10 — Bernstein–Yang `hddivsteps` modular inversion, a safe-Rust prototype.
+//! Bernstein–Yang `hddivsteps` modular inversion (PFP-10 prototype, PFP-58
+//! admission).
 //!
-//! This is the third candidate in the PFP-10 comparison. It is **not** wired into
-//! any arithmetic path by this module: it is a measurement and correctness
-//! prototype whose crossover against the Fermat inverse
+//! PFP-10 measured this candidate against the Fermat inverse
 //! ([`crate::ec::p256::P256Scalar::invert`] and
 //! [`crate::bn::arith::mod_exp_core_consttime`]) and the fixed-iteration binary
-//! GCD ([`crate::bn::limbs::mod_inverse_consttime_with_mask`]) is what PFP-10
-//! reports.
+//! GCD ([`crate::bn::limbs::mod_inverse_consttime_with_mask`]) and refused it
+//! because of one secret-derived branch per step at release-like codegen. PFP-58
+//! removed that transfer, verified the release artifact with ctgrind (firing
+//! control included) and a `jcc`/`setcc`/`cmov` audit, and measured it at
+//! ~0.38-0.40x the GCD on composite 1024/2048-bit moduli. It is now the
+//! odd-modulus inverse used by the RSA blinding refresh
+//! ([`crate::bn::blinding`]); the even-modulus arm keeps the variable-time
+//! helper. The P-256 loci still use Fermat, which wins there.
 //!
 //! ## Algorithm
 //!
@@ -80,6 +85,26 @@
 //! even modulus, which is a property of the modulus alone. It is safe Rust: a
 //! caller that violates the range precondition gets a wrong answer, never
 //! undefined behaviour.
+//!
+//! ## Composite moduli (PFP-58)
+//!
+//! **Primality is not required for correctness.** The recurrence computes
+//! `gcd(a, m)` and the coefficient `v` with `v * a == ±gcd(a, m) (mod m)` for any
+//! positive odd `m`; when the gcd is one, `v` is the inverse. The returned mask is
+//! the invertibility verdict, so a composite modulus is handled exactly like a
+//! prime one: a non-coprime `a` yields an all-zeros mask (and `None` from
+//! [`mod_inverse_divstep`]), which is the ordinary "no inverse, retry" answer.
+//!
+//! The published half-delta iteration bound also assumes only `0 <= g <= f <= M`
+//! with odd `M` above its verified floor, not primality. For this entry point
+//! `f = m`, `g = a`, so `a < m` is the caller's obligation as before.
+//!
+//! The caller must therefore establish:
+//!
+//! * `m` is odd and `m > 1` (an empty/even `m` is refused);
+//! * `0 <= a < m` (a wider `a` is silently truncated by the fixed-width buffer);
+//! * whether a non-invertible `a` is an error: the mask says so, and the RSA
+//!   blinding caller retries the draw, preserving the authority's schedule.
 
 use crate::bn::alloc::try_zeroed as try_zeroed_bn;
 use crate::bn::limbs::Limb;
@@ -90,10 +115,16 @@ use crate::runtime::secret::SecretLimbs;
 // ---------------------------------------------------------------------------
 
 /// All ones when `x == 0`, all zeros otherwise.
+///
+/// The value barrier is placed **between** the arithmetic and its use, not on
+/// the finished mask: it hides the `x | -x` range from the optimiser so the
+/// subtraction cannot be rewritten into a comparison-and-select (which the
+/// backend lowered to a conditional branch in the PFP-10 release build).
 #[inline(always)]
 fn ct_is_zero_mask(x: Limb) -> Limb {
     let non_zero = x | x.wrapping_neg();
-    (non_zero >> (Limb::BITS - 1)).wrapping_sub(1)
+    let nz = core::hint::black_box(non_zero >> (Limb::BITS - 1));
+    nz.wrapping_sub(1)
 }
 
 /// All ones when `x` is odd, all zeros otherwise.
@@ -103,10 +134,16 @@ fn ct_odd_mask(x: Limb) -> Limb {
 }
 
 /// All ones when the signed value `delta` is strictly positive.
+///
+/// Each component is an opaque value when it is combined: the optimiser sees
+/// neither that `sign_bit` is `delta < 0` nor that `zero` is `delta == 0`, so
+/// it cannot contract `!sign & !zero` into `delta > 0` and emit a branch.
 #[inline(always)]
 fn ct_positive_mask(delta: i64) -> Limb {
-    let sign = 0u64.wrapping_sub((delta as u64) >> (Limb::BITS - 1));
-    let zero = ct_is_zero_mask(delta as u64);
+    let bits = delta as u64;
+    let sign_bit = core::hint::black_box(bits >> (Limb::BITS - 1));
+    let sign = 0u64.wrapping_sub(sign_bit);
+    let zero = ct_is_zero_mask(bits);
     !sign & !zero
 }
 
@@ -376,7 +413,8 @@ pub(crate) fn iteration_bound(limbs: usize) -> Option<usize> {
 /// whose modulus is prime — the P-256 order — may ignore the mask and store the
 /// coefficient; a caller that must report failure uses the mask.
 ///
-/// `a` must satisfy `0 <= a < m`. An empty or even modulus is refused.
+/// `a` must satisfy `0 <= a < m`. An empty or even modulus is refused. The
+/// modulus need **not** be prime; see the module's "Composite moduli" section.
 pub(crate) fn mod_inverse_divstep_with_mask(a: &[Limb], m: &[Limb]) -> Option<(Vec<Limb>, Limb)> {
     if m.is_empty() || m[0] & 1 == 0 {
         return None;

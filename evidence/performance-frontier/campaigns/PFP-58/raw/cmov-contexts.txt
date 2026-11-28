@@ -1,0 +1,41 @@
+== cmov contexts ==
+     1bd:	mov    %rbp,%rdi
+     1c0:	mov    0x40(%rsp),%rsi
+     1c5:	call   *0x0(%rip)        # 1cb <pfp58_divstep_carrier+0x1cb>
+     1cb:	cmp    %r14,%rbx
+     1ce:	cmovb  %rbx,%r14
+     1d2:	shl    $0x3,%r14
+     1d6:	mov    %r12,%rdi
+---
+     1e5:	lea    -0x8(,%rbx,8),%r11
+     1ed:	shr    $0x3,%r11
+     1f1:	cmp    %r11,%rbx
+     1f4:	mov    %r11,%r10
+     1f7:	cmovb  %rbx,%r10
+     1fb:	lea    (%rbx,%rbx,2),%rax
+     1ff:	shl    $0x4,%rax
+---
+     3fa:	lea    0x1(%r10),%rax
+     3fe:	mov    %rax,0x198(%rsp)
+     406:	and    $0x3,%eax
+     409:	mov    $0x4,%ecx
+     40e:	cmove  %rcx,%rax
+     412:	movq   $0x1,(%r15,%rbx,8)
+     41a:	neg    %rax
+---
+    1abb:	mov    0x198(%rsp),%rdi
+    1ac3:	mov    %edi,%ecx
+    1ac5:	and    $0x3,%ecx
+    1ac8:	mov    $0x4,%edx
+    1acd:	cmovne %rcx,%rdx
+    1ad1:	sub    %rdx,%rdi
+    1ad4:	movq   0x18(%rsp),%xmm0
+---
+    1ccf:	mov    0x58(%rsp),%rdi
+    1cd4:	call   *%r12
+    1cd7:	mov    0x1b0(%rsp),%rax
+    1cdf:	cmp    %rbx,%rax
+    1ce2:	cmovb  %rax,%rbx
+    1ce6:	shl    $0x3,%rbx
+    1cea:	mov    0x1b8(%rsp),%rdi
+---

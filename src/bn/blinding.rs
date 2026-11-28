@@ -75,6 +75,18 @@ const BN_BLINDING_NO_RECREATE: c_ulong = 0x0000_0002;
 /// `BN_FLG_CONSTTIME` — `include/openssl/bn.h:67`.
 const BN_FLG_CONSTTIME: c_int = 0x04;
 
+/// PFP-58 measurement hook. Test-only: selects the pre-admission binary GCD in
+/// place of the divstep so the end-to-end comparison can be replayed in one
+/// process. The release path below always uses the divstep.
+#[cfg(test)]
+static PFP58_USE_DIVSTEP: core::sync::atomic::AtomicBool =
+    core::sync::atomic::AtomicBool::new(true);
+
+#[cfg(test)]
+pub(crate) fn pfp58_set_use_divstep(on: bool) {
+    PFP58_USE_DIVSTEP.store(on, core::sync::atomic::Ordering::Relaxed);
+}
+
 /// The bare signature of the authority's `bn_mod_exp` member, named so the
 /// default-hook test can compare against `BN_mod_exp_mont` without spelling the
 /// function-pointer type at the call site.
@@ -823,9 +835,9 @@ unsafe fn int_bn_mod_inverse(dst: *mut BigNum, a: *const BigNum, n: *const BigNu
     if nd.is_empty() || (nd.len() == 1 && nd[0] == 1) {
         return true;
     }
-    // `A` is secret and the RSA modulus is odd, so the fixed-iteration binary EEA
-    // is used. `mod_inverse_consttime` refuses an even modulus, which is why the
-    // variable-time call remains for that (unreachable for RSA) arm.
+    // `A` is secret and the RSA modulus is odd, so the fixed-iteration
+    // Bernstein-Yang divstep is used (PFP-58). It refuses an even modulus, which
+    // is why the variable-time call remains for that (unreachable for RSA) arm.
     if limbs::is_even(&nd) {
         return match limbs::mod_inverse(&ad, &nd) {
             Some(inv) => {
@@ -836,7 +848,20 @@ unsafe fn int_bn_mod_inverse(dst: *mut BigNum, a: *const BigNum, n: *const BigNu
             None => true,
         };
     }
-    match limbs::mod_inverse_consttime(&ad, &nd) {
+    // PFP-58: the Bernstein-Yang half-delta divstep. It is branch-free at the
+    // release artifact (see the PFP-58 receipt), and on this workload it is
+    // ~0.38-0.40x the fixed-iteration GCD at 1024/2048 bits. The caller's draw
+    // `a` is `0 <= a < mod` (`BN_priv_rand_range_ex`), and the modulus here is
+    // odd and greater than one, which are exactly the divstep preconditions.
+    #[cfg(test)]
+    let inverse = if PFP58_USE_DIVSTEP.load(core::sync::atomic::Ordering::Relaxed) {
+        crate::bn::divstep::mod_inverse_divstep(&ad, &nd)
+    } else {
+        limbs::mod_inverse_consttime(&ad, &nd)
+    };
+    #[cfg(not(test))]
+    let inverse = crate::bn::divstep::mod_inverse_divstep(&ad, &nd);
+    match inverse {
         Some(inv) => {
             // SAFETY: `dst` is live per this function's `# Safety` section.
             unsafe { store_consttime(as_mut(dst), inv, false, nd.len()) };
@@ -2034,6 +2059,58 @@ mod tests {
             assert_ne!((*b).mod_, m, "the duplicate is a different object");
             assert_ne!(BN_get_flags((*b).mod_, BN_FLG_CONSTTIME), 0);
             BN_BLINDING_free(b);
+            BN_free(m);
+        }
+    }
+
+    /// PFP-56: the blinding refresh sizes the fixed-pattern ladder from the public
+    /// exponent's own limb count, not the modulus'. `e = 65537` is one limb and
+    /// `MODULUS` is four, so the schedule is 64 iterations rather than 256.
+    #[test]
+    fn create_param_sizes_the_public_exponent_ladder_from_the_exponent() {
+        use crate::bn::arith::ladder_probe;
+
+        let m = hex(MODULUS);
+        let e = hex("010001");
+        // SAFETY: `m` is live and the flag is a plain value. The RSA caller gives
+        // its modulus the same flag through `BN_with_flags`.
+        unsafe { BN_set_flags(m, BN_FLG_CONSTTIME) };
+        // SAFETY: both constructors take no pointers.
+        let (ctx, mont) = unsafe { (BN_CTX_new(), BN_MONT_CTX_new()) };
+        assert!(!ctx.is_null() && !mont.is_null());
+        assert_eq!(
+            // SAFETY: `mont` and `m` are live; the context argument is unused here.
+            unsafe { BN_MONT_CTX_set(mont, m, core::ptr::null_mut()) },
+            1
+        );
+
+        ladder_probe::reset();
+        // SAFETY: every pointer is live, and the hook is the crate's own
+        // `BN_mod_exp_mont`, which is what selects the public-exponent arm.
+        let b = unsafe {
+            BN_BLINDING_create_param(
+                core::ptr::null_mut(),
+                e,
+                m,
+                ctx,
+                Some(BN_mod_exp_mont),
+                mont,
+            )
+        };
+        assert!(!b.is_null());
+        assert_eq!(
+            ladder_probe::ladder_bits(),
+            vec![64],
+            "65537 is one limb; the modulus is four"
+        );
+        assert_eq!(ladder_probe::vartime_bits(), Vec::<usize>::new());
+
+        // SAFETY: all five were allocated in this test.
+        unsafe {
+            BN_BLINDING_free(b);
+            BN_MONT_CTX_free(mont);
+            BN_CTX_free(ctx);
+            BN_free(e);
             BN_free(m);
         }
     }

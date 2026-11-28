@@ -1,0 +1,16 @@
+opcode	count	classification
+jmp	38	unconditional transfer; not a conditional transfer
+setb	71	carry/borrow mask bit from overflowing add/sub; secret-dependent data bit, no control transfer
+je	48	control flow: public loop/geometry/allocation checks plus the single authorised no-inverse declassification
+jne	47	control flow: public loop/geometry/allocation checks
+jae	11	control flow: public slice/length bounds
+jb	9	control flow: public slice/length bounds
+ja	2	control flow: public slice/length bounds
+jbe	1	control flow: public slice/length bounds
+setne	4	mask materialisation: delta==0 is secret-derived (1/step); Option/allocation tags and length checks are public
+sete	4	modulus parity (public), loop index i==0 (public), slice-length checks (public)
+seta	1	length-overflow check (public)
+cmovb	2	min of public lengths/pointers in slicing/allocation
+cmove	1	public loop-index remainder
+cmovne	1	public loop-index remainder
+jo	1	public checked_mul overflow in the iteration bound

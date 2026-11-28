@@ -1,0 +1,71 @@
+== cmov ==
+     1ca:	call   *%r15
+     1cd:	mov    %r12,%rdx
+     1d0:	cmp    %r12,%rbx
+     1d3:	cmovb  %rbx,%rdx
+     1d7:	shl    $0x3,%rdx
+---
+     206:	shr    $0x3,%r15
+     20a:	cmp    %r15,%rbx
+     20d:	mov    %r15,%r11
+     210:	cmovb  %rbx,%r11
+     214:	lea    (%rbx,%rbx,2),%r10
+---
+     3f9:	mov    %rax,0x1a8(%rsp)
+     401:	and    $0x3,%eax
+     404:	mov    $0x4,%ecx
+     409:	cmove  %rcx,%rax
+     40d:	movq   $0x1,(%r9,%rbx,8)
+---
+    1a91:	mov    %esi,%eax
+    1a93:	and    $0x3,%eax
+    1a96:	mov    $0x4,%ecx
+    1a9b:	cmovne %rax,%rcx
+    1a9f:	sub    %rcx,%rsi
+---
+== setcc(non-setb) ==
+      20:	movabs $0x3fffffffffffffc,%rdx
+      2a:	testb  $0x1,(%rcx)
+      2d:	sete   %al
+      30:	add    $0x3,%rdx
+---
+      30:	add    $0x3,%rdx
+      34:	cmp    %rdx,%r8
+      37:	seta   %dl
+      3a:	or     %al,%dl
+---
+     60a:	xor    %ecx,%ecx
+     60c:	test   %rdx,%rdx
+     60f:	setne  %cl
+     612:	mov    %rcx,0x18(%rsp)
+---
+    1857:	xor    %r10d,%r10d
+    185a:	test   %rdi,%rdi
+    185d:	sete   %r10b
+    1861:	xor    %r9,%r10
+---
+    18ca:	xor    %eax,%eax
+    18cc:	test   %rdx,%rdx
+    18cf:	setne  %al
+    18d2:	mov    %rax,0x18(%rsp)
+---
+    1b8a:	lea    0x0(,%rax,8),%rsi
+    1b92:	shr    $0x3d,%rax
+    1b96:	setne  %al
+    1b99:	test   %rsi,%rsi
+---
+    1b96:	setne  %al
+    1b99:	test   %rsi,%rsi
+    1b9c:	sete   %cl
+    1b9f:	or     %al,%cl
+---
+    1c4a:	lea    0x0(,%rax,8),%rsi
+    1c52:	shr    $0x3d,%rax
+    1c56:	setne  %al
+    1c59:	test   %rsi,%rsi
+---
+    1c56:	setne  %al
+    1c59:	test   %rsi,%rsi
+    1c5c:	sete   %cl
+    1c5f:	or     %al,%cl
+---

@@ -1,0 +1,55 @@
+== setcc contexts (non-setb) ==
+      1a:	mov    %rcx,%rbx
+      1d:	movabs $0x3fffffffffffffc,%rcx
+      27:	testb  $0x1,(%rdx)
+      2a:	sete   %al
+      2d:	add    $0x3,%rcx
+---
+      2a:	sete   %al
+      2d:	add    $0x3,%rcx
+      31:	cmp    %rcx,%rbx
+      34:	seta   %cl
+      37:	or     %al,%cl
+---
+     61a:	mov    0xd8(%rsp),%rax
+     622:	xor    %ecx,%ecx
+     624:	test   %rsi,%rsi
+     627:	setne  %cl
+     62a:	mov    %rcx,0x18(%rsp)
+---
+    1884:	or     %r10,%r9
+    1887:	xor    %r10d,%r10d
+    188a:	test   %rdi,%rdi
+    188d:	sete   %r10b
+    1891:	xor    %r9,%r10
+---
+    18f6:	jne    1870 <pfp58_divstep_carrier+0x1870>
+    18fc:	xor    %eax,%eax
+    18fe:	test   %rdx,%rdx
+    1901:	setne  %al
+    1904:	mov    %rax,0x18(%rsp)
+---
+    1bb5:	mov    0xe0(%rsp),%rax
+    1bbd:	lea    0x0(,%rax,8),%rsi
+    1bc5:	shr    $0x3d,%rax
+    1bc9:	setne  %al
+    1bcc:	test   %rsi,%rsi
+---
+    1bc5:	shr    $0x3d,%rax
+    1bc9:	setne  %al
+    1bcc:	test   %rsi,%rsi
+    1bcf:	sete   %cl
+    1bd2:	or     %al,%cl
+---
+    1c6b:	mov    0xe0(%rsp),%rax
+    1c73:	lea    0x0(,%rax,8),%rsi
+    1c7b:	shr    $0x3d,%rax
+    1c7f:	setne  %al
+    1c82:	test   %rsi,%rsi
+---
+    1c7b:	shr    $0x3d,%rax
+    1c7f:	setne  %al
+    1c82:	test   %rsi,%rsi
+    1c85:	sete   %cl
+    1c88:	or     %al,%cl
+---

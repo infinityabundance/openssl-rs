@@ -1,0 +1,16 @@
+HEAD=8dfb154081ef737fa1ef5e53f6b59b92dffca915
+tree_dirty=yes (pre-existing modifications present)
+8fc08a5d774a25bd9461d180e803eb331689049730f4c12c60d08b600e88eea1  artifacts/phase2/libcrypto.so.3
+705be2c53c96be1a48acf15ac859488b2ca5304cf2b58471f79d2737aafaf533  target/release/libopenssl_rs.a
+0d68d14ef513719ed867bdd3c0b16421426aab2db7af8779ad9330ecc46d87af  src/bn/divstep.rs
+89b7630616fc75024f4bb1857f9d0dc4b1c8bbbcebdcb721b9688f1e66fbed6e  src/bn/divstep/tests.rs
+8721f20a1079f688c7d2177aa0507a75ebc8a4cea622f4f8d4ab8db46c50d772  src/bn/blinding.rs
+497bd2601e547d6c605017eee05fd5f92cc461afd06799824e69548336c2ae68  src/bn/mod.rs
+--- our files in git status ---
+ M src/bn/blinding.rs
+ M src/bn/divstep.rs
+ M src/bn/divstep/tests.rs
+ M src/bn/mod.rs
+--- profile ---
+release: opt-level=3, codegen-units=16, overflow-checks=true, debug=0, no LTO
+ctgrind build: test profile overrides opt-level=3, cgu=16, debug-assertions=false, overflow-checks=true
