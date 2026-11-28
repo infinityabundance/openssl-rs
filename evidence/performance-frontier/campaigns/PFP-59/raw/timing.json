@@ -1,0 +1,109 @@
+{
+  "operations": {
+    "ecdsa-sign-p384": {
+      "after_ci95": [
+        2.7521,
+        2.7712
+      ],
+      "after_ratio": 2.762,
+      "authority_noise_floor": 0.0207,
+      "before_ci95": [
+        3.1851,
+        3.2168
+      ],
+      "before_ratio": 3.1911,
+      "median_us": {
+        "after": 1078.428,
+        "auth": 390.572,
+        "before": 1247.249
+      },
+      "reps": 15,
+      "speedup_before_over_after": 1.1554,
+      "status": "OK"
+    },
+    "ecdsa-sign-p521": {
+      "after_ci95": [
+        1.8615,
+        1.8693
+      ],
+      "after_ratio": 1.8674,
+      "authority_noise_floor": 0.0117,
+      "before_ci95": [
+        1.8569,
+        1.8675
+      ],
+      "before_ratio": 1.8656,
+      "median_us": {
+        "after": 1745.406,
+        "auth": 935.071,
+        "before": 1742.827
+      },
+      "reps": 15,
+      "speedup_before_over_after": 0.999,
+      "status": "OK"
+    },
+    "ecdsa-verify-p384": {
+      "after_ci95": [
+        2.385,
+        2.4062
+      ],
+      "after_ratio": 2.3997,
+      "authority_noise_floor": 0.0329,
+      "before_ci95": [
+        2.681,
+        2.7416
+      ],
+      "before_ratio": 2.718,
+      "median_us": {
+        "after": 791.431,
+        "auth": 330.2,
+        "before": 897.891
+      },
+      "reps": 15,
+      "speedup_before_over_after": 1.1326,
+      "status": "OK"
+    },
+    "ecdsa-verify-p521": {
+      "after_ci95": [
+        1.7373,
+        1.763
+      ],
+      "after_ratio": 1.7457,
+      "authority_noise_floor": 0.0587,
+      "before_ci95": [
+        1.732,
+        1.7547
+      ],
+      "before_ratio": 1.7449,
+      "median_us": {
+        "after": 1304.801,
+        "auth": 744.73,
+        "before": 1299.38
+      },
+      "reps": 15,
+      "speedup_before_over_after": 0.9996,
+      "status": "OK"
+    },
+    "ecdsa256": {
+      "after_ci95": [
+        12.7714,
+        12.8164
+      ],
+      "after_ratio": 12.7985,
+      "authority_noise_floor": 0.0102,
+      "before_ci95": [
+        12.9763,
+        13.0698
+      ],
+      "before_ratio": 13.0008,
+      "median_us": {
+        "after": 696.018,
+        "auth": 54.406,
+        "before": 709.083
+      },
+      "reps": 15,
+      "speedup_before_over_after": 1.0158,
+      "status": "OK"
+    }
+  }
+}

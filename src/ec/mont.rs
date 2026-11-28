@@ -22,8 +22,8 @@ use crate::bn::ctx::{
 };
 use crate::bn::exp::bn_mod_exp_mont_fixed_top;
 use crate::bn::mont::{
-    set_mersenne521_admission, BN_MONT_CTX_copy, BN_MONT_CTX_free, BN_MONT_CTX_new,
-    BN_MONT_CTX_set, BN_from_montgomery, BN_mod_mul_montgomery, BN_to_montgomery, MontCtx,
+    set_special_reduction, BN_MONT_CTX_copy, BN_MONT_CTX_free, BN_MONT_CTX_new, BN_MONT_CTX_set,
+    BN_from_montgomery, BN_mod_mul_montgomery, BN_to_montgomery, MontCtx, SpecialReduction,
 };
 use crate::ec::ecdh_ossl::ossl_ecdh_simple_compute_key;
 use crate::ec::ecdsa_ossl::{
@@ -175,7 +175,7 @@ pub(crate) unsafe fn mont_field_data(group: *const EcGroup) -> Option<*mut MontC
     }
 }
 
-/// Set or clear the P-521 Mersenne admission flag on the group's Montgomery
+/// Set or clear the specialised-reduction admission on the group's Montgomery
 /// field context.
 ///
 /// The write is gated by [`mont_field_data`], so a group whose method is not
@@ -186,13 +186,13 @@ pub(crate) unsafe fn mont_field_data(group: *const EcGroup) -> Option<*mut MontC
 /// # Safety
 ///
 /// `group` is NULL or a live `EC_GROUP`.
-pub(crate) unsafe fn set_group_mersenne521_admission(group: *mut EcGroup, admitted: bool) {
+pub(crate) unsafe fn set_group_special_reduction(group: *mut EcGroup, admitted: SpecialReduction) {
     // SAFETY: the caller guarantees `group` is NULL or live, and
     // `mont_field_data` establishes the slot's type from the method identity
     // before the write reaches it.
     unsafe {
         if let Some(mont) = mont_field_data(group) {
-            set_mersenne521_admission(mont, admitted);
+            set_special_reduction(mont, admitted);
         }
     }
 }

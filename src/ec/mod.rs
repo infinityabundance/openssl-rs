@@ -97,6 +97,8 @@ pub mod kdf;
 pub mod key;
 pub mod kmeth;
 pub(crate) mod p256;
+// PFP-59 — the P-384 exact-group admission predicate for the Solinas fast arm.
+pub(crate) mod p384;
 pub(crate) mod p521;
 // Phase 8.8's `crypto/ec/ec_pmeth.c` (D355): the `EC` `EVP_PKEY_METHOD` object and its callbacks,
 // published as `PMETH_STANDARD_METHODS`' row for `EVP_PKEY_EC`.

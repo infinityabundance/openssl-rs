@@ -1,0 +1,7 @@
+PFP-59 paired timing: median of per-repetition ratios (arm/authority), reps=15
+operation                before    after  speedup authfloor after_CI_lo after_CI_hi
+ecdsa-sign-p384          3.1911   2.7620   1.1554   0.0207     2.7521     2.7712
+ecdsa-sign-p521          1.8656   1.8674   0.9990   0.0117     1.8615     1.8693
+ecdsa-verify-p384        2.7180   2.3997   1.1326   0.0329      2.385     2.4062
+ecdsa-verify-p521        1.7449   1.7457   0.9996   0.0587     1.7373      1.763
+ecdsa256                13.0008  12.7985   1.0158   0.0102    12.7714    12.8164

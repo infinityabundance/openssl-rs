@@ -1,0 +1,5 @@
+# PFP-59 dispatch predicate manual adjudication (solinas384_active).
+# addr	class	reason
+2a6256	PUBLIC_ADMISSION_FLAG	`cmpb $0x2,0x7c(%rdi)` is `mc.special == Solinas384`; the flag is group state, not secret data
+2a6266	PUBLIC_CONSTANT_N0	`cmp $0x100000001,0x60(%rdi)` compares the prepared n0 word with the public P-384 constant
+2a626d	PUBLIC_LENGTH	`cmpq $0x6,0x28(%rdi)` is the public limb-width check

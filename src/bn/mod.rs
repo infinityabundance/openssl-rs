@@ -77,6 +77,9 @@ pub mod primes;
 pub mod rand;
 pub mod recp;
 pub(crate) mod rsa_fips186_4;
+// PFP-59 — the P-384 Solinas Montgomery reduction arm. Crate-internal; the fast
+// kernel is reached only through the admission flag established by the EC group.
+pub(crate) mod solinas;
 // Historical alias for the secret-bearing heap owner, which now lives in
 // `runtime::secret` so the storage policy does not depend on BN (T26). The
 // implementation cleanses on `Drop`, so an early `?` return cannot free staged

@@ -1,0 +1,7 @@
+symbols=1
+jcc/PUBLIC_ADMISSION_FLAG=1
+jcc/PUBLIC_CONSTANT_N0=1
+jcc/PUBLIC_LENGTH=1
+setcc/CARRY_CAPTURE=1
+review=0
+verdict=PASS

@@ -1,0 +1,5 @@
+symbol	addr	kind	insn	preceding_cmp	classification
+openssl_rs::bn::mont::solinas384_active	2a6256	jcc	jne    2a62ac <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn4mont17solinas384_active+0x5c>	-	PUBLIC_ADMISSION_FLAG	`cmpb $0x2,0x7c(%rdi)` is `mc.special == Solinas384`; the flag is group state, not secret data
+openssl_rs::bn::mont::solinas384_active	2a6266	jcc	jne    2a62ac <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn4mont17solinas384_active+0x5c>	cmp    %rcx,0x60(%rdi)	PUBLIC_CONSTANT_N0	`cmp $0x100000001,0x60(%rdi)` compares the prepared n0 word with the public P-384 constant
+openssl_rs::bn::mont::solinas384_active	2a626d	jcc	jne    2a62ac <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn4mont17solinas384_active+0x5c>	cmp    %rcx,0x60(%rdi)	PUBLIC_LENGTH	`cmpq $0x6,0x28(%rdi)` is the public limb-width check
+openssl_rs::bn::mont::solinas384_active	2a62a9	setcc	sete   %al	cmp    %rcx,0x60(%rdi)	CARRY_CAPTURE	materialises carry/borrow as data

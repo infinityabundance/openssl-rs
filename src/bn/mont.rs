@@ -89,6 +89,23 @@ enum MontBackend {
     TestMismatch,
 }
 
+/// The specialised reduction a prepared domain has been admitted for.
+///
+/// This is the PFP-11 admission flag, generalised to carry *which* specialised
+/// arm the group's exact identity selected. There is one flag and one setter;
+/// `None` (a fresh context, a re-prepared modulus, or a group whose identity
+/// predicate refused) keeps the generic kernel.
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub(crate) enum SpecialReduction {
+    /// No specialised arm: the generic Montgomery reduction serves.
+    None,
+    /// `p = 2^521 - 1`, the Mersenne word REDC of [`crate::bn::mersenne`].
+    Mersenne521,
+    /// `p = 2^384 - 2^128 - 2^96 + 2^32 - 1`, the Solinas word REDC of
+    /// [`crate::bn::solinas`].
+    Solinas384,
+}
+
 /// The authority's `BN_MONT_CTX`, and the crate's prepared Montgomery domain.
 ///
 /// The field names follow `crypto/bn/bn_local.h` so the structure stays reviewable
@@ -125,13 +142,13 @@ pub struct MontCtx {
     radix_bits: u32,
     /// The reduction kernel the residues were prepared for.
     backend: MontBackend,
-    /// Admission for the P-521 Mersenne REDC fast arm. It is cleared by every
-    /// modulus (re)preparation and by `BN_MONT_CTX_copy`'s copy of this field,
-    /// and can only be set by the EC group's exact-identity predicate at the
-    /// point the generator and curve are established. A plain `bool` here has
-    /// no ABI consequence: `MontCtx` is an opaque, Rust-owned `Box`, not
-    /// `#[repr(C)]`, and no consumer sees its layout.
-    mersenne521: bool,
+    /// Admission for a specialised reduction arm. It is cleared by every
+    /// modulus (re)preparation and travels with `BN_MONT_CTX_copy`, and can
+    /// only be set by the EC group's exact-identity predicate at the point the
+    /// generator and curve are established. A plain enum here has no ABI
+    /// consequence: `MontCtx` is an opaque, Rust-owned `Box`, not `#[repr(C)]`,
+    /// and no consumer sees its layout.
+    special: SpecialReduction,
 }
 
 // The cached-context slot is a caller-owned `*mut MontCtx` in the ABI structs
@@ -208,7 +225,7 @@ fn new_mont() -> *mut MontCtx {
         flags: 0,
         radix_bits: 0,
         backend: MontBackend::PortableRedc,
-        mersenne521: false,
+        special: SpecialReduction::None,
     })
     .unwrap_or(core::ptr::null_mut())
 }
@@ -309,7 +326,7 @@ fn mont_set(mont: &mut MontCtx, m: &[Limb]) -> bool {
     mont.backend = MontBackend::PortableRedc;
     // A new modulus invalidates any prior admission; only the EC group's
     // exact-identity predicate may re-establish it.
-    mont.mersenne521 = false;
+    mont.special = SpecialReduction::None;
     mont.rr = rr;
     mont.one = one;
     true
@@ -333,16 +350,16 @@ impl MontCtx {
     }
 }
 
-/// Record `admitted` on the `MontCtx` behind `mont`.
+/// Record the specialised reduction `admitted` on the `MontCtx` behind `mont`.
 ///
 /// # Safety
 ///
 /// `mont` must be null or a live, uniquely-owned `MontCtx` — the group's
 /// `field_data1`, which the caller's group contract owns.
-pub(crate) unsafe fn set_mersenne521_admission(mont: *mut MontCtx, admitted: bool) {
+pub(crate) unsafe fn set_special_reduction(mont: *mut MontCtx, admitted: SpecialReduction) {
     // SAFETY: the caller's contract.
     if let Some(mc) = unsafe { as_mut_mont(mont) } {
-        mc.mersenne521 = admitted;
+        mc.special = admitted;
     }
 }
 
@@ -352,9 +369,31 @@ pub(crate) unsafe fn set_mersenne521_admission(mont: *mut MontCtx, admitted: boo
 ///
 /// `mont` must be null or a live `MontCtx`.
 #[cfg(test)]
+pub(crate) unsafe fn special_reduction(mont: *const MontCtx) -> SpecialReduction {
+    // SAFETY: the caller's contract.
+    unsafe { as_ref_mont(mont) }.map_or(SpecialReduction::None, |mc| mc.special)
+}
+
+/// The test-only P-521 half of the admission read side.
+///
+/// # Safety
+///
+/// `mont` must be null or a live `MontCtx`.
+#[cfg(test)]
 pub(crate) unsafe fn mersenne521_admission(mont: *const MontCtx) -> bool {
     // SAFETY: the caller's contract.
-    unsafe { as_ref_mont(mont) }.is_some_and(|mc| mc.mersenne521)
+    (unsafe { special_reduction(mont) }) == SpecialReduction::Mersenne521
+}
+
+/// The test-only P-384 half of the admission read side.
+///
+/// # Safety
+///
+/// `mont` must be null or a live `MontCtx`.
+#[cfg(test)]
+pub(crate) unsafe fn solinas384_admission(mont: *const MontCtx) -> bool {
+    // SAFETY: the caller's contract.
+    (unsafe { special_reduction(mont) }) == SpecialReduction::Solinas384
 }
 
 /// Whether the prepared domain is admitted **and** still holds exactly the
@@ -362,9 +401,18 @@ pub(crate) unsafe fn mersenne521_admission(mont: *const MontCtx) -> bool {
 /// this is defence in depth; the modulus compare keeps a stale or mis-set flag
 /// from reaching the specialized kernel.
 fn mersenne521_active(mc: &MontCtx) -> bool {
-    mc.mersenne521
+    mc.special == SpecialReduction::Mersenne521
         && mc.n0[0] == crate::bn::mersenne::P521_N0
         && crate::bn::mersenne::is_p521(&mc.n)
+}
+
+/// Whether the prepared domain is admitted **and** still holds exactly the
+/// P-384 modulus with `n0 = 2^32 + 1`. As above, the modulus compare is
+/// defence in depth against a stale or mis-set flag.
+fn solinas384_active(mc: &MontCtx) -> bool {
+    mc.special == SpecialReduction::Solinas384
+        && mc.n0[0] == crate::bn::solinas::P384_N0
+        && crate::bn::solinas::is_p384(&mc.n)
 }
 
 /// Whether `mc` is a prepared domain for exactly `md`.
@@ -631,7 +679,7 @@ pub unsafe extern "C" fn BN_MONT_CTX_copy(to: *mut MontCtx, from: *mut MontCtx) 
         // The source's admission travels with the copy: `ossl_ec_GFp_mont_group_copy`
         // copies the curve, generator, order and cofactor first, so an admitted
         // source is an admitted destination and a refused one stays refused.
-        dst.mersenne521 = src.mersenne521;
+        dst.special = src.special;
         to
     })
 }
@@ -761,9 +809,10 @@ pub unsafe extern "C" fn BN_to_montgomery(
             let Some(padded) = pad_to(&ad, mc.n.len()) else {
                 return 0;
             };
-            let fast = mersenne521_active(mc);
-            let reduced = if fast {
+            let reduced = if mersenne521_active(mc) {
                 crate::bn::mersenne::mont_mul_p521_fallible(&padded, &mc.rr)
+            } else if solinas384_active(mc) {
+                crate::bn::solinas::mont_mul_p384_fallible(&padded, &mc.rr)
             } else {
                 mont_mul_fallible(&padded, &mc.rr, &mc.n, mc.n0[0])
             };
@@ -811,10 +860,12 @@ pub unsafe extern "C" fn BN_from_montgomery(
         if mc.n.is_empty() {
             return 0;
         }
-        // The specialized REDC is valid for `T < p·R = p·2^576`; a nine-limb
-        // input is below `2^576 < p·R`. Anything wider keeps the general path.
+        // The specialized REDC is valid for `T < p·R`; a six-limb P-384 input is
+        // below `2^384 = R < p·R`. A wider input keeps the general path.
         let reduced = if mersenne521_active(mc) && ad.len() <= crate::bn::mersenne::P521_LIMBS {
             crate::bn::mersenne::mont_reduce_p521_fallible(&ad)
+        } else if solinas384_active(mc) && ad.len() <= crate::bn::solinas::P384_LIMBS {
+            crate::bn::solinas::mont_reduce_p384_fallible(&ad)
         } else {
             mont_reduce(&ad, &mc.n, mc.n0[0])
         };
@@ -872,9 +923,10 @@ pub unsafe extern "C" fn BN_mod_mul_montgomery(
             let Some(pb) = pad_to(&bd, mc.n.len()) else {
                 return 0;
             };
-            let fast = mersenne521_active(mc);
-            let reduced = if fast {
+            let reduced = if mersenne521_active(mc) {
                 crate::bn::mersenne::mont_mul_p521_fallible(&pa, &pb)
+            } else if solinas384_active(mc) {
+                crate::bn::solinas::mont_mul_p384_fallible(&pa, &pb)
             } else {
                 mont_mul_fallible(&pa, &pb, &mc.n, mc.n0[0])
             };
@@ -2402,6 +2454,109 @@ mod tests {
                 BN_free(b);
             }
             BN_MONT_CTX_free(mont);
+        }
+    }
+
+    /// PFP-56: each ladder-width arm resolves to a pinned iteration count, so the
+    /// classification of a call site cannot drift. `Modulus` stays at the modulus'
+    /// limb count even for a one-limb exponent (the conservative default for secret
+    /// exponents); `Policy` is the declared policy widened to the ingestion-bound
+    /// count; `PublicExponent` is the exponent's own whole-limb length.
+    #[test]
+    fn ladder_width_arms_resolve_to_pinned_iteration_counts() {
+        use crate::bn::arith::ladder_probe;
+
+        // A 32-limb odd modulus (2048 bits) and a one-limb public exponent.
+        let mut m_limbs = vec![0u64; 32];
+        m_limbs[0] = 1;
+        m_limbs[31] = 1u64 << 63;
+        // SAFETY: `new_owned`/`BN_new` allocate and copy their arguments; the
+        // pointers below are the test's own and are released here.
+        unsafe {
+            let m = new_owned(m_limbs, 0);
+            let a = word(2);
+            let e = word(65537);
+            // The ladder is selected only for a `BN_FLG_CONSTTIME` operand, exactly
+            // as the authority's flag dispatch works; mark the modulus.
+            // SAFETY: `m` is live and the flag is a plain value.
+            BN_set_flags(m, BN_FLG_CONSTTIME);
+
+            let observe = |width: LadderWidth| {
+                ladder_probe::reset();
+                let r = BN_new();
+                assert_eq!(
+                    bn_mod_exp_mont_impl(r, a, e, m, core::ptr::null_mut(), width),
+                    1
+                );
+                BN_free(r);
+                (ladder_probe::ladder_bits(), ladder_probe::vartime_bits())
+            };
+
+            assert_eq!(
+                observe(LadderWidth::Modulus),
+                (vec![2048], vec![]),
+                "the C entry points keep the modulus width regardless of exponent length"
+            );
+            assert_eq!(
+                observe(LadderWidth::Policy {
+                    policy_limbs: 4,
+                    stored_exponent_limbs: 2,
+                }),
+                (vec![256], vec![]),
+                "an in-policy DH key runs the declared policy width"
+            );
+            assert_eq!(
+                observe(LadderWidth::Policy {
+                    policy_limbs: 4,
+                    stored_exponent_limbs: 38,
+                }),
+                (vec![2432], vec![]),
+                "an out-of-policy key keeps the ingestion-bound width"
+            );
+            assert_eq!(
+                observe(LadderWidth::PublicExponent),
+                (vec![64], vec![]),
+                "a public one-limb exponent runs one limb, not the modulus"
+            );
+
+            BN_free(a);
+            BN_free(e);
+            BN_free(m);
+        }
+    }
+
+    /// PFP-56: without a `BN_FLG_CONSTTIME` operand, `BN_mod_exp_mont` keeps the
+    /// variable-time core, whose loop bound is exactly the exponent's bit length.
+    /// This is the schedule every public-only site (RSA verify/encrypt, DSA
+    /// verify, FFC generation/validation, Miller-Rabin) selects in production.
+    #[test]
+    fn an_unflagged_public_exponent_uses_the_exponent_bit_length() {
+        use crate::bn::arith::ladder_probe;
+
+        let mut m_limbs = vec![0u64; 32];
+        m_limbs[0] = 1;
+        m_limbs[31] = 1u64 << 63;
+        // SAFETY: every object is this test's own and live.
+        unsafe {
+            let m = new_owned(m_limbs, 0);
+            let a = word(2);
+            let e = word(65537);
+            let r = BN_new();
+            ladder_probe::reset();
+            assert_eq!(
+                BN_mod_exp_mont(r, a, e, m, core::ptr::null_mut(), core::ptr::null_mut()),
+                1
+            );
+            assert_eq!(ladder_probe::ladder_bits(), Vec::<usize>::new());
+            assert_eq!(
+                ladder_probe::vartime_bits(),
+                vec![17],
+                "e = 65537 is 17 bits; no modulus-width ladder is entered"
+            );
+            BN_free(r);
+            BN_free(a);
+            BN_free(e);
+            BN_free(m);
         }
     }
 }

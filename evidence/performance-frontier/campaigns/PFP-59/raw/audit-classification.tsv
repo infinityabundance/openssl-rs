@@ -1,0 +1,62 @@
+symbol	addr	kind	insn	preceding_cmp	classification
+openssl_rs::bn::solinas::redc_p384_in_place	458a84	jcc	jb     458de1 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn7solinas18redc_p384_in_place+0x361>	cmp    $0xd,%rsi	PUBLIC_BOUND	
+openssl_rs::bn::solinas::redc_p384_in_place	458ade	jcc	je     458cd7 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn7solinas18redc_p384_in_place+0x257>	cmp    $0x6,%r11	PUBLIC_BOUND	
+openssl_rs::bn::solinas::redc_p384_in_place	458b07	setcc	setb   %r10b	cmp    $0x6,%r11	CARRY_CAPTURE	materialises carry/borrow as data
+openssl_rs::bn::solinas::redc_p384_in_place	458b13	jcc	je     458b60 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn7solinas18redc_p384_in_place+0xe0>	cmp    $0x5,%r11	PUBLIC_BOUND	
+openssl_rs::bn::solinas::redc_p384_in_place	458b29	jcc	je     458b63 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn7solinas18redc_p384_in_place+0xe3>	cmp    %rdx,%rax	PUBLIC_SIZE_PTR	cmp %rdx,%rax; %rdx = 8*slice_len from the entry `lea 0x0(,%rsi,8)`, %rax = 8*index+0x40
+openssl_rs::bn::solinas::redc_p384_in_place	458b35	setcc	setb   %al	cmp    %rdx,%rax	CARRY_CAPTURE	materialises carry/borrow as data
+openssl_rs::bn::solinas::redc_p384_in_place	458b42	jcc	je     458b50 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn7solinas18redc_p384_in_place+0xd0>	cmp    $0x4,%rbp	PUBLIC_BOUND	
+openssl_rs::bn::solinas::redc_p384_in_place	458b4e	jcc	jne    458b30 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn7solinas18redc_p384_in_place+0xb0>	test   %r11,%r11	PUBLIC_LOOP	%r11 is the remaining-count counter decremented by 8 at 458ada; fixed carry range
+openssl_rs::bn::solinas::redc_p384_in_place	458bae	setcc	setb   %al	cmp    %rbp,%r12	CARRY_CAPTURE	materialises carry/borrow as data
+openssl_rs::bn::solinas::redc_p384_in_place	458bbc	jcc	je     458ad0 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn7solinas18redc_p384_in_place+0x50>	cmp    %rdx,%rax	PUBLIC_SIZE_PTR	cmp %rdx,%rax; same slice-end pointer comparison
+openssl_rs::bn::solinas::redc_p384_in_place	458bc7	setcc	setb   %al	cmp    %rdx,%rax	CARRY_CAPTURE	materialises carry/borrow as data
+openssl_rs::bn::solinas::redc_p384_in_place	458bd4	jcc	je     458ad0 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn7solinas18redc_p384_in_place+0x50>	cmp    $0x7,%rbx	PUBLIC_BOUND	
+openssl_rs::bn::solinas::redc_p384_in_place	458be1	jcc	je     458ad0 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn7solinas18redc_p384_in_place+0x50>	cmp    %rdx,%rax	PUBLIC_SIZE_PTR	same slice-end pointer comparison
+openssl_rs::bn::solinas::redc_p384_in_place	458bec	setcc	setb   %al	cmp    %rdx,%rax	CARRY_CAPTURE	materialises carry/borrow as data
+openssl_rs::bn::solinas::redc_p384_in_place	458bf9	jcc	je     458ad0 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn7solinas18redc_p384_in_place+0x50>	cmp    $0x6,%rbx	PUBLIC_BOUND	
+openssl_rs::bn::solinas::redc_p384_in_place	458c06	jcc	je     458ad0 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn7solinas18redc_p384_in_place+0x50>	cmp    %rdx,%rax	PUBLIC_SIZE_PTR	same slice-end pointer comparison
+openssl_rs::bn::solinas::redc_p384_in_place	458c11	setcc	setb   %al	cmp    %rdx,%rax	CARRY_CAPTURE	materialises carry/borrow as data
+openssl_rs::bn::solinas::redc_p384_in_place	458c1e	jcc	je     458ad0 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn7solinas18redc_p384_in_place+0x50>	cmp    $0x5,%rbx	PUBLIC_BOUND	
+openssl_rs::bn::solinas::redc_p384_in_place	458c2b	jcc	je     458ad0 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn7solinas18redc_p384_in_place+0x50>	cmp    %rdx,%rax	PUBLIC_SIZE_PTR	same slice-end pointer comparison
+openssl_rs::bn::solinas::redc_p384_in_place	458c36	setcc	setb   %al	cmp    %rdx,%rax	CARRY_CAPTURE	materialises carry/borrow as data
+openssl_rs::bn::solinas::redc_p384_in_place	458c43	jcc	je     458ad0 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn7solinas18redc_p384_in_place+0x50>	cmp    $0x4,%rbx	PUBLIC_BOUND	
+openssl_rs::bn::solinas::redc_p384_in_place	458c50	jcc	je     458ad0 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn7solinas18redc_p384_in_place+0x50>	cmp    %rdx,%rax	PUBLIC_SIZE_PTR	same slice-end pointer comparison
+openssl_rs::bn::solinas::redc_p384_in_place	458c5b	setcc	setb   %al	cmp    %rdx,%rax	CARRY_CAPTURE	materialises carry/borrow as data
+openssl_rs::bn::solinas::redc_p384_in_place	458c68	jcc	je     458ad0 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn7solinas18redc_p384_in_place+0x50>	cmp    $0x3,%rbx	PUBLIC_BOUND	
+openssl_rs::bn::solinas::redc_p384_in_place	458c75	jcc	je     458ad0 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn7solinas18redc_p384_in_place+0x50>	cmp    %rdx,%rax	PUBLIC_SIZE_PTR	same slice-end pointer comparison
+openssl_rs::bn::solinas::redc_p384_in_place	458c80	setcc	setb   %al	cmp    %rdx,%rax	CARRY_CAPTURE	materialises carry/borrow as data
+openssl_rs::bn::solinas::redc_p384_in_place	458c8d	jcc	je     458ad0 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn7solinas18redc_p384_in_place+0x50>	cmp    $0x2,%rbx	PUBLIC_BOUND	
+openssl_rs::bn::solinas::redc_p384_in_place	458c9a	jcc	je     458ad0 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn7solinas18redc_p384_in_place+0x50>	cmp    %rdx,%rax	PUBLIC_SIZE_PTR	same slice-end pointer comparison
+openssl_rs::bn::solinas::redc_p384_in_place	458ca5	setcc	setb   %al	cmp    %rdx,%rax	CARRY_CAPTURE	materialises carry/borrow as data
+openssl_rs::bn::solinas::redc_p384_in_place	458cb2	jcc	je     458ad0 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn7solinas18redc_p384_in_place+0x50>	cmp    $0x1,%rbx	PUBLIC_BOUND	
+openssl_rs::bn::solinas::redc_p384_in_place	458cbf	jcc	je     458ad0 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn7solinas18redc_p384_in_place+0x50>	cmp    %rdx,%rax	PUBLIC_SIZE_PTR	same slice-end pointer comparison
+openssl_rs::bn::solinas::redc_p384_in_place	458ccc	setcc	setb   %al	cmp    %rdx,%rax	CARRY_CAPTURE	materialises carry/borrow as data
+openssl_rs::bn::solinas::redc_p384_in_place	458cf9	setcc	setb   %al	cmp    %rbp,%r9	CARRY_CAPTURE	materialises carry/borrow as data
+openssl_rs::bn::solinas::redc_p384_in_place	458d09	setcc	setb   %bl	cmp    %r8,%r10	CARRY_CAPTURE	materialises carry/borrow as data
+openssl_rs::bn::solinas::redc_p384_in_place	458d1c	setcc	setne  %al	cmp    %r8,%r10	CARRY_CAPTURE	materialises carry/borrow as data
+openssl_rs::bn::solinas::redc_p384_in_place	458d2d	setcc	setb   %bl	cmp    %r8,%r10	CARRY_CAPTURE	materialises carry/borrow as data
+openssl_rs::bn::solinas::redc_p384_in_place	458d3f	setcc	setne  %r12b	cmp    %r8,%r10	CARRY_CAPTURE	materialises carry/borrow as data
+openssl_rs::bn::solinas::redc_p384_in_place	458d46	setcc	setb   %al	cmp    %r8,%r10	CARRY_CAPTURE	materialises carry/borrow as data
+openssl_rs::bn::solinas::redc_p384_in_place	458d5b	setcc	sete   %sil	cmp    %r8,%r10	CARRY_CAPTURE	materialises carry/borrow as data
+openssl_rs::bn::solinas::redc_p384_in_place	458d67	setcc	setae  %bpl	cmp    %r8,%r10	CARRY_CAPTURE	materialises carry/borrow as data
+openssl_rs::bn::solinas::redc_p384_in_place	458de5	setcc	setae  %al	cmp    $0xd,%rsi	CARRY_CAPTURE	materialises carry/borrow as data
+openssl_rs::bn::solinas::mont_mul_p384_fallible	458e09	jcc	je     458e24 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn7solinas22mont_mul_p384_fallible+0x34>	-	PUBLIC_LENGTH	`xor $0x6,%rdx; xor $0x6,%r8; or` tests a.len()==6 && b.len()==6 (public widths)
+openssl_rs::bn::solinas::mont_mul_p384_fallible	458e55	jcc	je     458e5d <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn7solinas22mont_mul_p384_fallible+0x6d>	-	PUBLIC_ALLOC	`cmpb $0x0,0x10(%rsp)` after RawVec::finish_grow; allocation success, not a limb value
+openssl_rs::bn::solinas::mont_mul_p384_fallible	458ed4	setcc	setb   %cl	-	CARRY_CAPTURE	materialises carry/borrow as data
+openssl_rs::bn::solinas::mont_mul_p384_fallible	458ef3	setcc	setb   %cl	-	CARRY_CAPTURE	materialises carry/borrow as data
+openssl_rs::bn::solinas::mont_mul_p384_fallible	458f0f	setcc	setb   %r15b	-	CARRY_CAPTURE	materialises carry/borrow as data
+openssl_rs::bn::solinas::mont_mul_p384_fallible	458f2b	setcc	setb   %cl	-	CARRY_CAPTURE	materialises carry/borrow as data
+openssl_rs::bn::solinas::mont_mul_p384_fallible	458f3f	setcc	setb   %bl	-	CARRY_CAPTURE	materialises carry/borrow as data
+openssl_rs::bn::solinas::mont_mul_p384_fallible	458f64	jcc	jne    458eb0 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn7solinas22mont_mul_p384_fallible+0xc0>	cmp    $0x6,%r13	PUBLIC_BOUND	
+openssl_rs::bn::solinas::mont_mul_p384_fallible	458f79	jcc	jne    458fe5 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn7solinas22mont_mul_p384_fallible+0x1f5>	test   %al,%al	PUBLIC_STRUCT	test %al,%al on redc's return, which depends only on the public scratch length
+openssl_rs::bn::solinas::mont_mul_p384_fallible	458fc7	jcc	jne    458f90 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn7solinas22mont_mul_p384_fallible+0x1a0>	cmp    $0x6f,%rax	PUBLIC_BOUND	
+openssl_rs::bn::solinas::mont_mul_p384_fallible	45900c	jcc	jne    458f7b <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn7solinas22mont_mul_p384_fallible+0x18b>	cmp    $0x6f,%rax	PUBLIC_BOUND	
+openssl_rs::bn::solinas::mont_mul_p384_fallible	459092	jcc	jne    45905b <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn7solinas22mont_mul_p384_fallible+0x26b>	cmp    $0x6f,%rax	PUBLIC_BOUND	
+openssl_rs::bn::solinas::mont_reduce_p384_fallible	4590af	jcc	jbe    4590c7 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn7solinas25mont_reduce_p384_fallible+0x27>	cmp    $0x6,%rdx	PUBLIC_BOUND	
+openssl_rs::bn::solinas::mont_reduce_p384_fallible	4590f4	jcc	je     459102 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn7solinas25mont_reduce_p384_fallible+0x62>	cmp    $0x6,%rdx	PUBLIC_BOUND	
+openssl_rs::bn::solinas::mont_reduce_p384_fallible	459151	jcc	jne    4591b4 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn7solinas25mont_reduce_p384_fallible+0x114>	test   %al,%al	PUBLIC_STRUCT	test %al,%al on redc's return, which depends only on the public scratch length
+openssl_rs::bn::solinas::mont_reduce_p384_fallible	459197	jcc	jne    459160 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn7solinas25mont_reduce_p384_fallible+0xc0>	cmp    $0x6f,%rax	PUBLIC_BOUND	
+openssl_rs::bn::solinas::mont_reduce_p384_fallible	4591d8	jcc	jne    459153 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn7solinas25mont_reduce_p384_fallible+0xb3>	cmp    $0x6f,%rax	PUBLIC_BOUND	
+openssl_rs::bn::solinas::mont_reduce_p384_fallible	45925a	jcc	jne    459223 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn7solinas25mont_reduce_p384_fallible+0x183>	cmp    $0x6f,%rax	PUBLIC_BOUND	
+openssl_rs::bn::solinas::is_p384	459274	jcc	jne    4592b0 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2bn7solinas7is_p384+0x40>	cmp    $0x6,%rsi	PUBLIC_BOUND	
+openssl_rs::bn::solinas::is_p384	4592ac	setcc	sete   %al	cmp    $0x6,%rsi	CARRY_CAPTURE	materialises carry/borrow as data

@@ -1,0 +1,16 @@
+# PFP-59 manual adjudication of the register-vs-register REVIEW rows.
+# addr	class	reason
+458b29	PUBLIC_SIZE_PTR	cmp %rdx,%rax; %rdx = 8*slice_len from the entry `lea 0x0(,%rsi,8)`, %rax = 8*index+0x40
+458b4e	PUBLIC_LOOP	%r11 is the remaining-count counter decremented by 8 at 458ada; fixed carry range
+458bbc	PUBLIC_SIZE_PTR	cmp %rdx,%rax; same slice-end pointer comparison
+458be1	PUBLIC_SIZE_PTR	same slice-end pointer comparison
+458c06	PUBLIC_SIZE_PTR	same slice-end pointer comparison
+458c2b	PUBLIC_SIZE_PTR	same slice-end pointer comparison
+458c50	PUBLIC_SIZE_PTR	same slice-end pointer comparison
+458c75	PUBLIC_SIZE_PTR	same slice-end pointer comparison
+458c9a	PUBLIC_SIZE_PTR	same slice-end pointer comparison
+458cbf	PUBLIC_SIZE_PTR	same slice-end pointer comparison
+458e09	PUBLIC_LENGTH	`xor $0x6,%rdx; xor $0x6,%r8; or` tests a.len()==6 && b.len()==6 (public widths)
+458e55	PUBLIC_ALLOC	`cmpb $0x0,0x10(%rsp)` after RawVec::finish_grow; allocation success, not a limb value
+458f79	PUBLIC_STRUCT	test %al,%al on redc's return, which depends only on the public scratch length
+459151	PUBLIC_STRUCT	test %al,%al on redc's return, which depends only on the public scratch length

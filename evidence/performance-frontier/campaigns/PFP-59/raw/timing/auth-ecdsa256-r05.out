@@ -1,0 +1,1 @@
+RESULT ecdsa256 mode=prepared median_us=54.503 min_us=54.358 max_us=55.114 spread=0.0139 iters=100 runs=5

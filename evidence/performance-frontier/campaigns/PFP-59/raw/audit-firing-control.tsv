@@ -1,0 +1,3 @@
+symbol	addr	kind	insn	preceding_cmp	classification
+pfp59_audit_canary	4	jcc	je     1e <pfp59_audit_canary+0x1e>	-	REVIEW	
+pfp59_audit_canary	6	cmov	cmovs  %rdi,%rax	cmp    %rsi,%rdi	REVIEW	

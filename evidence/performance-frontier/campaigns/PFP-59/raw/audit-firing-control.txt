@@ -1,0 +1,5 @@
+symbols=1
+cmov/REVIEW=1
+jcc/REVIEW=1
+review=2
+verdict=STOP
