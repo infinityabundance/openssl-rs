@@ -4,13 +4,13 @@
  "crate": "openssl-rs",
  "version": "0.0.51",
  "registry": "crates-io",
- "status": "PENDING",
+ "status": "PUBLISHED",
  "source_identity": {
-  "commit": "9bc9c387f8e3380fcbaa180148023be80ddd4885",
-  "commit_subject": "Queues: the build does build, and that premise is withdrawn",
-  "candidate_commit": "9bc9c387f8e3380fcbaa180148023be80ddd4885",
-  "tag": null,
-  "note": "PRE-PUBLISH. The candidate is HEAD 9bc9c387 plus the uncommitted 0.0.51 version bump, four pre-existing bn tests and the regenerated documentation. The packaging-tree digest of src/, Cargo.toml, Cargo.lock and build.rs is 9b72d872acd6b2a2f2984362b63d01c4d83af4c63f1442ab97facab0dd05b2e8, identical to the tree the install artefacts were built from (atlas-refresh/build-0.0.51.json). No tag exists and no commit contains these bytes, so the publisher must commit exactly this tree or reissue both receipts."
+  "commit": "a0aca565",
+  "commit_subject": "PFP-73 + release 0.0.51: restrict the divstep domain, and rebuild the docs",
+  "candidate_commit": "a0aca565",
+  "tag": "v0.0.51",
+  "note": "PUBLISHED from commit a0aca565, tag v0.0.51. The packaging tree is that commit: the 0.0.51 version bump, the PFP-73 divstep-domain restriction and its four tests, and the regenerated documentation were all committed before the upload, so the bytes published are the bytes in the repository. The packaging-tree digest of src/, Cargo.toml, Cargo.lock and build.rs is 9b72d872acd6b2a2f2984362b63d01c4d83af4c63f1442ab97facab0dd05b2e8, identical to the tree the install artefacts were built from (atlas-refresh/build-0.0.51.json)."
  },
  "artefacts": {
   "libcrypto.so.3": "6db37244c961585ce25e2da80575d22cd2734f73668cb0224aeab96238900299",
@@ -20,19 +20,19 @@
   "phase2_courts": "11/11 passed on that rebuild; dynamic export counts unchanged (libcrypto 5906, libssl 608)"
  },
  "packaging": {
-  "status": "PENDING",
-  "files": null,
-  "compressed_bytes": null,
-  "crate_sha256": "PENDING",
+  "status": "PUBLISHED",
+  "files": 1113,
+  "compressed_bytes": 9196927,
+  "crate_sha256": "b70f118cf999096ffdc4ebef438af83c4f837d43720e2353d644f53b82cd4d24",
   "crate_path_note": "No `cargo publish` has run for 0.0.51. The checksum is deliberately PENDING: the publisher fills in the .crate size and sha256 after the upload, and this receipt must not claim a digest that was never observed."
  },
  "registry_verification": {
-  "status": "PENDING",
+  "status": "VERIFIED",
   "endpoint": "https://crates.io/api/v1/crates/openssl-rs/0.0.51",
-  "checksum": "PENDING",
-  "checksum_prefix": "PENDING",
-  "crate_size": null,
-  "published_at": null,
+  "checksum": "b70f118cf999096ffdc4ebef438af83c4f837d43720e2353d644f53b82cd4d24",
+  "checksum_prefix": "b70f118c",
+  "crate_size": 9196927,
+  "published_at": "2026-11-28",
   "published_by": null,
   "yanked": null,
   "license": "Apache-2.0 OR MIT",
