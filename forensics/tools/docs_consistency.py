@@ -69,6 +69,7 @@ from atlas_common import REPO_ROOT  # noqa: E402
 import earned_trust  # noqa: E402
 import gen_frf_courts  # noqa: E402
 import kernel_verification  # noqa: E402
+import release_state  # noqa: E402
 
 
 def load_json(relpath: str) -> dict:
@@ -518,6 +519,8 @@ def main(argv: list[str]) -> int:
               "    expect from evidence/etp-t14/ARTICLES.json and the tools it credits")
         print("forensics/performance/KERNELS.json: kernel_register_assurance\n"
               "    expect from forensics/tools/kernel_verification.py")
+        print("README.md + atlas-refresh/publish-*.json: release_state_consistency\n"
+              "    expect from each receipt's own status and the release README prose")
         return 0
 
     problems: list[str] = []
@@ -559,6 +562,16 @@ def main(argv: list[str]) -> int:
 
     constitution = earned_trust.check_root(REPO_ROOT)
 
+    release_problems = release_state.check_root(REPO_ROOT)
+    if release_problems:
+        print(f"[docs-consistency] FAIL: {len(release_problems)} release-state "
+              f"problem(s)")
+        for problem in release_problems:
+            print(f"  STALE: {problem.render()}")
+        print("  A publish receipt must agree with itself, with its build identity, "
+              "and with the README lifecycle; a contradiction is a refusal, not "
+              "a stale document.")
+
     kernel_problems = [
         f"forensics/performance/KERNELS.json: {problem.code} {problem.pointer}: "
         f"{problem.detail}"
@@ -587,12 +600,12 @@ def main(argv: list[str]) -> int:
               "docs/RELEASE_GATES.md; an article with no enforcement must say so rather "
               "than imply an enforcement that does not exist.")
 
-    if problems or constitution or kernel_problems:
+    if problems or constitution or kernel_problems or release_problems:
         return 1
 
     print(f"[docs-consistency] ok: {len(CHECKS)} hand-written claim(s) agree with "
-          f"their generated sources; the earned-trust constitution and the kernel "
-          f"register are wired")
+          f"their generated sources; the earned-trust constitution, the kernel "
+          f"register and the release-state checker are wired")
     return 0
 
 

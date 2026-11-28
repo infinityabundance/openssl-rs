@@ -4,23 +4,23 @@
   "recorded_utc": "2026-11-28",
   "crate": "openssl-rs",
   "version": "0.0.51",
-  "status": "BUILT (pending publish)",
-  "release_commit": null,
-  "published_as": "pending: atlas-refresh/publish-0.0.51.json (checksum PENDING)",
+  "status": "RELEASED",
+  "release_commit": "a0aca565e99e095153358420f9f0008da46f6fc5",
+  "published_as": "atlas-refresh/publish-0.0.51.json (PUBLISHED, checksum b70f118c…)",
   "purpose": "The install-tree identity rendered into README.md for the 0.0.51 candidate. The artefacts were built from the frozen working tree by the canonical recipe; this receipt binds the rendered identity to the bytes that build actually produced.",
   "source_identity": {
     "candidate_branch": "staging",
     "measured_source_commit": "9bc9c387f8e3380fcbaa180148023be80ddd4885",
     "measured_source_commit_subject": "Queues: the build does build, and that premise is withdrawn",
     "build_ran_at_head": "9bc9c387f8e3380fcbaa180148023be80ddd4885",
-    "measured_source_commit_note": "The test run and the build ran against the working tree whose uncommitted changes were the 0.0.51 version bump (Cargo.toml/Cargo.lock), pre-existing src/bn/blinding.rs, src/bn/divstep.rs and src/bn/divstep/tests.rs edits (four added tests), the regenerated documentation and this receipt. The tree is therefore NOT commit 9bc9c387 alone; the build source-tree digest below binds the exact bytes that were measured and built. Commit 9bc9c387 contains neither the 0.0.51 version string nor the four bn tests.",
+    "measured_source_commit_note": "The test run and the build ran against the working tree whose uncommitted changes were the 0.0.51 version bump (Cargo.toml/Cargo.lock), pre-existing src/bn/blinding.rs, src/bn/divstep.rs and src/bn/divstep/tests.rs edits (four added tests), the regenerated documentation and this receipt. The tree is therefore NOT commit 9bc9c387 alone; the build source-tree digest below binds the exact bytes that were measured and built. Commit 9bc9c387 contains neither the 0.0.51 version string nor the four bn tests. The release commit a0aca565 contains those bytes: the publish receipt records the packaging-tree digest at a0aca565 as identical to the build tree.",
     "measured_source_tree_digest": "9b72d872acd6b2a2f2984362b63d01c4d83af4c63f1442ab97facab0dd05b2e8",
     "build_source_tree_digest": "9b72d872acd6b2a2f2984362b63d01c4d83af4c63f1442ab97facab0dd05b2e8",
     "build_source_tree_digest_rule": "sha256 over canonical JSON of sorted [relpath, size, sha256] for src/, Cargo.toml, Cargo.lock, build.rs (forensics/tools/phase7_courts.py::_source_tree_digest)",
     "release_tree_digest": "9b72d872acd6b2a2f2984362b63d01c4d83af4c63f1442ab97facab0dd05b2e8",
-    "release_tree_digest_recomputed_at": "working tree at 9bc9c387f8e3380fcbaa180148023be80ddd4885 (no release commit exists yet)",
+    "release_tree_digest_recomputed_at": "a0aca565e99e095153358420f9f0008da46f6fc5",
     "release_tree_digest_rule": "same rule and same enumeration, computed over the 0.0.51 packaging tree (the working tree's src/, Cargo.toml, Cargo.lock, build.rs).",
-    "release_tree_digest_note": "The version bump is uncommitted, so the build tree and the packaging tree are the same working tree: both digest 909 entries to 9b72d872… . No commit is claimed to contain these bytes, and the receipt must be reissued if the publisher commits a different tree.",
+    "release_tree_digest_note": "The version bump was uncommitted when this build ran, so at build time the build tree and the packaging tree were the same working tree: both digest 909 entries to 9b72d872… . The publish receipt records that the release commit a0aca565 carries exactly these bytes, and the packaging-tree digest recomputed at a0aca565 is unchanged at 9b72d872…, which binds these artefact hashes to the released source.",
     "working_tree_at_build": "dirty by design: Cargo.toml and Cargo.lock at 0.0.51, four pre-existing uncommitted bn tests under src/bn, the regenerated documentation blocks, the campaign-status/reduction edits and this receipt. No other src/ change accompanies the bump."
   },
   "build": {
@@ -91,8 +91,13 @@
     }
   },
   "crate_package": {
-    "status": "PENDING",
-    "note": "No crate package was produced or uploaded for 0.0.51. The publisher performs `cargo publish`, which re-packs and verifies from the committed tree; the crate checksum is recorded as PENDING in atlas-refresh/publish-0.0.51.json and is not claimed here."
+    "status": "PUBLISHED",
+    "recipe": "CARGO_TARGET_DIR outside the repository cargo publish (re-packs and verifies from the committed tree)",
+    "path": "openssl-rs-0.0.51.crate as served by crates.io",
+    "files": 1113,
+    "compressed_bytes": 9196927,
+    "sha256": "b70f118cf999096ffdc4ebef438af83c4f837d43720e2353d644f53b82cd4d24",
+    "note": "The registry payload is recorded in atlas-refresh/publish-0.0.51.json; this build receipt reuses that record rather than claiming a second, local package."
   },
   "evidence_carried_forward": {
     "closure": "the applied closure is not re-measured at this candidate; this receipt binds build identity only.",
@@ -106,6 +111,6 @@
     "The closure and downstream evidence are not re-measured at 0.0.51.",
     "Passing the Phase 2 courts is an ABI/install-layout result, not a safety or cryptographic result.",
     "The export counts are unchanged from 0.0.49 (libcrypto 5906, libssl 608); the artefact bytes differ because the version metadata and src/bn code differ, which is not a regression and not a safety result.",
-    "The recorded source identity is HEAD plus a working-tree digest; the version bump and four bn tests are uncommitted, so no commit is claimed to contain the built bytes."
+    "The recorded source identity is HEAD 9bc9c387 plus a working-tree digest; the release commit a0aca565 contains the same fixed source tree, as the publish receipt records."
   ]
 }
