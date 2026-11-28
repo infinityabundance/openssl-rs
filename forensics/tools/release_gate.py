@@ -197,6 +197,21 @@ BRANCH_AUDIT_COVERAGE_SCHEMA = "openssl-rs/pfp/audit-coverage/1"
 SETCC_CONSUMERS = {"arithmetic", "control"}
 CMOV_OPERANDS = {"register", "fixed-address", "memory"}
 CMOV_ADDRESSES = {"fixed", "variable"}
+# PFP-84: secret dependence is four-state, never a Boolean/int/list.  A verdict
+# is not read from UNDETERMINED or NOT_ASSESSED.
+SECRET_DEPENDENCE_STATES = (
+    "OBSERVED_ZERO",
+    "OBSERVED_NONZERO",
+    "UNDETERMINED",
+    "NOT_ASSESSED",
+)
+SECRET_DEPENDENCE_PROPERTIES = ("jcc", "setcc", "cmov", "memory_address")
+LEGACY_SECRET_DEPENDENCE_FIELDS = (
+    "secret_derived_jcc",
+    "secret_derived_memory_address",
+    "secret_derived_setcc",
+    "secret_derived_cmov",
+)
 
 # Verdict states that forbid a release outright.  `SUPERSEDED` is not one: the
 # claim was current and has been replaced, which is a history fact, not a
@@ -1298,109 +1313,136 @@ def check_branch_audit(
                 "RG_AUDIT_RECORD_INVALID", target_id, "the target entry is not an object",
             ))
             continue
-        jcc = entry.get("secret_derived_jcc")
-        if not isinstance(jcc, int) or isinstance(jcc, bool) or jcc < 0:
+        legacy = [field for field in LEGACY_SECRET_DEPENDENCE_FIELDS if field in entry]
+        fourstate = entry.get("secret_dependence")
+        states: dict[str, str] = {}
+        if legacy:
             refusals.append(Refusal(
                 "RG_AUDIT_RECORD_INVALID", target_id,
-                "secret_derived_jcc must be a non-negative integer; the record must "
-                "state the count",
+                "the audit record still carries the legacy Boolean/int/list "
+                "secret-dependence shape; a four-state encoding is required",
             ))
-        elif jcc:
+        elif not isinstance(fourstate, dict):
+            refusals.append(Refusal(
+                "RG_AUDIT_RECORD_INVALID", target_id,
+                "the audit record has no four-state secret-dependence encoding",
+            ))
+        else:
+            for prop in SECRET_DEPENDENCE_PROPERTIES:
+                state = fourstate.get(prop)
+                if state not in SECRET_DEPENDENCE_STATES:
+                    refusals.append(Refusal(
+                        "RG_AUDIT_RECORD_INVALID", f"{target_id}/{prop}",
+                        f"{state!r} is not a four-state secret-dependence value",
+                    ))
+                else:
+                    states[prop] = state
+        unmeasured = sorted(
+            prop for prop, state in states.items()
+            if state in ("UNDETERMINED", "NOT_ASSESSED")
+        )
+        if unmeasured:
+            refusals.append(Refusal(
+                "RG_AUDIT_DEPENDENCE_UNMEASURED", target_id,
+                f"{', '.join(unmeasured)} are UNDETERMINED or NOT_ASSESSED; the gate "
+                "does not read a secret-dependence verdict from an unmeasured "
+                f"property; record {record_path.name} at DSO {dso_sha}",
+            ))
+
+        if states.get("jcc") == "OBSERVED_NONZERO":
             first = entry.get("secret_derived_jcc_addr", "?")
             refusals.append(Refusal(
                 "RG_AUDIT_SECRET_BRANCH", target_id,
-                f"{jcc} secret-derived conditional transfer(s) survive in the "
-                f"audited region (first at {first}); record {record_path.name} at "
+                f"a secret-derived conditional transfer survives in the audited "
+                f"region (first at {first}); record {record_path.name} at "
                 f"DSO {dso_sha}",
             ))
 
-        address_flag = entry.get("secret_derived_memory_address")
-        if not isinstance(address_flag, bool):
-            refusals.append(Refusal(
-                "RG_AUDIT_RECORD_INVALID", target_id,
-                "secret_derived_memory_address must be a boolean; the record must "
-                "state it",
-            ))
-        elif address_flag:
+        if states.get("memory_address") == "OBSERVED_NONZERO":
             refusals.append(Refusal(
                 "RG_AUDIT_SECRET_ADDRESS", target_id,
                 f"a secret-derived memory address survives in the audited region; "
                 f"record {record_path.name} at DSO {dso_sha}",
             ))
 
-        readers = entry.get("secret_derived_setcc", [])
-        if not isinstance(readers, list):
-            refusals.append(Refusal(
-                "RG_AUDIT_RECORD_INVALID", target_id,
-                "secret_derived_setcc must be a list",
-            ))
-            readers = []
-        for reader in readers:
-            if not isinstance(reader, dict):
-                refusals.append(Refusal(
-                    "RG_AUDIT_RECORD_INVALID", target_id,
-                    "a secret_derived_setcc entry is not an object",
-                ))
-                continue
-            where = f"{target_id}/{reader.get('addr', '?')}"
-            consumer = reader.get("consumer")
-            if consumer not in SETCC_CONSUMERS:
-                refusals.append(Refusal(
-                    "RG_AUDIT_RECORD_INVALID", where,
-                    "a secret-derived setcc must record whether it is consumed "
-                    "arithmetically or as control",
-                ))
-            elif consumer == "control":
-                refusals.append(Refusal(
-                    "RG_AUDIT_SECRET_BRANCH", where,
-                    f"secret-derived setcc {reader.get('insn', '?')} is consumed as a "
-                    f"transfer condition; record {record_path.name} at DSO {dso_sha}",
-                ))
+        detail = entry.get("secret_dependence_detail")
+        detail = detail if isinstance(detail, dict) else {}
 
-        moves = entry.get("secret_derived_cmov", [])
-        if not isinstance(moves, list):
-            refusals.append(Refusal(
-                "RG_AUDIT_RECORD_INVALID", target_id,
-                "secret_derived_cmov must be a list",
-            ))
-            moves = []
-        for move in moves:
-            if not isinstance(move, dict):
+        if states.get("setcc") == "OBSERVED_NONZERO":
+            readers = detail.get("setcc")
+            if not isinstance(readers, list) or not readers:
                 refusals.append(Refusal(
                     "RG_AUDIT_RECORD_INVALID", target_id,
-                    "a secret_derived_cmov entry is not an object",
+                    "a secret-derived setcc must be enumerated with its consumer",
                 ))
-                continue
-            where = f"{target_id}/{move.get('addr', '?')}"
-            operands = move.get("operands")
-            address = move.get("address")
-            if operands not in CMOV_OPERANDS:
+                readers = []
+            for reader in readers:
+                if not isinstance(reader, dict):
+                    refusals.append(Refusal(
+                        "RG_AUDIT_RECORD_INVALID", target_id,
+                        "a secret_derived_setcc entry is not an object",
+                    ))
+                    continue
+                where = f"{target_id}/{reader.get('addr', '?')}"
+                consumer = reader.get("consumer")
+                if consumer not in SETCC_CONSUMERS:
+                    refusals.append(Refusal(
+                        "RG_AUDIT_RECORD_INVALID", where,
+                        "a secret-derived setcc must record whether it is consumed "
+                        "arithmetically or as control",
+                    ))
+                elif consumer == "control":
+                    refusals.append(Refusal(
+                        "RG_AUDIT_SECRET_BRANCH", where,
+                        f"secret-derived setcc {reader.get('insn', '?')} is consumed as a "
+                        f"transfer condition; record {record_path.name} at DSO {dso_sha}",
+                    ))
+
+        if states.get("cmov") == "OBSERVED_NONZERO":
+            moves = detail.get("cmov")
+            if not isinstance(moves, list) or not moves:
                 refusals.append(Refusal(
-                    "RG_AUDIT_CMOV_UNQUALIFIED", where,
-                    f"a secret-derived cmov must record its operands "
-                    f"(register/fixed-address/memory); got {operands!r}",
+                    "RG_AUDIT_RECORD_INVALID", target_id,
+                    "a secret-derived cmov must be enumerated with its operands",
                 ))
-                continue
-            if address not in CMOV_ADDRESSES:
-                refusals.append(Refusal(
-                    "RG_AUDIT_CMOV_UNQUALIFIED", where,
-                    f"a secret-derived cmov must record whether the condition "
-                    f"address is fixed or variable; got {address!r}",
-                ))
-                continue
-            if operands == "memory" or address == "variable":
-                refusals.append(Refusal(
-                    "RG_AUDIT_SECRET_ADDRESS", where,
-                    f"secret-derived cmov {move.get('insn', '?')} acts on a variable "
-                    f"memory address; record {record_path.name} at DSO {dso_sha}",
-                ))
-                continue
-            if move.get("transfer_free") is not True:
-                refusals.append(Refusal(
-                    "RG_AUDIT_CMOV_UNQUALIFIED", where,
-                    f"secret-derived cmov {move.get('insn', '?')} is accepted only "
-                    "when the record states that it is transfer-free",
-                ))
+                moves = []
+            for move in moves:
+                if not isinstance(move, dict):
+                    refusals.append(Refusal(
+                        "RG_AUDIT_RECORD_INVALID", target_id,
+                        "a secret_derived_cmov entry is not an object",
+                    ))
+                    continue
+                where = f"{target_id}/{move.get('addr', '?')}"
+                operands = move.get("operands")
+                address = move.get("address")
+                if operands not in CMOV_OPERANDS:
+                    refusals.append(Refusal(
+                        "RG_AUDIT_CMOV_UNQUALIFIED", where,
+                        f"a secret-derived cmov must record its operands "
+                        f"(register/fixed-address/memory); got {operands!r}",
+                    ))
+                    continue
+                if address not in CMOV_ADDRESSES:
+                    refusals.append(Refusal(
+                        "RG_AUDIT_CMOV_UNQUALIFIED", where,
+                        f"a secret-derived cmov must record whether the condition "
+                        f"address is fixed or variable; got {address!r}",
+                    ))
+                    continue
+                if operands == "memory" or address == "variable":
+                    refusals.append(Refusal(
+                        "RG_AUDIT_SECRET_ADDRESS", where,
+                        f"secret-derived cmov {move.get('insn', '?')} acts on a variable "
+                        f"memory address; record {record_path.name} at DSO {dso_sha}",
+                    ))
+                    continue
+                if move.get("transfer_free") is not True:
+                    refusals.append(Refusal(
+                        "RG_AUDIT_CMOV_UNQUALIFIED", where,
+                        f"secret-derived cmov {move.get('insn', '?')} is accepted only "
+                        "when the record states that it is transfer-free",
+                    ))
 
     if not refusals:
         paths = coverage_doc.get("paths") or []
@@ -2016,25 +2058,60 @@ def self_test() -> int:
             "CE_REFUSED_ENFORCEMENT_REGRESSION",
         )
 
-        # Item 11: the recorded branch-audit admission. The repaired record is
-        # the positive control; the deliberately branchy canary is the same
-        # record with the pre-repair secret-derived jcc restored in key::decap.
-        # If a later change stops refusing the canary, this self-test fails.
+        # Item 11: the recorded branch-audit admission.  PFP-84 made the record
+        # four-state, so the positive control is a synthetic *fully measured*
+        # record; the committed record is now correctly refused as unmeasured in
+        # 30 of 31 targets and is itself a negative control.
         if BRANCH_AUDIT_RECORD.is_file():
             audit_document = json.loads(BRANCH_AUDIT_RECORD.read_text(encoding="utf-8"))
             audit_commit = audit_document["candidate"]["commit"]
             audit_tree = audit_document["candidate"]["tree"]
 
-            repaired_audit = check_branch_audit(ROOT, audit_commit, audit_tree)
-            cases.append(("repaired branch-audit record (positive control)", "no refusal"))
+            measured = json.loads(json.dumps(audit_document))
+            for target in measured["targets"].values():
+                target["secret_dependence"] = {
+                    prop: "OBSERVED_ZERO"
+                    for prop in ("jcc", "setcc", "cmov", "memory_address")
+                }
+                target.pop("secret_dependence_detail", None)
+            measured["targets"]["key::decap"]["secret_dependence"][
+                "setcc"
+            ] = "OBSERVED_NONZERO"
+            measured["targets"]["key::decap"]["secret_dependence_detail"] = {
+                "setcc": [
+                    {
+                        "addr": "0x1f8396",
+                        "insn": "setne %al",
+                        "condition_source": "0x1f8394: test %dl,%dl",
+                        "consumer": "arithmetic",
+                    }
+                ]
+            }
+            measured["secret_dependence_aggregate"]["mechanised_targets"] = len(
+                measured["targets"]
+            )
+            measured_record = tmp / "audit-measured-record.json"
+            measured_record.write_text(json.dumps(measured), encoding="utf-8")
+            repaired_audit = check_branch_audit(
+                ROOT, audit_commit, audit_tree, record=measured_record
+            )
+            cases.append(("fully measured branch-audit record (positive control)", "no refusal"))
             if repaired_audit.refusals:
                 failures.append(
-                    "repaired branch-audit record (positive control): unexpected "
+                    "fully measured branch-audit record (positive control): unexpected "
                     f"refusals {[(r.rule, r.detail) for r in repaired_audit.refusals]}"
                 )
 
-            canary = json.loads(json.dumps(audit_document))
-            canary["targets"]["key::decap"]["secret_derived_jcc"] = 1
+            expect(
+                "committed record with 30 unmeasured targets",
+                check_branch_audit(ROOT, audit_commit, audit_tree),
+                "RG_AUDIT_DEPENDENCE_UNMEASURED",
+            )
+
+            canary = json.loads(json.dumps(measured))
+            canary["targets"]["key::decap"]["secret_dependence"]["jcc"] = (
+                "OBSERVED_NONZERO"
+            )
             canary["targets"]["key::decap"]["secret_derived_jcc_addr"] = "0x300613"
             canary_record = tmp / "audit-canary-record.json"
             canary_record.write_text(json.dumps(canary), encoding="utf-8")
@@ -2045,14 +2122,14 @@ def self_test() -> int:
             )
 
             other_record = tmp / "audit-other-candidate.json"
-            other_record.write_text(json.dumps(audit_document), encoding="utf-8")
+            other_record.write_text(json.dumps(measured), encoding="utf-8")
             expect(
                 "audit record for another DSO",
                 check_branch_audit(ROOT, "0" * 40, "0" * 40, record=other_record),
                 "RG_AUDIT_IDENTITY_MISMATCH",
             )
 
-            uncovered = json.loads(json.dumps(audit_document))
+            uncovered = json.loads(json.dumps(measured))
             del uncovered["targets"]["arith::scalar_ntt"]
             uncovered_record = tmp / "audit-uncovered-record.json"
             uncovered_record.write_text(json.dumps(uncovered), encoding="utf-8")
@@ -2062,8 +2139,13 @@ def self_test() -> int:
                 "RG_AUDIT_UNCOVERED_PATH",
             )
 
-            unqualified = json.loads(json.dumps(audit_document))
-            unqualified["targets"]["key::decap"]["secret_derived_cmov"][0].pop("operands")
+            unqualified = json.loads(json.dumps(measured))
+            unqualified["targets"]["key::decap"]["secret_dependence"]["cmov"] = (
+                "OBSERVED_NONZERO"
+            )
+            unqualified["targets"]["key::decap"]["secret_dependence_detail"]["cmov"] = [
+                {"addr": "0x1f8396", "insn": "cmovne %eax,%ebx"}
+            ]
             unqualified_record = tmp / "audit-unqualified-cmov-record.json"
             unqualified_record.write_text(json.dumps(unqualified), encoding="utf-8")
             expect(
@@ -2072,14 +2154,26 @@ def self_test() -> int:
                 "RG_AUDIT_CMOV_UNQUALIFIED",
             )
 
-            secret_address = json.loads(json.dumps(audit_document))
-            secret_address["targets"]["key::decap"]["secret_derived_memory_address"] = True
+            secret_address = json.loads(json.dumps(measured))
+            secret_address["targets"]["key::decap"]["secret_dependence"][
+                "memory_address"
+            ] = "OBSERVED_NONZERO"
             secret_address_record = tmp / "audit-secret-address-record.json"
             secret_address_record.write_text(json.dumps(secret_address), encoding="utf-8")
             expect(
                 "secret-derived memory address",
                 check_branch_audit(ROOT, audit_commit, audit_tree, record=secret_address_record),
                 "RG_AUDIT_SECRET_ADDRESS",
+            )
+
+            legacy = json.loads(json.dumps(measured))
+            legacy["targets"]["key::decap"]["secret_derived_jcc"] = 0
+            legacy_record = tmp / "audit-legacy-shape-record.json"
+            legacy_record.write_text(json.dumps(legacy), encoding="utf-8")
+            expect(
+                "legacy Boolean-zero audit record",
+                check_branch_audit(ROOT, audit_commit, audit_tree, record=legacy_record),
+                "RG_AUDIT_RECORD_INVALID",
             )
 
     for name, rule in cases:

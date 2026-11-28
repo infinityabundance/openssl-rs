@@ -45,18 +45,30 @@ def codes(document: dict, doc_text: str | None = None) -> list[str]:
 
 
 class CommittedRegister(unittest.TestCase):
-    def test_the_committed_register_is_accepted(self) -> None:
-        self.assertEqual(kv.check_document(load()), [])
+    # On a clean checkout the audited DSOs are absent by design.  The register
+    # must fail closed with SUBJECT_NOT_RETRIEVABLE, never pass on a declared
+    # digest alone (PFP-86).
+    RETRIEVAL_ONLY = {kv.KV_SUBJECT_NOT_RETRIEVABLE}
 
-    def test_the_cli_accepts_the_committed_register_and_the_document(self) -> None:
+    def test_the_committed_register_is_accepted_or_refused_as_unretrievable(self) -> None:
+        codes_found = {problem.code for problem in kv.check_document(load())}
+        self.assertTrue(
+            codes_found == set() or codes_found == self.RETRIEVAL_ONLY,
+            sorted(codes_found),
+        )
+
+    def test_the_cli_accepts_or_names_unretrievable_subjects(self) -> None:
         result = subprocess.run(
             [sys.executable, str(TOOL), "check"],
             cwd=REPO_ROOT,
             capture_output=True,
             text=True,
         )
-        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        self.assertIn("1 register(s) accepted, 0 refused", result.stdout)
+        if result.returncode == 0:
+            self.assertIn("1 register(s) accepted, 0 refused", result.stdout)
+        else:
+            self.assertIn(kv.KV_SUBJECT_NOT_RETRIEVABLE, result.stdout)
+            self.assertNotIn("KV_AUDIT_RECORD_LEGACY_SHAPE", result.stdout)
 
     def test_every_kernel_names_the_hardware_absent_arms(self) -> None:
         document = load()
@@ -93,7 +105,11 @@ class CommittedRegister(unittest.TestCase):
         claims = {claim["id"]: claim for claim in document["claims"]}
         preset = claims["PFP-8-PRESET-e3ef3d84-DIFFERENTIAL-ONLY"]
         self.assertEqual(preset["assurance"], [])
-        self.assertEqual(kv.check_document(document), [])
+        # Only the unretrievable-subject refusal is allowed on a clean checkout.
+        self.assertLessEqual(
+            {problem.code for problem in kv.check_document(document)},
+            {kv.KV_SUBJECT_NOT_RETRIEVABLE},
+        )
         mutated = copy.deepcopy(document)
         for claim in mutated["claims"]:
             if claim["id"] == "PFP-8-PRESET-e3ef3d84-DIFFERENTIAL-ONLY":
@@ -115,12 +131,18 @@ class CommittedRegister(unittest.TestCase):
             for entry in entries:
                 self.assertIn(entry["class"], kv.ASSURANCE_CLASSES, kernel["id"])
 
-    def test_the_migration_claims_no_artefact_class_without_a_hashable_subject(self) -> None:
-        # No distribution DSO is tracked, so an ARTEFACT_* class could only be
-        # asserted by trusting a declared digest.  The honest migration does not.
+    def test_the_migration_claims_no_artefact_class_without_a_retrieval_clause(self) -> None:
+        # An artefact class must name how the uncommitted subject is reproduced,
+        # and the declared digest must be the one retrieval must yield.
         for kernel in load()["kernels"]:
             for entry in kernel["assurance"]:
-                self.assertNotIn(entry["class"], kv.ARTEFACT_CLASSES, kernel["id"])
+                if entry["class"] not in kv.ARTEFACT_CLASSES:
+                    continue
+                artefact = entry["subject"]["artefact"]
+                self.assertRegex(artefact["sha256"], r"^[0-9a-f]{64}$", kernel["id"])
+                clause = artefact["retrieval"]
+                self.assertTrue(clause["mechanism"], kernel["id"])
+                self.assertEqual(clause["expected_sha256"], artefact["sha256"], kernel["id"])
 
     def test_the_rsa_crt_family_is_not_flattered(self) -> None:
         document = load()
@@ -311,6 +333,40 @@ class AssuranceDefects(unittest.TestCase):
         # audit; only the file at the named path has different bytes.
         artefact["path"] = "docs/KERNEL-VERIFICATION.md"
         self.assertIn(kv.KV_ARTEFACT_SUBJECT_MISMATCH, codes(document))
+
+    def test_an_unretrieved_subject_is_refused_not_passed(self) -> None:
+        # PFP-86 mutation control: the audited binary is absent, so the entry must
+        # fail closed with SUBJECT_NOT_RETRIEVABLE rather than trust its digest.
+        document = self.fixture()
+        document["kernels"][0]["assurance"][0]["subject"]["artefact"]["path"] = (
+            "docs/not-retrieved.so"
+        )
+        found = codes(document)
+        self.assertIn(kv.KV_SUBJECT_NOT_RETRIEVABLE, found)
+        self.assertNotIn(kv.KV_ARTEFACT_SUBJECT_MISMATCH, found)
+
+    def test_a_legacy_boolean_record_is_refused(self) -> None:
+        # PFP-84 mutation control: re-introduce the old zero shape.
+        document = self.fixture()
+        record = document["kernels"][0]["assurance"][0]["secret_dependence"]["document"]
+        record["targets"]["mont_mul_ladder_into"]["secret_derived_jcc"] = 0
+        self.assertIn(kv.KV_AUDIT_RECORD_LEGACY_SHAPE, codes(document))
+
+    def test_a_verdict_cannot_be_read_from_not_assessed(self) -> None:
+        # PFP-84 mutation control: the record says NOT_ASSESSED, the entry reads
+        # OBSERVED_ZERO.  The verdict must be refused.
+        document = self.fixture()
+        record = document["kernels"][0]["assurance"][0]["secret_dependence"]["document"]
+        record["targets"]["mont_mul_ladder_into"]["secret_dependence"]["jcc"] = (
+            kv.NOT_ASSESSED
+        )
+        self.assertIn(kv.KV_SECRET_DEPENDENCE_UNMEASURED, codes(document))
+
+    def test_the_aggregate_mechanised_count_must_match_the_states(self) -> None:
+        document = self.fixture()
+        record = document["kernels"][0]["assurance"][0]["secret_dependence"]["document"]
+        record["secret_dependence_aggregate"]["mechanised_targets"] = 0
+        self.assertIn(kv.KV_AUDIT_RECORD_AGGREGATE_MISMATCH, codes(document))
 
     def test_source_review_argument_must_name_the_reviewed_source(self) -> None:
         document = load()

@@ -36,7 +36,7 @@
  "recorded_from": [
   {
    "path": "evidence/performance-frontier/campaigns/PFP-54/raw/audit-a5354547.md",
-   "sha256": "c1a4685d27bcc5999fbfacdf5ea90ec8bae8e4112648b952acedba8f8732b3c4"
+   "sha256": "bd0a2c1198764c5a58d0e9236376dd34ee59a43748d6190c493d04c9b0d7f6b8"
   },
   {
    "path": "evidence/performance-frontier/campaigns/PFP-54/raw/audit-a5354547.stderr",
@@ -70,11 +70,13 @@
     "bytes": 1030,
     "insns": 235
    },
-   "secret_derived_jcc": 0,
-   "secret_derived_memory_address": false,
-   "secret_derived_setcc": [],
-   "secret_derived_cmov": [],
-   "note": "The audit observes the cmov count and operand/address classes in the report; this instrument does not establish their secret dependence, so no secret_derived_cmov list is claimed here."
+   "note": "The audit observes the cmov count and operand/address classes in the report; this instrument does not establish their secret dependence, so no secret_derived_cmov list is claimed here.",
+   "secret_dependence": {
+    "jcc": "NOT_ASSESSED",
+    "setcc": "NOT_ASSESSED",
+    "cmov": "NOT_ASSESSED",
+    "memory_address": "NOT_ASSESSED"
+   }
   },
   "cbd_2": {
    "family": "ML-KEM CBD sampling eta=2",
@@ -93,10 +95,12 @@
     "bytes": 477,
     "insns": 108
    },
-   "secret_derived_jcc": 0,
-   "secret_derived_memory_address": false,
-   "secret_derived_setcc": [],
-   "secret_derived_cmov": []
+   "secret_dependence": {
+    "jcc": "NOT_ASSESSED",
+    "setcc": "NOT_ASSESSED",
+    "cmov": "NOT_ASSESSED",
+    "memory_address": "NOT_ASSESSED"
+   }
   },
   "cbd_3": {
    "family": "ML-KEM CBD sampling eta=3",
@@ -115,10 +119,12 @@
     "bytes": 1102,
     "insns": 255
    },
-   "secret_derived_jcc": 0,
-   "secret_derived_memory_address": false,
-   "secret_derived_setcc": [],
-   "secret_derived_cmov": []
+   "secret_dependence": {
+    "jcc": "NOT_ASSESSED",
+    "setcc": "NOT_ASSESSED",
+    "cmov": "NOT_ASSESSED",
+    "memory_address": "NOT_ASSESSED"
+   }
   },
   "decrypt_cpa": {
    "family": "ML-KEM K-PKE decrypt",
@@ -137,10 +143,12 @@
     "bytes": 2864,
     "insns": 683
    },
-   "secret_derived_jcc": 0,
-   "secret_derived_memory_address": false,
-   "secret_derived_setcc": [],
-   "secret_derived_cmov": []
+   "secret_dependence": {
+    "jcc": "NOT_ASSESSED",
+    "setcc": "NOT_ASSESSED",
+    "cmov": "NOT_ASSESSED",
+    "memory_address": "NOT_ASSESSED"
+   }
   },
   "encrypt_cpa": {
    "family": "ML-KEM K-PKE encrypt (re-encryption / implicit reject)",
@@ -159,10 +167,12 @@
     "bytes": 8042,
     "insns": 1696
    },
-   "secret_derived_jcc": 0,
-   "secret_derived_memory_address": false,
-   "secret_derived_setcc": [],
-   "secret_derived_cmov": []
+   "secret_dependence": {
+    "jcc": "NOT_ASSESSED",
+    "setcc": "NOT_ASSESSED",
+    "cmov": "NOT_ASSESSED",
+    "memory_address": "NOT_ASSESSED"
+   }
   },
   "gencbd_vector_ntt": {
    "family": "ML-KEM CBD vector sampling then NTT",
@@ -181,10 +191,12 @@
     "bytes": 312,
     "insns": 83
    },
-   "secret_derived_jcc": 0,
-   "secret_derived_memory_address": false,
-   "secret_derived_setcc": [],
-   "secret_derived_cmov": []
+   "secret_dependence": {
+    "jcc": "NOT_ASSESSED",
+    "setcc": "NOT_ASSESSED",
+    "cmov": "NOT_ASSESSED",
+    "memory_address": "NOT_ASSESSED"
+   }
   },
   "hash_g": {
    "family": "ML-KEM hash G",
@@ -203,10 +215,12 @@
     "bytes": 180,
     "insns": 59
    },
-   "secret_derived_jcc": 0,
-   "secret_derived_memory_address": false,
-   "secret_derived_setcc": [],
-   "secret_derived_cmov": []
+   "secret_dependence": {
+    "jcc": "NOT_ASSESSED",
+    "setcc": "NOT_ASSESSED",
+    "cmov": "NOT_ASSESSED",
+    "memory_address": "NOT_ASSESSED"
+   }
   },
   "hash_h": {
    "family": "ML-KEM hash H",
@@ -225,10 +239,12 @@
     "bytes": 180,
     "insns": 59
    },
-   "secret_derived_jcc": 0,
-   "secret_derived_memory_address": false,
-   "secret_derived_setcc": [],
-   "secret_derived_cmov": []
+   "secret_dependence": {
+    "jcc": "NOT_ASSESSED",
+    "setcc": "NOT_ASSESSED",
+    "cmov": "NOT_ASSESSED",
+    "memory_address": "NOT_ASSESSED"
+   }
   },
   "hash_h_pubkey": {
    "family": "ML-KEM public-key hash",
@@ -247,10 +263,12 @@
     "bytes": 358,
     "insns": 104
    },
-   "secret_derived_jcc": 0,
-   "secret_derived_memory_address": false,
-   "secret_derived_setcc": [],
-   "secret_derived_cmov": []
+   "secret_dependence": {
+    "jcc": "NOT_ASSESSED",
+    "setcc": "NOT_ASSESSED",
+    "cmov": "NOT_ASSESSED",
+    "memory_address": "NOT_ASSESSED"
+   }
   },
   "inner_product": {
    "family": "ML-KEM inner product",
@@ -269,10 +287,12 @@
     "bytes": 2209,
     "insns": 455
    },
-   "secret_derived_jcc": 0,
-   "secret_derived_memory_address": false,
-   "secret_derived_setcc": [],
-   "secret_derived_cmov": []
+   "secret_dependence": {
+    "jcc": "NOT_ASSESSED",
+    "setcc": "NOT_ASSESSED",
+    "cmov": "NOT_ASSESSED",
+    "memory_address": "NOT_ASSESSED"
+   }
   },
   "kdf": {
    "family": "ML-KEM KDF",
@@ -291,10 +311,12 @@
     "bytes": 128,
     "insns": 46
    },
-   "secret_derived_jcc": 0,
-   "secret_derived_memory_address": false,
-   "secret_derived_setcc": [],
-   "secret_derived_cmov": []
+   "secret_dependence": {
+    "jcc": "NOT_ASSESSED",
+    "setcc": "NOT_ASSESSED",
+    "cmov": "NOT_ASSESSED",
+    "memory_address": "NOT_ASSESSED"
+   }
   },
   "key::decap": {
    "family": "ML-KEM decapsulation carrier (implicit-rejection comparison + select)",
@@ -313,19 +335,24 @@
     "bytes": 1570,
     "insns": 340
    },
-   "secret_derived_jcc": 0,
-   "secret_derived_memory_address": false,
-   "secret_derived_setcc": [
-    {
-     "addr": "0x1f8396",
-     "insn": "setne %al",
-     "condition_source": "0x1f8394: test %dl,%dl",
-     "consumer": "arithmetic",
-     "note": "writes a register value consumed by a store, not a transfer condition (verified by disassembly)"
-    }
-   ],
-   "secret_derived_cmov": [],
-   "note": "The comparison contract is mechanised: the XOR/OR comparison accumulation is tainted and propagated over the CFG. Memory is not modelled, so `public-bound` means no tracked register taint reaches the condition."
+   "note": "The comparison contract is mechanised: the XOR/OR comparison accumulation is tainted and propagated over the CFG. Memory is not modelled, so `public-bound` means no tracked register taint reaches the condition.",
+   "secret_dependence": {
+    "jcc": "OBSERVED_ZERO",
+    "setcc": "OBSERVED_NONZERO",
+    "cmov": "OBSERVED_ZERO",
+    "memory_address": "UNDETERMINED"
+   },
+   "secret_dependence_detail": {
+    "setcc": [
+     {
+      "addr": "0x1f8396",
+      "insn": "setne %al",
+      "condition_source": "0x1f8394: test %dl,%dl",
+      "consumer": "arithmetic",
+      "note": "writes a register value consumed by a store, not a transfer condition (verified by disassembly)"
+     }
+    ]
+   }
   },
   "matrix_expand": {
    "family": "ML-KEM matrix expansion (public)",
@@ -344,10 +371,12 @@
     "bytes": 584,
     "insns": 134
    },
-   "secret_derived_jcc": 0,
-   "secret_derived_memory_address": false,
-   "secret_derived_setcc": [],
-   "secret_derived_cmov": []
+   "secret_dependence": {
+    "jcc": "NOT_ASSESSED",
+    "setcc": "NOT_ASSESSED",
+    "cmov": "NOT_ASSESSED",
+    "memory_address": "NOT_ASSESSED"
+   }
   },
   "matrix_mult_transpose_add": {
    "family": "ML-KEM matrix transpose-multiply-add",
@@ -366,10 +395,12 @@
     "bytes": 2439,
     "insns": 513
    },
-   "secret_derived_jcc": 0,
-   "secret_derived_memory_address": false,
-   "secret_derived_setcc": [],
-   "secret_derived_cmov": []
+   "secret_dependence": {
+    "jcc": "NOT_ASSESSED",
+    "setcc": "NOT_ASSESSED",
+    "cmov": "NOT_ASSESSED",
+    "memory_address": "NOT_ASSESSED"
+   }
   },
   "mod_exp_core_consttime_from_parts": {
    "family": "Constant-time ladder core",
@@ -388,10 +419,12 @@
     "bytes": 1011,
     "insns": 271
    },
-   "secret_derived_jcc": 0,
-   "secret_derived_memory_address": false,
-   "secret_derived_setcc": [],
-   "secret_derived_cmov": []
+   "secret_dependence": {
+    "jcc": "NOT_ASSESSED",
+    "setcc": "NOT_ASSESSED",
+    "cmov": "NOT_ASSESSED",
+    "memory_address": "NOT_ASSESSED"
+   }
   },
   "mod_inverse_consttime": {
    "family": "Constant-time inversion",
@@ -410,10 +443,12 @@
     "bytes": 11101,
     "insns": 2380
    },
-   "secret_derived_jcc": 0,
-   "secret_derived_memory_address": false,
-   "secret_derived_setcc": [],
-   "secret_derived_cmov": []
+   "secret_dependence": {
+    "jcc": "NOT_ASSESSED",
+    "setcc": "NOT_ASSESSED",
+    "cmov": "NOT_ASSESSED",
+    "memory_address": "NOT_ASSESSED"
+   }
   },
   "mont_mul_fallible": {
    "family": "Montgomery multiply (allocating wrapper)",
@@ -432,10 +467,12 @@
     "bytes": 1815,
     "insns": 432
    },
-   "secret_derived_jcc": 0,
-   "secret_derived_memory_address": false,
-   "secret_derived_setcc": [],
-   "secret_derived_cmov": []
+   "secret_dependence": {
+    "jcc": "NOT_ASSESSED",
+    "setcc": "NOT_ASSESSED",
+    "cmov": "NOT_ASSESSED",
+    "memory_address": "NOT_ASSESSED"
+   }
   },
   "mont_mul_sos_into": {
    "family": "Montgomery multiply (SOS kernel; the schedule LADDER_SCHEDULE selects)",
@@ -454,10 +491,12 @@
     "bytes": 873,
     "insns": 218
    },
-   "secret_derived_jcc": 0,
-   "secret_derived_memory_address": false,
-   "secret_derived_setcc": [],
-   "secret_derived_cmov": []
+   "secret_dependence": {
+    "jcc": "NOT_ASSESSED",
+    "setcc": "NOT_ASSESSED",
+    "cmov": "NOT_ASSESSED",
+    "memory_address": "NOT_ASSESSED"
+   }
   },
   "ossl_dh_compute_key": {
    "family": "DH key agreement (driver)",
@@ -476,10 +515,12 @@
     "bytes": 1304,
     "insns": 299
    },
-   "secret_derived_jcc": 0,
-   "secret_derived_memory_address": false,
-   "secret_derived_setcc": [],
-   "secret_derived_cmov": []
+   "secret_dependence": {
+    "jcc": "NOT_ASSESSED",
+    "setcc": "NOT_ASSESSED",
+    "cmov": "NOT_ASSESSED",
+    "memory_address": "NOT_ASSESSED"
+   }
   },
   "ossl_ec_GFp_simple_ladder_step": {
    "family": "EC ladder step (secret core)",
@@ -498,10 +539,12 @@
     "bytes": 1609,
     "insns": 424
    },
-   "secret_derived_jcc": 0,
-   "secret_derived_memory_address": false,
-   "secret_derived_setcc": [],
-   "secret_derived_cmov": []
+   "secret_dependence": {
+    "jcc": "NOT_ASSESSED",
+    "setcc": "NOT_ASSESSED",
+    "cmov": "NOT_ASSESSED",
+    "memory_address": "NOT_ASSESSED"
+   }
   },
   "ossl_ec_scalar_mul_ladder": {
    "family": "ECDSA scalar ladder (driver)",
@@ -520,10 +563,12 @@
     "bytes": 3190,
     "insns": 772
    },
-   "secret_derived_jcc": 0,
-   "secret_derived_memory_address": false,
-   "secret_derived_setcc": [],
-   "secret_derived_cmov": []
+   "secret_dependence": {
+    "jcc": "NOT_ASSESSED",
+    "setcc": "NOT_ASSESSED",
+    "cmov": "NOT_ASSESSED",
+    "memory_address": "NOT_ASSESSED"
+   }
   },
   "ossl_ec_wNAF_mul": {
    "family": "EC wNAF multiply (verification / public-scalar core)",
@@ -542,10 +587,12 @@
     "bytes": 6316,
     "insns": 1372
    },
-   "secret_derived_jcc": 0,
-   "secret_derived_memory_address": false,
-   "secret_derived_setcc": [],
-   "secret_derived_cmov": []
+   "secret_dependence": {
+    "jcc": "NOT_ASSESSED",
+    "setcc": "NOT_ASSESSED",
+    "cmov": "NOT_ASSESSED",
+    "memory_address": "NOT_ASSESSED"
+   }
   },
   "ossl_ml_kem_decap": {
    "family": "ML-KEM decapsulation (provider driver)",
@@ -564,10 +611,12 @@
     "bytes": 977,
     "insns": 203
    },
-   "secret_derived_jcc": 0,
-   "secret_derived_memory_address": false,
-   "secret_derived_setcc": [],
-   "secret_derived_cmov": []
+   "secret_dependence": {
+    "jcc": "NOT_ASSESSED",
+    "setcc": "NOT_ASSESSED",
+    "cmov": "NOT_ASSESSED",
+    "memory_address": "NOT_ASSESSED"
+   }
   },
   "p256::mont_reduce_into": {
    "family": "P-256 Montgomery reduction",
@@ -586,10 +635,12 @@
     "bytes": 1086,
     "insns": 296
    },
-   "secret_derived_jcc": 0,
-   "secret_derived_memory_address": false,
-   "secret_derived_setcc": [],
-   "secret_derived_cmov": []
+   "secret_dependence": {
+    "jcc": "NOT_ASSESSED",
+    "setcc": "NOT_ASSESSED",
+    "cmov": "NOT_ASSESSED",
+    "memory_address": "NOT_ASSESSED"
+   }
   },
   "p256::wide_mul_x86": {
    "family": "P-256 x86-64 multiply",
@@ -608,10 +659,12 @@
     "bytes": 396,
     "insns": 112
    },
-   "secret_derived_jcc": 0,
-   "secret_derived_memory_address": false,
-   "secret_derived_setcc": [],
-   "secret_derived_cmov": []
+   "secret_dependence": {
+    "jcc": "NOT_ASSESSED",
+    "setcc": "NOT_ASSESSED",
+    "cmov": "NOT_ASSESSED",
+    "memory_address": "NOT_ASSESSED"
+   }
   },
   "prf": {
    "family": "ML-KEM PRF",
@@ -630,10 +683,12 @@
     "bytes": 177,
     "insns": 60
    },
-   "secret_derived_jcc": 0,
-   "secret_derived_memory_address": false,
-   "secret_derived_setcc": [],
-   "secret_derived_cmov": []
+   "secret_dependence": {
+    "jcc": "NOT_ASSESSED",
+    "setcc": "NOT_ASSESSED",
+    "cmov": "NOT_ASSESSED",
+    "memory_address": "NOT_ASSESSED"
+   }
   },
   "rsa_ossl_mod_exp": {
    "family": "RSA CRT arms",
@@ -652,10 +707,12 @@
     "bytes": 4517,
     "insns": 1103
    },
-   "secret_derived_jcc": 0,
-   "secret_derived_memory_address": false,
-   "secret_derived_setcc": [],
-   "secret_derived_cmov": []
+   "secret_dependence": {
+    "jcc": "NOT_ASSESSED",
+    "setcc": "NOT_ASSESSED",
+    "cmov": "NOT_ASSESSED",
+    "memory_address": "NOT_ASSESSED"
+   }
   },
   "run_mont_ladder": {
    "family": "Montgomery ladder carrier (ladder multiplies inlined here)",
@@ -674,10 +731,12 @@
     "bytes": 5470,
     "insns": 1144
    },
-   "secret_derived_jcc": 0,
-   "secret_derived_memory_address": false,
-   "secret_derived_setcc": [],
-   "secret_derived_cmov": []
+   "secret_dependence": {
+    "jcc": "NOT_ASSESSED",
+    "setcc": "NOT_ASSESSED",
+    "cmov": "NOT_ASSESSED",
+    "memory_address": "NOT_ASSESSED"
+   }
   },
   "scalar_inverse_ntt": {
    "family": "ML-KEM inverse NTT",
@@ -696,10 +755,12 @@
     "bytes": 1366,
     "insns": 295
    },
-   "secret_derived_jcc": 0,
-   "secret_derived_memory_address": false,
-   "secret_derived_setcc": [],
-   "secret_derived_cmov": []
+   "secret_dependence": {
+    "jcc": "NOT_ASSESSED",
+    "setcc": "NOT_ASSESSED",
+    "cmov": "NOT_ASSESSED",
+    "memory_address": "NOT_ASSESSED"
+   }
   },
   "vector_decode_12": {
    "family": "ML-KEM vector decode 12-bit",
@@ -718,10 +779,12 @@
     "bytes": 136,
     "insns": 35
    },
-   "secret_derived_jcc": 0,
-   "secret_derived_memory_address": false,
-   "secret_derived_setcc": [],
-   "secret_derived_cmov": []
+   "secret_dependence": {
+    "jcc": "NOT_ASSESSED",
+    "setcc": "NOT_ASSESSED",
+    "cmov": "NOT_ASSESSED",
+    "memory_address": "NOT_ASSESSED"
+   }
   },
   "vector_encode": {
    "family": "ML-KEM vector encode",
@@ -740,10 +803,20 @@
     "bytes": 237,
     "insns": 71
    },
-   "secret_derived_jcc": 0,
-   "secret_derived_memory_address": false,
-   "secret_derived_setcc": [],
-   "secret_derived_cmov": []
+   "secret_dependence": {
+    "jcc": "NOT_ASSESSED",
+    "setcc": "NOT_ASSESSED",
+    "cmov": "NOT_ASSESSED",
+    "memory_address": "NOT_ASSESSED"
+   }
   }
+ },
+ "secret_dependence_aggregate": {
+  "inventory_targets": 31,
+  "mechanised_targets": 1,
+  "mechanised": [
+   "key::decap"
+  ],
+  "statement": "1 of 31 targets carry a mechanised secret-dependence contract; the remaining 30 are NOT_ASSESSED, never OBSERVED_ZERO.  A resolved target is not a verified target."
  }
 }

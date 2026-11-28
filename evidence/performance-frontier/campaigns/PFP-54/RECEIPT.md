@@ -3,8 +3,9 @@
 **State: DONE.** One release compilation produced a debug-stripped shipped DSO
 and a detached DWARF companion bound to it by build-id. The branch audit resolves
 all **31** targets, including `arith::mont_mul_sos_into`, whose only body is
-inlined into `mont_mul_fallible`. The audit observed **no secret-derived
-conditional transfer and no secret-derived memory address**. Release-gate item 11
+inlined into `mont_mul_fallible`. **Mechanised secret dependence covers 1 of the
+31 targets** (`key::decap`); the other 30 are `NOT_ASSESSED`, not observed zero.
+Release-gate item 11
 changed from `RG_AUDIT_IDENTITY_MISMATCH` to **passing**; the gate went from
 **36** to **35** refusals and no `RG_AUDIT_*` or `RG_DOCS` line remains.
 
@@ -106,10 +107,16 @@ detached DWARF). Totals over the 31 targets: **1,134 jcc, 6 div/idiv, 81 cmov,
   contract: 15 jcc public-bound, **0 secret-derived jcc**, 0 undetermined; one
   secret-derived `setcc` (`0x1f8396 setne %al`) consumed **arithmetically**
   (verified: `mov %eax,0xa0(%rsp)`) and one `public-bound` register `cmov`.
-- **No secret-derived conditional transfer and no secret-derived memory address.
-  No STOP.** For the other 30 targets the instrument prints provenance and
-  counts, not taint; the record labels them `inventory-and-source-review` and
-  the register does not assert constant time.
+- **Mechanised secret dependence: 1 of 31 targets, not 31 of 31.** Only
+  `key::decap` carries a mechanised contract. Its four-state record is
+  `jcc OBSERVED_ZERO`, `setcc OBSERVED_NONZERO`, `cmov OBSERVED_ZERO`,
+  `memory_address UNDETERMINED` (the instrument does not model memory). The
+  other 30 targets are `NOT_ASSESSED` for all four properties, never
+  `OBSERVED_ZERO`; a resolved target is not a verified target.
+- **No secret-derived conditional transfer and no secret-derived memory address
+  were *established* for `key::decap`.** For the other 30 targets the instrument
+  prints provenance and counts, not taint; the record labels them
+  `inventory-and-source-review` and the register does not assert constant time.
 
 ## 6. Release gate
 
@@ -124,6 +131,13 @@ fresh audit of it; the coverage requirement (`PFP-34/coverage.json`) is rebound
 to the PFP-54 inventory, and no family or prefix was admitted. The remaining 35
 refusals are the pre-existing package/claims/threshold/policy/instrument/
 authorisation items.
+
+**PFP-84 supersedes the item-11 reading above.** The record now encodes secret
+dependence as four states, and only `key::decap` is mechanised; the other 30
+targets are `NOT_ASSESSED`. Release-gate item 11 therefore records
+`RG_AUDIT_DEPENDENCE_UNMEASURED` for those targets instead of reading their
+former Boolean zero as a clean measurement. The 35-refusal figure is the
+pre-PFP-84 reading and is kept as history, not as the current admission.
 
 ## 7. Assurance entries (PFP-49 schema) — schema behaviour recorded
 

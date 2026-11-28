@@ -25,6 +25,15 @@ COVERAGE = ROOT / "evidence/performance-frontier/campaigns/PFP-34/coverage.json"
 RECORD = ROOT / "evidence/performance-frontier/campaigns/PFP-34/audit-record.json"
 RECORD_COPY = EV / "raw/audit-record.json"
 
+# A secret-dependence property is never a Boolean.  Zero is a measurement;
+# "no instrument applied" is a different state and must never be encoded as a
+# measured zero (PFP-84).
+OBSERVED_ZERO = "OBSERVED_ZERO"
+OBSERVED_NONZERO = "OBSERVED_NONZERO"
+UNDETERMINED = "UNDETERMINED"
+NOT_ASSESSED = "NOT_ASSESSED"
+SECRET_DEPENDENCE_PROPERTIES = ("jcc", "setcc", "cmov", "memory_address")
+
 
 def sha(path: pathlib.Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
@@ -68,6 +77,36 @@ def parse_report(text: str):
                     "class": cols[4].strip("*"),
                 })
     return targets, contract
+
+
+def _secret_dependence_aggregate(targets: dict[str, dict]) -> dict:
+    """Recompute the mechanised/inventory split from the per-target states.
+
+    A target is *mechanised* when at least one of its four properties was
+    assessed by an instrument (any state other than NOT_ASSESSED).  The
+    remaining targets are NOT_ASSESSED, so resolution is never reported as
+    verification.
+    """
+    mechanised = sorted(
+        tid
+        for tid, target in targets.items()
+        if any(
+            state != NOT_ASSESSED
+            for state in target["secret_dependence"].values()
+        )
+    )
+    total = len(targets)
+    return {
+        "inventory_targets": total,
+        "mechanised_targets": len(mechanised),
+        "mechanised": mechanised,
+        "statement": (
+            f"{len(mechanised)} of {total} targets carry a mechanised "
+            f"secret-dependence contract; the remaining "
+            f"{total - len(mechanised)} are NOT_ASSESSED, never "
+            "OBSERVED_ZERO.  A resolved target is not a verified target."
+        ),
+    }
 
 
 def main() -> int:
@@ -116,34 +155,60 @@ def main() -> int:
                 "calls": counts["calls"], "cpuid": counts["cpuid"],
                 "bytes": counts["bytes"], "insns": counts["insns"],
             },
-            "secret_derived_jcc": 0,
-            "secret_derived_memory_address": False,
-            "secret_derived_setcc": [],
-            "secret_derived_cmov": [],
+            # No instrument was applied to this target's secret dependence by
+            # the branch audit.  It observed instruction counts and provenance,
+            # not taint, so every property is NOT_ASSESSED rather than zero.
+            "secret_dependence": {
+                prop: NOT_ASSESSED for prop in SECRET_DEPENDENCE_PROPERTIES
+            },
         }
         if tid == "key::decap":
             record["classification"] = "comparison-contract"
             record["note"] = (
                 "The comparison contract is mechanised: the XOR/OR comparison "
                 "accumulation is tainted and propagated over the CFG. Memory is "
-                "not modelled, so `public-bound` means no tracked register taint "
-                "reaches the condition.")
-            for reader in contract["readers"]:
-                if reader["class"] != "secret-derived":
-                    continue
-                if reader["kind"] == "setcc":
-                    record["secret_derived_setcc"].append({
-                        "addr": reader["addr"], "insn": reader["insn"],
-                        "condition_source": reader["source"],
-                        "consumer": "arithmetic",
-                        "note": ("writes a register value consumed by a store, not "
-                                 "a transfer condition (verified by disassembly)"),
-                    })
+                "not modelled, so the memory-address property is UNDETERMINED, "
+                "not observed zero.")
+            secret_setcc = [
+                {
+                    "addr": reader["addr"], "insn": reader["insn"],
+                    "condition_source": reader["source"],
+                    "consumer": "arithmetic",
+                    "note": ("writes a register value consumed by a store, not "
+                             "a transfer condition (verified by disassembly)"),
+                }
+                for reader in contract["readers"]
+                if reader["class"] == "secret-derived" and reader["kind"] == "setcc"
+            ]
+            secret_cmov = [
+                {
+                    "addr": reader["addr"], "insn": reader["insn"],
+                    "condition_source": reader["source"],
+                }
+                for reader in contract["readers"]
+                if reader["class"] == "secret-derived" and reader["kind"] == "cmov"
+            ]
+            record["secret_dependence"] = {
+                "jcc": (
+                    UNDETERMINED if contract["undetermined"] > 0
+                    else OBSERVED_ZERO if contract["secret_derived_jcc"] == 0
+                    else OBSERVED_NONZERO
+                ),
+                "setcc": OBSERVED_NONZERO if secret_setcc else OBSERVED_ZERO,
+                "cmov": OBSERVED_NONZERO if secret_cmov else OBSERVED_ZERO,
+                # The instrument does not model memory, so a `public-bound`
+                # condition says nothing about the address operands.
+                "memory_address": UNDETERMINED,
+            }
+            record["secret_dependence_detail"] = {
+                "setcc": secret_setcc, "cmov": secret_cmov,
+            }
         if symbol == "scalar_ntt":
             record["note"] = (
                 "The audit observes the cmov count and operand/address classes "
                 "in the report; this instrument does not establish their secret "
-                "dependence, so no secret_derived_cmov list is claimed here.")
+                "dependence, so every secret-dependence property is NOT_ASSESSED "
+                "here, not zero.")
         targets[tid] = record
 
     candidate = subprocess.run(
@@ -200,6 +265,7 @@ def main() -> int:
             "dwarf_inline_resolved": 1,
             "refused": 0,
         },
+        "secret_dependence_aggregate": _secret_dependence_aggregate(targets),
         "targets": targets,
     }
     text = json.dumps(record, indent=1) + "\n"

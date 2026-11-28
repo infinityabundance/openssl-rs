@@ -114,6 +114,30 @@ NO_EVIDENCE_STATUSES = (
     "NO_EVIDENCE",
 )
 
+# A secret-dependence property is four-state, never a Boolean (PFP-84).  A
+# measured zero, a measured non-zero, an instrument that cannot decide, and an
+# instrument that was never applied are four different facts.
+OBSERVED_ZERO = "OBSERVED_ZERO"
+OBSERVED_NONZERO = "OBSERVED_NONZERO"
+UNDETERMINED = "UNDETERMINED"
+NOT_ASSESSED = "NOT_ASSESSED"
+SECRET_DEPENDENCE_STATES = (
+    OBSERVED_ZERO,
+    OBSERVED_NONZERO,
+    UNDETERMINED,
+    NOT_ASSESSED,
+)
+SECRET_DEPENDENCE_PROPERTIES = ("jcc", "setcc", "cmov", "memory_address")
+# The pre-PFP-84 record encoded all four properties as a count/boolean/list, so
+# an inapplicable instrument and a measured zero were indistinguishable.
+LEGACY_SECRET_DEPENDENCE_FIELDS = (
+    "secret_derived_jcc",
+    "secret_derived_memory_address",
+    "secret_derived_setcc",
+    "secret_derived_cmov",
+)
+BRANCH_AUDIT_RECORD_SCHEMA = "openssl-rs/pfp/branch-audit-record/1"
+
 KV_JSON_MALFORMED = "KV_JSON_MALFORMED"
 KV_JSON_DUPLICATE_KEY = "KV_JSON_DUPLICATE_KEY"
 KV_JSON_NON_FINITE = "KV_JSON_NON_FINITE"
@@ -144,6 +168,12 @@ KV_PROOF_UNBOUND = "KV_PROOF_UNBOUND"
 KV_ASSURANCE_OUTCOME_INADMISSIBLE = "KV_ASSURANCE_OUTCOME_INADMISSIBLE"
 KV_ARTEFACT_SUBJECT_MISMATCH = "KV_ARTEFACT_SUBJECT_MISMATCH"
 KV_ASSURANCE_INCOMPLETE = "KV_ASSURANCE_INCOMPLETE"
+KV_SUBJECT_NOT_RETRIEVABLE = "KV_SUBJECT_NOT_RETRIEVABLE"
+KV_AUDIT_RECORD_UNREADABLE = "KV_AUDIT_RECORD_UNREADABLE"
+KV_AUDIT_RECORD_LEGACY_SHAPE = "KV_AUDIT_RECORD_LEGACY_SHAPE"
+KV_AUDIT_RECORD_AGGREGATE_MISMATCH = "KV_AUDIT_RECORD_AGGREGATE_MISMATCH"
+KV_SECRET_DEPENDENCE_UNMEASURED = "KV_SECRET_DEPENDENCE_UNMEASURED"
+KV_SECRET_DEPENDENCE_UNKNOWN_STATE = "KV_SECRET_DEPENDENCE_UNKNOWN_STATE"
 
 CODES = (
     KV_JSON_MALFORMED,
@@ -176,6 +206,12 @@ CODES = (
     KV_ASSURANCE_OUTCOME_INADMISSIBLE,
     KV_ARTEFACT_SUBJECT_MISMATCH,
     KV_ASSURANCE_INCOMPLETE,
+    KV_SUBJECT_NOT_RETRIEVABLE,
+    KV_AUDIT_RECORD_UNREADABLE,
+    KV_AUDIT_RECORD_LEGACY_SHAPE,
+    KV_AUDIT_RECORD_AGGREGATE_MISMATCH,
+    KV_SECRET_DEPENDENCE_UNMEASURED,
+    KV_SECRET_DEPENDENCE_UNKNOWN_STATE,
 )
 
 RULES: dict[str, str] = {
@@ -244,6 +280,27 @@ RULES: dict[str, str] = {
     ),
     KV_ASSURANCE_INCOMPLETE: (
         "an assurance entry is missing a required field or its evidence path is absent"
+    ),
+    KV_SUBJECT_NOT_RETRIEVABLE: (
+        "an artefact subject is absent and cannot be retrieved; a digest is not a "
+        "measurement, so the entry is refused rather than assumed valid"
+    ),
+    KV_AUDIT_RECORD_UNREADABLE: (
+        "an ARTEFACT_AUDITED entry does not name a readable, digest-bound audit record"
+    ),
+    KV_AUDIT_RECORD_LEGACY_SHAPE: (
+        "an audit record still encodes secret dependence as a Boolean/int/list "
+        "instead of the four-state encoding"
+    ),
+    KV_AUDIT_RECORD_AGGREGATE_MISMATCH: (
+        "the stated mechanised/inventory target counts disagree with the per-target "
+        "states recomputed from the record"
+    ),
+    KV_SECRET_DEPENDENCE_UNMEASURED: (
+        "a secret-dependence verdict is claimed from UNDETERMINED or NOT_ASSESSED"
+    ),
+    KV_SECRET_DEPENDENCE_UNKNOWN_STATE: (
+        "a secret-dependence property is not one of the four recorded states"
     ),
 }
 
@@ -331,6 +388,121 @@ def _subject_path(root: Path, value: Any) -> Path | None:
 
 def _add(problems: list[Problem], code: str, pointer: str, detail: str) -> None:
     problems.append(Problem(pointer, code, detail))
+
+
+def _secret_dependence_states(
+    targets: Any, problems: list[Problem], where: str
+) -> dict[str, dict] | None:
+    """Validate the four-state encoding of every target; refuse the legacy shape.
+
+    Returns the per-target property states, or ``None`` when the record cannot
+    be read as the four-state encoding.  A legacy count/boolean/list is refused
+    explicitly because it makes a measured zero and an unapplied instrument
+    indistinguishable (PFP-84).
+    """
+    if not isinstance(targets, dict) or not targets:
+        _add(problems, KV_AUDIT_RECORD_UNREADABLE, where, "the record names no target")
+        return None
+    ok = True
+    legacy = sorted(
+        tid
+        for tid, target in targets.items()
+        if isinstance(target, dict)
+        and any(field in target for field in LEGACY_SECRET_DEPENDENCE_FIELDS)
+    )
+    if legacy:
+        _add(
+            problems,
+            KV_AUDIT_RECORD_LEGACY_SHAPE,
+            where,
+            "legacy Boolean/int/list secret-dependence fields on: " + ", ".join(legacy),
+        )
+        ok = False
+    states: dict[str, dict] = {}
+    for tid, target in targets.items():
+        if not isinstance(target, dict):
+            _add(problems, KV_AUDIT_RECORD_UNREADABLE, f"{where}/{tid}", "not an object")
+            ok = False
+            continue
+        record = target.get("secret_dependence")
+        if not isinstance(record, dict):
+            _add(
+                problems,
+                KV_SECRET_DEPENDENCE_UNKNOWN_STATE,
+                f"{where}/{tid}/secret_dependence",
+                "the four-state encoding is missing",
+            )
+            ok = False
+            continue
+        row: dict[str, str] = {}
+        for prop in SECRET_DEPENDENCE_PROPERTIES:
+            state = record.get(prop)
+            if state not in SECRET_DEPENDENCE_STATES:
+                _add(
+                    problems,
+                    KV_SECRET_DEPENDENCE_UNKNOWN_STATE,
+                    f"{where}/{tid}/secret_dependence/{prop}",
+                    f"{state!r} is not one of {SECRET_DEPENDENCE_STATES}",
+                )
+                ok = False
+            else:
+                row[prop] = state
+        states[tid] = row
+    return states if ok else None
+
+
+def _load_audit_record(
+    root: Path, reference: Any, problems: list[Problem], where: str
+) -> dict | None:
+    """Load and digest-bind an audit record referenced by an assurance entry.
+
+    The record may be an inline document (self-test fixtures) or a repository
+    path with its digest (the committed register).
+    """
+    if not isinstance(reference, dict):
+        _add(problems, KV_AUDIT_RECORD_UNREADABLE, where, "no audit record is named")
+        return None
+    document = reference.get("document")
+    if document is None:
+        path = _subject_path(root, reference.get("path"))
+        declared = reference.get("sha256")
+        if path is None or not path.is_file():
+            _add(
+                problems,
+                KV_AUDIT_RECORD_UNREADABLE,
+                where,
+                f"{reference.get('path')!r} does not name an existing file",
+            )
+            return None
+        if not _sha(declared):
+            _add(problems, KV_AUDIT_RECORD_UNREADABLE, where, "no full record SHA-256")
+            return None
+        actual = _hash_file(path)
+        if actual != declared:
+            _add(
+                problems,
+                KV_AUDIT_RECORD_UNREADABLE,
+                where,
+                f"the record hashes to {actual!r}, not the declared {declared!r}",
+            )
+            return None
+        try:
+            document = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+            _add(problems, KV_AUDIT_RECORD_UNREADABLE, where, "the record is not JSON")
+            return None
+    if not isinstance(document, dict):
+        _add(problems, KV_AUDIT_RECORD_UNREADABLE, where, "the record is not an object")
+        return None
+    if document.get("schema") != BRANCH_AUDIT_RECORD_SCHEMA:
+        _add(
+            problems,
+            KV_AUDIT_RECORD_UNREADABLE,
+            where,
+            f"schema must be {BRANCH_AUDIT_RECORD_SCHEMA!r}",
+        )
+        return None
+    return document
 
 
 def _check_hardware(document: dict, problems: list[Problem]) -> None:
@@ -809,15 +981,63 @@ def _check_assurance(
                     f"{where}/subject/artefact/sha256",
                     "the subject digest is not the cited evidence digest",
                 )
-            actual = _hash_file(subject_path)
-            if actual is None or actual != declared:
+            # The audited binaries are deliberately not committed (PFP-86).  An
+            # artefact entry must therefore name how the subject is reproduced
+            # or retrieved, together with the digest that retrieval must yield.
+            retrieval = artefact_subject.get("retrieval")
+            if not isinstance(retrieval, dict):
                 _add(
                     problems,
-                    KV_ARTEFACT_SUBJECT_MISMATCH,
-                    f"{where}/subject/artefact/path",
-                    f"{artefact_subject.get('path')!r} hashes to {actual!r}, not the "
-                    f"declared {declared!r}",
+                    KV_ASSURANCE_INCOMPLETE,
+                    f"{where}/subject/artefact/retrieval",
+                    "an uncommitted subject needs a retrieval or reproduction clause",
                 )
+            else:
+                mechanism = retrieval.get("mechanism")
+                expected = retrieval.get("expected_sha256")
+                clause_path = _subject_path(root, retrieval.get("evidence_path"))
+                if not _text(mechanism):
+                    _add(
+                        problems,
+                        KV_ASSURANCE_INCOMPLETE,
+                        f"{where}/subject/artefact/retrieval/mechanism",
+                        "the retrieval or reproduction mechanism is missing",
+                    )
+                if not _sha(expected) or expected != declared:
+                    _add(
+                        problems,
+                        KV_ASSURANCE_INCOMPLETE,
+                        f"{where}/subject/artefact/retrieval/expected_sha256",
+                        "the retrieval clause must name the subject's full digest",
+                    )
+                if clause_path is None or not clause_path.is_file():
+                    _add(
+                        problems,
+                        KV_ASSURANCE_INCOMPLETE,
+                        f"{where}/subject/artefact/retrieval/evidence_path",
+                        "the retrieval clause names no existing evidence file",
+                    )
+            if not subject_path.is_file():
+                # Presence is not assumed.  A digest without the bytes is not a
+                # measurement, so a clean checkout records a refusal rather than
+                # passing the entry on its declared hash.
+                _add(
+                    problems,
+                    KV_SUBJECT_NOT_RETRIEVABLE,
+                    f"{where}/subject/artefact/path",
+                    f"{artefact_subject.get('path')!r} is absent and was not "
+                    "retrieved; the declared digest cannot be recomputed",
+                )
+            else:
+                actual = _hash_file(subject_path)
+                if actual != declared:
+                    _add(
+                        problems,
+                        KV_ARTEFACT_SUBJECT_MISMATCH,
+                        f"{where}/subject/artefact/path",
+                        f"{artefact_subject.get('path')!r} hashes to {actual!r}, not the "
+                        f"declared {declared!r}",
+                    )
         if assurance_class == "ARTEFACT_AUDITED":
             audit = evidence.get("audit")
             if not isinstance(audit, dict):
@@ -845,6 +1065,98 @@ def _check_assurance(
                         f"{where}/subject/artefact/sha256",
                         "the audit is not of the subject digest",
                     )
+            # PFP-84: the audit record must use the four-state secret-dependence
+            # encoding, and no verdict may be read from UNDETERMINED or
+            # NOT_ASSESSED.  The aggregate must state how many targets are
+            # actually mechanised, not imply that resolution is verification.
+            record_reference = entry.get("secret_dependence")
+            record_document = _load_audit_record(
+                root, record_reference, problems, f"{where}/secret_dependence/record"
+            )
+            if record_document is not None:
+                states = _secret_dependence_states(
+                    record_document.get("targets"), problems, f"{where}/secret_dependence"
+                )
+                aggregate = record_document.get("secret_dependence_aggregate")
+                if states is not None and isinstance(aggregate, dict):
+                    mechanised = sorted(
+                        tid
+                        for tid, row in states.items()
+                        if any(
+                            row.get(prop) != NOT_ASSESSED
+                            for prop in SECRET_DEPENDENCE_PROPERTIES
+                        )
+                    )
+                    if (
+                        aggregate.get("mechanised_targets") != len(mechanised)
+                        or aggregate.get("inventory_targets") != len(states)
+                    ):
+                        _add(
+                            problems,
+                            KV_AUDIT_RECORD_AGGREGATE_MISMATCH,
+                            f"{where}/secret_dependence/aggregate",
+                            f"the record states "
+                            f"{aggregate.get('mechanised_targets')!r} of "
+                            f"{aggregate.get('inventory_targets')!r} mechanised; the "
+                            f"per-target states give {len(mechanised)} of {len(states)}",
+                        )
+                elif states is not None:
+                    _add(
+                        problems,
+                        KV_AUDIT_RECORD_AGGREGATE_MISMATCH,
+                        f"{where}/secret_dependence/aggregate",
+                        "the aggregate mechanised/inventory counts are missing",
+                    )
+                if states is not None and isinstance(record_reference, dict):
+                    carriers = record_reference.get("carriers")
+                    verdict = record_reference.get("verdict")
+                    if not isinstance(carriers, list) or not carriers:
+                        _add(
+                            problems,
+                            KV_ASSURANCE_INCOMPLETE,
+                            f"{where}/secret_dependence/carriers",
+                            "the covered carrier targets must be named",
+                        )
+                    if not isinstance(verdict, dict):
+                        _add(
+                            problems,
+                            KV_ASSURANCE_INCOMPLETE,
+                            f"{where}/secret_dependence/verdict",
+                            "the per-property verdict must be stated",
+                        )
+                    if isinstance(carriers, list) and isinstance(verdict, dict):
+                        for carrier in carriers:
+                            row = states.get(carrier)
+                            if row is None:
+                                _add(
+                                    problems,
+                                    KV_AUDIT_RECORD_UNREADABLE,
+                                    f"{where}/secret_dependence/carriers",
+                                    f"{carrier!r} is not a target in the audit record",
+                                )
+                                continue
+                            for prop in SECRET_DEPENDENCE_PROPERTIES:
+                                claimed = verdict.get(prop)
+                                actual_state = row.get(prop)
+                                if claimed not in SECRET_DEPENDENCE_STATES:
+                                    _add(
+                                        problems,
+                                        KV_SECRET_DEPENDENCE_UNKNOWN_STATE,
+                                        f"{where}/secret_dependence/verdict/{prop}",
+                                        f"{claimed!r} is not a four-state value",
+                                    )
+                                elif claimed in (OBSERVED_ZERO, OBSERVED_NONZERO) and (
+                                    actual_state in (UNDETERMINED, NOT_ASSESSED)
+                                    or actual_state != claimed
+                                ):
+                                    _add(
+                                        problems,
+                                        KV_SECRET_DEPENDENCE_UNMEASURED,
+                                        f"{where}/secret_dependence/verdict/{prop}",
+                                        f"{carrier!r} is {actual_state!r} but the entry "
+                                        f"reads {claimed!r}; a verdict is not read from "
+                                        "UNDETERMINED or NOT_ASSESSED",
+                                    )
         if assurance_class in TAINT_CLASSES:
             taint = evidence.get("ctgrind")
             if not isinstance(taint, dict) or not _text(taint.get("result")):
@@ -1273,6 +1585,39 @@ _FIXTURE_ARTEFACT = Path(__file__).resolve()
 _A = hashlib.sha256(_FIXTURE_ARTEFACT.read_bytes()).hexdigest()
 _B = "b" * 64
 _AUDIT_EVIDENCE = "docs/KERNEL-VERIFICATION.md"
+
+
+def _audit_record_document() -> dict:
+    """A minimal four-state audit record for the self-test fixtures."""
+    return {
+        "schema": BRANCH_AUDIT_RECORD_SCHEMA,
+        "targets": {
+            "mont_mul_ladder_into": {
+                "secret_dependence": {
+                    "jcc": OBSERVED_ZERO,
+                    "setcc": OBSERVED_ZERO,
+                    "cmov": OBSERVED_ZERO,
+                    "memory_address": OBSERVED_ZERO,
+                }
+            }
+        },
+        "secret_dependence_aggregate": {
+            "inventory_targets": 1,
+            "mechanised_targets": 1,
+            "mechanised": ["mont_mul_ladder_into"],
+        },
+    }
+
+
+def _retrieval_clause() -> dict:
+    return {
+        "mechanism": (
+            "the self-test subject is the tool file itself; production subjects "
+            "are reproduced by PFP-54/build.sh at the recorded source identity"
+        ),
+        "expected_sha256": _A,
+        "evidence_path": _AUDIT_EVIDENCE,
+    }
 _TS = "x86_64-unknown-linux-gnu release"
 _TP = "release, x86_64-unknown-linux-gnu, rustc 1.98.1"
 _NO_EVIDENCE = [
@@ -1375,6 +1720,17 @@ def _valid_document() -> dict:
                             "artefact": {
                                 "path": str(_FIXTURE_ARTEFACT),
                                 "sha256": _A,
+                                "retrieval": _retrieval_clause(),
+                            },
+                        },
+                        "secret_dependence": {
+                            "document": _audit_record_document(),
+                            "carriers": ["mont_mul_ladder_into"],
+                            "verdict": {
+                                "jcc": OBSERVED_ZERO,
+                                "setcc": OBSERVED_ZERO,
+                                "cmov": OBSERVED_ZERO,
+                                "memory_address": OBSERVED_ZERO,
                             },
                         },
                         "assumptions": [
@@ -1665,6 +2021,62 @@ def _controls() -> list[tuple[str, dict, str | None]]:
                 )
             ),
             KV_ASSURANCE_INCOMPLETE,
+        ),
+        (
+            KV_SUBJECT_NOT_RETRIEVABLE,
+            _mutate(
+                lambda d: d["kernels"][0]["assurance"][0]["subject"]["artefact"].update(
+                    path="docs/not-retrieved.so"
+                )
+            ),
+            KV_SUBJECT_NOT_RETRIEVABLE,
+        ),
+        (
+            KV_AUDIT_RECORD_UNREADABLE,
+            _mutate(
+                lambda d: d["kernels"][0]["assurance"][0]["secret_dependence"][
+                    "document"
+                ].update(schema="wrong")
+            ),
+            KV_AUDIT_RECORD_UNREADABLE,
+        ),
+        (
+            KV_AUDIT_RECORD_LEGACY_SHAPE,
+            _mutate(
+                lambda d: d["kernels"][0]["assurance"][0]["secret_dependence"][
+                    "document"
+                ]["targets"]["mont_mul_ladder_into"].update(secret_derived_jcc=0)
+            ),
+            KV_AUDIT_RECORD_LEGACY_SHAPE,
+        ),
+        (
+            KV_AUDIT_RECORD_AGGREGATE_MISMATCH,
+            _mutate(
+                lambda d: d["kernels"][0]["assurance"][0]["secret_dependence"][
+                    "document"
+                ]["secret_dependence_aggregate"].update(mechanised_targets=0)
+            ),
+            KV_AUDIT_RECORD_AGGREGATE_MISMATCH,
+        ),
+        (
+            KV_SECRET_DEPENDENCE_UNMEASURED,
+            _mutate(
+                lambda d: d["kernels"][0]["assurance"][0]["secret_dependence"][
+                    "document"
+                ]["targets"]["mont_mul_ladder_into"]["secret_dependence"].update(
+                    jcc=NOT_ASSESSED
+                )
+            ),
+            KV_SECRET_DEPENDENCE_UNMEASURED,
+        ),
+        (
+            KV_SECRET_DEPENDENCE_UNKNOWN_STATE,
+            _mutate(
+                lambda d: d["kernels"][0]["assurance"][0]["secret_dependence"][
+                    "verdict"
+                ].update(jcc="ZERO")
+            ),
+            KV_SECRET_DEPENDENCE_UNKNOWN_STATE,
         ),
     ]
     return controls

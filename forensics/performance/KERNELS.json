@@ -445,7 +445,7 @@
      "differential": null,
      "audit": {
       "kind": "BINARY_BRANCH_AUDIT",
-      "result": "detached-DWARF binary branch audit at DSO a535454753d8 resolved 31/31 targets; mont_mul_sos_into 18 jcc / 0 cmov / 10 setcc; mont_mul_fallible 31 jcc / 0 cmov / 10 setcc; 0 secret-derived jcc; 0 secret-derived address",
+      "result": "detached-DWARF binary branch audit at DSO a535454753d8 resolved 31/31 targets; mont_mul_sos_into 18 jcc / 0 cmov / 10 setcc; mont_mul_fallible 31 jcc / 0 cmov / 10 setcc; 1 of 31 targets mechanised for secret dependence; these carriers are NOT_ASSESSED",
       "verdict": "PASS",
       "digest": "a535454753d8857e4c385689ea431b5a47a9686322e6f52b203971188a49359f",
       "binding": "ARTEFACT"
@@ -486,13 +486,18 @@
     },
     {
      "class": "ARTEFACT_AUDITED",
-     "scope": "PFP-54 f536fd639130 / DSO a535454753d88: the branch audit resolves 31/31 targets and covers mont_mul_sos_into, mont_mul_fallible (mont_mul_sos_into 18 jcc / 0 cmov / 10 setcc; mont_mul_fallible 31 jcc / 0 cmov / 10 setcc). One secret-derived setcc (key::decap, consumed arithmetically) and zero secret-derived conditional transfers or memory addresses were observed. A binary branch audit is not a constant-time proof; the historical ['SOURCE_REVIEWED', 'SOURCE_REVIEWED'] entries remain as the evidence they record.",
+     "scope": "PFP-54 f536fd639130 / DSO a535454753d88: the branch audit resolves 31/31 targets and covers mont_mul_sos_into, mont_mul_fallible (mont_mul_sos_into 18 jcc / 0 cmov / 10 setcc; mont_mul_fallible 31 jcc / 0 cmov / 10 setcc). Mechanised secret dependence covers 1 of 31 targets (key::decap); the carriers listed here are NOT_ASSESSED for jcc, setcc, cmov and memory address, so this entry does not record a zero for them. A binary branch audit is not a constant-time proof; the historical ['SOURCE_REVIEWED', 'SOURCE_REVIEWED'] entries remain as the evidence they record.",
      "evidence": 2,
      "subject": {
       "source": "staging f536fd63913073bab76f839d41e89617da4fa74c, tree 4fef3b02666120f261bc00c43e2e6e04c50cd013; one release compilation; detached DWARF companion sha256 cd64dd590a597116f8475f6db0c81cc94602d74d540d4b45b4b1bae1a0b7ed9b",
       "artefact": {
        "path": "evidence/performance-frontier/campaigns/PFP-54/raw/artefacts/libcrypto.so.3",
-       "sha256": "a535454753d8857e4c385689ea431b5a47a9686322e6f52b203971188a49359f"
+       "sha256": "a535454753d8857e4c385689ea431b5a47a9686322e6f52b203971188a49359f",
+       "retrieval": {
+        "mechanism": "rebuild from source f536fd63 with evidence/performance-frontier/campaigns/PFP-54/build.sh (CARGO_PROFILE_RELEASE_DEBUG=1) and confirm the four digests in ARTEFACTS-NOT-COMMITTED.md",
+        "expected_sha256": "a535454753d8857e4c385689ea431b5a47a9686322e6f52b203971188a49359f",
+        "evidence_path": "evidence/performance-frontier/campaigns/PFP-54/ARTEFACTS-NOT-COMMITTED.md"
+       }
       }
      },
      "assumptions": [
@@ -502,7 +507,21 @@
      ],
      "result": "PASS",
      "instrument": "courts/phase18/timing/binary_branch_audit.py sha256 8b07f7e91dac28d8a2e9752efa929a541ed115e81e060d275979d4210dec0edc; GNU objdump/readelf 2.40; detached DWARF companion sha256 cd64dd590a597116f8475f6db0c81cc94602d74d540d4b45b4b1bae1a0b7ed9b",
-     "evidence_path": "evidence/performance-frontier/campaigns/PFP-54/raw/audit-a5354547.md"
+     "evidence_path": "evidence/performance-frontier/campaigns/PFP-54/raw/audit-a5354547.md",
+     "secret_dependence": {
+      "path": "evidence/performance-frontier/campaigns/PFP-54/raw/audit-record.json",
+      "sha256": "e7c61a70cb9eb8ccd8616d33c8b5e4e8692c4a4cb425b2e882fd9c0123d32993",
+      "carriers": [
+       "mont_mul_sos_into",
+       "mont_mul_fallible"
+      ],
+      "verdict": {
+       "jcc": "NOT_ASSESSED",
+       "setcc": "NOT_ASSESSED",
+       "cmov": "NOT_ASSESSED",
+       "memory_address": "NOT_ASSESSED"
+      }
+     }
     }
    ],
    "no_evidence_targets": [
@@ -649,7 +668,7 @@
      "differential": null,
      "audit": {
       "kind": "BINARY_BRANCH_AUDIT",
-      "result": "detached-DWARF binary branch audit at DSO a535454753d8 resolved 31/31 targets; run_mont_ladder 97 jcc / 3 cmov / 18 setcc; mod_exp_core_consttime_from_parts 27 jcc / 2 cmov / 0 setcc; mod_inverse_consttime 217 jcc / 3 cmov / 24 setcc; 0 secret-derived jcc; 0 secret-derived address",
+      "result": "detached-DWARF binary branch audit at DSO a535454753d8 resolved 31/31 targets; run_mont_ladder 97 jcc / 3 cmov / 18 setcc; mod_exp_core_consttime_from_parts 27 jcc / 2 cmov / 0 setcc; mod_inverse_consttime 217 jcc / 3 cmov / 24 setcc; 1 of 31 targets mechanised for secret dependence; these carriers are NOT_ASSESSED",
       "verdict": "PASS",
       "digest": "a535454753d8857e4c385689ea431b5a47a9686322e6f52b203971188a49359f",
       "binding": "ARTEFACT"
@@ -690,13 +709,18 @@
     },
     {
      "class": "ARTEFACT_AUDITED",
-     "scope": "PFP-54 f536fd639130 / DSO a535454753d88: the branch audit resolves 31/31 targets and covers run_mont_ladder, mod_exp_core_consttime_from_parts, mod_inverse_consttime (run_mont_ladder 97 jcc / 3 cmov / 18 setcc; mod_exp_core_consttime_from_parts 27 jcc / 2 cmov / 0 setcc; mod_inverse_consttime 217 jcc / 3 cmov / 24 setcc). One secret-derived setcc (key::decap, consumed arithmetically) and zero secret-derived conditional transfers or memory addresses were observed. A binary branch audit is not a constant-time proof; the historical ['SOURCE_REVIEWED', 'SOURCE_REVIEWED'] entries remain as the evidence they record.",
+     "scope": "PFP-54 f536fd639130 / DSO a535454753d88: the branch audit resolves 31/31 targets and covers run_mont_ladder, mod_exp_core_consttime_from_parts, mod_inverse_consttime (run_mont_ladder 97 jcc / 3 cmov / 18 setcc; mod_exp_core_consttime_from_parts 27 jcc / 2 cmov / 0 setcc; mod_inverse_consttime 217 jcc / 3 cmov / 24 setcc). Mechanised secret dependence covers 1 of 31 targets (key::decap); the carriers listed here are NOT_ASSESSED for jcc, setcc, cmov and memory address, so this entry does not record a zero for them. A binary branch audit is not a constant-time proof; the historical ['SOURCE_REVIEWED', 'SOURCE_REVIEWED'] entries remain as the evidence they record.",
      "evidence": 2,
      "subject": {
       "source": "staging f536fd63913073bab76f839d41e89617da4fa74c, tree 4fef3b02666120f261bc00c43e2e6e04c50cd013; one release compilation; detached DWARF companion sha256 cd64dd590a597116f8475f6db0c81cc94602d74d540d4b45b4b1bae1a0b7ed9b",
       "artefact": {
        "path": "evidence/performance-frontier/campaigns/PFP-54/raw/artefacts/libcrypto.so.3",
-       "sha256": "a535454753d8857e4c385689ea431b5a47a9686322e6f52b203971188a49359f"
+       "sha256": "a535454753d8857e4c385689ea431b5a47a9686322e6f52b203971188a49359f",
+       "retrieval": {
+        "mechanism": "rebuild from source f536fd63 with evidence/performance-frontier/campaigns/PFP-54/build.sh (CARGO_PROFILE_RELEASE_DEBUG=1) and confirm the four digests in ARTEFACTS-NOT-COMMITTED.md",
+        "expected_sha256": "a535454753d8857e4c385689ea431b5a47a9686322e6f52b203971188a49359f",
+        "evidence_path": "evidence/performance-frontier/campaigns/PFP-54/ARTEFACTS-NOT-COMMITTED.md"
+       }
       }
      },
      "assumptions": [
@@ -706,7 +730,22 @@
      ],
      "result": "PASS",
      "instrument": "courts/phase18/timing/binary_branch_audit.py sha256 8b07f7e91dac28d8a2e9752efa929a541ed115e81e060d275979d4210dec0edc; GNU objdump/readelf 2.40; detached DWARF companion sha256 cd64dd590a597116f8475f6db0c81cc94602d74d540d4b45b4b1bae1a0b7ed9b",
-     "evidence_path": "evidence/performance-frontier/campaigns/PFP-54/raw/audit-a5354547.md"
+     "evidence_path": "evidence/performance-frontier/campaigns/PFP-54/raw/audit-a5354547.md",
+     "secret_dependence": {
+      "path": "evidence/performance-frontier/campaigns/PFP-54/raw/audit-record.json",
+      "sha256": "e7c61a70cb9eb8ccd8616d33c8b5e4e8692c4a4cb425b2e882fd9c0123d32993",
+      "carriers": [
+       "run_mont_ladder",
+       "mod_exp_core_consttime_from_parts",
+       "mod_inverse_consttime"
+      ],
+      "verdict": {
+       "jcc": "NOT_ASSESSED",
+       "setcc": "NOT_ASSESSED",
+       "cmov": "NOT_ASSESSED",
+       "memory_address": "NOT_ASSESSED"
+      }
+     }
     }
    ],
    "no_evidence_targets": [
@@ -772,7 +811,7 @@
      "differential": null,
      "audit": {
       "kind": "BINARY_BRANCH_AUDIT",
-      "result": "detached-DWARF binary branch audit at DSO a535454753d8 resolved 31/31 targets; p256::mont_reduce_into 2 jcc / 0 cmov / 2 setcc; p256::wide_mul_x86 0 jcc / 0 cmov / 9 setcc; 0 secret-derived jcc; 0 secret-derived address",
+      "result": "detached-DWARF binary branch audit at DSO a535454753d8 resolved 31/31 targets; p256::mont_reduce_into 2 jcc / 0 cmov / 2 setcc; p256::wide_mul_x86 0 jcc / 0 cmov / 9 setcc; 1 of 31 targets mechanised for secret dependence; these carriers are NOT_ASSESSED",
       "verdict": "PASS",
       "digest": "a535454753d8857e4c385689ea431b5a47a9686322e6f52b203971188a49359f",
       "binding": "ARTEFACT"
@@ -799,13 +838,18 @@
     },
     {
      "class": "ARTEFACT_AUDITED",
-     "scope": "PFP-54 f536fd639130 / DSO a535454753d88: the branch audit resolves 31/31 targets and covers p256::mont_reduce_into, p256::wide_mul_x86 (p256::mont_reduce_into 2 jcc / 0 cmov / 2 setcc; p256::wide_mul_x86 0 jcc / 0 cmov / 9 setcc). One secret-derived setcc (key::decap, consumed arithmetically) and zero secret-derived conditional transfers or memory addresses were observed. A binary branch audit is not a constant-time proof; the historical ['SOURCE_REVIEWED'] entries remain as the evidence they record.",
+     "scope": "PFP-54 f536fd639130 / DSO a535454753d88: the branch audit resolves 31/31 targets and covers p256::mont_reduce_into, p256::wide_mul_x86 (p256::mont_reduce_into 2 jcc / 0 cmov / 2 setcc; p256::wide_mul_x86 0 jcc / 0 cmov / 9 setcc). Mechanised secret dependence covers 1 of 31 targets (key::decap); the carriers listed here are NOT_ASSESSED for jcc, setcc, cmov and memory address, so this entry does not record a zero for them. A binary branch audit is not a constant-time proof; the historical ['SOURCE_REVIEWED'] entries remain as the evidence they record.",
      "evidence": 1,
      "subject": {
       "source": "staging f536fd63913073bab76f839d41e89617da4fa74c, tree 4fef3b02666120f261bc00c43e2e6e04c50cd013; one release compilation; detached DWARF companion sha256 cd64dd590a597116f8475f6db0c81cc94602d74d540d4b45b4b1bae1a0b7ed9b",
       "artefact": {
        "path": "evidence/performance-frontier/campaigns/PFP-54/raw/artefacts/libcrypto.so.3",
-       "sha256": "a535454753d8857e4c385689ea431b5a47a9686322e6f52b203971188a49359f"
+       "sha256": "a535454753d8857e4c385689ea431b5a47a9686322e6f52b203971188a49359f",
+       "retrieval": {
+        "mechanism": "rebuild from source f536fd63 with evidence/performance-frontier/campaigns/PFP-54/build.sh (CARGO_PROFILE_RELEASE_DEBUG=1) and confirm the four digests in ARTEFACTS-NOT-COMMITTED.md",
+        "expected_sha256": "a535454753d8857e4c385689ea431b5a47a9686322e6f52b203971188a49359f",
+        "evidence_path": "evidence/performance-frontier/campaigns/PFP-54/ARTEFACTS-NOT-COMMITTED.md"
+       }
       }
      },
      "assumptions": [
@@ -815,7 +859,21 @@
      ],
      "result": "PASS",
      "instrument": "courts/phase18/timing/binary_branch_audit.py sha256 8b07f7e91dac28d8a2e9752efa929a541ed115e81e060d275979d4210dec0edc; GNU objdump/readelf 2.40; detached DWARF companion sha256 cd64dd590a597116f8475f6db0c81cc94602d74d540d4b45b4b1bae1a0b7ed9b",
-     "evidence_path": "evidence/performance-frontier/campaigns/PFP-54/raw/audit-a5354547.md"
+     "evidence_path": "evidence/performance-frontier/campaigns/PFP-54/raw/audit-a5354547.md",
+     "secret_dependence": {
+      "path": "evidence/performance-frontier/campaigns/PFP-54/raw/audit-record.json",
+      "sha256": "e7c61a70cb9eb8ccd8616d33c8b5e4e8692c4a4cb425b2e882fd9c0123d32993",
+      "carriers": [
+       "p256::mont_reduce_into",
+       "p256::wide_mul_x86"
+      ],
+      "verdict": {
+       "jcc": "NOT_ASSESSED",
+       "setcc": "NOT_ASSESSED",
+       "cmov": "NOT_ASSESSED",
+       "memory_address": "NOT_ASSESSED"
+      }
+     }
     }
    ],
    "no_evidence_targets": [
@@ -1001,7 +1059,7 @@
      "differential": null,
      "audit": {
       "kind": "BINARY_BRANCH_AUDIT",
-      "result": "detached-DWARF binary branch audit at DSO a535454753d8 resolved 31/31 targets; mod_inverse_consttime 217 jcc / 3 cmov / 24 setcc; 0 secret-derived jcc; 0 secret-derived address",
+      "result": "detached-DWARF binary branch audit at DSO a535454753d8 resolved 31/31 targets; mod_inverse_consttime 217 jcc / 3 cmov / 24 setcc; 1 of 31 targets mechanised for secret dependence; these carriers are NOT_ASSESSED",
       "verdict": "PASS",
       "digest": "a535454753d8857e4c385689ea431b5a47a9686322e6f52b203971188a49359f",
       "binding": "ARTEFACT"
@@ -1027,13 +1085,18 @@
     },
     {
      "class": "ARTEFACT_AUDITED",
-     "scope": "PFP-54 f536fd639130 / DSO a535454753d88: the branch audit resolves 31/31 targets and covers mod_inverse_consttime (mod_inverse_consttime 217 jcc / 3 cmov / 24 setcc). One secret-derived setcc (key::decap, consumed arithmetically) and zero secret-derived conditional transfers or memory addresses were observed. A binary branch audit is not a constant-time proof; the historical ['SOURCE_REVIEWED'] entries remain as the evidence they record.",
+     "scope": "PFP-54 f536fd639130 / DSO a535454753d88: the branch audit resolves 31/31 targets and covers mod_inverse_consttime (mod_inverse_consttime 217 jcc / 3 cmov / 24 setcc). Mechanised secret dependence covers 1 of 31 targets (key::decap); the carriers listed here are NOT_ASSESSED for jcc, setcc, cmov and memory address, so this entry does not record a zero for them. A binary branch audit is not a constant-time proof; the historical ['SOURCE_REVIEWED'] entries remain as the evidence they record.",
      "evidence": 1,
      "subject": {
       "source": "staging f536fd63913073bab76f839d41e89617da4fa74c, tree 4fef3b02666120f261bc00c43e2e6e04c50cd013; one release compilation; detached DWARF companion sha256 cd64dd590a597116f8475f6db0c81cc94602d74d540d4b45b4b1bae1a0b7ed9b",
       "artefact": {
        "path": "evidence/performance-frontier/campaigns/PFP-54/raw/artefacts/libcrypto.so.3",
-       "sha256": "a535454753d8857e4c385689ea431b5a47a9686322e6f52b203971188a49359f"
+       "sha256": "a535454753d8857e4c385689ea431b5a47a9686322e6f52b203971188a49359f",
+       "retrieval": {
+        "mechanism": "rebuild from source f536fd63 with evidence/performance-frontier/campaigns/PFP-54/build.sh (CARGO_PROFILE_RELEASE_DEBUG=1) and confirm the four digests in ARTEFACTS-NOT-COMMITTED.md",
+        "expected_sha256": "a535454753d8857e4c385689ea431b5a47a9686322e6f52b203971188a49359f",
+        "evidence_path": "evidence/performance-frontier/campaigns/PFP-54/ARTEFACTS-NOT-COMMITTED.md"
+       }
       }
      },
      "assumptions": [
@@ -1043,7 +1106,20 @@
      ],
      "result": "PASS",
      "instrument": "courts/phase18/timing/binary_branch_audit.py sha256 8b07f7e91dac28d8a2e9752efa929a541ed115e81e060d275979d4210dec0edc; GNU objdump/readelf 2.40; detached DWARF companion sha256 cd64dd590a597116f8475f6db0c81cc94602d74d540d4b45b4b1bae1a0b7ed9b",
-     "evidence_path": "evidence/performance-frontier/campaigns/PFP-54/raw/audit-a5354547.md"
+     "evidence_path": "evidence/performance-frontier/campaigns/PFP-54/raw/audit-a5354547.md",
+     "secret_dependence": {
+      "path": "evidence/performance-frontier/campaigns/PFP-54/raw/audit-record.json",
+      "sha256": "e7c61a70cb9eb8ccd8616d33c8b5e4e8692c4a4cb425b2e882fd9c0123d32993",
+      "carriers": [
+       "mod_inverse_consttime"
+      ],
+      "verdict": {
+       "jcc": "NOT_ASSESSED",
+       "setcc": "NOT_ASSESSED",
+       "cmov": "NOT_ASSESSED",
+       "memory_address": "NOT_ASSESSED"
+      }
+     }
     }
    ],
    "no_evidence_targets": [
@@ -1127,7 +1203,7 @@
      "differential": null,
      "audit": {
       "kind": "BINARY_BRANCH_AUDIT",
-      "result": "detached-DWARF binary branch audit at DSO a535454753d8 resolved 31/31 targets; ossl_dh_compute_key 37 jcc / 1 cmov / 0 setcc; run_mont_ladder 97 jcc / 3 cmov / 18 setcc; mont_mul_sos_into 18 jcc / 0 cmov / 10 setcc; mont_mul_fallible 31 jcc / 0 cmov / 10 setcc; 0 secret-derived jcc; 0 secret-derived address",
+      "result": "detached-DWARF binary branch audit at DSO a535454753d8 resolved 31/31 targets; ossl_dh_compute_key 37 jcc / 1 cmov / 0 setcc; run_mont_ladder 97 jcc / 3 cmov / 18 setcc; mont_mul_sos_into 18 jcc / 0 cmov / 10 setcc; mont_mul_fallible 31 jcc / 0 cmov / 10 setcc; 1 of 31 targets mechanised for secret dependence; these carriers are NOT_ASSESSED",
       "verdict": "PASS",
       "digest": "a535454753d8857e4c385689ea431b5a47a9686322e6f52b203971188a49359f",
       "binding": "ARTEFACT"
@@ -1174,13 +1250,18 @@
     },
     {
      "class": "ARTEFACT_AUDITED",
-     "scope": "PFP-54 f536fd639130 / DSO a535454753d88: the branch audit resolves 31/31 targets and covers ossl_dh_compute_key, run_mont_ladder, mont_mul_sos_into, mont_mul_fallible (ossl_dh_compute_key 37 jcc / 1 cmov / 0 setcc; run_mont_ladder 97 jcc / 3 cmov / 18 setcc; mont_mul_sos_into 18 jcc / 0 cmov / 10 setcc; mont_mul_fallible 31 jcc / 0 cmov / 10 setcc). One secret-derived setcc (key::decap, consumed arithmetically) and zero secret-derived conditional transfers or memory addresses were observed. A binary branch audit is not a constant-time proof; the historical ['SOURCE_TAINT_TESTED', 'SOURCE_REVIEWED'] entries remain as the evidence they record.",
+     "scope": "PFP-54 f536fd639130 / DSO a535454753d88: the branch audit resolves 31/31 targets and covers ossl_dh_compute_key, run_mont_ladder, mont_mul_sos_into, mont_mul_fallible (ossl_dh_compute_key 37 jcc / 1 cmov / 0 setcc; run_mont_ladder 97 jcc / 3 cmov / 18 setcc; mont_mul_sos_into 18 jcc / 0 cmov / 10 setcc; mont_mul_fallible 31 jcc / 0 cmov / 10 setcc). Mechanised secret dependence covers 1 of 31 targets (key::decap); the carriers listed here are NOT_ASSESSED for jcc, setcc, cmov and memory address, so this entry does not record a zero for them. A binary branch audit is not a constant-time proof; the historical ['SOURCE_TAINT_TESTED', 'SOURCE_REVIEWED'] entries remain as the evidence they record.",
      "evidence": 2,
      "subject": {
       "source": "staging f536fd63913073bab76f839d41e89617da4fa74c, tree 4fef3b02666120f261bc00c43e2e6e04c50cd013; one release compilation; detached DWARF companion sha256 cd64dd590a597116f8475f6db0c81cc94602d74d540d4b45b4b1bae1a0b7ed9b",
       "artefact": {
        "path": "evidence/performance-frontier/campaigns/PFP-54/raw/artefacts/libcrypto.so.3",
-       "sha256": "a535454753d8857e4c385689ea431b5a47a9686322e6f52b203971188a49359f"
+       "sha256": "a535454753d8857e4c385689ea431b5a47a9686322e6f52b203971188a49359f",
+       "retrieval": {
+        "mechanism": "rebuild from source f536fd63 with evidence/performance-frontier/campaigns/PFP-54/build.sh (CARGO_PROFILE_RELEASE_DEBUG=1) and confirm the four digests in ARTEFACTS-NOT-COMMITTED.md",
+        "expected_sha256": "a535454753d8857e4c385689ea431b5a47a9686322e6f52b203971188a49359f",
+        "evidence_path": "evidence/performance-frontier/campaigns/PFP-54/ARTEFACTS-NOT-COMMITTED.md"
+       }
       }
      },
      "assumptions": [
@@ -1190,7 +1271,23 @@
      ],
      "result": "PASS",
      "instrument": "courts/phase18/timing/binary_branch_audit.py sha256 8b07f7e91dac28d8a2e9752efa929a541ed115e81e060d275979d4210dec0edc; GNU objdump/readelf 2.40; detached DWARF companion sha256 cd64dd590a597116f8475f6db0c81cc94602d74d540d4b45b4b1bae1a0b7ed9b",
-     "evidence_path": "evidence/performance-frontier/campaigns/PFP-54/raw/audit-a5354547.md"
+     "evidence_path": "evidence/performance-frontier/campaigns/PFP-54/raw/audit-a5354547.md",
+     "secret_dependence": {
+      "path": "evidence/performance-frontier/campaigns/PFP-54/raw/audit-record.json",
+      "sha256": "e7c61a70cb9eb8ccd8616d33c8b5e4e8692c4a4cb425b2e882fd9c0123d32993",
+      "carriers": [
+       "ossl_dh_compute_key",
+       "run_mont_ladder",
+       "mont_mul_sos_into",
+       "mont_mul_fallible"
+      ],
+      "verdict": {
+       "jcc": "NOT_ASSESSED",
+       "setcc": "NOT_ASSESSED",
+       "cmov": "NOT_ASSESSED",
+       "memory_address": "NOT_ASSESSED"
+      }
+     }
     }
    ],
    "no_evidence_targets": [

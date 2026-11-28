@@ -34,5 +34,13 @@
   }
  },
  "any_secret_derived_transfer_or_address": false,
- "stop": false
+ "stop": false,
+ "secret_dependence_aggregate": {
+  "inventory_targets": 31,
+  "mechanised_targets": 1,
+  "mechanised": [
+   "key::decap"
+  ],
+  "statement": "1 of 31 targets carry a mechanised secret-dependence contract; the remaining 30 are NOT_ASSESSED, never OBSERVED_ZERO.  A resolved target is not a verified target."
+ }
 }

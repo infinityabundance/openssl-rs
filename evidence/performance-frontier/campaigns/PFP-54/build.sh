@@ -21,6 +21,35 @@
 #     bash docker/openssl-rs-court.sh exec \
 #       sh evidence/performance-frontier/campaigns/PFP-54/build.sh
 set -eu
+
+# Run a command with its output captured, propagating its status.  Piping the
+# build through `tail` made the pipeline status that of `tail`, so a failed
+# cargo build could be concealed (PFP-86).  Under `set -e` a failure here exits
+# the script.
+run_checked() {
+    _log=$1; shift
+    if ! "$@" >"$_log" 2>&1; then
+        echo "FATAL: command failed: $*" >&2
+        tail -n 3 "$_log" >&2 || true
+        return 1
+    fi
+    tail -n 3 "$_log" || true
+}
+
+# Mutation control for PFP-86(3): a failing command must fail the script.  It
+# runs before the court requirement so it is exercisable on a clean checkout.
+if [ "${1:-}" = "--self-test-failing-build" ]; then
+    _control_log=$(mktemp)
+    if run_checked "$_control_log" sh -c 'echo "fake cargo output"; exit 7'; then
+        echo "FATAL: control did not see the failing command" >&2
+        rm -f "$_control_log"
+        exit 1
+    fi
+    rm -f "$_control_log"
+    echo "control ok: a failing build command fails the script"
+    exit 0
+fi
+
 cd /work
 . /work/forensics/tools/require_court.sh
 
@@ -62,8 +91,9 @@ textsha() { tmp="$BASE/text.$$.bin"; objcopy --dump-section .text="$tmp" "$1" >/
 } >"$OUT/build-inputs.txt"
 
 echo "=== cargo build --release --lib --offline (debug=1) ==="
-CARGO_BUILD_JOBS=2 CARGO_PROFILE_RELEASE_DEBUG=1 CARGO_PROFILE_TEST_DEBUG=0 \
-    CARGO_TARGET_DIR="$T" cargo build --release --lib --offline 2>&1 | tail -n 3
+run_checked "$BASE/cargo-build.log" \
+    env CARGO_BUILD_JOBS=2 CARGO_PROFILE_RELEASE_DEBUG=1 CARGO_PROFILE_TEST_DEBUG=0 \
+        CARGO_TARGET_DIR="$T" cargo build --release --lib --offline
 
 rustc --edition 2021 --emit=obj --crate-type lib -O \
     --crate-name libcrypto_shell -o "$BASE/shell/libcrypto.shell.o" "$SHELL_RS"

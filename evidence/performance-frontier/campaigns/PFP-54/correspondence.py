@@ -15,6 +15,7 @@ import os
 import pathlib
 import re
 import subprocess
+import sys
 import tempfile
 
 ROOT = pathlib.Path("/work")
@@ -61,6 +62,50 @@ def package_list() -> tuple[list[str] | None, str]:
     return completed.stdout.splitlines(), "ok"
 
 
+def text_and_dso_pass(
+    shipped_text: str, reported_text: str, shipped_dso: str, reported_dso: str
+) -> bool:
+    """The report is about the shipped file only when *both* hashes match.
+
+    A matching `.text` hash with a different complete-DSO hash describes two
+    different files; requiring only `.text` let a passing report name another
+    artefact (PFP-86).
+    """
+    return shipped_text == reported_text and shipped_dso == reported_dso
+
+
+def package_exclusion_pass(package_ok: bool | None) -> bool:
+    """A package listing that failed is not evidence of exclusion.
+
+    `None` means `cargo package --list` did not produce a measurement; treating
+    it as success read a missing measurement as a pass (PFP-86).
+    """
+    return package_ok is True
+
+
+def self_test() -> int:
+    """Mutation controls: inject each defect class and require a refusal."""
+    cases = [
+        ("text and DSO both match", text_and_dso_pass("t", "t", "d", "d"), True),
+        ("text matches but complete DSO differs",
+         text_and_dso_pass("t", "t", "d1", "d2"), False),
+        ("complete DSO matches but text differs",
+         text_and_dso_pass("t1", "t2", "d", "d"), False),
+        ("package listing clean", package_exclusion_pass(True), True),
+        ("package listing leaked", package_exclusion_pass(False), False),
+        ("cargo package --list failed (missing measurement)",
+         package_exclusion_pass(None), False),
+    ]
+    failures = [name for name, got, want in cases if got is not want]
+    if failures:
+        print("correspondence self-test: FAIL")
+        for name in failures:
+            print(f"  {name}")
+        return 1
+    print(f"correspondence self-test: ok ({len(cases)} controls)")
+    return 0
+
+
 def main() -> int:
     text = REPORT.read_text()
     reported_dso = re.search(r"- SHA-256: `([0-9a-f]{64})`", text).group(1)
@@ -90,7 +135,8 @@ def main() -> int:
             "reported_text_sha256": reported_text,
             "audited_dso_sha256": reported_dso,
             "shipped_dso_sha256": shipped_sha,
-            "pass": shipped_text == reported_text,
+            "complete_dso_hash_matches": shipped_sha == reported_dso,
+            "pass": text_and_dso_pass(shipped_text, reported_text, shipped_sha, reported_dso),
         },
         "b_build_id_present_and_identical": {
             "shipped_build_id": shipped_bid,
@@ -106,7 +152,8 @@ def main() -> int:
             "cargo_package_note": package_note,
             "package_lines_naming_the_artefacts": leaked,
             "cargo_toml_excludes_evidence": "evidence/**" in (ROOT / "Cargo.toml").read_text(),
-            "pass": (package_ok is not False and len(shipped_debug_sections) == 0
+            "pass": (package_exclusion_pass(package_ok)
+                     and len(shipped_debug_sections) == 0
                      and len(debug_debug_sections) > 0),
         },
     }
@@ -130,4 +177,6 @@ def main() -> int:
 
 
 if __name__ == "__main__":
+    if "--self-test" in sys.argv[1:]:
+        raise SystemExit(self_test())
     raise SystemExit(main())
