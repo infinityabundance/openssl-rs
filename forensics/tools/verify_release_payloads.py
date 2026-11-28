@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Re-verify historical crate payloads against the bytes the registry serves.
+"""Re-verify published crate payloads against the bytes the registry serves.
 
 Why this exists
 ---------------
@@ -7,19 +7,33 @@ A publish receipt is only as good as its checksum.  Two of them (0.0.47,
 0.0.48) recorded a digest that is not the digest of the `.crate` the registry
 serves, and four of the earliest recorded no digest at all.  A receipt that
 quotes the wrong bytes is a lifecycle claim that its own subject refutes, which
-is the class `release_state.py` now refuses as ``RS_LIFECYCLE_UNEARNED``.
+is the class `release_state.py` refuses as ``RS_LIFECYCLE_UNEARNED``.
 
 This tool does not guess, and it does not rewrite history.  For each published
 version it downloads the exact payload, hashes it, checks it against the
-registry's own API value, and then -- only on a match -- records the measured
-bytes in the receipt.  A digest that disagreed with the receipt is preserved
-under ``checksum_superseded`` beside the correction, because the record of what
-was once believed is part of the evidence.
+registry's own API value, and then records the measured bytes.  A digest that
+disagreed is preserved under ``*_superseded`` beside the correction, because the
+record of what was once believed is part of the evidence.
+
+Canonical identity
+------------------
+The registry payload is the single authority for a release's crate digest and
+size.  Every duplicate of that identity in a receipt -- ``packaging.crate_sha256``,
+``packaging.compressed_bytes``, the API ``endpoint`` -- is reconciled to it, and a
+duplicate that disagreed is kept under ``*_superseded`` rather than left as a
+second, conflicting assertion.  Leaving one field corrected and another stale is
+the defect this tool found in 0.0.47/0.0.48 and must not reintroduce.
+
+Modes
+-----
+``--check`` performs a **fresh** verification every time (no version is skipped
+because it was verified before) and exits non-zero if any receipt would change.
+``--write`` records the measurement.
 
 Usage
 -----
-    python3 forensics/tools/verify_release_payloads.py            # verify + record
-    python3 forensics/tools/verify_release_payloads.py --check    # verify only
+    python3 forensics/tools/verify_release_payloads.py --check
+    python3 forensics/tools/verify_release_payloads.py --write --version 0.0.48
 
 SPDX-License-Identifier: Apache-2.0
 """
@@ -40,6 +54,17 @@ CRATE_URL = "https://static.crates.io/crates/{name}/{name}-{version}.crate"
 API_URL = "https://crates.io/api/v1/crates/{name}/{version}"
 NAME = "openssl-rs"
 
+SUPERSEDE_WHY = (
+    "This value is not what the registry serves. It was corrected on 2026-11-28 "
+    "by re-downloading the payload and recomputing its sha256; the superseded "
+    "value is retained because the record of what was once believed is part of "
+    "the evidence."
+)
+
+
+class Refusal(RuntimeError):
+    pass
+
 
 def _get_json(url: str) -> dict:
     request = urllib.request.Request(url, headers={"User-Agent": "openssl-rs-release-verify"})
@@ -52,14 +77,13 @@ def _served_digest(version: str) -> tuple[str, int]:
     digest = hashlib.sha256()
     size = 0
     request = urllib.request.Request(url, headers={"User-Agent": "openssl-rs-release-verify"})
-    with urllib.request.urlopen(request, timeout=120) as response, tempfile.TemporaryFile() as sink:
+    with urllib.request.urlopen(request, timeout=120) as response:
         while True:
             chunk = response.read(1 << 20)
             if not chunk:
                 break
             digest.update(chunk)
             size += len(chunk)
-            sink.write(chunk)
     return digest.hexdigest(), size
 
 
@@ -72,51 +96,95 @@ def _indent_of(text: str) -> int:
     return 1
 
 
-def verify(version: str, receipt: dict, record: bool, stamp: str) -> str:
+def _supersede(container: dict, key: str, why: str = SUPERSEDE_WHY) -> None:
+    if key in container and f"{key}_superseded" not in container:
+        container[f"{key}_superseded"] = {"value": container[key], "why": why}
+
+
+def verify(version: str, receipt: dict, stamp: str) -> tuple[str, bool]:
+    """Verify one payload and reconcile every duplicate of its identity.
+
+    Returns ``(line, changed)``.  A refusal is raised, never returned as a pass.
+    """
     registry = receipt.setdefault("registry_verification", {})
-    api = (_get_json(API_URL.format(name=NAME, version=version)).get("version") or {})
+    try:
+        api = _get_json(API_URL.format(name=NAME, version=version)).get("version") or {}
+    except Exception as error:
+        raise Refusal(f"the registry API could not be read: {error}") from error
+
     api_checksum = str(api.get("checksum") or "").lower()
     api_size = api.get("crate_size")
+    # A missing API field is a refusal, not a version to skip: the registry is
+    # the authority, and a measurement without it cannot be reconciled.
+    if len(api_checksum) != 64:
+        raise Refusal("the registry API returned no 64-hex checksum")
+    if not isinstance(api_size, int):
+        raise Refusal("the registry API returned no crate_size")
 
     served, size = _served_digest(version)
-    if api_checksum and served != api_checksum:
-        return f"{version}: REFUSED: downloaded {served[:16]} but the registry API says {api_checksum[:16]}"
-    if api_size is not None and size != api_size:
-        return f"{version}: REFUSED: downloaded {size} bytes but the registry API says {api_size}"
+    if served != api_checksum:
+        raise Refusal(
+            f"the downloaded payload hashes to {served[:16]}… but the registry API "
+            f"says {api_checksum[:16]}…; the download is not the served payload"
+        )
+    if size != api_size:
+        raise Refusal(
+            f"the downloaded payload is {size} bytes but the registry API says "
+            f"{api_size}; the download is not the served payload"
+        )
 
-    claimed = str(registry.get("checksum") or "").lower()
-    if claimed and claimed != served:
-        registry["checksum_superseded"] = {
-            "value": claimed,
-            "recorded_on": receipt.get("date", ""),
-            "why": (
-                "This digest is not the digest of the .crate the registry serves. "
-                "It was corrected on 2026-11-28 by re-downloading the payload and "
-                "recomputing its sha256; the superseded value is retained because "
-                "the record of what was once believed is part of the evidence."
-            ),
-        }
+    before = json.dumps(receipt, sort_keys=True)
+
+    claimed = registry.get("checksum")
+    if claimed and str(claimed).lower() != served:
+        _supersede(registry, "checksum")
     registry["checksum"] = served
     registry["checksum_prefix"] = served[:8]
     registry["crate_size"] = size
     registry["download_sha256_recomputed"] = served
-    registry["download_verification"] = (
-        f"RUN at {stamp}: downloaded {CRATE_URL.format(name=NAME, version=version)}, "
-        f"recomputed sha256 {served[:16]}… over {size} bytes; matches the registry "
-        "API checksum and size"
-    )
-    registry["verified_at"] = stamp
-    registry["verified_by"] = "forensics/tools/verify_release_payloads.py (PFP-87)"
 
-    note = f"{version}: {'CORRECTED' if claimed and claimed != served else 'OK'} {served[:16]}… {size}"
-    if record:
-        return note
-    return note
+    # The endpoint must name this version.  0.0.47 and 0.0.48 both pointed at
+    # 0.0.45, which is how a wrong checksum survived unnoticed.
+    endpoint = str(registry.get("endpoint") or "")
+    if endpoint and not endpoint.rstrip("/").endswith(f"/{version}"):
+        _supersede(registry, "endpoint", SUPERSEDE_WHY + " It named another version.")
+        registry["endpoint"] = API_URL.format(name=NAME, version=version)
+
+    # Every duplicate of the payload identity is reconciled to the registry.
+    packaging = receipt.get("packaging")
+    if isinstance(packaging, dict):
+        old_sha = packaging.get("crate_sha256")
+        if old_sha and str(old_sha).lower() != served:
+            _supersede(packaging, "crate_sha256")
+        if old_sha is not None:
+            packaging["crate_sha256"] = served
+        old_size = packaging.get("compressed_bytes")
+        if isinstance(old_size, int) and old_size != size:
+            _supersede(packaging, "compressed_bytes")
+            packaging["compressed_bytes"] = size
+
+    changed = json.dumps(receipt, sort_keys=True) != before
+
+    # The verification stamp records a correction, not a re-check: writing a
+    # fresh timestamp on every run would make `--check` always report
+    # WOULD_CORRECT even when the identity is already reconciled.
+    if changed:
+        registry["download_verification"] = (
+            f"RUN at {stamp}: downloaded "
+            f"{CRATE_URL.format(name=NAME, version=version)}, recomputed sha256 "
+            f"{served[:16]}… over {size} bytes; matches the registry API checksum and size"
+        )
+        registry["verified_at"] = stamp
+        registry["verified_by"] = "forensics/tools/verify_release_payloads.py (PFP-87)"
+
+    return f"{version}: {'CORRECTED' if changed else 'OK'} {served[:16]}… {size}", changed
 
 
 def main(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("--check", action="store_true", help="verify without recording")
+    mode = parser.add_mutually_exclusive_group(required=True)
+    mode.add_argument("--write", action="store_true", help="record the measurement")
+    mode.add_argument("--check", action="store_true", help="fresh verification, refuse drift")
     parser.add_argument("--version", action="append", default=None)
     args = parser.parse_args(argv)
 
@@ -133,26 +201,30 @@ def main(argv: list[str]) -> int:
         if str(receipt.get("status", "")).upper() != "PUBLISHED":
             print(f"{version}: SKIP (status {receipt.get('status')!r})")
             continue
-        # Already verified against the served payload at this identity.
-        registry = receipt.get("registry_verification") or {}
-        if str(registry.get("download_verification", "")).startswith("RUN at"):
-            print(f"{version}: SKIP (already re-verified {registry.get('verified_at')})")
-            continue
         try:
-            line = verify(version, receipt, record=not args.check, stamp=stamp)
-        except Exception as error:  # network failure is a refusal, not a pass
+            line, changed = verify(version, receipt, stamp)
+        except Refusal as refusal:
+            print(f"{version}: REFUSED: {refusal}")
+            failures += 1
+            continue
+        except Exception as error:  # a network failure is a refusal, not a pass
             print(f"{version}: ERROR {type(error).__name__}: {error}")
             failures += 1
             continue
-        if "REFUSED" in line:
-            failures += 1
-        print(line)
-        if not args.check and "REFUSED" not in line:
-            original = path.read_text(encoding="utf-8")
-            path.write_text(
-                json.dumps(receipt, indent=_indent_of(original)) + "\n",
-                encoding="utf-8",
-            )
+
+        if args.check:
+            print(line)
+            if changed:
+                print(f"{version}: WOULD_CORRECT: the receipt disagrees with the served payload")
+                failures += 1
+        else:
+            print(line)
+            if changed:
+                original = path.read_text(encoding="utf-8")
+                path.write_text(
+                    json.dumps(receipt, indent=_indent_of(original)) + "\n",
+                    encoding="utf-8",
+                )
 
     return 1 if failures else 0
 

@@ -14,7 +14,7 @@
     "limit_bytes": 10000000
   },
   "registry_verification": {
-    "endpoint": "https://crates.io/api/v1/crates/openssl-rs",
+    "endpoint": "https://crates.io/api/v1/crates/openssl-rs/0.0.33",
     "max_version": "0.0.33",
     "newest_version": "0.0.33",
     "default_version": "0.0.33",
@@ -24,9 +24,13 @@
     "published_at": "2026-10-23T00:29:16Z",
     "checksum": "1230b9fc542b89c76a6d6b485349b5344b2349c8e9816a2a2835cabfb7405d98",
     "download_sha256_recomputed": "1230b9fc542b89c76a6d6b485349b5344b2349c8e9816a2a2835cabfb7405d98",
-    "download_verification": "RUN at 2026-11-28T15:21:20Z: downloaded https://static.crates.io/crates/openssl-rs/openssl-rs-0.0.33.crate, recomputed sha256 1230b9fc542b89c7\u2026 over 8757315 bytes; matches the registry API checksum and size",
-    "verified_at": "2026-11-28T15:21:20Z",
-    "verified_by": "forensics/tools/verify_release_payloads.py (PFP-87)"
+    "download_verification": "RUN at 2026-11-28T15:42:10Z: downloaded https://static.crates.io/crates/openssl-rs/openssl-rs-0.0.33.crate, recomputed sha256 1230b9fc542b89c7\u2026 over 8757315 bytes; matches the registry API checksum and size",
+    "verified_at": "2026-11-28T15:42:10Z",
+    "verified_by": "forensics/tools/verify_release_payloads.py (PFP-87)",
+    "endpoint_superseded": {
+      "value": "https://crates.io/api/v1/crates/openssl-rs",
+      "why": "This value is not what the registry serves. It was corrected on 2026-11-28 by re-downloading the payload and recomputing its sha256; the superseded value is retained because the record of what was once believed is part of the evidence. It named another version."
+    }
   },
   "non_claims": [
     "Publishing is not a safety or compatibility result.",

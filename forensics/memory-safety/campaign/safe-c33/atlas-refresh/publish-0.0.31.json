@@ -21,7 +21,7 @@
     "allow_dirty_used": false
   },
   "registry_verification": {
-    "endpoint": "https://crates.io/api/v1/crates/openssl-rs",
+    "endpoint": "https://crates.io/api/v1/crates/openssl-rs/0.0.31",
     "max_version": "0.0.31",
     "newest_version": "0.0.31",
     "default_version": "0.0.31",
@@ -30,9 +30,13 @@
     "published_at": "2026-10-22T04:42:02Z",
     "checksum": "d574588ef6bd05c39411f5501d00f01ad436f7424826de759d22c11ca842c8ec",
     "download_sha256_recomputed": "d574588ef6bd05c39411f5501d00f01ad436f7424826de759d22c11ca842c8ec",
-    "download_verification": "RUN at 2026-11-28T15:21:20Z: downloaded https://static.crates.io/crates/openssl-rs/openssl-rs-0.0.31.crate, recomputed sha256 d574588ef6bd05c3\u2026 over 8637979 bytes; matches the registry API checksum and size",
-    "verified_at": "2026-11-28T15:21:20Z",
-    "verified_by": "forensics/tools/verify_release_payloads.py (PFP-87)"
+    "download_verification": "RUN at 2026-11-28T15:42:10Z: downloaded https://static.crates.io/crates/openssl-rs/openssl-rs-0.0.31.crate, recomputed sha256 d574588ef6bd05c3\u2026 over 8637979 bytes; matches the registry API checksum and size",
+    "verified_at": "2026-11-28T15:42:10Z",
+    "verified_by": "forensics/tools/verify_release_payloads.py (PFP-87)",
+    "endpoint_superseded": {
+      "value": "https://crates.io/api/v1/crates/openssl-rs",
+      "why": "This value is not what the registry serves. It was corrected on 2026-11-28 by re-downloading the payload and recomputing its sha256; the superseded value is retained because the record of what was once believed is part of the evidence. It named another version."
+    }
   },
   "content_delta_since_0_0_30": [
     "README leads with generated achievement, L7 family and memory-safety blocks",
