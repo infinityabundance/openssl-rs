@@ -1,0 +1,12 @@
+CPUID leaf1.ECX known bits: sse2=1 ssse3=1 pclmulqdq=1 aes=1 osxsave=1 avx=1
+CPUID leaf7.0: avx2=1 avx512f=0 avx512vl=0 vaes=1 vpclmulqdq=1
+XCR0=0x207 os_avx=1 os_avx512=0
+effective: aes=1 pclmulqdq=1 vaes256=1 vpclmul256=1 avx512=0
+aes_control_out=69c4e0d86a7b0430d8cdb78070b4c55a
+aes_control=PASS (FIPS-197 C.1)
+pclmul_control_out=00e038d8688850b040a0789828c810f0
+pclmul_control_ref=00e038d8688850b040a0789828c810f0
+pclmul_control=PASS (software carry-less multiply)
+vaes_control=PASS (256-bit VAES equals two 128-bit aesenc)
+vpclmul_control=PASS (256-bit VPCLMUL equals two lanes)
+poscontrol=PASS

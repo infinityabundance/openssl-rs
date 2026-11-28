@@ -1,0 +1,2160 @@
+### AES_encrypt  0x474ac0..0x47533f
+
+court/tmp/pfp63/before/libcrypto.so.3:     file format elf64-x86-64
+
+
+Disassembly of section .text:
+
+0000000000474ac0 <AES_encrypt>:
+  474ac0:	55                   	push   rbp
+  474ac1:	41 57                	push   r15
+  474ac3:	41 56                	push   r14
+  474ac5:	41 55                	push   r13
+  474ac7:	41 54                	push   r12
+  474ac9:	53                   	push   rbx
+  474aca:	48 81 ec e8 00 00 00 	sub    rsp,0xe8
+  474ad1:	8b 0a                	mov    ecx,DWORD PTR [rdx]
+  474ad3:	0f c9                	bswap  ecx
+  474ad5:	41 89 cf             	mov    r15d,ecx
+  474ad8:	41 c1 ef 18          	shr    r15d,0x18
+  474adc:	44 32 3f             	xor    r15b,BYTE PTR [rdi]
+  474adf:	89 c8                	mov    eax,ecx
+  474ae1:	c1 e8 10             	shr    eax,0x10
+  474ae4:	32 47 01             	xor    al,BYTE PTR [rdi+0x1]
+  474ae7:	89 44 24 20          	mov    DWORD PTR [rsp+0x20],eax
+  474aeb:	89 cd                	mov    ebp,ecx
+  474aed:	c1 ed 08             	shr    ebp,0x8
+  474af0:	40 32 6f 02          	xor    bpl,BYTE PTR [rdi+0x2]
+  474af4:	44 8b 42 04          	mov    r8d,DWORD PTR [rdx+0x4]
+  474af8:	32 4f 03             	xor    cl,BYTE PTR [rdi+0x3]
+  474afb:	41 0f c8             	bswap  r8d
+  474afe:	45 89 c5             	mov    r13d,r8d
+  474b01:	41 c1 ed 18          	shr    r13d,0x18
+  474b05:	44 32 6f 04          	xor    r13b,BYTE PTR [rdi+0x4]
+  474b09:	44 89 c0             	mov    eax,r8d
+  474b0c:	c1 e8 10             	shr    eax,0x10
+  474b0f:	32 47 05             	xor    al,BYTE PTR [rdi+0x5]
+  474b12:	89 44 24 04          	mov    DWORD PTR [rsp+0x4],eax
+  474b16:	45 89 c1             	mov    r9d,r8d
+  474b19:	41 c1 e9 08          	shr    r9d,0x8
+  474b1d:	44 32 4f 06          	xor    r9b,BYTE PTR [rdi+0x6]
+  474b21:	44 32 47 07          	xor    r8b,BYTE PTR [rdi+0x7]
+  474b25:	4c 89 44 24 30       	mov    QWORD PTR [rsp+0x30],r8
+  474b2a:	44 8b 72 08          	mov    r14d,DWORD PTR [rdx+0x8]
+  474b2e:	41 0f ce             	bswap  r14d
+  474b31:	45 89 f3             	mov    r11d,r14d
+  474b34:	41 c1 eb 18          	shr    r11d,0x18
+  474b38:	44 32 5f 08          	xor    r11b,BYTE PTR [rdi+0x8]
+  474b3c:	45 89 f4             	mov    r12d,r14d
+  474b3f:	41 c1 ec 10          	shr    r12d,0x10
+  474b43:	44 32 67 09          	xor    r12b,BYTE PTR [rdi+0x9]
+  474b47:	44 89 f0             	mov    eax,r14d
+  474b4a:	c1 e8 08             	shr    eax,0x8
+  474b4d:	32 47 0a             	xor    al,BYTE PTR [rdi+0xa]
+  474b50:	89 44 24 18          	mov    DWORD PTR [rsp+0x18],eax
+  474b54:	44 32 77 0b          	xor    r14b,BYTE PTR [rdi+0xb]
+  474b58:	8b 5a 0c             	mov    ebx,DWORD PTR [rdx+0xc]
+  474b5b:	0f cb                	bswap  ebx
+  474b5d:	89 d8                	mov    eax,ebx
+  474b5f:	c1 e8 18             	shr    eax,0x18
+  474b62:	32 47 0c             	xor    al,BYTE PTR [rdi+0xc]
+  474b65:	89 44 24 0c          	mov    DWORD PTR [rsp+0xc],eax
+  474b69:	89 d8                	mov    eax,ebx
+  474b6b:	c1 e8 10             	shr    eax,0x10
+  474b6e:	32 47 0d             	xor    al,BYTE PTR [rdi+0xd]
+  474b71:	89 44 24 14          	mov    DWORD PTR [rsp+0x14],eax
+  474b75:	89 d8                	mov    eax,ebx
+  474b77:	c1 e8 08             	shr    eax,0x8
+  474b7a:	32 47 0e             	xor    al,BYTE PTR [rdi+0xe]
+  474b7d:	32 5f 0f             	xor    bl,BYTE PTR [rdi+0xf]
+  474b80:	4c 63 92 f0 00 00 00 	movsxd r10,DWORD PTR [rdx+0xf0]
+  474b87:	49 83 fa 02          	cmp    r10,0x2
+  474b8b:	0f 82 11 06 00 00    	jb     4751a2 <AES_encrypt+0x6e2>
+  474b91:	48 89 b4 24 90 00 00 	mov    QWORD PTR [rsp+0x90],rsi
+  474b98:	00 
+  474b99:	49 8d 72 f0          	lea    rsi,[r10-0x10]
+  474b9d:	48 83 fe f2          	cmp    rsi,0xfffffffffffffff2
+  474ba1:	0f 82 75 07 00 00    	jb     47531c <AES_encrypt+0x85c>
+  474ba7:	48 89 94 24 88 00 00 	mov    QWORD PTR [rsp+0x88],rdx
+  474bae:	00 
+  474baf:	48 83 c2 1c          	add    rdx,0x1c
+  474bb3:	48 89 54 24 28       	mov    QWORD PTR [rsp+0x28],rdx
+  474bb8:	4c 89 94 24 80 00 00 	mov    QWORD PTR [rsp+0x80],r10
+  474bbf:	00 
+  474bc0:	49 8d 52 ff          	lea    rdx,[r10-0x1]
+  474bc4:	44 89 7c 24 10       	mov    DWORD PTR [rsp+0x10],r15d
+  474bc9:	44 89 24 24          	mov    DWORD PTR [rsp],r12d
+  474bcd:	44 8b 54 24 0c       	mov    r10d,DWORD PTR [rsp+0xc]
+  474bd2:	44 8b 44 24 20       	mov    r8d,DWORD PTR [rsp+0x20]
+  474bd7:	66 0f 1f 84 00 00 00 	nop    WORD PTR [rax+rax*1+0x0]
+  474bde:	00 00 
+  474be0:	89 5c 24 40          	mov    DWORD PTR [rsp+0x40],ebx
+  474be4:	48 89 54 24 20       	mov    QWORD PTR [rsp+0x20],rdx
+  474be9:	41 0f b6 d0          	movzx  edx,r8b
+  474bed:	4c 8d 3d 2c e3 21 00 	lea    r15,[rip+0x21e32c]        # 692f20 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs6digest6tables8AES_SBOX>
+  474bf4:	42 0f b6 34 3a       	movzx  esi,BYTE PTR [rdx+r15*1]
+  474bf9:	41 0f b6 d6          	movzx  edx,r14b
+  474bfd:	42 0f b6 1c 3a       	movzx  ebx,BYTE PTR [rdx+r15*1]
+  474c02:	41 0f b6 d2          	movzx  edx,r10b
+  474c06:	42 0f b6 3c 3a       	movzx  edi,BYTE PTR [rdx+r15*1]
+  474c0b:	48 89 bc 24 d8 00 00 	mov    QWORD PTR [rsp+0xd8],rdi
+  474c12:	00 
+  474c13:	41 0f b6 d1          	movzx  edx,r9b
+  474c17:	46 0f b6 34 3a       	movzx  r14d,BYTE PTR [rdx+r15*1]
+  474c1c:	89 da                	mov    edx,ebx
+  474c1e:	49 89 dc             	mov    r12,rbx
+  474c21:	48 89 9c 24 c8 00 00 	mov    QWORD PTR [rsp+0xc8],rbx
+  474c28:	00 
+  474c29:	40 30 f2             	xor    dl,sil
+  474c2c:	88 54 24 0b          	mov    BYTE PTR [rsp+0xb],dl
+  474c30:	44 8d 0c 36          	lea    r9d,[rsi+rsi*1]
+  474c34:	44 89 4c 24 7c       	mov    DWORD PTR [rsp+0x7c],r9d
+  474c39:	48 89 f3             	mov    rbx,rsi
+  474c3c:	48 89 b4 24 e0 00 00 	mov    QWORD PTR [rsp+0xe0],rsi
+  474c43:	00 
+  474c44:	44 30 ca             	xor    dl,r9b
+  474c47:	8d 34 3f             	lea    esi,[rdi+rdi*1]
+  474c4a:	89 74 24 0c          	mov    DWORD PTR [rsp+0xc],esi
+  474c4e:	44 30 f6             	xor    sil,r14b
+  474c51:	4c 89 b4 24 d0 00 00 	mov    QWORD PTR [rsp+0xd0],r14
+  474c58:	00 
+  474c59:	40 30 d6             	xor    sil,dl
+  474c5c:	89 fa                	mov    edx,edi
+  474c5e:	c0 fa 07             	sar    dl,0x7
+  474c61:	80 e2 1b             	and    dl,0x1b
+  474c64:	40 30 d6             	xor    sil,dl
+  474c67:	89 d7                	mov    edi,edx
+  474c69:	40 80 f7 1b          	xor    dil,0x1b
+  474c6d:	44 0f b6 d6          	movzx  r10d,sil
+  474c71:	40 80 f6 1b          	xor    sil,0x1b
+  474c75:	84 db                	test   bl,bl
+  474c77:	40 0f b6 f6          	movzx  esi,sil
+  474c7b:	41 0f 49 f2          	cmovns esi,r10d
+  474c7f:	89 74 24 78          	mov    DWORD PTR [rsp+0x78],esi
+  474c83:	be 1b 00 00 00       	mov    esi,0x1b
+  474c88:	41 b8 00 00 00 00    	mov    r8d,0x0
+  474c8e:	41 0f 49 f0          	cmovns esi,r8d
+  474c92:	45 31 c0             	xor    r8d,r8d
+  474c95:	41 89 f2             	mov    r10d,esi
+  474c98:	41 80 f2 1b          	xor    r10b,0x1b
+  474c9c:	45 84 f6             	test   r14b,r14b
+  474c9f:	45 0f b6 ca          	movzx  r9d,r10b
+  474ca3:	44 0f 49 ce          	cmovns r9d,esi
+  474ca7:	44 89 4c 24 6c       	mov    DWORD PTR [rsp+0x6c],r9d
+  474cac:	be 1b 00 00 00       	mov    esi,0x1b
+  474cb1:	41 0f 49 f0          	cmovns esi,r8d
+  474cb5:	41 89 f2             	mov    r10d,esi
+  474cb8:	41 80 f2 1b          	xor    r10b,0x1b
+  474cbc:	45 84 e4             	test   r12b,r12b
+  474cbf:	0f b6 d2             	movzx  edx,dl
+  474cc2:	40 0f b6 ff          	movzx  edi,dil
+  474cc6:	0f 49 fa             	cmovns edi,edx
+  474cc9:	89 7c 24 70          	mov    DWORD PTR [rsp+0x70],edi
+  474ccd:	41 0f b6 d2          	movzx  edx,r10b
+  474cd1:	0f 49 d6             	cmovns edx,esi
+  474cd4:	89 54 24 74          	mov    DWORD PTR [rsp+0x74],edx
+  474cd8:	0f b6 54 24 14       	movzx  edx,BYTE PTR [rsp+0x14]
+  474cdd:	42 0f b6 34 3a       	movzx  esi,BYTE PTR [rdx+r15*1]
+  474ce2:	0f b6 54 24 30       	movzx  edx,BYTE PTR [rsp+0x30]
+  474ce7:	46 0f b6 14 3a       	movzx  r10d,BYTE PTR [rdx+r15*1]
+  474cec:	41 0f b6 d3          	movzx  edx,r11b
+  474cf0:	46 0f b6 1c 3a       	movzx  r11d,BYTE PTR [rdx+r15*1]
+  474cf5:	40 0f b6 d5          	movzx  edx,bpl
+  474cf9:	46 0f b6 04 3a       	movzx  r8d,BYTE PTR [rdx+r15*1]
+  474cfe:	4c 89 94 24 b0 00 00 	mov    QWORD PTR [rsp+0xb0],r10
+  474d05:	00 
+  474d06:	44 89 d2             	mov    edx,r10d
+  474d09:	40 30 f2             	xor    dl,sil
+  474d0c:	88 54 24 0a          	mov    BYTE PTR [rsp+0xa],dl
+  474d10:	8d 3c 36             	lea    edi,[rsi+rsi*1]
+  474d13:	89 7c 24 68          	mov    DWORD PTR [rsp+0x68],edi
+  474d17:	49 89 f1             	mov    r9,rsi
+  474d1a:	48 89 b4 24 c0 00 00 	mov    QWORD PTR [rsp+0xc0],rsi
+  474d21:	00 
+  474d22:	40 30 fa             	xor    dl,dil
+  474d25:	4c 89 df             	mov    rdi,r11
+  474d28:	4c 89 5c 24 38       	mov    QWORD PTR [rsp+0x38],r11
+  474d2d:	43 8d 34 1b          	lea    esi,[r11+r11*1]
+  474d31:	89 74 24 14          	mov    DWORD PTR [rsp+0x14],esi
+  474d35:	44 30 c6             	xor    sil,r8b
+  474d38:	4d 89 c3             	mov    r11,r8
+  474d3b:	4c 89 84 24 b8 00 00 	mov    QWORD PTR [rsp+0xb8],r8
+  474d42:	00 
+  474d43:	40 30 d6             	xor    sil,dl
+  474d46:	89 fa                	mov    edx,edi
+  474d48:	c0 fa 07             	sar    dl,0x7
+  474d4b:	80 e2 1b             	and    dl,0x1b
+  474d4e:	40 30 d6             	xor    sil,dl
+  474d51:	89 d7                	mov    edi,edx
+  474d53:	40 80 f7 1b          	xor    dil,0x1b
+  474d57:	44 0f b6 c6          	movzx  r8d,sil
+  474d5b:	40 80 f6 1b          	xor    sil,0x1b
+  474d5f:	45 84 c9             	test   r9b,r9b
+  474d62:	40 0f b6 f6          	movzx  esi,sil
+  474d66:	41 0f 49 f0          	cmovns esi,r8d
+  474d6a:	89 74 24 64          	mov    DWORD PTR [rsp+0x64],esi
+  474d6e:	be 1b 00 00 00       	mov    esi,0x1b
+  474d73:	41 b9 00 00 00 00    	mov    r9d,0x0
+  474d79:	41 0f 49 f1          	cmovns esi,r9d
+  474d7d:	41 89 f0             	mov    r8d,esi
+  474d80:	41 80 f0 1b          	xor    r8b,0x1b
+  474d84:	45 84 db             	test   r11b,r11b
+  474d87:	45 0f b6 c0          	movzx  r8d,r8b
+  474d8b:	44 0f 49 c6          	cmovns r8d,esi
+  474d8f:	44 89 44 24 5c       	mov    DWORD PTR [rsp+0x5c],r8d
+  474d94:	be 1b 00 00 00       	mov    esi,0x1b
+  474d99:	41 0f 49 f1          	cmovns esi,r9d
+  474d9d:	41 89 f0             	mov    r8d,esi
+  474da0:	41 80 f0 1b          	xor    r8b,0x1b
+  474da4:	45 84 d2             	test   r10b,r10b
+  474da7:	0f b6 d2             	movzx  edx,dl
+  474daa:	40 0f b6 ff          	movzx  edi,dil
+  474dae:	0f 49 fa             	cmovns edi,edx
+  474db1:	89 7c 24 60          	mov    DWORD PTR [rsp+0x60],edi
+  474db5:	41 0f b6 d0          	movzx  edx,r8b
+  474db9:	0f 49 d6             	cmovns edx,esi
+  474dbc:	89 54 24 58          	mov    DWORD PTR [rsp+0x58],edx
+  474dc0:	0f b6 14 24          	movzx  edx,BYTE PTR [rsp]
+  474dc4:	0f b6 c0             	movzx  eax,al
+  474dc7:	42 0f b6 14 3a       	movzx  edx,BYTE PTR [rdx+r15*1]
+  474dcc:	0f b6 c9             	movzx  ecx,cl
+  474dcf:	42 0f b6 34 39       	movzx  esi,BYTE PTR [rcx+r15*1]
+  474dd4:	41 0f b6 cd          	movzx  ecx,r13b
+  474dd8:	42 0f b6 0c 39       	movzx  ecx,BYTE PTR [rcx+r15*1]
+  474ddd:	42 0f b6 3c 38       	movzx  edi,BYTE PTR [rax+r15*1]
+  474de2:	41 89 f3             	mov    r11d,esi
+  474de5:	49 89 f1             	mov    r9,rsi
+  474de8:	48 89 b4 24 a0 00 00 	mov    QWORD PTR [rsp+0xa0],rsi
+  474def:	00 
+  474df0:	41 30 d3             	xor    r11b,dl
+  474df3:	44 89 d8             	mov    eax,r11d
+  474df6:	8d 34 12             	lea    esi,[rdx+rdx*1]
+  474df9:	49 89 d0             	mov    r8,rdx
+  474dfc:	48 89 94 24 a8 00 00 	mov    QWORD PTR [rsp+0xa8],rdx
+  474e03:	00 
+  474e04:	40 30 f0             	xor    al,sil
+  474e07:	48 89 ca             	mov    rdx,rcx
+  474e0a:	48 89 4c 24 30       	mov    QWORD PTR [rsp+0x30],rcx
+  474e0f:	01 c9                	add    ecx,ecx
+  474e11:	89 0c 24             	mov    DWORD PTR [rsp],ecx
+  474e14:	40 30 f9             	xor    cl,dil
+  474e17:	49 89 fa             	mov    r10,rdi
+  474e1a:	48 89 bc 24 98 00 00 	mov    QWORD PTR [rsp+0x98],rdi
+  474e21:	00 
+  474e22:	30 c1                	xor    cl,al
+  474e24:	89 d0                	mov    eax,edx
+  474e26:	c0 f8 07             	sar    al,0x7
+  474e29:	24 1b                	and    al,0x1b
+  474e2b:	30 c1                	xor    cl,al
+  474e2d:	89 c2                	mov    edx,eax
+  474e2f:	80 f2 1b             	xor    dl,0x1b
+  474e32:	0f b6 f9             	movzx  edi,cl
+  474e35:	80 f1 1b             	xor    cl,0x1b
+  474e38:	45 84 c0             	test   r8b,r8b
+  474e3b:	0f b6 c9             	movzx  ecx,cl
+  474e3e:	0f 49 cf             	cmovns ecx,edi
+  474e41:	89 4c 24 1c          	mov    DWORD PTR [rsp+0x1c],ecx
+  474e45:	b9 1b 00 00 00       	mov    ecx,0x1b
+  474e4a:	41 b8 00 00 00 00    	mov    r8d,0x0
+  474e50:	41 0f 49 c8          	cmovns ecx,r8d
+  474e54:	89 cf                	mov    edi,ecx
+  474e56:	40 80 f7 1b          	xor    dil,0x1b
+  474e5a:	45 84 d2             	test   r10b,r10b
+  474e5d:	40 0f b6 ff          	movzx  edi,dil
+  474e61:	0f 49 f9             	cmovns edi,ecx
+  474e64:	89 7c 24 4c          	mov    DWORD PTR [rsp+0x4c],edi
+  474e68:	b9 1b 00 00 00       	mov    ecx,0x1b
+  474e6d:	41 0f 49 c8          	cmovns ecx,r8d
+  474e71:	89 cf                	mov    edi,ecx
+  474e73:	40 80 f7 1b          	xor    dil,0x1b
+  474e77:	45 84 c9             	test   r9b,r9b
+  474e7a:	0f b6 c0             	movzx  eax,al
+  474e7d:	0f b6 d2             	movzx  edx,dl
+  474e80:	0f 49 d0             	cmovns edx,eax
+  474e83:	89 54 24 50          	mov    DWORD PTR [rsp+0x50],edx
+  474e87:	40 0f b6 c7          	movzx  eax,dil
+  474e8b:	0f 49 c1             	cmovns eax,ecx
+  474e8e:	89 44 24 54          	mov    DWORD PTR [rsp+0x54],eax
+  474e92:	0f b6 44 24 04       	movzx  eax,BYTE PTR [rsp+0x4]
+  474e97:	0f b6 4c 24 40       	movzx  ecx,BYTE PTR [rsp+0x40]
+  474e9c:	0f b6 7c 24 18       	movzx  edi,BYTE PTR [rsp+0x18]
+  474ea1:	46 0f b6 14 38       	movzx  r10d,BYTE PTR [rax+r15*1]
+  474ea6:	42 0f b6 14 39       	movzx  edx,BYTE PTR [rcx+r15*1]
+  474eab:	0f b6 44 24 10       	movzx  eax,BYTE PTR [rsp+0x10]
+  474eb0:	42 0f b6 0c 38       	movzx  ecx,BYTE PTR [rax+r15*1]
+  474eb5:	42 0f b6 3c 3f       	movzx  edi,BYTE PTR [rdi+r15*1]
+  474eba:	89 d5                	mov    ebp,edx
+  474ebc:	44 30 d5             	xor    bpl,r10b
+  474ebf:	89 e8                	mov    eax,ebp
+  474ec1:	47 8d 04 12          	lea    r8d,[r10+r10*1]
+  474ec5:	44 30 c0             	xor    al,r8b
+  474ec8:	44 8d 0c 09          	lea    r9d,[rcx+rcx*1]
+  474ecc:	44 89 4c 24 04       	mov    DWORD PTR [rsp+0x4],r9d
+  474ed1:	41 30 f9             	xor    r9b,dil
+  474ed4:	41 30 c1             	xor    r9b,al
+  474ed7:	89 c8                	mov    eax,ecx
+  474ed9:	c0 f8 07             	sar    al,0x7
+  474edc:	24 1b                	and    al,0x1b
+  474ede:	41 30 c1             	xor    r9b,al
+  474ee1:	41 89 c6             	mov    r14d,eax
+  474ee4:	41 80 f6 1b          	xor    r14b,0x1b
+  474ee8:	41 0f b6 d9          	movzx  ebx,r9b
+  474eec:	41 80 f1 1b          	xor    r9b,0x1b
+  474ef0:	45 84 d2             	test   r10b,r10b
+  474ef3:	45 0f b6 c9          	movzx  r9d,r9b
+  474ef7:	44 0f 49 cb          	cmovns r9d,ebx
+  474efb:	41 bc 1b 00 00 00    	mov    r12d,0x1b
+  474f01:	41 bf 00 00 00 00    	mov    r15d,0x0
+  474f07:	45 0f 49 e7          	cmovns r12d,r15d
+  474f0b:	44 89 e3             	mov    ebx,r12d
+  474f0e:	80 f3 1b             	xor    bl,0x1b
+  474f11:	40 84 ff             	test   dil,dil
+  474f14:	0f b6 db             	movzx  ebx,bl
+  474f17:	41 0f 49 dc          	cmovns ebx,r12d
+  474f1b:	41 bd 1b 00 00 00    	mov    r13d,0x1b
+  474f21:	45 0f 49 ef          	cmovns r13d,r15d
+  474f25:	45 89 ec             	mov    r12d,r13d
+  474f28:	41 80 f4 1b          	xor    r12b,0x1b
+  474f2c:	84 d2                	test   dl,dl
+  474f2e:	44 0f b6 f8          	movzx  r15d,al
+  474f32:	41 0f b6 c6          	movzx  eax,r14b
+  474f36:	41 0f 49 c7          	cmovns eax,r15d
+  474f3a:	45 0f b6 e4          	movzx  r12d,r12b
+  474f3e:	45 0f 49 e5          	cmovns r12d,r13d
+  474f42:	4c 8b 7c 24 28       	mov    r15,QWORD PTR [rsp+0x28]
+  474f47:	45 8b 77 f4          	mov    r14d,DWORD PTR [r15-0xc]
+  474f4b:	41 0f ce             	bswap  r14d
+  474f4e:	45 89 f5             	mov    r13d,r14d
+  474f51:	41 c1 ed 18          	shr    r13d,0x18
+  474f55:	45 31 cd             	xor    r13d,r9d
+  474f58:	44 89 6c 24 10       	mov    DWORD PTR [rsp+0x10],r13d
+  474f5d:	45 89 f1             	mov    r9d,r14d
+  474f60:	41 c1 e9 10          	shr    r9d,0x10
+  474f64:	41 31 d9             	xor    r9d,ebx
+  474f67:	41 30 d0             	xor    r8b,dl
+  474f6a:	41 30 c8             	xor    r8b,cl
+  474f6d:	41 30 f8             	xor    r8b,dil
+  474f70:	8d 1c 3f             	lea    ebx,[rdi+rdi*1]
+  474f73:	41 30 d8             	xor    r8b,bl
+  474f76:	45 30 c8             	xor    r8b,r9b
+  474f79:	44 31 f0             	xor    eax,r14d
+  474f7c:	41 c1 ee 08          	shr    r14d,0x8
+  474f80:	45 31 e6             	xor    r14d,r12d
+  474f83:	01 d2                	add    edx,edx
+  474f85:	40 30 cd             	xor    bpl,cl
+  474f88:	40 30 d5             	xor    bpl,dl
+  474f8b:	40 30 dd             	xor    bpl,bl
+  474f8e:	44 30 f5             	xor    bpl,r14b
+  474f91:	4c 8b 74 24 38       	mov    r14,QWORD PTR [rsp+0x38]
+  474f96:	44 30 d1             	xor    cl,r10b
+  474f99:	30 d1                	xor    cl,dl
+  474f9b:	40 30 f9             	xor    cl,dil
+  474f9e:	32 4c 24 04          	xor    cl,BYTE PTR [rsp+0x4]
+  474fa2:	30 c1                	xor    cl,al
+  474fa4:	48 89 4c 24 40       	mov    QWORD PTR [rsp+0x40],rcx
+  474fa9:	4c 89 fb             	mov    rbx,r15
+  474fac:	41 8b 47 f8          	mov    eax,DWORD PTR [r15-0x8]
+  474fb0:	0f c8                	bswap  eax
+  474fb2:	41 89 c7             	mov    r15d,eax
+  474fb5:	41 c1 ef 18          	shr    r15d,0x18
+  474fb9:	44 33 7c 24 1c       	xor    r15d,DWORD PTR [rsp+0x1c]
+  474fbe:	89 c2                	mov    edx,eax
+  474fc0:	c1 ea 10             	shr    edx,0x10
+  474fc3:	33 54 24 4c          	xor    edx,DWORD PTR [rsp+0x4c]
+  474fc7:	48 8b 8c 24 a0 00 00 	mov    rcx,QWORD PTR [rsp+0xa0]
+  474fce:	00 
+  474fcf:	40 30 ce             	xor    sil,cl
+  474fd2:	4c 8b 4c 24 30       	mov    r9,QWORD PTR [rsp+0x30]
+  474fd7:	44 30 ce             	xor    sil,r9b
+  474fda:	4c 8b 94 24 98 00 00 	mov    r10,QWORD PTR [rsp+0x98]
+  474fe1:	00 
+  474fe2:	44 30 d6             	xor    sil,r10b
+  474fe5:	43 8d 3c 12          	lea    edi,[r10+r10*1]
+  474fe9:	40 30 fe             	xor    sil,dil
+  474fec:	40 30 d6             	xor    sil,dl
+  474fef:	89 74 24 04          	mov    DWORD PTR [rsp+0x4],esi
+  474ff3:	8b 74 24 50          	mov    esi,DWORD PTR [rsp+0x50]
+  474ff7:	31 c6                	xor    esi,eax
+  474ff9:	c1 e8 08             	shr    eax,0x8
+  474ffc:	33 44 24 54          	xor    eax,DWORD PTR [rsp+0x54]
+  475000:	8d 14 09             	lea    edx,[rcx+rcx*1]
+  475003:	45 30 cb             	xor    r11b,r9b
+  475006:	41 30 d3             	xor    r11b,dl
+  475009:	41 30 fb             	xor    r11b,dil
+  47500c:	41 30 c3             	xor    r11b,al
+  47500f:	44 89 5c 24 1c       	mov    DWORD PTR [rsp+0x1c],r11d
+  475014:	4c 89 c8             	mov    rax,r9
+  475017:	32 84 24 a8 00 00 00 	xor    al,BYTE PTR [rsp+0xa8]
+  47501e:	30 d0                	xor    al,dl
+  475020:	44 30 d0             	xor    al,r10b
+  475023:	32 04 24             	xor    al,BYTE PTR [rsp]
+  475026:	40 30 f0             	xor    al,sil
+  475029:	48 89 44 24 30       	mov    QWORD PTR [rsp+0x30],rax
+  47502e:	8b 43 fc             	mov    eax,DWORD PTR [rbx-0x4]
+  475031:	48 89 5c 24 28       	mov    QWORD PTR [rsp+0x28],rbx
+  475036:	0f c8                	bswap  eax
+  475038:	41 89 c3             	mov    r11d,eax
+  47503b:	41 c1 eb 18          	shr    r11d,0x18
+  47503f:	44 33 5c 24 64       	xor    r11d,DWORD PTR [rsp+0x64]
+  475044:	89 c2                	mov    edx,eax
+  475046:	c1 ea 10             	shr    edx,0x10
+  475049:	33 54 24 5c          	xor    edx,DWORD PTR [rsp+0x5c]
+  47504d:	48 8b bc 24 b0 00 00 	mov    rdi,QWORD PTR [rsp+0xb0]
+  475054:	00 
+  475055:	44 8b 4c 24 68       	mov    r9d,DWORD PTR [rsp+0x68]
+  47505a:	41 30 f9             	xor    r9b,dil
+  47505d:	45 30 f1             	xor    r9b,r14b
+  475060:	48 8b 8c 24 b8 00 00 	mov    rcx,QWORD PTR [rsp+0xb8]
+  475067:	00 
+  475068:	41 30 c9             	xor    r9b,cl
+  47506b:	8d 34 09             	lea    esi,[rcx+rcx*1]
+  47506e:	41 30 f1             	xor    r9b,sil
+  475071:	41 30 d1             	xor    r9b,dl
+  475074:	44 89 0c 24          	mov    DWORD PTR [rsp],r9d
+  475078:	44 8b 4c 24 60       	mov    r9d,DWORD PTR [rsp+0x60]
+  47507d:	41 31 c1             	xor    r9d,eax
+  475080:	c1 e8 08             	shr    eax,0x8
+  475083:	33 44 24 58          	xor    eax,DWORD PTR [rsp+0x58]
+  475087:	8d 14 3f             	lea    edx,[rdi+rdi*1]
+  47508a:	0f b6 7c 24 0a       	movzx  edi,BYTE PTR [rsp+0xa]
+  47508f:	44 30 f7             	xor    dil,r14b
+  475092:	40 30 d7             	xor    dil,dl
+  475095:	40 30 f7             	xor    dil,sil
+  475098:	89 fe                	mov    esi,edi
+  47509a:	40 30 c6             	xor    sil,al
+  47509d:	89 74 24 18          	mov    DWORD PTR [rsp+0x18],esi
+  4750a1:	44 32 b4 24 c0 00 00 	xor    r14b,BYTE PTR [rsp+0xc0]
+  4750a8:	00 
+  4750a9:	41 30 d6             	xor    r14b,dl
+  4750ac:	41 30 ce             	xor    r14b,cl
+  4750af:	44 32 74 24 14       	xor    r14b,BYTE PTR [rsp+0x14]
+  4750b4:	45 30 ce             	xor    r14b,r9b
+  4750b7:	8b 13                	mov    edx,DWORD PTR [rbx]
+  4750b9:	0f ca                	bswap  edx
+  4750bb:	41 89 d2             	mov    r10d,edx
+  4750be:	41 c1 ea 18          	shr    r10d,0x18
+  4750c2:	44 33 54 24 78       	xor    r10d,DWORD PTR [rsp+0x78]
+  4750c7:	89 d0                	mov    eax,edx
+  4750c9:	c1 e8 10             	shr    eax,0x10
+  4750cc:	33 44 24 6c          	xor    eax,DWORD PTR [rsp+0x6c]
+  4750d0:	8b 74 24 7c          	mov    esi,DWORD PTR [rsp+0x7c]
+  4750d4:	48 8b 8c 24 c8 00 00 	mov    rcx,QWORD PTR [rsp+0xc8]
+  4750db:	00 
+  4750dc:	40 30 ce             	xor    sil,cl
+  4750df:	4c 8b a4 24 d8 00 00 	mov    r12,QWORD PTR [rsp+0xd8]
+  4750e6:	00 
+  4750e7:	44 30 e6             	xor    sil,r12b
+  4750ea:	48 8b 9c 24 d0 00 00 	mov    rbx,QWORD PTR [rsp+0xd0]
+  4750f1:	00 
+  4750f2:	40 30 de             	xor    sil,bl
+  4750f5:	44 8d 2c 1b          	lea    r13d,[rbx+rbx*1]
+  4750f9:	44 30 ee             	xor    sil,r13b
+  4750fc:	40 30 c6             	xor    sil,al
+  4750ff:	89 74 24 14          	mov    DWORD PTR [rsp+0x14],esi
+  475103:	44 8b 4c 24 70       	mov    r9d,DWORD PTR [rsp+0x70]
+  475108:	41 31 d1             	xor    r9d,edx
+  47510b:	c1 ea 08             	shr    edx,0x8
+  47510e:	33 54 24 74          	xor    edx,DWORD PTR [rsp+0x74]
+  475112:	8d 3c 09             	lea    edi,[rcx+rcx*1]
+  475115:	48 8b 4c 24 40       	mov    rcx,QWORD PTR [rsp+0x40]
+  47511a:	0f b6 44 24 0b       	movzx  eax,BYTE PTR [rsp+0xb]
+  47511f:	44 30 e0             	xor    al,r12b
+  475122:	40 30 f8             	xor    al,dil
+  475125:	44 30 e8             	xor    al,r13b
+  475128:	30 d0                	xor    al,dl
+  47512a:	48 8b 54 24 20       	mov    rdx,QWORD PTR [rsp+0x20]
+  47512f:	48 8b b4 24 e0 00 00 	mov    rsi,QWORD PTR [rsp+0xe0]
+  475136:	00 
+  475137:	44 30 e6             	xor    sil,r12b
+  47513a:	40 30 fe             	xor    sil,dil
+  47513d:	40 30 de             	xor    sil,bl
+  475140:	45 89 fd             	mov    r13d,r15d
+  475143:	40 32 74 24 0c       	xor    sil,BYTE PTR [rsp+0xc]
+  475148:	89 f3                	mov    ebx,esi
+  47514a:	44 30 cb             	xor    bl,r9b
+  47514d:	44 8b 4c 24 1c       	mov    r9d,DWORD PTR [rsp+0x1c]
+  475152:	48 83 44 24 28 10    	add    QWORD PTR [rsp+0x28],0x10
+  475158:	48 ff ca             	dec    rdx
+  47515b:	0f 85 7f fa ff ff    	jne    474be0 <AES_encrypt+0x120>
+  475161:	44 89 44 24 20       	mov    DWORD PTR [rsp+0x20],r8d
+  475166:	44 89 54 24 0c       	mov    DWORD PTR [rsp+0xc],r10d
+  47516b:	4c 89 74 24 38       	mov    QWORD PTR [rsp+0x38],r14
+  475170:	4c 8b 94 24 80 00 00 	mov    r10,QWORD PTR [rsp+0x80]
+  475177:	00 
+  475178:	44 89 d2             	mov    edx,r10d
+  47517b:	49 c1 e2 02          	shl    r10,0x2
+  47517f:	83 fa 0e             	cmp    edx,0xe
+  475182:	4c 8b b4 24 90 00 00 	mov    r14,QWORD PTR [rsp+0x90]
+  475189:	00 
+  47518a:	48 8b 94 24 88 00 00 	mov    rdx,QWORD PTR [rsp+0x88]
+  475191:	00 
+  475192:	44 8b 7c 24 10       	mov    r15d,DWORD PTR [rsp+0x10]
+  475197:	44 8b 24 24          	mov    r12d,DWORD PTR [rsp]
+  47519b:	76 11                	jbe    4751ae <AES_encrypt+0x6ee>
+  47519d:	e9 80 01 00 00       	jmp    475322 <AES_encrypt+0x862>
+  4751a2:	4c 89 74 24 38       	mov    QWORD PTR [rsp+0x38],r14
+  4751a7:	49 c1 e2 02          	shl    r10,0x2
+  4751ab:	49 89 f6             	mov    r14,rsi
+  4751ae:	41 0f b6 f7          	movzx  esi,r15b
+  4751b2:	46 8b 3c 92          	mov    r15d,DWORD PTR [rdx+r10*4]
+  4751b6:	41 0f cf             	bswap  r15d
+  4751b9:	45 89 f8             	mov    r8d,r15d
+  4751bc:	41 c1 e8 18          	shr    r8d,0x18
+  4751c0:	48 8d 3d 59 dd 21 00 	lea    rdi,[rip+0x21dd59]        # 692f20 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs6digest6tables8AES_SBOX>
+  4751c7:	44 32 04 3e          	xor    r8b,BYTE PTR [rsi+rdi*1]
+  4751cb:	44 89 44 24 28       	mov    DWORD PTR [rsp+0x28],r8d
+  4751d0:	0f b6 74 24 04       	movzx  esi,BYTE PTR [rsp+0x4]
+  4751d5:	45 89 f8             	mov    r8d,r15d
+  4751d8:	41 c1 e8 10          	shr    r8d,0x10
+  4751dc:	44 32 04 3e          	xor    r8b,BYTE PTR [rsi+rdi*1]
+  4751e0:	44 89 44 24 04       	mov    DWORD PTR [rsp+0x4],r8d
+  4751e5:	0f b6 74 24 18       	movzx  esi,BYTE PTR [rsp+0x18]
+  4751ea:	45 89 f8             	mov    r8d,r15d
+  4751ed:	41 c1 e8 08          	shr    r8d,0x8
+  4751f1:	44 32 04 3e          	xor    r8b,BYTE PTR [rsi+rdi*1]
+  4751f5:	44 89 44 24 18       	mov    DWORD PTR [rsp+0x18],r8d
+  4751fa:	0f b6 f3             	movzx  esi,bl
+  4751fd:	44 32 3c 3e          	xor    r15b,BYTE PTR [rsi+rdi*1]
+  475201:	41 0f b6 f5          	movzx  esi,r13b
+  475205:	42 8b 5c 92 04       	mov    ebx,DWORD PTR [rdx+r10*4+0x4]
+  47520a:	0f cb                	bswap  ebx
+  47520c:	41 89 d8             	mov    r8d,ebx
+  47520f:	41 c1 e8 18          	shr    r8d,0x18
+  475213:	44 32 04 3e          	xor    r8b,BYTE PTR [rsi+rdi*1]
+  475217:	44 89 44 24 10       	mov    DWORD PTR [rsp+0x10],r8d
+  47521c:	41 0f b6 f4          	movzx  esi,r12b
+  475220:	49 89 d5             	mov    r13,rdx
+  475223:	89 da                	mov    edx,ebx
+  475225:	c1 ea 10             	shr    edx,0x10
+  475228:	32 14 3e             	xor    dl,BYTE PTR [rsi+rdi*1]
+  47522b:	89 14 24             	mov    DWORD PTR [rsp],edx
+  47522e:	0f b6 f0             	movzx  esi,al
+  475231:	89 da                	mov    edx,ebx
+  475233:	c1 ea 08             	shr    edx,0x8
+  475236:	32 14 3e             	xor    dl,BYTE PTR [rsi+rdi*1]
+  475239:	0f b6 c9             	movzx  ecx,cl
+  47523c:	32 1c 39             	xor    bl,BYTE PTR [rcx+rdi*1]
+  47523f:	41 0f b6 f3          	movzx  esi,r11b
+  475243:	43 8b 4c 95 08       	mov    ecx,DWORD PTR [r13+r10*4+0x8]
+  475248:	0f c9                	bswap  ecx
+  47524a:	41 89 cc             	mov    r12d,ecx
+  47524d:	41 c1 ec 18          	shr    r12d,0x18
+  475251:	44 32 24 3e          	xor    r12b,BYTE PTR [rsi+rdi*1]
+  475255:	0f b6 74 24 14       	movzx  esi,BYTE PTR [rsp+0x14]
+  47525a:	89 c8                	mov    eax,ecx
+  47525c:	c1 e8 10             	shr    eax,0x10
+  47525f:	32 04 3e             	xor    al,BYTE PTR [rsi+rdi*1]
+  475262:	40 0f b6 f5          	movzx  esi,bpl
+  475266:	41 89 cb             	mov    r11d,ecx
+  475269:	41 c1 eb 08          	shr    r11d,0x8
+  47526d:	44 32 1c 3e          	xor    r11b,BYTE PTR [rsi+rdi*1]
+  475271:	0f b6 74 24 30       	movzx  esi,BYTE PTR [rsp+0x30]
+  475276:	32 0c 3e             	xor    cl,BYTE PTR [rsi+rdi*1]
+  475279:	47 8b 44 95 0c       	mov    r8d,DWORD PTR [r13+r10*4+0xc]
+  47527e:	0f b6 74 24 0c       	movzx  esi,BYTE PTR [rsp+0xc]
+  475283:	41 0f c8             	bswap  r8d
+  475286:	45 89 c5             	mov    r13d,r8d
+  475289:	41 c1 ed 18          	shr    r13d,0x18
+  47528d:	44 32 2c 3e          	xor    r13b,BYTE PTR [rsi+rdi*1]
+  475291:	0f b6 74 24 20       	movzx  esi,BYTE PTR [rsp+0x20]
+  475296:	44 89 c5             	mov    ebp,r8d
+  475299:	c1 ed 10             	shr    ebp,0x10
+  47529c:	40 32 2c 3e          	xor    bpl,BYTE PTR [rsi+rdi*1]
+  4752a0:	41 0f b6 f1          	movzx  esi,r9b
+  4752a4:	45 89 c2             	mov    r10d,r8d
+  4752a7:	41 c1 ea 08          	shr    r10d,0x8
+  4752ab:	44 32 14 3e          	xor    r10b,BYTE PTR [rsi+rdi*1]
+  4752af:	0f b6 74 24 38       	movzx  esi,BYTE PTR [rsp+0x38]
+  4752b4:	44 32 04 3e          	xor    r8b,BYTE PTR [rsi+rdi*1]
+  4752b8:	8b 74 24 28          	mov    esi,DWORD PTR [rsp+0x28]
+  4752bc:	41 88 36             	mov    BYTE PTR [r14],sil
+  4752bf:	8b 74 24 04          	mov    esi,DWORD PTR [rsp+0x4]
+  4752c3:	41 88 76 01          	mov    BYTE PTR [r14+0x1],sil
+  4752c7:	8b 74 24 18          	mov    esi,DWORD PTR [rsp+0x18]
+  4752cb:	41 88 76 02          	mov    BYTE PTR [r14+0x2],sil
+  4752cf:	45 88 7e 03          	mov    BYTE PTR [r14+0x3],r15b
+  4752d3:	8b 74 24 10          	mov    esi,DWORD PTR [rsp+0x10]
+  4752d7:	41 88 76 04          	mov    BYTE PTR [r14+0x4],sil
+  4752db:	8b 34 24             	mov    esi,DWORD PTR [rsp]
+  4752de:	41 88 76 05          	mov    BYTE PTR [r14+0x5],sil
+  4752e2:	41 88 56 06          	mov    BYTE PTR [r14+0x6],dl
+  4752e6:	41 88 5e 07          	mov    BYTE PTR [r14+0x7],bl
+  4752ea:	45 88 66 08          	mov    BYTE PTR [r14+0x8],r12b
+  4752ee:	41 88 46 09          	mov    BYTE PTR [r14+0x9],al
+  4752f2:	45 88 5e 0a          	mov    BYTE PTR [r14+0xa],r11b
+  4752f6:	41 88 4e 0b          	mov    BYTE PTR [r14+0xb],cl
+  4752fa:	45 88 6e 0c          	mov    BYTE PTR [r14+0xc],r13b
+  4752fe:	41 88 6e 0d          	mov    BYTE PTR [r14+0xd],bpl
+  475302:	45 88 56 0e          	mov    BYTE PTR [r14+0xe],r10b
+  475306:	45 88 46 0f          	mov    BYTE PTR [r14+0xf],r8b
+  47530a:	48 81 c4 e8 00 00 00 	add    rsp,0xe8
+  475311:	5b                   	pop    rbx
+  475312:	41 5c                	pop    r12
+  475314:	41 5d                	pop    r13
+  475316:	41 5e                	pop    r14
+  475318:	41 5f                	pop    r15
+  47531a:	5d                   	pop    rbp
+  47531b:	c3                   	ret
+  47531c:	41 ba 3c 00 00 00    	mov    r10d,0x3c
+  475322:	48 8d 15 ef db 3f 00 	lea    rdx,[rip+0x3fdbef]        # 872f18 <anon.8d44795054d4d1fb7bdb5af10492a3b6.186.llvm.7323277226304408740+0xd8>
+  475329:	be 3c 00 00 00       	mov    esi,0x3c
+  47532e:	4c 89 d7             	mov    rdi,r10
+  475331:	ff 15 21 b8 44 00    	call   QWORD PTR [rip+0x44b821]        # 8c0b58 <_DYNAMIC+0x2880>
+  475337:	0f 0b                	ud2
+  475339:	ff 15 e1 b4 44 00    	call   QWORD PTR [rip+0x44b4e1]        # 8c0820 <_DYNAMIC+0x2548>
+
+### AES_decrypt  0x474350..0x474aa0
+
+court/tmp/pfp63/before/libcrypto.so.3:     file format elf64-x86-64
+
+
+Disassembly of section .text:
+
+0000000000474350 <AES_decrypt>:
+  474350:	55                   	push   rbp
+  474351:	41 57                	push   r15
+  474353:	41 56                	push   r14
+  474355:	41 55                	push   r13
+  474357:	41 54                	push   r12
+  474359:	53                   	push   rbx
+  47435a:	48 81 ec 98 00 00 00 	sub    rsp,0x98
+  474361:	f3 0f 6f 07          	movdqu xmm0,XMMWORD PTR [rdi]
+  474365:	48 63 9a f0 00 00 00 	movsxd rbx,DWORD PTR [rdx+0xf0]
+  47436c:	8b 02                	mov    eax,DWORD PTR [rdx]
+  47436e:	44 8b 5a 04          	mov    r11d,DWORD PTR [rdx+0x4]
+  474372:	0f c8                	bswap  eax
+  474374:	41 89 c7             	mov    r15d,eax
+  474377:	41 c1 ef 18          	shr    r15d,0x18
+  47437b:	66 0f 7f 44 24 10    	movdqa XMMWORD PTR [rsp+0x10],xmm0
+  474381:	44 32 7c 24 10       	xor    r15b,BYTE PTR [rsp+0x10]
+  474386:	89 c1                	mov    ecx,eax
+  474388:	c1 e9 10             	shr    ecx,0x10
+  47438b:	32 4c 24 11          	xor    cl,BYTE PTR [rsp+0x11]
+  47438f:	89 4c 24 08          	mov    DWORD PTR [rsp+0x8],ecx
+  474393:	89 c1                	mov    ecx,eax
+  474395:	c1 e9 08             	shr    ecx,0x8
+  474398:	32 4c 24 12          	xor    cl,BYTE PTR [rsp+0x12]
+  47439c:	89 4c 24 28          	mov    DWORD PTR [rsp+0x28],ecx
+  4743a0:	48 89 b4 24 90 00 00 	mov    QWORD PTR [rsp+0x90],rsi
+  4743a7:	00 
+  4743a8:	32 44 24 13          	xor    al,BYTE PTR [rsp+0x13]
+  4743ac:	89 44 24 2c          	mov    DWORD PTR [rsp+0x2c],eax
+  4743b0:	41 0f cb             	bswap  r11d
+  4743b3:	45 89 da             	mov    r10d,r11d
+  4743b6:	41 c1 ea 18          	shr    r10d,0x18
+  4743ba:	44 32 54 24 14       	xor    r10b,BYTE PTR [rsp+0x14]
+  4743bf:	45 89 dd             	mov    r13d,r11d
+  4743c2:	41 c1 ed 10          	shr    r13d,0x10
+  4743c6:	44 32 6c 24 15       	xor    r13b,BYTE PTR [rsp+0x15]
+  4743cb:	45 89 dc             	mov    r12d,r11d
+  4743ce:	41 c1 ec 08          	shr    r12d,0x8
+  4743d2:	44 32 64 24 16       	xor    r12b,BYTE PTR [rsp+0x16]
+  4743d7:	44 32 5c 24 17       	xor    r11b,BYTE PTR [rsp+0x17]
+  4743dc:	44 8b 42 08          	mov    r8d,DWORD PTR [rdx+0x8]
+  4743e0:	41 0f c8             	bswap  r8d
+  4743e3:	44 89 c5             	mov    ebp,r8d
+  4743e6:	c1 ed 18             	shr    ebp,0x18
+  4743e9:	40 32 6c 24 18       	xor    bpl,BYTE PTR [rsp+0x18]
+  4743ee:	44 89 c6             	mov    esi,r8d
+  4743f1:	c1 ee 10             	shr    esi,0x10
+  4743f4:	40 32 74 24 19       	xor    sil,BYTE PTR [rsp+0x19]
+  4743f9:	45 89 c6             	mov    r14d,r8d
+  4743fc:	41 c1 ee 08          	shr    r14d,0x8
+  474400:	44 32 74 24 1a       	xor    r14b,BYTE PTR [rsp+0x1a]
+  474405:	44 32 44 24 1b       	xor    r8b,BYTE PTR [rsp+0x1b]
+  47440a:	8b 4a 0c             	mov    ecx,DWORD PTR [rdx+0xc]
+  47440d:	0f c9                	bswap  ecx
+  47440f:	41 89 c9             	mov    r9d,ecx
+  474412:	41 c1 e9 18          	shr    r9d,0x18
+  474416:	44 32 4c 24 1c       	xor    r9b,BYTE PTR [rsp+0x1c]
+  47441b:	89 c8                	mov    eax,ecx
+  47441d:	c1 e8 10             	shr    eax,0x10
+  474420:	32 44 24 1d          	xor    al,BYTE PTR [rsp+0x1d]
+  474424:	89 cf                	mov    edi,ecx
+  474426:	c1 ef 08             	shr    edi,0x8
+  474429:	40 32 7c 24 1e       	xor    dil,BYTE PTR [rsp+0x1e]
+  47442e:	32 4c 24 1f          	xor    cl,BYTE PTR [rsp+0x1f]
+  474432:	48 89 5c 24 30       	mov    QWORD PTR [rsp+0x30],rbx
+  474437:	48 83 fb 02          	cmp    rbx,0x2
+  47443b:	48 89 54 24 48       	mov    QWORD PTR [rsp+0x48],rdx
+  474440:	0f 82 ff 03 00 00    	jb     474845 <AES_decrypt+0x4f5>
+  474446:	44 89 54 24 04       	mov    DWORD PTR [rsp+0x4],r10d
+  47444b:	4c 8d 52 1c          	lea    r10,[rdx+0x1c]
+  47444f:	bb 01 00 00 00       	mov    ebx,0x1
+  474454:	48 89 5c 24 20       	mov    QWORD PTR [rsp+0x20],rbx
+  474459:	66 0f 6f 05 1f 66 23 	movdqa xmm0,XMMWORD PTR [rip+0x23661f]        # 6aaa80 <_RNvNtCsfBoMNNx3tZr_10openssl_rs13cipher_tables7SEED_SS+0x102c>
+  474460:	00 
+  474461:	8b 54 24 08          	mov    edx,DWORD PTR [rsp+0x8]
+  474465:	66 66 2e 0f 1f 84 00 	data16 cs nop WORD PTR [rax+rax*1+0x0]
+  47446c:	00 00 00 00 
+  474470:	4c 89 54 24 08       	mov    QWORD PTR [rsp+0x8],r10
+  474475:	48 83 7c 24 20 0f    	cmp    QWORD PTR [rsp+0x20],0xf
+  47447b:	0f 84 fb 05 00 00    	je     474a7c <AES_decrypt+0x72c>
+  474481:	45 0f b6 f6          	movzx  r14d,r14b
+  474485:	4c 8d 15 bc eb 21 00 	lea    r10,[rip+0x21ebbc]        # 693048 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs6digest6tables12AES_INV_SBOX>
+  47448c:	47 0f b6 34 16       	movzx  r14d,BYTE PTR [r14+r10*1]
+  474491:	40 0f b6 ff          	movzx  edi,dil
+  474495:	42 0f b6 3c 17       	movzx  edi,BYTE PTR [rdi+r10*1]
+  47449a:	c1 e7 08             	shl    edi,0x8
+  47449d:	44 09 f7             	or     edi,r14d
+  4744a0:	0f b6 5c 24 28       	movzx  ebx,BYTE PTR [rsp+0x28]
+  4744a5:	42 0f b6 1c 13       	movzx  ebx,BYTE PTR [rbx+r10*1]
+  4744aa:	45 0f b6 f4          	movzx  r14d,r12b
+  4744ae:	c1 e3 10             	shl    ebx,0x10
+  4744b1:	09 fb                	or     ebx,edi
+  4744b3:	43 0f b6 3c 16       	movzx  edi,BYTE PTR [r14+r10*1]
+  4744b8:	c1 e7 18             	shl    edi,0x18
+  4744bb:	09 df                	or     edi,ebx
+  4744bd:	66 0f 6e e7          	movd   xmm4,edi
+  4744c1:	0f b6 c0             	movzx  eax,al
+  4744c4:	42 0f b6 04 10       	movzx  eax,BYTE PTR [rax+r10*1]
+  4744c9:	0f b6 fa             	movzx  edi,dl
+  4744cc:	42 0f b6 3c 17       	movzx  edi,BYTE PTR [rdi+r10*1]
+  4744d1:	41 0f b6 dd          	movzx  ebx,r13b
+  4744d5:	42 0f b6 1c 13       	movzx  ebx,BYTE PTR [rbx+r10*1]
+  4744da:	40 0f b6 f6          	movzx  esi,sil
+  4744de:	c1 e7 08             	shl    edi,0x8
+  4744e1:	09 c7                	or     edi,eax
+  4744e3:	c1 e3 10             	shl    ebx,0x10
+  4744e6:	09 fb                	or     ebx,edi
+  4744e8:	42 0f b6 04 16       	movzx  eax,BYTE PTR [rsi+r10*1]
+  4744ed:	c1 e0 18             	shl    eax,0x18
+  4744f0:	09 d8                	or     eax,ebx
+  4744f2:	66 0f 6e d0          	movd   xmm2,eax
+  4744f6:	66 0f 6f cc          	movdqa xmm1,xmm4
+  4744fa:	66 0f ef ca          	pxor   xmm1,xmm2
+  4744fe:	41 0f b6 c3          	movzx  eax,r11b
+  474502:	42 0f b6 04 10       	movzx  eax,BYTE PTR [rax+r10*1]
+  474507:	41 0f b6 d0          	movzx  edx,r8b
+  47450b:	42 0f b6 14 12       	movzx  edx,BYTE PTR [rdx+r10*1]
+  474510:	0f b6 c9             	movzx  ecx,cl
+  474513:	42 0f b6 0c 11       	movzx  ecx,BYTE PTR [rcx+r10*1]
+  474518:	0f b6 74 24 2c       	movzx  esi,BYTE PTR [rsp+0x2c]
+  47451d:	c1 e2 08             	shl    edx,0x8
+  474520:	09 c2                	or     edx,eax
+  474522:	c1 e1 10             	shl    ecx,0x10
+  474525:	09 d1                	or     ecx,edx
+  474527:	42 0f b6 04 16       	movzx  eax,BYTE PTR [rsi+r10*1]
+  47452c:	c1 e0 18             	shl    eax,0x18
+  47452f:	09 c8                	or     eax,ecx
+  474531:	66 0f 6e e8          	movd   xmm5,eax
+  474535:	66 0f ef cd          	pxor   xmm1,xmm5
+  474539:	41 0f b6 c7          	movzx  eax,r15b
+  47453d:	42 0f b6 04 10       	movzx  eax,BYTE PTR [rax+r10*1]
+  474542:	0f b6 4c 24 04       	movzx  ecx,BYTE PTR [rsp+0x4]
+  474547:	42 0f b6 0c 11       	movzx  ecx,BYTE PTR [rcx+r10*1]
+  47454c:	40 0f b6 d5          	movzx  edx,bpl
+  474550:	42 0f b6 14 12       	movzx  edx,BYTE PTR [rdx+r10*1]
+  474555:	41 0f b6 f1          	movzx  esi,r9b
+  474559:	c1 e1 08             	shl    ecx,0x8
+  47455c:	09 c1                	or     ecx,eax
+  47455e:	c1 e2 10             	shl    edx,0x10
+  474561:	09 ca                	or     edx,ecx
+  474563:	42 0f b6 04 16       	movzx  eax,BYTE PTR [rsi+r10*1]
+  474568:	c1 e0 18             	shl    eax,0x18
+  47456b:	09 d0                	or     eax,edx
+  47456d:	66 44 0f 6e c0       	movd   xmm8,eax
+  474572:	66 0f ef db          	pxor   xmm3,xmm3
+  474576:	66 41 0f 64 d8       	pcmpgtb xmm3,xmm8
+  47457b:	66 0f db d8          	pand   xmm3,xmm0
+  47457f:	66 0f ef f6          	pxor   xmm6,xmm6
+  474583:	66 0f 64 f2          	pcmpgtb xmm6,xmm2
+  474587:	66 0f 6f fa          	movdqa xmm7,xmm2
+  47458b:	66 44 0f 6f cc       	movdqa xmm9,xmm4
+  474590:	66 45 0f ef c8       	pxor   xmm9,xmm8
+  474595:	66 41 0f ef d0       	pxor   xmm2,xmm8
+  47459a:	66 45 0f fc c0       	paddb  xmm8,xmm8
+  47459f:	66 41 0f ef d8       	pxor   xmm3,xmm8
+  4745a4:	66 0f ef cb          	pxor   xmm1,xmm3
+  4745a8:	66 0f db f0          	pand   xmm6,xmm0
+  4745ac:	66 0f fc ff          	paddb  xmm7,xmm7
+  4745b0:	66 0f ef f7          	pxor   xmm6,xmm7
+  4745b4:	66 0f ef ce          	pxor   xmm1,xmm6
+  4745b8:	66 44 0f 6f e3       	movdqa xmm12,xmm3
+  4745bd:	66 44 0f fc e3       	paddb  xmm12,xmm3
+  4745c2:	66 45 0f ef d2       	pxor   xmm10,xmm10
+  4745c7:	66 45 0f 64 d0       	pcmpgtb xmm10,xmm8
+  4745cc:	66 44 0f db d0       	pand   xmm10,xmm0
+  4745d1:	66 45 0f ef d4       	pxor   xmm10,xmm12
+  4745d6:	66 41 0f ef ca       	pxor   xmm1,xmm10
+  4745db:	66 45 0f ef c0       	pxor   xmm8,xmm8
+  4745e0:	66 44 0f 64 c4       	pcmpgtb xmm8,xmm4
+  4745e5:	66 44 0f db c0       	pand   xmm8,xmm0
+  4745ea:	66 0f ef dc          	pxor   xmm3,xmm4
+  4745ee:	66 0f fc e4          	paddb  xmm4,xmm4
+  4745f2:	66 44 0f ef c4       	pxor   xmm8,xmm4
+  4745f7:	66 45 0f 6f e8       	movdqa xmm13,xmm8
+  4745fc:	66 45 0f ef db       	pxor   xmm11,xmm11
+  474601:	66 44 0f 64 dc       	pcmpgtb xmm11,xmm4
+  474606:	66 45 0f ef f6       	pxor   xmm14,xmm14
+  47460b:	66 45 0f 64 f4       	pcmpgtb xmm14,xmm12
+  474610:	66 44 0f db f0       	pand   xmm14,xmm0
+  474615:	66 45 0f ef e4       	pxor   xmm12,xmm12
+  47461a:	66 44 0f 64 e5       	pcmpgtb xmm12,xmm5
+  47461f:	66 44 0f db e0       	pand   xmm12,xmm0
+  474624:	66 44 0f ef cd       	pxor   xmm9,xmm5
+  474629:	66 44 0f ef ce       	pxor   xmm9,xmm6
+  47462e:	66 45 0f ef c8       	pxor   xmm9,xmm8
+  474633:	66 44 0f ef c5       	pxor   xmm8,xmm5
+  474638:	66 0f fc ed          	paddb  xmm5,xmm5
+  47463c:	66 44 0f ef e5       	pxor   xmm12,xmm5
+  474641:	66 41 0f ef d4       	pxor   xmm2,xmm12
+  474646:	66 44 0f ef c2       	pxor   xmm8,xmm2
+  47464b:	66 45 0f ef c2       	pxor   xmm8,xmm10
+  474650:	66 41 0f 6f e2       	movdqa xmm4,xmm10
+  474655:	66 41 0f fc e2       	paddb  xmm4,xmm10
+  47465a:	66 41 0f ef e6       	pxor   xmm4,xmm14
+  47465f:	66 0f fc f6          	paddb  xmm6,xmm6
+  474663:	66 45 0f ef d2       	pxor   xmm10,xmm10
+  474668:	66 44 0f 64 d7       	pcmpgtb xmm10,xmm7
+  47466d:	66 0f ef ff          	pxor   xmm7,xmm7
+  474671:	66 0f 64 fe          	pcmpgtb xmm7,xmm6
+  474675:	66 44 0f db d0       	pand   xmm10,xmm0
+  47467a:	66 44 0f ef d6       	pxor   xmm10,xmm6
+  47467f:	66 0f ef da          	pxor   xmm3,xmm2
+  474683:	66 45 0f fc ed       	paddb  xmm13,xmm13
+  474688:	66 44 0f db d8       	pand   xmm11,xmm0
+  47468d:	66 45 0f ef dd       	pxor   xmm11,xmm13
+  474692:	66 0f db f8          	pand   xmm7,xmm0
+  474696:	66 45 0f ef ca       	pxor   xmm9,xmm10
+  47469b:	66 41 0f ef da       	pxor   xmm3,xmm10
+  4746a0:	66 45 0f fc d2       	paddb  xmm10,xmm10
+  4746a5:	66 44 0f ef d7       	pxor   xmm10,xmm7
+  4746aa:	66 0f ef d2          	pxor   xmm2,xmm2
+  4746ae:	66 41 0f 64 d5       	pcmpgtb xmm2,xmm13
+  4746b3:	66 41 0f ef cb       	pxor   xmm1,xmm11
+  4746b8:	66 0f db d0          	pand   xmm2,xmm0
+  4746bc:	66 45 0f ef c3       	pxor   xmm8,xmm11
+  4746c1:	66 45 0f fc db       	paddb  xmm11,xmm11
+  4746c6:	66 44 0f ef da       	pxor   xmm11,xmm2
+  4746cb:	66 45 0f ef da       	pxor   xmm11,xmm10
+  4746d0:	66 45 0f fc e4       	paddb  xmm12,xmm12
+  4746d5:	66 0f ef d2          	pxor   xmm2,xmm2
+  4746d9:	66 0f 64 d5          	pcmpgtb xmm2,xmm5
+  4746dd:	66 0f ef ed          	pxor   xmm5,xmm5
+  4746e1:	66 41 0f 64 ec       	pcmpgtb xmm5,xmm12
+  4746e6:	66 0f db d0          	pand   xmm2,xmm0
+  4746ea:	66 41 0f ef d4       	pxor   xmm2,xmm12
+  4746ef:	66 0f db e8          	pand   xmm5,xmm0
+  4746f3:	66 44 0f ef ca       	pxor   xmm9,xmm2
+  4746f8:	66 0f ef da          	pxor   xmm3,xmm2
+  4746fc:	66 0f fc d2          	paddb  xmm2,xmm2
+  474700:	66 0f ef d5          	pxor   xmm2,xmm5
+  474704:	66 0f ef cc          	pxor   xmm1,xmm4
+  474708:	66 41 0f ef cb       	pxor   xmm1,xmm11
+  47470d:	66 0f ef ca          	pxor   xmm1,xmm2
+  474711:	66 0f 7f 4c 24 60    	movdqa XMMWORD PTR [rsp+0x60],xmm1
+  474717:	66 44 0f ef cc       	pxor   xmm9,xmm4
+  47471c:	66 45 0f ef cb       	pxor   xmm9,xmm11
+  474721:	66 44 0f ef ca       	pxor   xmm9,xmm2
+  474726:	66 44 0f 7f 8c 24 80 	movdqa XMMWORD PTR [rsp+0x80],xmm9
+  47472d:	00 00 00 
+  474730:	66 44 0f ef c4       	pxor   xmm8,xmm4
+  474735:	66 45 0f ef c3       	pxor   xmm8,xmm11
+  47473a:	66 44 0f ef c2       	pxor   xmm8,xmm2
+  47473f:	66 44 0f 7f 44 24 50 	movdqa XMMWORD PTR [rsp+0x50],xmm8
+  474746:	66 0f ef dc          	pxor   xmm3,xmm4
+  47474a:	66 41 0f ef db       	pxor   xmm3,xmm11
+  47474f:	66 0f ef da          	pxor   xmm3,xmm2
+  474753:	66 0f 7f 5c 24 70    	movdqa XMMWORD PTR [rsp+0x70],xmm3
+  474759:	48 8b 5c 24 20       	mov    rbx,QWORD PTR [rsp+0x20]
+  47475e:	48 ff c3             	inc    rbx
+  474761:	4c 8b 54 24 08       	mov    r10,QWORD PTR [rsp+0x8]
+  474766:	41 8b 42 f4          	mov    eax,DWORD PTR [r10-0xc]
+  47476a:	0f c8                	bswap  eax
+  47476c:	41 89 c7             	mov    r15d,eax
+  47476f:	41 c1 ef 18          	shr    r15d,0x18
+  474773:	44 32 7c 24 60       	xor    r15b,BYTE PTR [rsp+0x60]
+  474778:	89 c2                	mov    edx,eax
+  47477a:	c1 ea 10             	shr    edx,0x10
+  47477d:	32 94 24 80 00 00 00 	xor    dl,BYTE PTR [rsp+0x80]
+  474784:	89 c1                	mov    ecx,eax
+  474786:	c1 e9 08             	shr    ecx,0x8
+  474789:	32 4c 24 50          	xor    cl,BYTE PTR [rsp+0x50]
+  47478d:	89 4c 24 28          	mov    DWORD PTR [rsp+0x28],ecx
+  474791:	45 8b 5a f8          	mov    r11d,DWORD PTR [r10-0x8]
+  474795:	32 44 24 70          	xor    al,BYTE PTR [rsp+0x70]
+  474799:	89 44 24 2c          	mov    DWORD PTR [rsp+0x2c],eax
+  47479d:	41 0f cb             	bswap  r11d
+  4747a0:	44 89 d8             	mov    eax,r11d
+  4747a3:	c1 e8 18             	shr    eax,0x18
+  4747a6:	32 44 24 61          	xor    al,BYTE PTR [rsp+0x61]
+  4747aa:	89 44 24 04          	mov    DWORD PTR [rsp+0x4],eax
+  4747ae:	45 89 dd             	mov    r13d,r11d
+  4747b1:	41 c1 ed 10          	shr    r13d,0x10
+  4747b5:	44 32 ac 24 81 00 00 	xor    r13b,BYTE PTR [rsp+0x81]
+  4747bc:	00 
+  4747bd:	45 89 dc             	mov    r12d,r11d
+  4747c0:	41 c1 ec 08          	shr    r12d,0x8
+  4747c4:	44 32 64 24 51       	xor    r12b,BYTE PTR [rsp+0x51]
+  4747c9:	44 32 5c 24 71       	xor    r11b,BYTE PTR [rsp+0x71]
+  4747ce:	45 8b 42 fc          	mov    r8d,DWORD PTR [r10-0x4]
+  4747d2:	41 0f c8             	bswap  r8d
+  4747d5:	44 89 c5             	mov    ebp,r8d
+  4747d8:	c1 ed 18             	shr    ebp,0x18
+  4747db:	40 32 6c 24 62       	xor    bpl,BYTE PTR [rsp+0x62]
+  4747e0:	44 89 c6             	mov    esi,r8d
+  4747e3:	c1 ee 10             	shr    esi,0x10
+  4747e6:	40 32 b4 24 82 00 00 	xor    sil,BYTE PTR [rsp+0x82]
+  4747ed:	00 
+  4747ee:	45 89 c6             	mov    r14d,r8d
+  4747f1:	41 c1 ee 08          	shr    r14d,0x8
+  4747f5:	44 32 74 24 52       	xor    r14b,BYTE PTR [rsp+0x52]
+  4747fa:	44 32 44 24 72       	xor    r8b,BYTE PTR [rsp+0x72]
+  4747ff:	41 8b 0a             	mov    ecx,DWORD PTR [r10]
+  474802:	0f c9                	bswap  ecx
+  474804:	41 89 c9             	mov    r9d,ecx
+  474807:	41 c1 e9 18          	shr    r9d,0x18
+  47480b:	44 32 4c 24 63       	xor    r9b,BYTE PTR [rsp+0x63]
+  474810:	89 c8                	mov    eax,ecx
+  474812:	c1 e8 10             	shr    eax,0x10
+  474815:	32 84 24 83 00 00 00 	xor    al,BYTE PTR [rsp+0x83]
+  47481c:	89 cf                	mov    edi,ecx
+  47481e:	c1 ef 08             	shr    edi,0x8
+  474821:	40 32 7c 24 53       	xor    dil,BYTE PTR [rsp+0x53]
+  474826:	32 4c 24 73          	xor    cl,BYTE PTR [rsp+0x73]
+  47482a:	49 83 c2 10          	add    r10,0x10
+  47482e:	48 89 5c 24 20       	mov    QWORD PTR [rsp+0x20],rbx
+  474833:	48 39 5c 24 30       	cmp    QWORD PTR [rsp+0x30],rbx
+  474838:	0f 85 32 fc ff ff    	jne    474470 <AES_decrypt+0x120>
+  47483e:	44 8b 54 24 04       	mov    r10d,DWORD PTR [rsp+0x4]
+  474843:	eb 04                	jmp    474849 <AES_decrypt+0x4f9>
+  474845:	8b 54 24 08          	mov    edx,DWORD PTR [rsp+0x8]
+  474849:	44 89 54 24 04       	mov    DWORD PTR [rsp+0x4],r10d
+  47484e:	4c 8b 54 24 30       	mov    r10,QWORD PTR [rsp+0x30]
+  474853:	44 89 d3             	mov    ebx,r10d
+  474856:	49 c1 e2 02          	shl    r10,0x2
+  47485a:	83 fb 0e             	cmp    ebx,0xe
+  47485d:	0f 87 32 02 00 00    	ja     474a95 <AES_decrypt+0x745>
+  474863:	41 0f b6 df          	movzx  ebx,r15b
+  474867:	48 89 5c 24 08       	mov    QWORD PTR [rsp+0x8],rbx
+  47486c:	48 8b 5c 24 48       	mov    rbx,QWORD PTR [rsp+0x48]
+  474871:	42 8b 1c 93          	mov    ebx,DWORD PTR [rbx+r10*4]
+  474875:	0f cb                	bswap  ebx
+  474877:	89 5c 24 20          	mov    DWORD PTR [rsp+0x20],ebx
+  47487b:	4c 89 54 24 30       	mov    QWORD PTR [rsp+0x30],r10
+  474880:	c1 eb 18             	shr    ebx,0x18
+  474883:	4c 8d 3d be e7 21 00 	lea    r15,[rip+0x21e7be]        # 693048 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs6digest6tables12AES_INV_SBOX>
+  47488a:	4c 8b 54 24 08       	mov    r10,QWORD PTR [rsp+0x8]
+  47488f:	43 32 1c 3a          	xor    bl,BYTE PTR [r10+r15*1]
+  474893:	89 5c 24 08          	mov    DWORD PTR [rsp+0x8],ebx
+  474897:	0f b6 c0             	movzx  eax,al
+  47489a:	44 8b 54 24 20       	mov    r10d,DWORD PTR [rsp+0x20]
+  47489f:	44 89 d3             	mov    ebx,r10d
+  4748a2:	c1 eb 10             	shr    ebx,0x10
+  4748a5:	42 32 1c 38          	xor    bl,BYTE PTR [rax+r15*1]
+  4748a9:	89 5c 24 44          	mov    DWORD PTR [rsp+0x44],ebx
+  4748ad:	41 0f b6 c6          	movzx  eax,r14b
+  4748b1:	44 89 d3             	mov    ebx,r10d
+  4748b4:	c1 eb 08             	shr    ebx,0x8
+  4748b7:	42 32 1c 38          	xor    bl,BYTE PTR [rax+r15*1]
+  4748bb:	89 5c 24 40          	mov    DWORD PTR [rsp+0x40],ebx
+  4748bf:	41 0f b6 c3          	movzx  eax,r11b
+  4748c3:	46 32 14 38          	xor    r10b,BYTE PTR [rax+r15*1]
+  4748c7:	44 89 54 24 20       	mov    DWORD PTR [rsp+0x20],r10d
+  4748cc:	0f b6 44 24 04       	movzx  eax,BYTE PTR [rsp+0x4]
+  4748d1:	4c 8b 54 24 30       	mov    r10,QWORD PTR [rsp+0x30]
+  4748d6:	4c 8b 74 24 48       	mov    r14,QWORD PTR [rsp+0x48]
+  4748db:	47 8b 5c 96 04       	mov    r11d,DWORD PTR [r14+r10*4+0x4]
+  4748e0:	41 0f cb             	bswap  r11d
+  4748e3:	44 89 db             	mov    ebx,r11d
+  4748e6:	c1 eb 18             	shr    ebx,0x18
+  4748e9:	42 32 1c 38          	xor    bl,BYTE PTR [rax+r15*1]
+  4748ed:	89 5c 24 04          	mov    DWORD PTR [rsp+0x4],ebx
+  4748f1:	0f b6 c2             	movzx  eax,dl
+  4748f4:	44 89 da             	mov    edx,r11d
+  4748f7:	c1 ea 10             	shr    edx,0x10
+  4748fa:	42 32 14 38          	xor    dl,BYTE PTR [rax+r15*1]
+  4748fe:	89 54 24 3c          	mov    DWORD PTR [rsp+0x3c],edx
+  474902:	40 0f b6 c7          	movzx  eax,dil
+  474906:	44 89 df             	mov    edi,r11d
+  474909:	c1 ef 08             	shr    edi,0x8
+  47490c:	42 32 3c 38          	xor    dil,BYTE PTR [rax+r15*1]
+  474910:	41 0f b6 c0          	movzx  eax,r8b
+  474914:	46 32 1c 38          	xor    r11b,BYTE PTR [rax+r15*1]
+  474918:	40 0f b6 c5          	movzx  eax,bpl
+  47491c:	47 8b 44 96 08       	mov    r8d,DWORD PTR [r14+r10*4+0x8]
+  474921:	41 0f c8             	bswap  r8d
+  474924:	44 89 c2             	mov    edx,r8d
+  474927:	c1 ea 18             	shr    edx,0x18
+  47492a:	42 32 14 38          	xor    dl,BYTE PTR [rax+r15*1]
+  47492e:	41 0f b6 c5          	movzx  eax,r13b
+  474932:	45 89 c5             	mov    r13d,r8d
+  474935:	41 c1 ed 10          	shr    r13d,0x10
+  474939:	46 32 2c 38          	xor    r13b,BYTE PTR [rax+r15*1]
+  47493d:	0f b6 44 24 28       	movzx  eax,BYTE PTR [rsp+0x28]
+  474942:	44 89 c3             	mov    ebx,r8d
+  474945:	c1 eb 08             	shr    ebx,0x8
+  474948:	42 32 1c 38          	xor    bl,BYTE PTR [rax+r15*1]
+  47494c:	0f b6 c1             	movzx  eax,cl
+  47494f:	46 32 04 38          	xor    r8b,BYTE PTR [rax+r15*1]
+  474953:	43 8b 44 96 0c       	mov    eax,DWORD PTR [r14+r10*4+0xc]
+  474958:	41 0f b6 c9          	movzx  ecx,r9b
+  47495c:	0f c8                	bswap  eax
+  47495e:	41 89 c1             	mov    r9d,eax
+  474961:	41 c1 e9 18          	shr    r9d,0x18
+  474965:	46 32 0c 39          	xor    r9b,BYTE PTR [rcx+r15*1]
+  474969:	40 0f b6 ce          	movzx  ecx,sil
+  47496d:	89 c6                	mov    esi,eax
+  47496f:	c1 ee 10             	shr    esi,0x10
+  474972:	42 32 34 39          	xor    sil,BYTE PTR [rcx+r15*1]
+  474976:	41 0f b6 cc          	movzx  ecx,r12b
+  47497a:	41 89 c4             	mov    r12d,eax
+  47497d:	41 c1 ec 08          	shr    r12d,0x8
+  474981:	46 32 24 39          	xor    r12b,BYTE PTR [rcx+r15*1]
+  474985:	0f b6 4c 24 2c       	movzx  ecx,BYTE PTR [rsp+0x2c]
+  47498a:	42 32 04 39          	xor    al,BYTE PTR [rcx+r15*1]
+  47498e:	0f b6 c0             	movzx  eax,al
+  474991:	66 0f 6e c0          	movd   xmm0,eax
+  474995:	41 0f b6 c4          	movzx  eax,r12b
+  474999:	66 0f 6e c8          	movd   xmm1,eax
+  47499d:	40 0f b6 c6          	movzx  eax,sil
+  4749a1:	66 0f 6e e0          	movd   xmm4,eax
+  4749a5:	41 0f b6 c1          	movzx  eax,r9b
+  4749a9:	66 0f 6e d0          	movd   xmm2,eax
+  4749ad:	41 0f b6 c0          	movzx  eax,r8b
+  4749b1:	66 0f 6e e8          	movd   xmm5,eax
+  4749b5:	0f b6 c3             	movzx  eax,bl
+  4749b8:	66 0f 6e f0          	movd   xmm6,eax
+  4749bc:	41 0f b6 c5          	movzx  eax,r13b
+  4749c0:	66 0f 6e f8          	movd   xmm7,eax
+  4749c4:	0f b6 c2             	movzx  eax,dl
+  4749c7:	66 0f 6e d8          	movd   xmm3,eax
+  4749cb:	41 0f b6 c3          	movzx  eax,r11b
+  4749cf:	66 44 0f 6e c0       	movd   xmm8,eax
+  4749d4:	40 0f b6 c7          	movzx  eax,dil
+  4749d8:	66 44 0f 6e c8       	movd   xmm9,eax
+  4749dd:	0f b6 44 24 3c       	movzx  eax,BYTE PTR [rsp+0x3c]
+  4749e2:	66 44 0f 6e d0       	movd   xmm10,eax
+  4749e7:	0f b6 44 24 04       	movzx  eax,BYTE PTR [rsp+0x4]
+  4749ec:	66 44 0f 6e d8       	movd   xmm11,eax
+  4749f1:	0f b6 44 24 20       	movzx  eax,BYTE PTR [rsp+0x20]
+  4749f6:	66 44 0f 6e e0       	movd   xmm12,eax
+  4749fb:	0f b6 44 24 40       	movzx  eax,BYTE PTR [rsp+0x40]
+  474a00:	66 44 0f 6e e8       	movd   xmm13,eax
+  474a05:	0f b6 44 24 44       	movzx  eax,BYTE PTR [rsp+0x44]
+  474a0a:	66 44 0f 6e f0       	movd   xmm14,eax
+  474a0f:	0f b6 44 24 08       	movzx  eax,BYTE PTR [rsp+0x8]
+  474a14:	66 44 0f 6e f8       	movd   xmm15,eax
+  474a19:	66 0f 60 c8          	punpcklbw xmm1,xmm0
+  474a1d:	66 0f 60 d4          	punpcklbw xmm2,xmm4
+  474a21:	66 0f 61 d1          	punpcklwd xmm2,xmm1
+  474a25:	66 0f 60 f5          	punpcklbw xmm6,xmm5
+  474a29:	66 0f 60 df          	punpcklbw xmm3,xmm7
+  474a2d:	66 0f 61 de          	punpcklwd xmm3,xmm6
+  474a31:	66 0f 62 da          	punpckldq xmm3,xmm2
+  474a35:	66 45 0f 60 c8       	punpcklbw xmm9,xmm8
+  474a3a:	66 45 0f 60 da       	punpcklbw xmm11,xmm10
+  474a3f:	66 45 0f 61 d9       	punpcklwd xmm11,xmm9
+  474a44:	66 45 0f 60 ec       	punpcklbw xmm13,xmm12
+  474a49:	66 45 0f 60 fe       	punpcklbw xmm15,xmm14
+  474a4e:	66 45 0f 61 fd       	punpcklwd xmm15,xmm13
+  474a53:	66 45 0f 62 fb       	punpckldq xmm15,xmm11
+  474a58:	66 44 0f 6c fb       	punpcklqdq xmm15,xmm3
+  474a5d:	48 8b 84 24 90 00 00 	mov    rax,QWORD PTR [rsp+0x90]
+  474a64:	00 
+  474a65:	f3 44 0f 7f 38       	movdqu XMMWORD PTR [rax],xmm15
+  474a6a:	48 81 c4 98 00 00 00 	add    rsp,0x98
+  474a71:	5b                   	pop    rbx
+  474a72:	41 5c                	pop    r12
+  474a74:	41 5d                	pop    r13
+  474a76:	41 5e                	pop    r14
+  474a78:	41 5f                	pop    r15
+  474a7a:	5d                   	pop    rbp
+  474a7b:	c3                   	ret
+  474a7c:	bf 3c 00 00 00       	mov    edi,0x3c
+  474a81:	48 8d 15 90 e4 3f 00 	lea    rdx,[rip+0x3fe490]        # 872f18 <anon.8d44795054d4d1fb7bdb5af10492a3b6.186.llvm.7323277226304408740+0xd8>
+  474a88:	be 3c 00 00 00       	mov    esi,0x3c
+  474a8d:	ff 15 c5 c0 44 00    	call   QWORD PTR [rip+0x44c0c5]        # 8c0b58 <_DYNAMIC+0x2880>
+  474a93:	0f 0b                	ud2
+  474a95:	4c 89 d7             	mov    rdi,r10
+  474a98:	eb e7                	jmp    474a81 <AES_decrypt+0x731>
+  474a9a:	ff 15 80 bd 44 00    	call   QWORD PTR [rip+0x44bd80]        # 8c0820 <_DYNAMIC+0x2548>
+
+### CRYPTO_gcm128_aad  0x222410..0x2227a5
+
+court/tmp/pfp63/before/libcrypto.so.3:     file format elf64-x86-64
+
+
+Disassembly of section .text:
+
+0000000000222410 <CRYPTO_gcm128_aad>:
+  222410:	55                   	push   rbp
+  222411:	41 57                	push   r15
+  222413:	41 56                	push   r14
+  222415:	41 55                	push   r13
+  222417:	41 54                	push   r12
+  222419:	53                   	push   rbx
+  22241a:	48 83 ec 28          	sub    rsp,0x28
+  22241e:	b8 fe ff ff ff       	mov    eax,0xfffffffe
+  222423:	48 83 7f 78 00       	cmp    QWORD PTR [rdi+0x78],0x0
+  222428:	0f 85 3a 03 00 00    	jne    222768 <CRYPTO_gcm128_aad+0x358>
+  22242e:	48 8b 4f 70          	mov    rcx,QWORD PTR [rdi+0x70]
+  222432:	48 01 d1             	add    rcx,rdx
+  222435:	0f 92 c0             	setb   al
+  222438:	49 b8 00 00 00 00 00 	movabs r8,0x2000000000000000
+  22243f:	00 00 20 
+  222442:	4c 39 c1             	cmp    rcx,r8
+  222445:	41 0f 97 c0          	seta   r8b
+  222449:	41 08 c0             	or     r8b,al
+  22244c:	b8 ff ff ff ff       	mov    eax,0xffffffff
+  222451:	0f 85 11 03 00 00    	jne    222768 <CRYPTO_gcm128_aad+0x358>
+  222457:	48 89 4f 70          	mov    QWORD PTR [rdi+0x70],rcx
+  22245b:	8b 87 84 00 00 00    	mov    eax,DWORD PTR [rdi+0x84]
+  222461:	48 85 c0             	test   rax,rax
+  222464:	0f 84 13 01 00 00    	je     22257d <CRYPTO_gcm128_aad+0x16d>
+  22246a:	83 f8 10             	cmp    eax,0x10
+  22246d:	0f 87 1d 03 00 00    	ja     222790 <CRYPTO_gcm128_aad+0x380>
+  222473:	41 bb 10 00 00 00    	mov    r11d,0x10
+  222479:	49 29 c3             	sub    r11,rax
+  22247c:	4c 39 da             	cmp    rdx,r11
+  22247f:	4c 89 d9             	mov    rcx,r11
+  222482:	48 0f 42 ca          	cmovb  rcx,rdx
+  222486:	48 85 c9             	test   rcx,rcx
+  222489:	74 2f                	je     2224ba <CRYPTO_gcm128_aad+0xaa>
+  22248b:	4c 8d 14 07          	lea    r10,[rdi+rax*1]
+  22248f:	49 83 c2 60          	add    r10,0x60
+  222493:	45 31 c0             	xor    r8d,r8d
+  222496:	66 2e 0f 1f 84 00 00 	cs nop WORD PTR [rax+rax*1+0x0]
+  22249d:	00 00 00 
+  2224a0:	4d 39 c3             	cmp    r11,r8
+  2224a3:	0f 84 ce 02 00 00    	je     222777 <CRYPTO_gcm128_aad+0x367>
+  2224a9:	46 0f b6 0c 06       	movzx  r9d,BYTE PTR [rsi+r8*1]
+  2224ae:	47 30 0c 02          	xor    BYTE PTR [r10+r8*1],r9b
+  2224b2:	49 ff c0             	inc    r8
+  2224b5:	4c 39 c1             	cmp    rcx,r8
+  2224b8:	75 e6                	jne    2224a0 <CRYPTO_gcm128_aad+0x90>
+  2224ba:	48 01 c8             	add    rax,rcx
+  2224bd:	48 83 f8 10          	cmp    rax,0x10
+  2224c1:	0f 85 93 02 00 00    	jne    22275a <CRYPTO_gcm128_aad+0x34a>
+  2224c7:	48 01 ce             	add    rsi,rcx
+  2224ca:	48 29 ca             	sub    rdx,rcx
+  2224cd:	48 89 d0             	mov    rax,rdx
+  2224d0:	4c 8b 07             	mov    r8,QWORD PTR [rdi]
+  2224d3:	4c 8b 5f 08          	mov    r11,QWORD PTR [rdi+0x8]
+  2224d7:	4c 8b 4f 60          	mov    r9,QWORD PTR [rdi+0x60]
+  2224db:	4c 8b 57 68          	mov    r10,QWORD PTR [rdi+0x68]
+  2224df:	49 0f ca             	bswap  r10
+  2224e2:	49 0f c9             	bswap  r9
+  2224e5:	4c 33 4f 10          	xor    r9,QWORD PTR [rdi+0x10]
+  2224e9:	4c 33 57 18          	xor    r10,QWORD PTR [rdi+0x18]
+  2224ed:	b9 7f 00 00 00       	mov    ecx,0x7f
+  2224f2:	31 db                	xor    ebx,ebx
+  2224f4:	41 be 01 00 00 00    	mov    r14d,0x1
+  2224fa:	49 bf 00 00 00 00 00 	movabs r15,0xe100000000000000
+  222501:	00 00 e1 
+  222504:	45 31 e4             	xor    r12d,r12d
+  222507:	31 d2                	xor    edx,edx
+  222509:	0f 1f 80 00 00 00 00 	nop    DWORD PTR [rax+0x0]
+  222510:	31 ed                	xor    ebp,ebp
+  222512:	4c 0f a5 f5          	shld   rbp,r14,cl
+  222516:	41 bd 01 00 00 00    	mov    r13d,0x1
+  22251c:	49 d3 e5             	shl    r13,cl
+  22251f:	f6 c1 40             	test   cl,0x40
+  222522:	49 0f 45 ed          	cmovne rbp,r13
+  222526:	4c 0f 45 eb          	cmovne r13,rbx
+  22252a:	4c 21 cd             	and    rbp,r9
+  22252d:	4d 21 d5             	and    r13,r10
+  222530:	49 09 ed             	or     r13,rbp
+  222533:	4c 89 dd             	mov    rbp,r11
+  222536:	48 0f 44 eb          	cmove  rbp,rbx
+  22253a:	4d 89 c5             	mov    r13,r8
+  22253d:	4c 0f 44 eb          	cmove  r13,rbx
+  222541:	4c 31 ea             	xor    rdx,r13
+  222544:	49 31 ec             	xor    r12,rbp
+  222547:	4c 89 c5             	mov    rbp,r8
+  22254a:	4c 0f a4 dd 3f       	shld   rbp,r11,0x3f
+  22254f:	49 d1 e8             	shr    r8,1
+  222552:	4d 89 c5             	mov    r13,r8
+  222555:	4d 31 fd             	xor    r13,r15
+  222558:	41 f6 c3 01          	test   r11b,0x1
+  22255c:	4d 0f 45 c5          	cmovne r8,r13
+  222560:	49 89 eb             	mov    r11,rbp
+  222563:	83 c1 ff             	add    ecx,0xffffffff
+  222566:	72 a8                	jb     222510 <CRYPTO_gcm128_aad+0x100>
+  222568:	48 89 57 10          	mov    QWORD PTR [rdi+0x10],rdx
+  22256c:	4c 89 67 18          	mov    QWORD PTR [rdi+0x18],r12
+  222570:	0f 57 c0             	xorps  xmm0,xmm0
+  222573:	48 8d 4f 60          	lea    rcx,[rdi+0x60]
+  222577:	0f 11 01             	movups XMMWORD PTR [rcx],xmm0
+  22257a:	48 89 c2             	mov    rdx,rax
+  22257d:	48 89 d0             	mov    rax,rdx
+  222580:	48 83 e0 f0          	and    rax,0xfffffffffffffff0
+  222584:	0f 84 f5 00 00 00    	je     22267f <CRYPTO_gcm128_aad+0x26f>
+  22258a:	48 89 54 24 08       	mov    QWORD PTR [rsp+0x8],rdx
+  22258f:	4c 8b 7f 18          	mov    r15,QWORD PTR [rdi+0x18]
+  222593:	48 8b 0f             	mov    rcx,QWORD PTR [rdi]
+  222596:	48 89 4c 24 20       	mov    QWORD PTR [rsp+0x20],rcx
+  22259b:	48 8b 4f 08          	mov    rcx,QWORD PTR [rdi+0x8]
+  22259f:	48 89 4c 24 18       	mov    QWORD PTR [rsp+0x18],rcx
+  2225a4:	48 89 7c 24 10       	mov    QWORD PTR [rsp+0x10],rdi
+  2225a9:	4c 8b 67 10          	mov    r12,QWORD PTR [rdi+0x10]
+  2225ad:	41 bb 10 00 00 00    	mov    r11d,0x10
+  2225b3:	45 31 d2             	xor    r10d,r10d
+  2225b6:	bb 01 00 00 00       	mov    ebx,0x1
+  2225bb:	49 be 00 00 00 00 00 	movabs r14,0xe100000000000000
+  2225c2:	00 00 e1 
+  2225c5:	31 c9                	xor    ecx,ecx
+  2225c7:	66 0f 1f 84 00 00 00 	nop    WORD PTR [rax+rax*1+0x0]
+  2225ce:	00 00 
+  2225d0:	4c 8b 2c 0e          	mov    r13,QWORD PTR [rsi+rcx*1]
+  2225d4:	48 8b 6c 0e 08       	mov    rbp,QWORD PTR [rsi+rcx*1+0x8]
+  2225d9:	48 0f cd             	bswap  rbp
+  2225dc:	4c 31 fd             	xor    rbp,r15
+  2225df:	49 0f cd             	bswap  r13
+  2225e2:	4d 31 e5             	xor    r13,r12
+  2225e5:	b9 7f 00 00 00       	mov    ecx,0x7f
+  2225ea:	4c 8b 4c 24 18       	mov    r9,QWORD PTR [rsp+0x18]
+  2225ef:	4c 8b 44 24 20       	mov    r8,QWORD PTR [rsp+0x20]
+  2225f4:	45 31 ff             	xor    r15d,r15d
+  2225f7:	45 31 e4             	xor    r12d,r12d
+  2225fa:	66 0f 1f 44 00 00    	nop    WORD PTR [rax+rax*1+0x0]
+  222600:	31 ff                	xor    edi,edi
+  222602:	48 0f a5 df          	shld   rdi,rbx,cl
+  222606:	ba 01 00 00 00       	mov    edx,0x1
+  22260b:	48 d3 e2             	shl    rdx,cl
+  22260e:	f6 c1 40             	test   cl,0x40
+  222611:	48 0f 45 fa          	cmovne rdi,rdx
+  222615:	49 0f 45 d2          	cmovne rdx,r10
+  222619:	4c 21 ef             	and    rdi,r13
+  22261c:	48 21 ea             	and    rdx,rbp
+  22261f:	48 09 fa             	or     rdx,rdi
+  222622:	4c 89 ca             	mov    rdx,r9
+  222625:	49 0f 44 d2          	cmove  rdx,r10
+  222629:	4c 89 c7             	mov    rdi,r8
+  22262c:	49 0f 44 fa          	cmove  rdi,r10
+  222630:	49 31 fc             	xor    r12,rdi
+  222633:	49 31 d7             	xor    r15,rdx
+  222636:	4c 89 c2             	mov    rdx,r8
+  222639:	4c 0f a4 ca 3f       	shld   rdx,r9,0x3f
+  22263e:	49 d1 e8             	shr    r8,1
+  222641:	4c 89 c7             	mov    rdi,r8
+  222644:	4c 31 f7             	xor    rdi,r14
+  222647:	41 f6 c1 01          	test   r9b,0x1
+  22264b:	4c 0f 45 c7          	cmovne r8,rdi
+  22264f:	49 89 d1             	mov    r9,rdx
+  222652:	83 c1 ff             	add    ecx,0xffffffff
+  222655:	72 a9                	jb     222600 <CRYPTO_gcm128_aad+0x1f0>
+  222657:	49 39 c3             	cmp    r11,rax
+  22265a:	4c 89 d9             	mov    rcx,r11
+  22265d:	4d 8d 5b 10          	lea    r11,[r11+0x10]
+  222661:	0f 82 69 ff ff ff    	jb     2225d0 <CRYPTO_gcm128_aad+0x1c0>
+  222667:	48 8b 7c 24 10       	mov    rdi,QWORD PTR [rsp+0x10]
+  22266c:	4c 89 67 10          	mov    QWORD PTR [rdi+0x10],r12
+  222670:	4c 89 7f 18          	mov    QWORD PTR [rdi+0x18],r15
+  222674:	48 8b 54 24 08       	mov    rdx,QWORD PTR [rsp+0x8]
+  222679:	83 e2 0f             	and    edx,0xf
+  22267c:	48 01 c6             	add    rsi,rax
+  22267f:	48 85 d2             	test   rdx,rdx
+  222682:	0f 84 d6 00 00 00    	je     22275e <CRYPTO_gcm128_aad+0x34e>
+  222688:	0f b6 06             	movzx  eax,BYTE PTR [rsi]
+  22268b:	30 47 60             	xor    BYTE PTR [rdi+0x60],al
+  22268e:	48 83 fa 01          	cmp    rdx,0x1
+  222692:	0f 84 c8 00 00 00    	je     222760 <CRYPTO_gcm128_aad+0x350>
+  222698:	0f b6 46 01          	movzx  eax,BYTE PTR [rsi+0x1]
+  22269c:	30 47 61             	xor    BYTE PTR [rdi+0x61],al
+  22269f:	48 83 fa 02          	cmp    rdx,0x2
+  2226a3:	0f 84 b7 00 00 00    	je     222760 <CRYPTO_gcm128_aad+0x350>
+  2226a9:	0f b6 46 02          	movzx  eax,BYTE PTR [rsi+0x2]
+  2226ad:	30 47 62             	xor    BYTE PTR [rdi+0x62],al
+  2226b0:	48 83 fa 03          	cmp    rdx,0x3
+  2226b4:	0f 84 a6 00 00 00    	je     222760 <CRYPTO_gcm128_aad+0x350>
+  2226ba:	0f b6 46 03          	movzx  eax,BYTE PTR [rsi+0x3]
+  2226be:	30 47 63             	xor    BYTE PTR [rdi+0x63],al
+  2226c1:	48 83 fa 04          	cmp    rdx,0x4
+  2226c5:	0f 84 95 00 00 00    	je     222760 <CRYPTO_gcm128_aad+0x350>
+  2226cb:	0f b6 46 04          	movzx  eax,BYTE PTR [rsi+0x4]
+  2226cf:	30 47 64             	xor    BYTE PTR [rdi+0x64],al
+  2226d2:	48 83 fa 05          	cmp    rdx,0x5
+  2226d6:	0f 84 84 00 00 00    	je     222760 <CRYPTO_gcm128_aad+0x350>
+  2226dc:	0f b6 46 05          	movzx  eax,BYTE PTR [rsi+0x5]
+  2226e0:	30 47 65             	xor    BYTE PTR [rdi+0x65],al
+  2226e3:	48 83 fa 06          	cmp    rdx,0x6
+  2226e7:	74 77                	je     222760 <CRYPTO_gcm128_aad+0x350>
+  2226e9:	0f b6 46 06          	movzx  eax,BYTE PTR [rsi+0x6]
+  2226ed:	30 47 66             	xor    BYTE PTR [rdi+0x66],al
+  2226f0:	48 83 fa 07          	cmp    rdx,0x7
+  2226f4:	74 6a                	je     222760 <CRYPTO_gcm128_aad+0x350>
+  2226f6:	0f b6 46 07          	movzx  eax,BYTE PTR [rsi+0x7]
+  2226fa:	30 47 67             	xor    BYTE PTR [rdi+0x67],al
+  2226fd:	48 83 fa 08          	cmp    rdx,0x8
+  222701:	74 5d                	je     222760 <CRYPTO_gcm128_aad+0x350>
+  222703:	0f b6 46 08          	movzx  eax,BYTE PTR [rsi+0x8]
+  222707:	30 47 68             	xor    BYTE PTR [rdi+0x68],al
+  22270a:	48 83 fa 09          	cmp    rdx,0x9
+  22270e:	74 50                	je     222760 <CRYPTO_gcm128_aad+0x350>
+  222710:	0f b6 46 09          	movzx  eax,BYTE PTR [rsi+0x9]
+  222714:	30 47 69             	xor    BYTE PTR [rdi+0x69],al
+  222717:	48 83 fa 0a          	cmp    rdx,0xa
+  22271b:	74 43                	je     222760 <CRYPTO_gcm128_aad+0x350>
+  22271d:	0f b6 46 0a          	movzx  eax,BYTE PTR [rsi+0xa]
+  222721:	30 47 6a             	xor    BYTE PTR [rdi+0x6a],al
+  222724:	48 83 fa 0b          	cmp    rdx,0xb
+  222728:	74 36                	je     222760 <CRYPTO_gcm128_aad+0x350>
+  22272a:	0f b6 46 0b          	movzx  eax,BYTE PTR [rsi+0xb]
+  22272e:	30 47 6b             	xor    BYTE PTR [rdi+0x6b],al
+  222731:	48 83 fa 0c          	cmp    rdx,0xc
+  222735:	74 29                	je     222760 <CRYPTO_gcm128_aad+0x350>
+  222737:	0f b6 46 0c          	movzx  eax,BYTE PTR [rsi+0xc]
+  22273b:	30 47 6c             	xor    BYTE PTR [rdi+0x6c],al
+  22273e:	48 83 fa 0d          	cmp    rdx,0xd
+  222742:	74 1c                	je     222760 <CRYPTO_gcm128_aad+0x350>
+  222744:	0f b6 46 0d          	movzx  eax,BYTE PTR [rsi+0xd]
+  222748:	30 47 6d             	xor    BYTE PTR [rdi+0x6d],al
+  22274b:	48 83 fa 0e          	cmp    rdx,0xe
+  22274f:	74 0f                	je     222760 <CRYPTO_gcm128_aad+0x350>
+  222751:	0f b6 46 0e          	movzx  eax,BYTE PTR [rsi+0xe]
+  222755:	30 47 6e             	xor    BYTE PTR [rdi+0x6e],al
+  222758:	eb 06                	jmp    222760 <CRYPTO_gcm128_aad+0x350>
+  22275a:	89 c2                	mov    edx,eax
+  22275c:	eb 02                	jmp    222760 <CRYPTO_gcm128_aad+0x350>
+  22275e:	31 d2                	xor    edx,edx
+  222760:	89 97 84 00 00 00    	mov    DWORD PTR [rdi+0x84],edx
+  222766:	31 c0                	xor    eax,eax
+  222768:	48 83 c4 28          	add    rsp,0x28
+  22276c:	5b                   	pop    rbx
+  22276d:	41 5c                	pop    r12
+  22276f:	41 5d                	pop    r13
+  222771:	41 5e                	pop    r14
+  222773:	41 5f                	pop    r15
+  222775:	5d                   	pop    rbp
+  222776:	c3                   	ret
+  222777:	48 8d 15 aa 4a 5d 00 	lea    rdx,[rip+0x5d4aaa]        # 7f7228 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs4x50910v3_attrmap26ossl_v3_attribute_mappings+0x118>
+  22277e:	bf 10 00 00 00       	mov    edi,0x10
+  222783:	be 10 00 00 00       	mov    esi,0x10
+  222788:	ff 15 ca e3 69 00    	call   QWORD PTR [rip+0x69e3ca]        # 8c0b58 <_DYNAMIC+0x2880>
+  22278e:	eb 0d                	jmp    22279d <CRYPTO_gcm128_aad+0x38d>
+  222790:	48 8d 3d 79 4a 5d 00 	lea    rdi,[rip+0x5d4a79]        # 7f7210 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs4x50910v3_attrmap26ossl_v3_attribute_mappings+0x100>
+  222797:	ff 15 33 d2 69 00    	call   QWORD PTR [rip+0x69d233]        # 8bf9d0 <_DYNAMIC+0x16f8>
+  22279d:	0f 0b                	ud2
+  22279f:	ff 15 7b e0 69 00    	call   QWORD PTR [rip+0x69e07b]        # 8c0820 <_DYNAMIC+0x2548>
+
+### CRYPTO_gcm128_encrypt  0x2227f0..0x222801
+
+court/tmp/pfp63/before/libcrypto.so.3:     file format elf64-x86-64
+
+
+Disassembly of section .text:
+
+00000000002227f0 <CRYPTO_gcm128_encrypt>:
+  2227f0:	50                   	push   rax
+  2227f1:	45 31 c0             	xor    r8d,r8d
+  2227f4:	e8 07 e0 00 00       	call   230800 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs5modes3gcm5crypt.llvm.3256867274980599799>
+  2227f9:	59                   	pop    rcx
+  2227fa:	c3                   	ret
+  2227fb:	ff 15 1f e0 69 00    	call   QWORD PTR [rip+0x69e01f]        # 8c0820 <_DYNAMIC+0x2548>
+
+### CRYPTO_gcm128_decrypt  0x2227b0..0x2227c4
+
+court/tmp/pfp63/before/libcrypto.so.3:     file format elf64-x86-64
+
+
+Disassembly of section .text:
+
+00000000002227b0 <CRYPTO_gcm128_decrypt>:
+  2227b0:	50                   	push   rax
+  2227b1:	41 b8 01 00 00 00    	mov    r8d,0x1
+  2227b7:	e8 44 e0 00 00       	call   230800 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs5modes3gcm5crypt.llvm.3256867274980599799>
+  2227bc:	59                   	pop    rcx
+  2227bd:	c3                   	ret
+  2227be:	ff 15 5c e0 69 00    	call   QWORD PTR [rip+0x69e05c]        # 8c0820 <_DYNAMIC+0x2548>
+
+### CRYPTO_gcm128_finish  0x222830..0x222cac
+
+court/tmp/pfp63/before/libcrypto.so.3:     file format elf64-x86-64
+
+
+Disassembly of section .text:
+
+0000000000222830 <CRYPTO_gcm128_finish>:
+  222830:	55                   	push   rbp
+  222831:	41 57                	push   r15
+  222833:	41 56                	push   r14
+  222835:	41 55                	push   r13
+  222837:	41 54                	push   r12
+  222839:	53                   	push   rbx
+  22283a:	49 89 d5             	mov    r13,rdx
+  22283d:	48 89 74 24 f8       	mov    QWORD PTR [rsp-0x8],rsi
+  222842:	83 bf 80 00 00 00 00 	cmp    DWORD PTR [rdi+0x80],0x0
+  222849:	48 be 00 00 00 00 00 	movabs rsi,0xe100000000000000
+  222850:	00 00 e1 
+  222853:	0f 84 ad 00 00 00    	je     222906 <CRYPTO_gcm128_finish+0xd6>
+  222859:	4c 89 6c 24 e0       	mov    QWORD PTR [rsp-0x20],r13
+  22285e:	4c 8b 07             	mov    r8,QWORD PTR [rdi]
+  222861:	48 8b 5f 50          	mov    rbx,QWORD PTR [rdi+0x50]
+  222865:	4c 8b 77 58          	mov    r14,QWORD PTR [rdi+0x58]
+  222869:	49 0f ce             	bswap  r14
+  22286c:	48 0f cb             	bswap  rbx
+  22286f:	48 33 5f 10          	xor    rbx,QWORD PTR [rdi+0x10]
+  222873:	4c 33 77 18          	xor    r14,QWORD PTR [rdi+0x18]
+  222877:	4c 8b 4f 08          	mov    r9,QWORD PTR [rdi+0x8]
+  22287b:	b9 7f 00 00 00       	mov    ecx,0x7f
+  222880:	45 31 ff             	xor    r15d,r15d
+  222883:	41 bc 01 00 00 00    	mov    r12d,0x1
+  222889:	4c 89 cd             	mov    rbp,r9
+  22288c:	4d 89 c5             	mov    r13,r8
+  22288f:	45 31 db             	xor    r11d,r11d
+  222892:	45 31 d2             	xor    r10d,r10d
+  222895:	66 66 2e 0f 1f 84 00 	data16 cs nop WORD PTR [rax+rax*1+0x0]
+  22289c:	00 00 00 00 
+  2228a0:	31 c0                	xor    eax,eax
+  2228a2:	4c 0f a5 e0          	shld   rax,r12,cl
+  2228a6:	ba 01 00 00 00       	mov    edx,0x1
+  2228ab:	48 d3 e2             	shl    rdx,cl
+  2228ae:	f6 c1 40             	test   cl,0x40
+  2228b1:	48 0f 45 c2          	cmovne rax,rdx
+  2228b5:	49 0f 45 d7          	cmovne rdx,r15
+  2228b9:	48 21 d8             	and    rax,rbx
+  2228bc:	4c 21 f2             	and    rdx,r14
+  2228bf:	48 09 c2             	or     rdx,rax
+  2228c2:	48 89 e8             	mov    rax,rbp
+  2228c5:	49 0f 44 c7          	cmove  rax,r15
+  2228c9:	4c 89 ea             	mov    rdx,r13
+  2228cc:	49 0f 44 d7          	cmove  rdx,r15
+  2228d0:	49 31 d2             	xor    r10,rdx
+  2228d3:	49 31 c3             	xor    r11,rax
+  2228d6:	4c 89 e8             	mov    rax,r13
+  2228d9:	48 0f a4 e8 3f       	shld   rax,rbp,0x3f
+  2228de:	49 d1 ed             	shr    r13,1
+  2228e1:	4c 89 ea             	mov    rdx,r13
+  2228e4:	48 31 f2             	xor    rdx,rsi
+  2228e7:	40 f6 c5 01          	test   bpl,0x1
+  2228eb:	4c 0f 45 ea          	cmovne r13,rdx
+  2228ef:	48 89 c5             	mov    rbp,rax
+  2228f2:	83 c1 ff             	add    ecx,0xffffffff
+  2228f5:	72 a9                	jb     2228a0 <CRYPTO_gcm128_finish+0x70>
+  2228f7:	c7 87 80 00 00 00 00 	mov    DWORD PTR [rdi+0x80],0x0
+  2228fe:	00 00 00 
+  222901:	e9 bb 00 00 00       	jmp    2229c1 <CRYPTO_gcm128_finish+0x191>
+  222906:	83 bf 84 00 00 00 00 	cmp    DWORD PTR [rdi+0x84],0x0
+  22290d:	4c 8b 57 10          	mov    r10,QWORD PTR [rdi+0x10]
+  222911:	0f 84 cb 02 00 00    	je     222be2 <CRYPTO_gcm128_finish+0x3b2>
+  222917:	4c 89 6c 24 e0       	mov    QWORD PTR [rsp-0x20],r13
+  22291c:	4c 8b 07             	mov    r8,QWORD PTR [rdi]
+  22291f:	4c 8b 4f 08          	mov    r9,QWORD PTR [rdi+0x8]
+  222923:	48 8b 5f 60          	mov    rbx,QWORD PTR [rdi+0x60]
+  222927:	4c 8b 77 68          	mov    r14,QWORD PTR [rdi+0x68]
+  22292b:	49 0f ce             	bswap  r14
+  22292e:	48 0f cb             	bswap  rbx
+  222931:	4c 33 77 18          	xor    r14,QWORD PTR [rdi+0x18]
+  222935:	4c 31 d3             	xor    rbx,r10
+  222938:	b9 7f 00 00 00       	mov    ecx,0x7f
+  22293d:	45 31 ff             	xor    r15d,r15d
+  222940:	41 bc 01 00 00 00    	mov    r12d,0x1
+  222946:	4c 89 cd             	mov    rbp,r9
+  222949:	4d 89 c5             	mov    r13,r8
+  22294c:	45 31 db             	xor    r11d,r11d
+  22294f:	45 31 d2             	xor    r10d,r10d
+  222952:	66 66 66 66 66 2e 0f 	data16 data16 data16 data16 cs nop WORD PTR [rax+rax*1+0x0]
+  222959:	1f 84 00 00 00 00 00 
+  222960:	31 c0                	xor    eax,eax
+  222962:	4c 0f a5 e0          	shld   rax,r12,cl
+  222966:	ba 01 00 00 00       	mov    edx,0x1
+  22296b:	48 d3 e2             	shl    rdx,cl
+  22296e:	f6 c1 40             	test   cl,0x40
+  222971:	48 0f 45 c2          	cmovne rax,rdx
+  222975:	49 0f 45 d7          	cmovne rdx,r15
+  222979:	48 21 d8             	and    rax,rbx
+  22297c:	4c 21 f2             	and    rdx,r14
+  22297f:	48 09 c2             	or     rdx,rax
+  222982:	48 89 e8             	mov    rax,rbp
+  222985:	49 0f 44 c7          	cmove  rax,r15
+  222989:	4c 89 ea             	mov    rdx,r13
+  22298c:	49 0f 44 d7          	cmove  rdx,r15
+  222990:	49 31 d2             	xor    r10,rdx
+  222993:	49 31 c3             	xor    r11,rax
+  222996:	4c 89 e8             	mov    rax,r13
+  222999:	48 0f a4 e8 3f       	shld   rax,rbp,0x3f
+  22299e:	49 d1 ed             	shr    r13,1
+  2229a1:	4c 89 ea             	mov    rdx,r13
+  2229a4:	48 31 f2             	xor    rdx,rsi
+  2229a7:	40 f6 c5 01          	test   bpl,0x1
+  2229ab:	4c 0f 45 ea          	cmovne r13,rdx
+  2229af:	48 89 c5             	mov    rbp,rax
+  2229b2:	83 c1 ff             	add    ecx,0xffffffff
+  2229b5:	72 a9                	jb     222960 <CRYPTO_gcm128_finish+0x130>
+  2229b7:	c7 87 84 00 00 00 00 	mov    DWORD PTR [rdi+0x84],0x0
+  2229be:	00 00 00 
+  2229c1:	4c 8b 6c 24 e0       	mov    r13,QWORD PTR [rsp-0x20]
+  2229c6:	48 8b 5f 70          	mov    rbx,QWORD PTR [rdi+0x70]
+  2229ca:	4c 8b 77 78          	mov    r14,QWORD PTR [rdi+0x78]
+  2229ce:	49 c1 e6 03          	shl    r14,0x3
+  2229d2:	4d 31 de             	xor    r14,r11
+  2229d5:	48 c1 e3 03          	shl    rbx,0x3
+  2229d9:	4c 31 d3             	xor    rbx,r10
+  2229dc:	b9 7f 00 00 00       	mov    ecx,0x7f
+  2229e1:	45 31 ff             	xor    r15d,r15d
+  2229e4:	41 bc 01 00 00 00    	mov    r12d,0x1
+  2229ea:	45 31 db             	xor    r11d,r11d
+  2229ed:	45 31 d2             	xor    r10d,r10d
+  2229f0:	31 c0                	xor    eax,eax
+  2229f2:	4c 0f a5 e0          	shld   rax,r12,cl
+  2229f6:	ba 01 00 00 00       	mov    edx,0x1
+  2229fb:	48 d3 e2             	shl    rdx,cl
+  2229fe:	f6 c1 40             	test   cl,0x40
+  222a01:	48 0f 45 c2          	cmovne rax,rdx
+  222a05:	49 0f 45 d7          	cmovne rdx,r15
+  222a09:	48 21 d8             	and    rax,rbx
+  222a0c:	4c 21 f2             	and    rdx,r14
+  222a0f:	48 09 c2             	or     rdx,rax
+  222a12:	4c 89 c8             	mov    rax,r9
+  222a15:	49 0f 44 c7          	cmove  rax,r15
+  222a19:	4c 89 c2             	mov    rdx,r8
+  222a1c:	49 0f 44 d7          	cmove  rdx,r15
+  222a20:	49 31 d2             	xor    r10,rdx
+  222a23:	49 31 c3             	xor    r11,rax
+  222a26:	4c 89 c0             	mov    rax,r8
+  222a29:	4c 0f a4 c8 3f       	shld   rax,r9,0x3f
+  222a2e:	49 d1 e8             	shr    r8,1
+  222a31:	4c 89 c2             	mov    rdx,r8
+  222a34:	48 31 f2             	xor    rdx,rsi
+  222a37:	41 f6 c1 01          	test   r9b,0x1
+  222a3b:	4c 0f 45 c2          	cmovne r8,rdx
+  222a3f:	49 89 c1             	mov    r9,rax
+  222a42:	83 c1 ff             	add    ecx,0xffffffff
+  222a45:	72 a9                	jb     2229f0 <CRYPTO_gcm128_finish+0x1c0>
+  222a47:	49 0f cb             	bswap  r11
+  222a4a:	49 0f ca             	bswap  r10
+  222a4d:	44 89 d0             	mov    eax,r10d
+  222a50:	45 89 d8             	mov    r8d,r11d
+  222a53:	41 c1 e8 08          	shr    r8d,0x8
+  222a57:	44 89 d1             	mov    ecx,r10d
+  222a5a:	45 89 d9             	mov    r9d,r11d
+  222a5d:	4c 89 db             	mov    rbx,r11
+  222a60:	4d 89 de             	mov    r14,r11
+  222a63:	49 c1 ee 30          	shr    r14,0x30
+  222a67:	4d 89 df             	mov    r15,r11
+  222a6a:	49 c1 ef 38          	shr    r15,0x38
+  222a6e:	44 32 77 3e          	xor    r14b,BYTE PTR [rdi+0x3e]
+  222a72:	44 32 7f 3f          	xor    r15b,BYTE PTR [rdi+0x3f]
+  222a76:	48 c1 eb 20          	shr    rbx,0x20
+  222a7a:	41 0f b6 d7          	movzx  edx,r15b
+  222a7e:	48 c1 e2 38          	shl    rdx,0x38
+  222a82:	41 0f b6 f6          	movzx  esi,r14b
+  222a86:	48 c1 e6 30          	shl    rsi,0x30
+  222a8a:	48 09 d6             	or     rsi,rdx
+  222a8d:	4c 89 da             	mov    rdx,r11
+  222a90:	48 c1 ea 28          	shr    rdx,0x28
+  222a94:	32 5f 3c             	xor    bl,BYTE PTR [rdi+0x3c]
+  222a97:	32 57 3d             	xor    dl,BYTE PTR [rdi+0x3d]
+  222a9a:	41 c1 e9 10          	shr    r9d,0x10
+  222a9e:	0f b6 d2             	movzx  edx,dl
+  222aa1:	48 c1 e2 28          	shl    rdx,0x28
+  222aa5:	48 09 f2             	or     rdx,rsi
+  222aa8:	44 89 d5             	mov    ebp,r10d
+  222aab:	0f b6 f3             	movzx  esi,bl
+  222aae:	48 c1 e6 20          	shl    rsi,0x20
+  222ab2:	48 09 d6             	or     rsi,rdx
+  222ab5:	44 89 da             	mov    edx,r11d
+  222ab8:	c1 ea 18             	shr    edx,0x18
+  222abb:	32 57 3b             	xor    dl,BYTE PTR [rdi+0x3b]
+  222abe:	0f b6 d2             	movzx  edx,dl
+  222ac1:	c1 e2 18             	shl    edx,0x18
+  222ac4:	48 09 f2             	or     rdx,rsi
+  222ac7:	44 89 d3             	mov    ebx,r10d
+  222aca:	44 32 4f 3a          	xor    r9b,BYTE PTR [rdi+0x3a]
+  222ace:	41 0f b6 f1          	movzx  esi,r9b
+  222ad2:	c1 e6 10             	shl    esi,0x10
+  222ad5:	48 09 d6             	or     rsi,rdx
+  222ad8:	4d 89 d1             	mov    r9,r10
+  222adb:	44 32 47 39          	xor    r8b,BYTE PTR [rdi+0x39]
+  222adf:	41 0f b6 d0          	movzx  edx,r8b
+  222ae3:	c1 e2 08             	shl    edx,0x8
+  222ae6:	48 09 f2             	or     rdx,rsi
+  222ae9:	4c 89 d6             	mov    rsi,r10
+  222aec:	44 32 5f 38          	xor    r11b,BYTE PTR [rdi+0x38]
+  222af0:	45 0f b6 c3          	movzx  r8d,r11b
+  222af4:	49 09 d0             	or     r8,rdx
+  222af7:	4c 89 d2             	mov    rdx,r10
+  222afa:	48 c1 ea 30          	shr    rdx,0x30
+  222afe:	32 57 36             	xor    dl,BYTE PTR [rdi+0x36]
+  222b01:	49 c1 ea 38          	shr    r10,0x38
+  222b05:	44 32 57 37          	xor    r10b,BYTE PTR [rdi+0x37]
+  222b09:	45 0f b6 d2          	movzx  r10d,r10b
+  222b0d:	49 c1 e2 38          	shl    r10,0x38
+  222b11:	0f b6 d2             	movzx  edx,dl
+  222b14:	48 c1 e2 30          	shl    rdx,0x30
+  222b18:	4c 09 d2             	or     rdx,r10
+  222b1b:	49 c1 e9 20          	shr    r9,0x20
+  222b1f:	48 c1 ee 28          	shr    rsi,0x28
+  222b23:	44 32 4f 34          	xor    r9b,BYTE PTR [rdi+0x34]
+  222b27:	40 32 77 35          	xor    sil,BYTE PTR [rdi+0x35]
+  222b2b:	40 0f b6 f6          	movzx  esi,sil
+  222b2f:	48 c1 e6 28          	shl    rsi,0x28
+  222b33:	48 09 d6             	or     rsi,rdx
+  222b36:	41 0f b6 d1          	movzx  edx,r9b
+  222b3a:	48 c1 e2 20          	shl    rdx,0x20
+  222b3e:	48 09 f2             	or     rdx,rsi
+  222b41:	c1 ed 10             	shr    ebp,0x10
+  222b44:	c1 eb 18             	shr    ebx,0x18
+  222b47:	40 32 6f 32          	xor    bpl,BYTE PTR [rdi+0x32]
+  222b4b:	32 5f 33             	xor    bl,BYTE PTR [rdi+0x33]
+  222b4e:	0f b6 f3             	movzx  esi,bl
+  222b51:	c1 e6 18             	shl    esi,0x18
+  222b54:	48 09 d6             	or     rsi,rdx
+  222b57:	40 0f b6 d5          	movzx  edx,bpl
+  222b5b:	c1 e2 10             	shl    edx,0x10
+  222b5e:	48 09 f2             	or     rdx,rsi
+  222b61:	c1 e9 08             	shr    ecx,0x8
+  222b64:	0f b6 77 30          	movzx  esi,BYTE PTR [rdi+0x30]
+  222b68:	32 4f 31             	xor    cl,BYTE PTR [rdi+0x31]
+  222b6b:	40 30 c6             	xor    sil,al
+  222b6e:	0f b6 c1             	movzx  eax,cl
+  222b71:	c1 e0 08             	shl    eax,0x8
+  222b74:	48 09 d0             	or     rax,rdx
+  222b77:	40 0f b6 ce          	movzx  ecx,sil
+  222b7b:	4c 89 c2             	mov    rdx,r8
+  222b7e:	48 0f ca             	bswap  rdx
+  222b81:	48 09 c1             	or     rcx,rax
+  222b84:	48 89 c8             	mov    rax,rcx
+  222b87:	48 0f c8             	bswap  rax
+  222b8a:	48 89 47 10          	mov    QWORD PTR [rdi+0x10],rax
+  222b8e:	48 89 57 18          	mov    QWORD PTR [rdi+0x18],rdx
+  222b92:	48 8b 74 24 f8       	mov    rsi,QWORD PTR [rsp-0x8]
+  222b97:	48 85 f6             	test   rsi,rsi
+  222b9a:	0f 94 c0             	sete   al
+  222b9d:	49 83 fd 11          	cmp    r13,0x11
+  222ba1:	0f 93 c2             	setae  dl
+  222ba4:	08 c2                	or     dl,al
+  222ba6:	b8 ff ff ff ff       	mov    eax,0xffffffff
+  222bab:	0f 85 f0 00 00 00    	jne    222ca1 <CRYPTO_gcm128_finish+0x471>
+  222bb1:	48 89 4c 24 e8       	mov    QWORD PTR [rsp-0x18],rcx
+  222bb6:	4c 89 44 24 f0       	mov    QWORD PTR [rsp-0x10],r8
+  222bbb:	4d 85 ed             	test   r13,r13
+  222bbe:	74 0f                	je     222bcf <CRYPTO_gcm128_finish+0x39f>
+  222bc0:	49 83 fd 04          	cmp    r13,0x4
+  222bc4:	73 10                	jae    222bd6 <CRYPTO_gcm128_finish+0x3a6>
+  222bc6:	31 c9                	xor    ecx,ecx
+  222bc8:	31 c0                	xor    eax,eax
+  222bca:	e9 b9 00 00 00       	jmp    222c88 <CRYPTO_gcm128_finish+0x458>
+  222bcf:	31 c0                	xor    eax,eax
+  222bd1:	e9 cb 00 00 00       	jmp    222ca1 <CRYPTO_gcm128_finish+0x471>
+  222bd6:	49 83 fd 10          	cmp    r13,0x10
+  222bda:	73 16                	jae    222bf2 <CRYPTO_gcm128_finish+0x3c2>
+  222bdc:	31 c0                	xor    eax,eax
+  222bde:	31 c9                	xor    ecx,ecx
+  222be0:	eb 5b                	jmp    222c3d <CRYPTO_gcm128_finish+0x40d>
+  222be2:	4c 8b 5f 18          	mov    r11,QWORD PTR [rdi+0x18]
+  222be6:	4c 8b 07             	mov    r8,QWORD PTR [rdi]
+  222be9:	4c 8b 4f 08          	mov    r9,QWORD PTR [rdi+0x8]
+  222bed:	e9 d4 fd ff ff       	jmp    2229c6 <CRYPTO_gcm128_finish+0x196>
+  222bf2:	44 89 e8             	mov    eax,r13d
+  222bf5:	83 e0 10             	and    eax,0x10
+  222bf8:	f3 0f 6f 06          	movdqu xmm0,XMMWORD PTR [rsi]
+  222bfc:	66 0f ef 44 24 e8    	pxor   xmm0,XMMWORD PTR [rsp-0x18]
+  222c02:	66 0f 70 c8 ee       	pshufd xmm1,xmm0,0xee
+  222c07:	66 0f eb c8          	por    xmm1,xmm0
+  222c0b:	66 0f 70 c1 55       	pshufd xmm0,xmm1,0x55
+  222c10:	66 0f eb c1          	por    xmm0,xmm1
+  222c14:	66 0f 6f c8          	movdqa xmm1,xmm0
+  222c18:	66 0f 72 d1 10       	psrld  xmm1,0x10
+  222c1d:	66 0f eb c8          	por    xmm1,xmm0
+  222c21:	66 0f 6f c1          	movdqa xmm0,xmm1
+  222c25:	66 0f 71 d0 08       	psrlw  xmm0,0x8
+  222c2a:	66 0f eb c1          	por    xmm0,xmm1
+  222c2e:	66 0f 7e c1          	movd   ecx,xmm0
+  222c32:	49 39 c5             	cmp    r13,rax
+  222c35:	74 63                	je     222c9a <CRYPTO_gcm128_finish+0x46a>
+  222c37:	41 f6 c5 0c          	test   r13b,0xc
+  222c3b:	74 4b                	je     222c88 <CRYPTO_gcm128_finish+0x458>
+  222c3d:	48 89 c7             	mov    rdi,rax
+  222c40:	44 89 e8             	mov    eax,r13d
+  222c43:	83 e0 1c             	and    eax,0x1c
+  222c46:	0f b6 c9             	movzx  ecx,cl
+  222c49:	66 0f 6e c1          	movd   xmm0,ecx
+  222c4d:	0f 1f 00             	nop    DWORD PTR [rax]
+  222c50:	8b 0c 3e             	mov    ecx,DWORD PTR [rsi+rdi*1]
+  222c53:	33 4c 3c e8          	xor    ecx,DWORD PTR [rsp+rdi*1-0x18]
+  222c57:	66 0f 6e c9          	movd   xmm1,ecx
+  222c5b:	66 0f eb c1          	por    xmm0,xmm1
+  222c5f:	48 83 c7 04          	add    rdi,0x4
+  222c63:	48 39 f8             	cmp    rax,rdi
+  222c66:	75 e8                	jne    222c50 <CRYPTO_gcm128_finish+0x420>
+  222c68:	66 0f 6f c8          	movdqa xmm1,xmm0
+  222c6c:	66 0f 72 d1 10       	psrld  xmm1,0x10
+  222c71:	66 0f eb c8          	por    xmm1,xmm0
+  222c75:	66 0f 6f c1          	movdqa xmm0,xmm1
+  222c79:	66 0f 71 d0 08       	psrlw  xmm0,0x8
+  222c7e:	66 0f eb c1          	por    xmm0,xmm1
+  222c82:	66 0f 7e c1          	movd   ecx,xmm0
+  222c86:	eb 0d                	jmp    222c95 <CRYPTO_gcm128_finish+0x465>
+  222c88:	0f b6 14 06          	movzx  edx,BYTE PTR [rsi+rax*1]
+  222c8c:	32 54 04 e8          	xor    dl,BYTE PTR [rsp+rax*1-0x18]
+  222c90:	48 ff c0             	inc    rax
+  222c93:	08 d1                	or     cl,dl
+  222c95:	49 39 c5             	cmp    r13,rax
+  222c98:	75 ee                	jne    222c88 <CRYPTO_gcm128_finish+0x458>
+  222c9a:	31 c0                	xor    eax,eax
+  222c9c:	84 c9                	test   cl,cl
+  222c9e:	0f 95 c0             	setne  al
+  222ca1:	5b                   	pop    rbx
+  222ca2:	41 5c                	pop    r12
+  222ca4:	41 5d                	pop    r13
+  222ca6:	41 5e                	pop    r14
+  222ca8:	41 5f                	pop    r15
+  222caa:	5d                   	pop    rbp
+  222cab:	c3                   	ret
+
+### CRYPTO_gcm128_setiv  0x222e40..0x223104
+
+court/tmp/pfp63/before/libcrypto.so.3:     file format elf64-x86-64
+
+
+Disassembly of section .text:
+
+0000000000222e40 <CRYPTO_gcm128_setiv>:
+  222e40:	55                   	push   rbp
+  222e41:	41 57                	push   r15
+  222e43:	41 56                	push   r14
+  222e45:	41 55                	push   r13
+  222e47:	41 54                	push   r12
+  222e49:	53                   	push   rbx
+  222e4a:	48 83 ec 28          	sub    rsp,0x28
+  222e4e:	48 89 fb             	mov    rbx,rdi
+  222e51:	0f 57 c0             	xorps  xmm0,xmm0
+  222e54:	0f 11 47 70          	movups XMMWORD PTR [rdi+0x70],xmm0
+  222e58:	48 c7 87 80 00 00 00 	mov    QWORD PTR [rdi+0x80],0x0
+  222e5f:	00 00 00 00 
+  222e63:	48 83 fa 0c          	cmp    rdx,0xc
+  222e67:	75 1f                	jne    222e88 <CRYPTO_gcm128_setiv+0x48>
+  222e69:	8b 46 08             	mov    eax,DWORD PTR [rsi+0x8]
+  222e6c:	89 43 48             	mov    DWORD PTR [rbx+0x48],eax
+  222e6f:	48 8b 06             	mov    rax,QWORD PTR [rsi]
+  222e72:	48 89 43 40          	mov    QWORD PTR [rbx+0x40],rax
+  222e76:	c7 43 4c 00 00 00 01 	mov    DWORD PTR [rbx+0x4c],0x1000000
+  222e7d:	41 bd 00 00 00 02    	mov    r13d,0x2000000
+  222e83:	e9 45 02 00 00       	jmp    2230cd <CRYPTO_gcm128_setiv+0x28d>
+  222e88:	45 31 ed             	xor    r13d,r13d
+  222e8b:	4c 8b 33             	mov    r14,QWORD PTR [rbx]
+  222e8e:	49 bf 00 00 00 00 00 	movabs r15,0xe100000000000000
+  222e95:	00 00 e1 
+  222e98:	48 83 fa 10          	cmp    rdx,0x10
+  222e9c:	48 89 1c 24          	mov    QWORD PTR [rsp],rbx
+  222ea0:	48 89 54 24 08       	mov    QWORD PTR [rsp+0x8],rdx
+  222ea5:	0f 82 83 01 00 00    	jb     22302e <CRYPTO_gcm128_setiv+0x1ee>
+  222eab:	48 8b 43 08          	mov    rax,QWORD PTR [rbx+0x8]
+  222eaf:	48 89 44 24 20       	mov    QWORD PTR [rsp+0x20],rax
+  222eb4:	45 31 c0             	xor    r8d,r8d
+  222eb7:	41 b9 01 00 00 00    	mov    r9d,0x1
+  222ebd:	45 31 ed             	xor    r13d,r13d
+  222ec0:	45 31 e4             	xor    r12d,r12d
+  222ec3:	66 66 66 66 2e 0f 1f 	data16 data16 data16 cs nop WORD PTR [rax+rax*1+0x0]
+  222eca:	84 00 00 00 00 00 
+  222ed0:	4c 8b 16             	mov    r10,QWORD PTR [rsi]
+  222ed3:	4c 8b 5e 08          	mov    r11,QWORD PTR [rsi+0x8]
+  222ed7:	49 0f cb             	bswap  r11
+  222eda:	4d 31 eb             	xor    r11,r13
+  222edd:	49 0f ca             	bswap  r10
+  222ee0:	4d 31 e2             	xor    r10,r12
+  222ee3:	b9 7f 00 00 00       	mov    ecx,0x7f
+  222ee8:	48 8b 7c 24 20       	mov    rdi,QWORD PTR [rsp+0x20]
+  222eed:	4c 89 f5             	mov    rbp,r14
+  222ef0:	45 31 ed             	xor    r13d,r13d
+  222ef3:	45 31 e4             	xor    r12d,r12d
+  222ef6:	66 2e 0f 1f 84 00 00 	cs nop WORD PTR [rax+rax*1+0x0]
+  222efd:	00 00 00 
+  222f00:	31 db                	xor    ebx,ebx
+  222f02:	4c 0f a5 cb          	shld   rbx,r9,cl
+  222f06:	b8 01 00 00 00       	mov    eax,0x1
+  222f0b:	48 d3 e0             	shl    rax,cl
+  222f0e:	f6 c1 40             	test   cl,0x40
+  222f11:	48 0f 45 d8          	cmovne rbx,rax
+  222f15:	49 0f 45 c0          	cmovne rax,r8
+  222f19:	4c 21 d3             	and    rbx,r10
+  222f1c:	4c 21 d8             	and    rax,r11
+  222f1f:	48 09 d8             	or     rax,rbx
+  222f22:	48 89 f8             	mov    rax,rdi
+  222f25:	49 0f 44 c0          	cmove  rax,r8
+  222f29:	48 89 eb             	mov    rbx,rbp
+  222f2c:	49 0f 44 d8          	cmove  rbx,r8
+  222f30:	49 31 dc             	xor    r12,rbx
+  222f33:	49 31 c5             	xor    r13,rax
+  222f36:	48 89 e8             	mov    rax,rbp
+  222f39:	48 0f a4 f8 3f       	shld   rax,rdi,0x3f
+  222f3e:	48 d1 ed             	shr    rbp,1
+  222f41:	48 89 eb             	mov    rbx,rbp
+  222f44:	4c 31 fb             	xor    rbx,r15
+  222f47:	40 f6 c7 01          	test   dil,0x1
+  222f4b:	48 0f 45 eb          	cmovne rbp,rbx
+  222f4f:	48 89 c7             	mov    rdi,rax
+  222f52:	83 c1 ff             	add    ecx,0xffffffff
+  222f55:	72 a9                	jb     222f00 <CRYPTO_gcm128_setiv+0xc0>
+  222f57:	48 83 c2 f0          	add    rdx,0xfffffffffffffff0
+  222f5b:	48 83 c6 10          	add    rsi,0x10
+  222f5f:	48 83 fa 0f          	cmp    rdx,0xf
+  222f63:	0f 87 67 ff ff ff    	ja     222ed0 <CRYPTO_gcm128_setiv+0x90>
+  222f69:	48 85 d2             	test   rdx,rdx
+  222f6c:	0f 84 c8 00 00 00    	je     22303a <CRYPTO_gcm128_setiv+0x1fa>
+  222f72:	48 8b 6c 24 08       	mov    rbp,QWORD PTR [rsp+0x8]
+  222f77:	0f 57 c0             	xorps  xmm0,xmm0
+  222f7a:	0f 29 44 24 10       	movaps XMMWORD PTR [rsp+0x10],xmm0
+  222f7f:	48 8d 7c 24 10       	lea    rdi,[rsp+0x10]
+  222f84:	ff 15 26 d5 69 00    	call   QWORD PTR [rip+0x69d526]        # 8c04b0 <memcpy@GLIBC_2.14>
+  222f8a:	48 8b 04 24          	mov    rax,QWORD PTR [rsp]
+  222f8e:	48 8b 40 08          	mov    rax,QWORD PTR [rax+0x8]
+  222f92:	48 8b 54 24 18       	mov    rdx,QWORD PTR [rsp+0x18]
+  222f97:	48 0f ca             	bswap  rdx
+  222f9a:	48 8b 74 24 10       	mov    rsi,QWORD PTR [rsp+0x10]
+  222f9f:	48 0f ce             	bswap  rsi
+  222fa2:	4c 31 e6             	xor    rsi,r12
+  222fa5:	4c 31 ea             	xor    rdx,r13
+  222fa8:	b9 7f 00 00 00       	mov    ecx,0x7f
+  222fad:	31 ff                	xor    edi,edi
+  222faf:	41 b8 01 00 00 00    	mov    r8d,0x1
+  222fb5:	49 89 c2             	mov    r10,rax
+  222fb8:	4d 89 f1             	mov    r9,r14
+  222fbb:	45 31 ed             	xor    r13d,r13d
+  222fbe:	45 31 e4             	xor    r12d,r12d
+  222fc1:	66 66 66 66 66 66 2e 	data16 data16 data16 data16 data16 cs nop WORD PTR [rax+rax*1+0x0]
+  222fc8:	0f 1f 84 00 00 00 00 
+  222fcf:	00 
+  222fd0:	45 31 db             	xor    r11d,r11d
+  222fd3:	4d 0f a5 c3          	shld   r11,r8,cl
+  222fd7:	bb 01 00 00 00       	mov    ebx,0x1
+  222fdc:	48 d3 e3             	shl    rbx,cl
+  222fdf:	f6 c1 40             	test   cl,0x40
+  222fe2:	4c 0f 45 db          	cmovne r11,rbx
+  222fe6:	48 0f 45 df          	cmovne rbx,rdi
+  222fea:	49 21 f3             	and    r11,rsi
+  222fed:	48 21 d3             	and    rbx,rdx
+  222ff0:	4c 09 db             	or     rbx,r11
+  222ff3:	4d 89 d3             	mov    r11,r10
+  222ff6:	4c 0f 44 df          	cmove  r11,rdi
+  222ffa:	4c 89 cb             	mov    rbx,r9
+  222ffd:	48 0f 44 df          	cmove  rbx,rdi
+  223001:	49 31 dc             	xor    r12,rbx
+  223004:	4d 31 dd             	xor    r13,r11
+  223007:	4d 89 cb             	mov    r11,r9
+  22300a:	4d 0f a4 d3 3f       	shld   r11,r10,0x3f
+  22300f:	49 d1 e9             	shr    r9,1
+  223012:	4c 89 cb             	mov    rbx,r9
+  223015:	4c 31 fb             	xor    rbx,r15
+  223018:	41 f6 c2 01          	test   r10b,0x1
+  22301c:	4c 0f 45 cb          	cmovne r9,rbx
+  223020:	4d 89 da             	mov    r10,r11
+  223023:	83 c1 ff             	add    ecx,0xffffffff
+  223026:	72 a8                	jb     222fd0 <CRYPTO_gcm128_setiv+0x190>
+  223028:	48 8b 1c 24          	mov    rbx,QWORD PTR [rsp]
+  22302c:	eb 19                	jmp    223047 <CRYPTO_gcm128_setiv+0x207>
+  22302e:	45 31 e4             	xor    r12d,r12d
+  223031:	48 85 d2             	test   rdx,rdx
+  223034:	0f 85 38 ff ff ff    	jne    222f72 <CRYPTO_gcm128_setiv+0x132>
+  22303a:	48 8b 1c 24          	mov    rbx,QWORD PTR [rsp]
+  22303e:	48 8b 43 08          	mov    rax,QWORD PTR [rbx+0x8]
+  223042:	48 8b 6c 24 08       	mov    rbp,QWORD PTR [rsp+0x8]
+  223047:	48 c1 e5 03          	shl    rbp,0x3
+  22304b:	4c 31 ed             	xor    rbp,r13
+  22304e:	b9 7f 00 00 00       	mov    ecx,0x7f
+  223053:	31 f6                	xor    esi,esi
+  223055:	41 b8 01 00 00 00    	mov    r8d,0x1
+  22305b:	45 31 ed             	xor    r13d,r13d
+  22305e:	31 ff                	xor    edi,edi
+  223060:	31 d2                	xor    edx,edx
+  223062:	4c 0f a5 c2          	shld   rdx,r8,cl
+  223066:	41 b9 01 00 00 00    	mov    r9d,0x1
+  22306c:	49 d3 e1             	shl    r9,cl
+  22306f:	f6 c1 40             	test   cl,0x40
+  223072:	49 0f 45 d1          	cmovne rdx,r9
+  223076:	4c 0f 45 ce          	cmovne r9,rsi
+  22307a:	4c 21 e2             	and    rdx,r12
+  22307d:	49 21 e9             	and    r9,rbp
+  223080:	49 09 d1             	or     r9,rdx
+  223083:	48 89 c2             	mov    rdx,rax
+  223086:	48 0f 44 d6          	cmove  rdx,rsi
+  22308a:	4d 89 f1             	mov    r9,r14
+  22308d:	4c 0f 44 ce          	cmove  r9,rsi
+  223091:	4c 31 cf             	xor    rdi,r9
+  223094:	49 31 d5             	xor    r13,rdx
+  223097:	4c 89 f2             	mov    rdx,r14
+  22309a:	48 0f a4 c2 3f       	shld   rdx,rax,0x3f
+  22309f:	49 d1 ee             	shr    r14,1
+  2230a2:	4d 89 f1             	mov    r9,r14
+  2230a5:	4d 31 f9             	xor    r9,r15
+  2230a8:	a8 01                	test   al,0x1
+  2230aa:	4d 0f 45 f1          	cmovne r14,r9
+  2230ae:	48 89 d0             	mov    rax,rdx
+  2230b1:	83 c1 ff             	add    ecx,0xffffffff
+  2230b4:	72 aa                	jb     223060 <CRYPTO_gcm128_setiv+0x220>
+  2230b6:	48 0f cf             	bswap  rdi
+  2230b9:	4c 89 e8             	mov    rax,r13
+  2230bc:	48 0f c8             	bswap  rax
+  2230bf:	48 89 43 48          	mov    QWORD PTR [rbx+0x48],rax
+  2230c3:	48 89 7b 40          	mov    QWORD PTR [rbx+0x40],rdi
+  2230c7:	41 ff c5             	inc    r13d
+  2230ca:	41 0f cd             	bswap  r13d
+  2230cd:	0f 57 c0             	xorps  xmm0,xmm0
+  2230d0:	0f 11 43 10          	movups XMMWORD PTR [rbx+0x10],xmm0
+  2230d4:	48 8b 83 88 00 00 00 	mov    rax,QWORD PTR [rbx+0x88]
+  2230db:	48 85 c0             	test   rax,rax
+  2230de:	74 15                	je     2230f5 <CRYPTO_gcm128_setiv+0x2b5>
+  2230e0:	48 8d 7b 40          	lea    rdi,[rbx+0x40]
+  2230e4:	48 8d 73 30          	lea    rsi,[rbx+0x30]
+  2230e8:	48 8b 93 90 00 00 00 	mov    rdx,QWORD PTR [rbx+0x90]
+  2230ef:	ff d0                	call   rax
+  2230f1:	44 89 6b 4c          	mov    DWORD PTR [rbx+0x4c],r13d
+  2230f5:	48 83 c4 28          	add    rsp,0x28
+  2230f9:	5b                   	pop    rbx
+  2230fa:	41 5c                	pop    r12
+  2230fc:	41 5d                	pop    r13
+  2230fe:	41 5e                	pop    r14
+  223100:	41 5f                	pop    r15
+  223102:	5d                   	pop    rbp
+  223103:	c3                   	ret
+
+### openssl_rs::modes::gcm::crypt  0x230800..0x230bcf
+
+court/tmp/pfp63/before/libcrypto.so.3:     file format elf64-x86-64
+
+
+Disassembly of section .text:
+
+0000000000230800 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs5modes3gcm5crypt.llvm.3256867274980599799>:
+  230800:	55                   	push   rbp
+  230801:	41 57                	push   r15
+  230803:	41 56                	push   r14
+  230805:	41 55                	push   r13
+  230807:	41 54                	push   r12
+  230809:	53                   	push   rbx
+  23080a:	48 83 ec 38          	sub    rsp,0x38
+  23080e:	44 89 44 24 1c       	mov    DWORD PTR [rsp+0x1c],r8d
+  230813:	49 89 d7             	mov    r15,rdx
+  230816:	49 89 f4             	mov    r12,rsi
+  230819:	49 89 f9             	mov    r9,rdi
+  23081c:	48 8b 7f 78          	mov    rdi,QWORD PTR [rdi+0x78]
+  230820:	48 01 cf             	add    rdi,rcx
+  230823:	40 0f 92 c6          	setb   sil
+  230827:	48 ba e0 ff ff ff 0f 	movabs rdx,0xfffffffe0
+  23082e:	00 00 00 
+  230831:	48 39 d7             	cmp    rdi,rdx
+  230834:	0f 97 c2             	seta   dl
+  230837:	40 08 f2             	or     dl,sil
+  23083a:	b8 ff ff ff ff       	mov    eax,0xffffffff
+  23083f:	0f 85 16 03 00 00    	jne    230b5b <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs5modes3gcm5crypt.llvm.3256867274980599799+0x35b>
+  230845:	49 89 79 78          	mov    QWORD PTR [r9+0x78],rdi
+  230849:	41 83 b9 84 00 00 00 	cmp    DWORD PTR [r9+0x84],0x0
+  230850:	00 
+  230851:	48 bd 00 00 00 00 00 	movabs rbp,0xe100000000000000
+  230858:	00 00 e1 
+  23085b:	4c 89 4c 24 10       	mov    QWORD PTR [rsp+0x10],r9
+  230860:	48 89 4c 24 08       	mov    QWORD PTR [rsp+0x8],rcx
+  230865:	0f 84 b1 00 00 00    	je     23091c <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs5modes3gcm5crypt.llvm.3256867274980599799+0x11c>
+  23086b:	49 8b 01             	mov    rax,QWORD PTR [r9]
+  23086e:	4d 8b 41 08          	mov    r8,QWORD PTR [r9+0x8]
+  230872:	49 8b 51 60          	mov    rdx,QWORD PTR [r9+0x60]
+  230876:	49 8b 71 68          	mov    rsi,QWORD PTR [r9+0x68]
+  23087a:	48 0f ce             	bswap  rsi
+  23087d:	48 0f ca             	bswap  rdx
+  230880:	49 33 51 10          	xor    rdx,QWORD PTR [r9+0x10]
+  230884:	49 8d 79 60          	lea    rdi,[r9+0x60]
+  230888:	49 33 71 18          	xor    rsi,QWORD PTR [r9+0x18]
+  23088c:	b9 7f 00 00 00       	mov    ecx,0x7f
+  230891:	45 31 c9             	xor    r9d,r9d
+  230894:	41 ba 01 00 00 00    	mov    r10d,0x1
+  23089a:	45 31 db             	xor    r11d,r11d
+  23089d:	31 db                	xor    ebx,ebx
+  23089f:	90                   	nop
+  2308a0:	45 31 f6             	xor    r14d,r14d
+  2308a3:	4d 0f a5 d6          	shld   r14,r10,cl
+  2308a7:	41 bd 01 00 00 00    	mov    r13d,0x1
+  2308ad:	49 d3 e5             	shl    r13,cl
+  2308b0:	f6 c1 40             	test   cl,0x40
+  2308b3:	4d 0f 45 f5          	cmovne r14,r13
+  2308b7:	4d 0f 45 e9          	cmovne r13,r9
+  2308bb:	49 21 d6             	and    r14,rdx
+  2308be:	49 21 f5             	and    r13,rsi
+  2308c1:	4d 09 f5             	or     r13,r14
+  2308c4:	4d 89 c6             	mov    r14,r8
+  2308c7:	4d 0f 44 f1          	cmove  r14,r9
+  2308cb:	49 89 c5             	mov    r13,rax
+  2308ce:	4d 0f 44 e9          	cmove  r13,r9
+  2308d2:	4c 31 eb             	xor    rbx,r13
+  2308d5:	4d 31 f3             	xor    r11,r14
+  2308d8:	49 89 c6             	mov    r14,rax
+  2308db:	4d 0f a4 c6 3f       	shld   r14,r8,0x3f
+  2308e0:	48 d1 e8             	shr    rax,1
+  2308e3:	49 89 c5             	mov    r13,rax
+  2308e6:	49 31 ed             	xor    r13,rbp
+  2308e9:	41 f6 c0 01          	test   r8b,0x1
+  2308ed:	49 0f 45 c5          	cmovne rax,r13
+  2308f1:	4d 89 f0             	mov    r8,r14
+  2308f4:	83 c1 ff             	add    ecx,0xffffffff
+  2308f7:	72 a7                	jb     2308a0 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs5modes3gcm5crypt.llvm.3256867274980599799+0xa0>
+  2308f9:	4c 8b 4c 24 10       	mov    r9,QWORD PTR [rsp+0x10]
+  2308fe:	49 89 59 10          	mov    QWORD PTR [r9+0x10],rbx
+  230902:	4d 89 59 18          	mov    QWORD PTR [r9+0x18],r11
+  230906:	0f 57 c0             	xorps  xmm0,xmm0
+  230909:	0f 11 07             	movups XMMWORD PTR [rdi],xmm0
+  23090c:	41 c7 81 84 00 00 00 	mov    DWORD PTR [r9+0x84],0x0
+  230913:	00 00 00 00 
+  230917:	48 8b 4c 24 08       	mov    rcx,QWORD PTR [rsp+0x8]
+  23091c:	49 8b 91 88 00 00 00 	mov    rdx,QWORD PTR [r9+0x88]
+  230923:	31 c0                	xor    eax,eax
+  230925:	48 89 54 24 30       	mov    QWORD PTR [rsp+0x30],rdx
+  23092a:	48 85 d2             	test   rdx,rdx
+  23092d:	0f 84 28 02 00 00    	je     230b5b <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs5modes3gcm5crypt.llvm.3256867274980599799+0x35b>
+  230933:	41 8b 99 80 00 00 00 	mov    ebx,DWORD PTR [r9+0x80]
+  23093a:	48 85 c9             	test   rcx,rcx
+  23093d:	0f 84 11 02 00 00    	je     230b54 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs5modes3gcm5crypt.llvm.3256867274980599799+0x354>
+  230943:	49 8d 41 40          	lea    rax,[r9+0x40]
+  230947:	48 89 44 24 28       	mov    QWORD PTR [rsp+0x28],rax
+  23094c:	41 8b 41 4c          	mov    eax,DWORD PTR [r9+0x4c]
+  230950:	0f c8                	bswap  eax
+  230952:	89 44 24 04          	mov    DWORD PTR [rsp+0x4],eax
+  230956:	49 8d 41 20          	lea    rax,[r9+0x20]
+  23095a:	48 89 44 24 20       	mov    QWORD PTR [rsp+0x20],rax
+  23095f:	49 8d 69 50          	lea    rbp,[r9+0x50]
+  230963:	45 31 f6             	xor    r14d,r14d
+  230966:	41 bb 01 00 00 00    	mov    r11d,0x1
+  23096c:	45 31 ed             	xor    r13d,r13d
+  23096f:	eb 18                	jmp    230989 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs5modes3gcm5crypt.llvm.3256867274980599799+0x189>
+  230971:	66 66 66 66 66 66 2e 	data16 data16 data16 data16 data16 cs nop WORD PTR [rax+rax*1+0x0]
+  230978:	0f 1f 84 00 00 00 00 
+  23097f:	00 
+  230980:	49 39 cd             	cmp    r13,rcx
+  230983:	0f 83 c9 01 00 00    	jae    230b52 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs5modes3gcm5crypt.llvm.3256867274980599799+0x352>
+  230989:	48 85 db             	test   rbx,rbx
+  23098c:	74 12                	je     2309a0 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs5modes3gcm5crypt.llvm.3256867274980599799+0x1a0>
+  23098e:	ba 10 00 00 00       	mov    edx,0x10
+  230993:	48 29 da             	sub    rdx,rbx
+  230996:	73 42                	jae    2309da <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs5modes3gcm5crypt.llvm.3256867274980599799+0x1da>
+  230998:	e9 25 02 00 00       	jmp    230bc2 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs5modes3gcm5crypt.llvm.3256867274980599799+0x3c2>
+  23099d:	0f 1f 00             	nop    DWORD PTR [rax]
+  2309a0:	49 8b 91 90 00 00 00 	mov    rdx,QWORD PTR [r9+0x90]
+  2309a7:	48 8b 7c 24 28       	mov    rdi,QWORD PTR [rsp+0x28]
+  2309ac:	48 8b 74 24 20       	mov    rsi,QWORD PTR [rsp+0x20]
+  2309b1:	ff 54 24 30          	call   QWORD PTR [rsp+0x30]
+  2309b5:	41 bb 01 00 00 00    	mov    r11d,0x1
+  2309bb:	48 8b 4c 24 08       	mov    rcx,QWORD PTR [rsp+0x8]
+  2309c0:	4c 8b 4c 24 10       	mov    r9,QWORD PTR [rsp+0x10]
+  2309c5:	8b 44 24 04          	mov    eax,DWORD PTR [rsp+0x4]
+  2309c9:	ff c0                	inc    eax
+  2309cb:	89 44 24 04          	mov    DWORD PTR [rsp+0x4],eax
+  2309cf:	0f c8                	bswap  eax
+  2309d1:	41 89 41 4c          	mov    DWORD PTR [r9+0x4c],eax
+  2309d5:	ba 10 00 00 00       	mov    edx,0x10
+  2309da:	48 89 c8             	mov    rax,rcx
+  2309dd:	4c 29 e8             	sub    rax,r13
+  2309e0:	48 39 d0             	cmp    rax,rdx
+  2309e3:	48 0f 43 c2          	cmovae rax,rdx
+  2309e7:	48 85 c0             	test   rax,rax
+  2309ea:	0f 84 90 00 00 00    	je     230a80 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs5modes3gcm5crypt.llvm.3256867274980599799+0x280>
+  2309f0:	49 89 c0             	mov    r8,rax
+  2309f3:	4c 89 ea             	mov    rdx,r13
+  2309f6:	48 89 df             	mov    rdi,rbx
+  2309f9:	80 7c 24 1c 00       	cmp    BYTE PTR [rsp+0x1c],0x0
+  2309fe:	74 50                	je     230a50 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs5modes3gcm5crypt.llvm.3256867274980599799+0x250>
+  230a00:	49 89 c2             	mov    r10,rax
+  230a03:	4c 89 ea             	mov    rdx,r13
+  230a06:	48 89 df             	mov    rdi,rbx
+  230a09:	0f 1f 80 00 00 00 00 	nop    DWORD PTR [rax+0x0]
+  230a10:	4c 39 ea             	cmp    rdx,r13
+  230a13:	0f 82 51 01 00 00    	jb     230b6a <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs5modes3gcm5crypt.llvm.3256867274980599799+0x36a>
+  230a19:	48 83 ff 0f          	cmp    rdi,0xf
+  230a1d:	0f 87 66 01 00 00    	ja     230b89 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs5modes3gcm5crypt.llvm.3256867274980599799+0x389>
+  230a23:	41 0f b6 34 14       	movzx  esi,BYTE PTR [r12+rdx*1]
+  230a28:	44 0f b6 44 3d d0    	movzx  r8d,BYTE PTR [rbp+rdi*1-0x30]
+  230a2e:	41 30 f0             	xor    r8b,sil
+  230a31:	45 88 04 17          	mov    BYTE PTR [r15+rdx*1],r8b
+  230a35:	40 88 74 3d 00       	mov    BYTE PTR [rbp+rdi*1+0x0],sil
+  230a3a:	48 ff c7             	inc    rdi
+  230a3d:	48 ff c2             	inc    rdx
+  230a40:	49 ff ca             	dec    r10
+  230a43:	75 cb                	jne    230a10 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs5modes3gcm5crypt.llvm.3256867274980599799+0x210>
+  230a45:	eb 39                	jmp    230a80 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs5modes3gcm5crypt.llvm.3256867274980599799+0x280>
+  230a47:	66 0f 1f 84 00 00 00 	nop    WORD PTR [rax+rax*1+0x0]
+  230a4e:	00 00 
+  230a50:	4c 39 ea             	cmp    rdx,r13
+  230a53:	0f 82 42 01 00 00    	jb     230b9b <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs5modes3gcm5crypt.llvm.3256867274980599799+0x39b>
+  230a59:	48 83 ff 0f          	cmp    rdi,0xf
+  230a5d:	0f 87 14 01 00 00    	ja     230b77 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs5modes3gcm5crypt.llvm.3256867274980599799+0x377>
+  230a63:	0f b6 74 3d d0       	movzx  esi,BYTE PTR [rbp+rdi*1-0x30]
+  230a68:	41 32 34 14          	xor    sil,BYTE PTR [r12+rdx*1]
+  230a6c:	41 88 34 17          	mov    BYTE PTR [r15+rdx*1],sil
+  230a70:	40 88 74 3d 00       	mov    BYTE PTR [rbp+rdi*1+0x0],sil
+  230a75:	48 ff c7             	inc    rdi
+  230a78:	48 ff c2             	inc    rdx
+  230a7b:	49 ff c8             	dec    r8
+  230a7e:	75 d0                	jne    230a50 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs5modes3gcm5crypt.llvm.3256867274980599799+0x250>
+  230a80:	48 01 c3             	add    rbx,rax
+  230a83:	0f 82 1f 01 00 00    	jb     230ba8 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs5modes3gcm5crypt.llvm.3256867274980599799+0x3a8>
+  230a89:	49 01 c5             	add    r13,rax
+  230a8c:	0f 82 23 01 00 00    	jb     230bb5 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs5modes3gcm5crypt.llvm.3256867274980599799+0x3b5>
+  230a92:	48 83 fb 10          	cmp    rbx,0x10
+  230a96:	0f 85 e4 fe ff ff    	jne    230980 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs5modes3gcm5crypt.llvm.3256867274980599799+0x180>
+  230a9c:	49 8b 01             	mov    rax,QWORD PTR [r9]
+  230a9f:	49 8b 51 50          	mov    rdx,QWORD PTR [r9+0x50]
+  230aa3:	49 8b 71 58          	mov    rsi,QWORD PTR [r9+0x58]
+  230aa7:	48 0f ce             	bswap  rsi
+  230aaa:	48 0f ca             	bswap  rdx
+  230aad:	49 33 51 10          	xor    rdx,QWORD PTR [r9+0x10]
+  230ab1:	49 33 71 18          	xor    rsi,QWORD PTR [r9+0x18]
+  230ab5:	4d 8b 41 08          	mov    r8,QWORD PTR [r9+0x8]
+  230ab9:	b9 7f 00 00 00       	mov    ecx,0x7f
+  230abe:	31 ff                	xor    edi,edi
+  230ac0:	45 31 c9             	xor    r9d,r9d
+  230ac3:	48 bb 00 00 00 00 00 	movabs rbx,0xe100000000000000
+  230aca:	00 00 e1 
+  230acd:	0f 1f 00             	nop    DWORD PTR [rax]
+  230ad0:	45 31 d2             	xor    r10d,r10d
+  230ad3:	4d 0f a5 da          	shld   r10,r11,cl
+  230ad7:	41 bb 01 00 00 00    	mov    r11d,0x1
+  230add:	49 d3 e3             	shl    r11,cl
+  230ae0:	f6 c1 40             	test   cl,0x40
+  230ae3:	4d 0f 45 d3          	cmovne r10,r11
+  230ae7:	4d 0f 45 de          	cmovne r11,r14
+  230aeb:	49 21 d2             	and    r10,rdx
+  230aee:	49 21 f3             	and    r11,rsi
+  230af1:	4d 09 d3             	or     r11,r10
+  230af4:	4d 89 c2             	mov    r10,r8
+  230af7:	4d 0f 44 d6          	cmove  r10,r14
+  230afb:	49 89 c3             	mov    r11,rax
+  230afe:	4d 0f 44 de          	cmove  r11,r14
+  230b02:	4d 31 d9             	xor    r9,r11
+  230b05:	4c 31 d7             	xor    rdi,r10
+  230b08:	49 89 c2             	mov    r10,rax
+  230b0b:	4d 0f a4 c2 3f       	shld   r10,r8,0x3f
+  230b10:	48 d1 e8             	shr    rax,1
+  230b13:	49 89 c3             	mov    r11,rax
+  230b16:	49 31 db             	xor    r11,rbx
+  230b19:	41 f6 c0 01          	test   r8b,0x1
+  230b1d:	49 0f 45 c3          	cmovne rax,r11
+  230b21:	41 bb 01 00 00 00    	mov    r11d,0x1
+  230b27:	4d 89 d0             	mov    r8,r10
+  230b2a:	83 c1 ff             	add    ecx,0xffffffff
+  230b2d:	72 a1                	jb     230ad0 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs5modes3gcm5crypt.llvm.3256867274980599799+0x2d0>
+  230b2f:	48 8b 44 24 10       	mov    rax,QWORD PTR [rsp+0x10]
+  230b34:	4c 89 48 10          	mov    QWORD PTR [rax+0x10],r9
+  230b38:	49 89 c1             	mov    r9,rax
+  230b3b:	48 89 78 18          	mov    QWORD PTR [rax+0x18],rdi
+  230b3f:	0f 57 c0             	xorps  xmm0,xmm0
+  230b42:	0f 11 45 00          	movups XMMWORD PTR [rbp+0x0],xmm0
+  230b46:	31 db                	xor    ebx,ebx
+  230b48:	48 8b 4c 24 08       	mov    rcx,QWORD PTR [rsp+0x8]
+  230b4d:	e9 2e fe ff ff       	jmp    230980 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs5modes3gcm5crypt.llvm.3256867274980599799+0x180>
+  230b52:	31 c0                	xor    eax,eax
+  230b54:	41 89 99 80 00 00 00 	mov    DWORD PTR [r9+0x80],ebx
+  230b5b:	48 83 c4 38          	add    rsp,0x38
+  230b5f:	5b                   	pop    rbx
+  230b60:	41 5c                	pop    r12
+  230b62:	41 5d                	pop    r13
+  230b64:	41 5e                	pop    r14
+  230b66:	41 5f                	pop    r15
+  230b68:	5d                   	pop    rbp
+  230b69:	c3                   	ret
+  230b6a:	48 8d 3d 8f 77 5d 00 	lea    rdi,[rip+0x5d778f]        # 808300 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs4x5097v3_conf17CONF_LHASH_METHOD+0x158>
+  230b71:	ff 15 19 f8 68 00    	call   QWORD PTR [rip+0x68f819]        # 8c0390 <_DYNAMIC+0x20b8>
+  230b77:	48 8d 15 6a 77 5d 00 	lea    rdx,[rip+0x5d776a]        # 8082e8 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs4x5097v3_conf17CONF_LHASH_METHOD+0x140>
+  230b7e:	be 10 00 00 00       	mov    esi,0x10
+  230b83:	ff 15 cf ff 68 00    	call   QWORD PTR [rip+0x68ffcf]        # 8c0b58 <_DYNAMIC+0x2880>
+  230b89:	48 8d 15 88 77 5d 00 	lea    rdx,[rip+0x5d7788]        # 808318 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs4x5097v3_conf17CONF_LHASH_METHOD+0x170>
+  230b90:	be 10 00 00 00       	mov    esi,0x10
+  230b95:	ff 15 bd ff 68 00    	call   QWORD PTR [rip+0x68ffbd]        # 8c0b58 <_DYNAMIC+0x2880>
+  230b9b:	48 8d 3d 2e 77 5d 00 	lea    rdi,[rip+0x5d772e]        # 8082d0 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs4x5097v3_conf17CONF_LHASH_METHOD+0x128>
+  230ba2:	ff 15 e8 f7 68 00    	call   QWORD PTR [rip+0x68f7e8]        # 8c0390 <_DYNAMIC+0x20b8>
+  230ba8:	48 8d 3d f1 76 5d 00 	lea    rdi,[rip+0x5d76f1]        # 8082a0 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs4x5097v3_conf17CONF_LHASH_METHOD+0xf8>
+  230baf:	ff 15 db f7 68 00    	call   QWORD PTR [rip+0x68f7db]        # 8c0390 <_DYNAMIC+0x20b8>
+  230bb5:	48 8d 3d fc 76 5d 00 	lea    rdi,[rip+0x5d76fc]        # 8082b8 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs4x5097v3_conf17CONF_LHASH_METHOD+0x110>
+  230bbc:	ff 15 ce f7 68 00    	call   QWORD PTR [rip+0x68f7ce]        # 8c0390 <_DYNAMIC+0x20b8>
+  230bc2:	48 8d 3d bf 76 5d 00 	lea    rdi,[rip+0x5d76bf]        # 808288 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs4x5097v3_conf17CONF_LHASH_METHOD+0xe0>
+  230bc9:	ff 15 01 ee 68 00    	call   QWORD PTR [rip+0x68ee01]        # 8bf9d0 <_DYNAMIC+0x16f8>
+

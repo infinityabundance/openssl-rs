@@ -158,13 +158,81 @@ fn inv_mix_columns(state: &mut [u8; 16]) {
     }
 }
 
+/// The AES bit in the first `OPENSSL_ia32cap` vector.
+///
+/// `OPENSSL_ia32cap`'s value is `[vec1][:vec2]`; a vector prefixed with `~` clears the named
+/// bits. `AES` is `CPUID.(EAX=1).ECX` bit 25, i.e. bit 25 of the first vector. Only the clear
+/// mask is modelled, because that is the form that forces the portable path; the authority's
+/// value-set form and its other capability bits are not modelled (`RT-CPU-CAPABILITY`).
+#[cfg(target_arch = "x86_64")]
+fn ia32cap_aes_cleared(spec: Option<&str>) -> bool {
+    let Some(first) = spec.and_then(|s| s.split(':').next()) else {
+        return false;
+    };
+    let Some(mask) = first.strip_prefix('~') else {
+        return false;
+    };
+    let mask = mask.trim_start_matches("0x").trim_start_matches("0X");
+    u64::from_str_radix(mask, 16)
+        .map(|m| m & (1u64 << 25) != 0)
+        .unwrap_or(false)
+}
+
+/// The AES-NI dispatch predicate — the only runtime feature-detection site on this path.
+///
+/// `BOUNDARY_COVERED`: `is_x86_feature_detected!` is a cached CPUID read with no memory or
+/// initialisation obligation; the `#[target_feature(enable = "aes")]` callees execute only
+/// SSE2 moves (baseline on x86_64) and AES-NI instructions, so the single `aes` bit is the
+/// whole precondition. The result is cached for the process, and `OPENSSL_ia32cap`'s AES clear
+/// mask overrides it to force the portable arm.
+#[cfg(target_arch = "x86_64")]
+fn aes_ni_available() -> bool {
+    use std::sync::OnceLock;
+
+    static AVAILABLE: OnceLock<bool> = OnceLock::new();
+    *AVAILABLE.get_or_init(|| {
+        let spec = std::env::var("OPENSSL_ia32cap").ok();
+        if ia32cap_aes_cleared(spec.as_deref()) {
+            return false;
+        }
+        std::is_x86_feature_detected!("aes")
+    })
+}
+
+/// `SubWord(w)` and `RotWord(SubWord(w))` for the big-endian logical word `w`, via
+/// `aeskeygenassist`.
+///
+/// `w` is a key-schedule word in the `GETU32` convention; the instruction operates on the
+/// little-endian lane representation, so the word is byte-swapped in and both results are
+/// byte-swapped out. No memory is indexed by `w`.
+///
+/// # Safety
+/// The caller must have established the `aes` target feature.
+#[cfg(target_arch = "x86_64")]
+#[target_feature(enable = "aes")]
+unsafe fn ni_subword_pair(w: u32) -> (u32, u32) {
+    use core::arch::x86_64::*;
+
+    // SAFETY: the caller establishes `aes`; the only memory touched is the local `lanes`.
+    unsafe {
+        let wb = w.swap_bytes() as i32;
+        // The instruction reads 32-bit words X1 = lane 1 and X3 = lane 3, so the word is placed
+        // in both; lane 0 then holds SubWord(w) and lane 1 RotWord(SubWord(w)).
+        let x = _mm_set_epi32(wb, 0, wb, 0);
+        let t = _mm_aeskeygenassist_si128::<0x00>(x);
+        let mut lanes = [0u32; 4];
+        _mm_storeu_si128(lanes.as_mut_ptr().cast(), t);
+        (lanes[0].swap_bytes(), lanes[1].swap_bytes())
+    }
+}
+
 /// The logical key expansion: the standard `GETU32` words, the authority's round structure.
 /// The public entry points byte-swap the result on the way out, because the authority's
 /// perlasm key schedule stores each word in memory order and `RT-CIPHER` observes it.
 ///
 /// # Safety
 /// `user_key` readable for `bits / 8` bytes and `key` writable, or either NULL.
-unsafe fn aes_expand(user_key: *const u8, bits: c_int, key: *mut AesKey) -> c_int {
+unsafe fn aes_expand_portable(user_key: *const u8, bits: c_int, key: *mut AesKey) -> c_int {
     // SAFETY: the caller's contract.
     unsafe {
         if user_key.is_null() || key.is_null() {
@@ -271,6 +339,122 @@ unsafe fn aes_expand(user_key: *const u8, bits: c_int, key: *mut AesKey) -> c_in
     }
 }
 
+/// The AES-NI key expansion: the same recurrence as [`aes_expand_portable`], with every
+/// `SubWord`/`RotWord` taken from `aeskeygenassist` instead of the S-box table.
+///
+/// The output is the same big-endian logical schedule [`aes_expand_portable`] produces, so
+/// [`bswap_schedule`] and the decrypt transform that consume it are unchanged.
+///
+/// # Safety
+/// `user_key` readable for `bits / 8` bytes and `key` writable, or either NULL; the caller must
+/// have established the `aes` target feature.
+#[cfg(target_arch = "x86_64")]
+#[target_feature(enable = "aes")]
+unsafe fn aes_expand_ni(user_key: *const u8, bits: c_int, key: *mut AesKey) -> c_int {
+    // SAFETY: the caller's contract; every read/write is within `user_key`/`key`.
+    unsafe {
+        if user_key.is_null() || key.is_null() {
+            return -1;
+        }
+        if bits != 128 && bits != 192 && bits != 256 {
+            return -2;
+        }
+        let rk = &mut (*key).rd_key;
+        (*key).rounds = if bits == 128 {
+            10
+        } else if bits == 192 {
+            12
+        } else {
+            14
+        };
+
+        rk[0] = get_u32(user_key);
+        rk[1] = get_u32(user_key.add(4));
+        rk[2] = get_u32(user_key.add(8));
+        rk[3] = get_u32(user_key.add(12));
+
+        if bits == 128 {
+            let mut i = 0usize;
+            let mut off = 0usize;
+            loop {
+                let (_, rot) = ni_subword_pair(rk[off + 3]);
+                rk[off + 4] = rk[off] ^ rot ^ AES_RCON[i];
+                rk[off + 5] = rk[off + 1] ^ rk[off + 4];
+                rk[off + 6] = rk[off + 2] ^ rk[off + 5];
+                rk[off + 7] = rk[off + 3] ^ rk[off + 6];
+                i += 1;
+                if i == 10 {
+                    return 0;
+                }
+                off += 4;
+            }
+        }
+
+        rk[4] = get_u32(user_key.add(16));
+        rk[5] = get_u32(user_key.add(20));
+        if bits == 192 {
+            let mut i = 0usize;
+            let mut off = 0usize;
+            loop {
+                let (_, rot) = ni_subword_pair(rk[off + 5]);
+                rk[off + 6] = rk[off] ^ rot ^ AES_RCON[i];
+                rk[off + 7] = rk[off + 1] ^ rk[off + 6];
+                rk[off + 8] = rk[off + 2] ^ rk[off + 7];
+                rk[off + 9] = rk[off + 3] ^ rk[off + 8];
+                i += 1;
+                if i == 8 {
+                    return 0;
+                }
+                rk[off + 10] = rk[off + 4] ^ rk[off + 9];
+                rk[off + 11] = rk[off + 5] ^ rk[off + 10];
+                off += 6;
+            }
+        }
+
+        rk[6] = get_u32(user_key.add(24));
+        rk[7] = get_u32(user_key.add(28));
+        if bits == 256 {
+            let mut i = 0usize;
+            let mut off = 0usize;
+            loop {
+                let (_, rot) = ni_subword_pair(rk[off + 7]);
+                rk[off + 8] = rk[off] ^ rot ^ AES_RCON[i];
+                rk[off + 9] = rk[off + 1] ^ rk[off + 8];
+                rk[off + 10] = rk[off + 2] ^ rk[off + 9];
+                rk[off + 11] = rk[off + 3] ^ rk[off + 10];
+                i += 1;
+                if i == 7 {
+                    return 0;
+                }
+                let (sub, _) = ni_subword_pair(rk[off + 11]);
+                rk[off + 12] = rk[off + 4] ^ sub;
+                rk[off + 13] = rk[off + 5] ^ rk[off + 12];
+                rk[off + 14] = rk[off + 6] ^ rk[off + 13];
+                rk[off + 15] = rk[off + 7] ^ rk[off + 14];
+                off += 8;
+            }
+        }
+        0
+    }
+}
+
+/// Dispatch the key expansion to the AES-NI arm when it is available, else to the portable
+/// table transcription.
+///
+/// # Safety
+/// `user_key` readable for `bits / 8` bytes and `key` writable, or either NULL.
+unsafe fn aes_expand(user_key: *const u8, bits: c_int, key: *mut AesKey) -> c_int {
+    #[cfg(target_arch = "x86_64")]
+    if aes_ni_available() {
+        // SAFETY: `aes_ni_available` establishes the `aes` target feature, and the pointer
+        // contract is this function's own, unchanged for the callee.
+        return unsafe { aes_expand_ni(user_key, bits, key) };
+    }
+
+    // SAFETY: the caller's contract, unchanged for the portable transcription.
+    unsafe { aes_expand_portable(user_key, bits, key) }
+}
+
 /// Byte-swap the live words of a schedule, so the stored bytes match the authority's perlasm
 /// `AES_KEY` rather than the C `GETU32` convention. `RT-CIPHER` observes the difference.
 ///
@@ -363,13 +547,60 @@ pub unsafe extern "C" fn AES_set_decrypt_key(
     }
 }
 
+/// One AES-128/192/256 block through the AES-NI round instructions.
+///
+/// The stored schedule is the authority's perlasm memory order, so each round key is one
+/// unaligned sixteen-byte load; the round count comes from the schedule, so all three key
+/// sizes share this carrier.
+///
+/// # Safety
+/// The caller must have established the `aes` target feature; `in` readable for sixteen bytes,
+/// `out` writable for sixteen, `key` a live schedule.
+#[cfg(target_arch = "x86_64")]
+#[target_feature(enable = "aes")]
+unsafe fn aes_encrypt_ni(input: *const u8, out: *mut u8, key: *const AesKey) {
+    use core::arch::x86_64::*;
+
+    // SAFETY: the caller's contract gives the extents; `rk` is within the live schedule.
+    unsafe {
+        let rk = (*key).rd_key.as_ptr();
+        let rounds = (*key).rounds as usize;
+        let mut state = _mm_loadu_si128(input.cast());
+        state = _mm_xor_si128(state, _mm_loadu_si128(rk.cast()));
+        let mut r = 1usize;
+        while r < rounds {
+            state = _mm_aesenc_si128(state, _mm_loadu_si128(rk.add(4 * r).cast()));
+            r += 1;
+        }
+        state = _mm_aesenclast_si128(state, _mm_loadu_si128(rk.add(4 * rounds).cast()));
+        _mm_storeu_si128(out.cast(), state);
+    }
+}
+
 /// `void AES_encrypt(const unsigned char *in, unsigned char *out, const AES_KEY *key)` —
-/// FIPS-197 §5.1, the byte-oriented round.
+/// FIPS-197 §5.1, dispatched to AES-NI when the CPU has it.
 ///
 /// # Safety
 /// `in` readable for sixteen bytes, `out` writable for sixteen, `key` a live schedule.
 #[no_mangle]
 pub unsafe extern "C" fn AES_encrypt(input: *const u8, out: *mut u8, key: *const AesKey) {
+    #[cfg(target_arch = "x86_64")]
+    if aes_ni_available() {
+        // SAFETY: `aes_ni_available` establishes the `aes` target feature; the pointer contract
+        // is this function's own, unchanged for the callee.
+        unsafe { aes_encrypt_ni(input, out, key) };
+        return;
+    }
+
+    // SAFETY: the caller's contract, unchanged for the portable transcription.
+    unsafe { aes_encrypt_portable(input, out, key) }
+}
+
+/// The portable FIPS-197 §5.1 byte-oriented round, the fallback for CPUs without AES-NI.
+///
+/// # Safety
+/// As [`AES_encrypt`].
+unsafe fn aes_encrypt_portable(input: *const u8, out: *mut u8, key: *const AesKey) {
     // SAFETY: the caller's contract.
     unsafe {
         let mut state = [0u8; 16];
@@ -392,13 +623,60 @@ pub unsafe extern "C" fn AES_encrypt(input: *const u8, out: *mut u8, key: *const
     }
 }
 
+/// One AES-128/192/256 inverse block through the AES-NI round instructions.
+///
+/// [`AES_set_decrypt_key`] stores the equivalent-inverse-cipher schedule (blocks reversed,
+/// inner blocks `InvMixColumns`-transformed), which is exactly the order `aesdec` expects, so
+/// this reads the schedule forward from slot 0.
+///
+/// # Safety
+/// The caller must have established the `aes` target feature; `in` readable for sixteen bytes,
+/// `out` writable for sixteen, `key` a live decryption schedule.
+#[cfg(target_arch = "x86_64")]
+#[target_feature(enable = "aes")]
+unsafe fn aes_decrypt_ni(input: *const u8, out: *mut u8, key: *const AesKey) {
+    use core::arch::x86_64::*;
+
+    // SAFETY: the caller's contract gives the extents; `rk` is within the live schedule.
+    unsafe {
+        let rk = (*key).rd_key.as_ptr();
+        let rounds = (*key).rounds as usize;
+        let mut state = _mm_loadu_si128(input.cast());
+        state = _mm_xor_si128(state, _mm_loadu_si128(rk.cast()));
+        let mut r = 1usize;
+        while r < rounds {
+            state = _mm_aesdec_si128(state, _mm_loadu_si128(rk.add(4 * r).cast()));
+            r += 1;
+        }
+        state = _mm_aesdeclast_si128(state, _mm_loadu_si128(rk.add(4 * rounds).cast()));
+        _mm_storeu_si128(out.cast(), state);
+    }
+}
+
 /// `void AES_decrypt(const unsigned char *in, unsigned char *out, const AES_KEY *key)` —
-/// FIPS-197 §5.3.
+/// FIPS-197 §5.3, dispatched to AES-NI when the CPU has it.
 ///
 /// # Safety
 /// As [`AES_encrypt`].
 #[no_mangle]
 pub unsafe extern "C" fn AES_decrypt(input: *const u8, out: *mut u8, key: *const AesKey) {
+    #[cfg(target_arch = "x86_64")]
+    if aes_ni_available() {
+        // SAFETY: `aes_ni_available` establishes the `aes` target feature; the pointer contract
+        // is this function's own, unchanged for the callee.
+        unsafe { aes_decrypt_ni(input, out, key) };
+        return;
+    }
+
+    // SAFETY: the caller's contract, unchanged for the portable transcription.
+    unsafe { aes_decrypt_portable(input, out, key) }
+}
+
+/// The portable FIPS-197 §5.3 byte-oriented round, the fallback for CPUs without AES-NI.
+///
+/// # Safety
+/// As [`AES_encrypt`].
+unsafe fn aes_decrypt_portable(input: *const u8, out: *mut u8, key: *const AesKey) {
     // SAFETY: the caller's contract.
     unsafe {
         let mut state = [0u8; 16];
@@ -962,6 +1240,89 @@ mod tests {
                 assert_eq!(AES_set_decrypt_key(key.as_ptr(), bits, &mut dk), 0);
                 AES_decrypt(out.as_ptr(), dec.as_mut_ptr(), &dk);
                 assert_eq!(dec, FIPS_PT);
+            }
+        }
+    }
+
+    /// The AES-NI expansion and round are the same function as the portable transcription: for
+    /// random keys of all three sizes the two schedules are byte-identical, and the two round
+    /// carriers agree on random blocks in both directions.
+    #[cfg(all(test, target_arch = "x86_64"))]
+    #[test]
+    fn aes_ni_matches_portable() {
+        if !std::is_x86_feature_detected!("aes") {
+            return;
+        }
+        let mut seed = 0x0123_4567_89ab_cdefu64;
+        let mut next = || {
+            seed = seed
+                .wrapping_mul(6364136223846793005)
+                .wrapping_add(1442695040888963407);
+            (seed >> 32) as u8
+        };
+        for bits in [128u32, 192, 256] {
+            let n = (bits / 8) as usize;
+            for _ in 0..64 {
+                let mut key = [0u8; 32];
+                let mut block = [0u8; 16];
+                for b in &mut key[..n] {
+                    *b = next();
+                }
+                for b in &mut block {
+                    *b = next();
+                }
+
+                let mut kp = AesKey {
+                    rd_key: [0; 60],
+                    rounds: 0,
+                };
+                let mut kn = AesKey {
+                    rd_key: [0; 60],
+                    rounds: 0,
+                };
+                // SAFETY: live locals; the feature predicate above establishes `aes` for the
+                // NI callee, and the pointer extents are live arrays.
+                unsafe {
+                    assert_eq!(aes_expand_portable(key.as_ptr(), bits as c_int, &mut kp), 0);
+                    assert_eq!(aes_expand_ni(key.as_ptr(), bits as c_int, &mut kn), 0);
+                }
+                assert_eq!(kp.rounds, kn.rounds);
+                assert_eq!(kp.rd_key, kn.rd_key, "schedule bits={bits}");
+
+                let mut ek = AesKey {
+                    rd_key: [0; 60],
+                    rounds: 0,
+                };
+                // SAFETY: live locals.
+                unsafe {
+                    assert_eq!(AES_set_encrypt_key(key.as_ptr(), bits as c_int, &mut ek), 0);
+                }
+                let mut p = [0u8; 16];
+                let mut q = [0u8; 16];
+                // SAFETY: live locals; feature established above.
+                unsafe {
+                    aes_encrypt_portable(block.as_ptr(), p.as_mut_ptr(), &ek);
+                    aes_encrypt_ni(block.as_ptr(), q.as_mut_ptr(), &ek);
+                }
+                assert_eq!(p, q, "encrypt bits={bits}");
+
+                let mut dk = AesKey {
+                    rd_key: [0; 60],
+                    rounds: 0,
+                };
+                // SAFETY: live locals.
+                unsafe {
+                    assert_eq!(AES_set_decrypt_key(key.as_ptr(), bits as c_int, &mut dk), 0);
+                }
+                let mut r = [0u8; 16];
+                let mut s = [0u8; 16];
+                // SAFETY: live locals; feature established above.
+                unsafe {
+                    aes_decrypt_portable(p.as_ptr(), r.as_mut_ptr(), &dk);
+                    aes_decrypt_ni(p.as_ptr(), s.as_mut_ptr(), &dk);
+                }
+                assert_eq!(r, s, "decrypt bits={bits}");
+                assert_eq!(r, block, "round-trip bits={bits}");
             }
         }
     }

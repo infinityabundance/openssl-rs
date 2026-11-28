@@ -142,7 +142,21 @@ impl GcmCtx {
 /// byte-reversed and `H` halved once (`cipher_aes_gcm_siv_polyval.c:22-95`), and the crate's GCM
 /// model carries the field key rather than the authority's Shoup table, so those two helpers are
 /// written against this function rather than against a table lookup.
+///
+/// The multiply is dispatched once per process to the `pclmulqdq` arm when the CPU has it,
+/// else to [`gf_mul_portable`].
 pub(crate) fn gf_mul(x: u128, y: u128) -> u128 {
+    #[cfg(target_arch = "x86_64")]
+    if pclmul_available() {
+        // SAFETY: `pclmul_available` establishes the `pclmulqdq` target feature.
+        return unsafe { gf_mul_clmul(x, y) };
+    }
+    gf_mul_portable(x, y)
+}
+
+/// SP 800-38D Algorithm 1 in the bit-by-bit form: the portable fallback for CPUs without
+/// `pclmulqdq`.
+fn gf_mul_portable(x: u128, y: u128) -> u128 {
     let mut z: u128 = 0;
     let mut v = y;
     let mut i = 0u32;
@@ -158,6 +172,108 @@ pub(crate) fn gf_mul(x: u128, y: u128) -> u128 {
         i += 1;
     }
     z
+}
+
+/// The `PCLMULQDQ` bit in the first `OPENSSL_ia32cap` vector (`CPUID.(EAX=1).ECX` bit 1).
+/// Only the `~` clear mask is modelled, the form that forces the portable path.
+#[cfg(target_arch = "x86_64")]
+fn ia32cap_pclmul_cleared(spec: Option<&str>) -> bool {
+    let Some(first) = spec.and_then(|s| s.split(':').next()) else {
+        return false;
+    };
+    let Some(mask) = first.strip_prefix('~') else {
+        return false;
+    };
+    let mask = mask.trim_start_matches("0x").trim_start_matches("0X");
+    u64::from_str_radix(mask, 16)
+        .map(|m| m & (1u64 << 1) != 0)
+        .unwrap_or(false)
+}
+
+/// The PCLMULQDQ dispatch predicate — the only runtime feature-detection site on this path.
+///
+/// `BOUNDARY_COVERED`: `is_x86_feature_detected!` is a cached CPUID read with no memory or
+/// initialisation obligation; the `#[target_feature(enable = "pclmulqdq")]` callee executes
+/// only SSE2 moves (baseline on x86_64) and `pclmulqdq`, so the single bit is the whole
+/// precondition. The result is cached for the process, and `OPENSSL_ia32cap`'s clear mask
+/// overrides it to force the portable arm.
+#[cfg(target_arch = "x86_64")]
+fn pclmul_available() -> bool {
+    use std::sync::OnceLock;
+
+    static AVAILABLE: OnceLock<bool> = OnceLock::new();
+    *AVAILABLE.get_or_init(|| {
+        let spec = std::env::var("OPENSSL_ia32cap").ok();
+        if ia32cap_pclmul_cleared(spec.as_deref()) {
+            return false;
+        }
+        std::is_x86_feature_detected!("pclmulqdq")
+    })
+}
+
+/// Reduce a 256-bit carry-less product modulo `x^128 + x^7 + x^2 + x + 1`.
+///
+/// `lo` is the low 128 bits and `hi` the high 128. Since `x^128 = x^7 + x^2 + x + 1`, the
+/// first fold adds `hi << {7,2,1,0}` to `lo`, collecting the overflow bits
+/// `hi >> {121,126,127}` in `carry`, which is at most seven bits. The second fold adds
+/// `carry << {7,2,1,0}`, which is below `2^14` and so cannot overflow again. Two folds, fixed
+/// shift/XOR counts, no loop and no branch.
+#[cfg(target_arch = "x86_64")]
+#[inline]
+fn reduce_gcm(lo: u128, hi: u128) -> u128 {
+    let carry = (hi >> 121) ^ (hi >> 126) ^ (hi >> 127);
+    let acc = lo ^ (hi << 7) ^ (hi << 2) ^ (hi << 1) ^ hi;
+    acc ^ (carry << 7) ^ (carry << 2) ^ (carry << 1) ^ carry
+}
+
+/// The GHASH field multiply with `pclmulqdq`: carry-less multiply, fixed two-fold reduction.
+///
+/// GCM stores the coefficient of `x^0` in the most significant bit of the big-endian value,
+/// so the polynomial integers are the bit reversal of the `u128` operands: reverse in,
+/// carry-less multiply, reduce, reverse out. The reflection is pure arithmetic and the
+/// multiply/reduce are fixed-shape; no memory is indexed by either operand and no branch
+/// depends on them.
+///
+/// # Safety
+/// The caller must have established the `pclmulqdq` target feature.
+#[cfg(target_arch = "x86_64")]
+#[target_feature(enable = "pclmulqdq")]
+unsafe fn gf_mul_clmul(x: u128, y: u128) -> u128 {
+    use core::arch::x86_64::*;
+
+    // SAFETY: the caller establishes `pclmulqdq`; `a`/`b` are locals and every load is a
+    // sixteen-byte read of one of them.
+    unsafe {
+        let a = x.reverse_bits();
+        let b = y.reverse_bits();
+        let va = _mm_loadu_si128((&a as *const u128).cast());
+        let vb = _mm_loadu_si128((&b as *const u128).cast());
+
+        // Each product is a 128-bit polynomial; `l` is its low 64 bits, `h` its high 64.
+        let p00 = _mm_clmulepi64_si128::<0x00>(va, vb);
+        let p01 = _mm_clmulepi64_si128::<0x01>(va, vb);
+        let p10 = _mm_clmulepi64_si128::<0x10>(va, vb);
+        let p11 = _mm_clmulepi64_si128::<0x11>(va, vb);
+
+        let mut t = [0u64; 2];
+        _mm_storeu_si128(t.as_mut_ptr().cast(), p00);
+        let (l00, h00) = (t[0], t[1]);
+        _mm_storeu_si128(t.as_mut_ptr().cast(), p01);
+        let (l01, h01) = (t[0], t[1]);
+        _mm_storeu_si128(t.as_mut_ptr().cast(), p10);
+        let (l10, h10) = (t[0], t[1]);
+        _mm_storeu_si128(t.as_mut_ptr().cast(), p11);
+        let (l11, h11) = (t[0], t[1]);
+
+        // p11*2^128 + (p01 ^ p10)*2^64 + p00, with XOR (carry-less) addition.
+        let w0 = l00;
+        let w1 = h00 ^ l01 ^ l10;
+        let w2 = h01 ^ h10 ^ l11;
+        let w3 = h11;
+        let lo = ((w1 as u128) << 64) | w0 as u128;
+        let hi = ((w3 as u128) << 64) | w2 as u128;
+        reduce_gcm(lo, hi).reverse_bits()
+    }
 }
 
 /// `void ossl_gcm_init_4bit(u128 Htable[16], const u64 H[2])` — `crypto/modes/gcm128.c:563-569`.
@@ -705,6 +821,58 @@ mod tests {
         k
     }
 
+    /// The PCLMULQDQ field multiply is the same function as the bit-by-bit transcription over
+    /// random operands and the field's edge values (zero, one, all-ones, the reduction
+    /// constant), including when one operand is an `E(K, 0)`-shaped hash key.
+    #[cfg(all(test, target_arch = "x86_64"))]
+    #[test]
+    fn clmul_matches_portable_gf_mul() {
+        if !std::is_x86_feature_detected!("pclmulqdq") {
+            return;
+        }
+        let mut seed = 0x0f1e_2d3c_4b5a_6978u64;
+        let mut next128 = || {
+            let mut b = [0u8; 16];
+            for x in &mut b {
+                seed = seed
+                    .wrapping_mul(6364136223846793005)
+                    .wrapping_add(1442695040888963407);
+                *x = (seed >> 40) as u8;
+            }
+            u128::from_be_bytes(b)
+        };
+        let edges = [0u128, 1, u128::MAX, R, 1 << 127, 1 << 64];
+        let mut pairs = Vec::new();
+        for _ in 0..512 {
+            pairs.push((next128(), next128()));
+        }
+        for &e in &edges {
+            for &f in &edges {
+                pairs.push((e, f));
+            }
+        }
+        // Hash-key-shaped operand: `E(K, 0)` for a fixed key, taken from `AES_encrypt`.
+        let k = schedule(&[0x42u8; 16], 128);
+        let mut hb = [0u8; 16];
+        // SAFETY: live locals and a live schedule.
+        unsafe {
+            AES_encrypt([0u8; 16].as_ptr(), hb.as_mut_ptr(), &k);
+        }
+        let h = u128::from_be_bytes(hb);
+        for &e in &edges {
+            pairs.push((h, e));
+            pairs.push((e, h));
+        }
+
+        for (x, y) in pairs {
+            // SAFETY: the feature predicate above establishes `pclmulqdq`.
+            let got = unsafe { gf_mul_clmul(x, y) };
+            assert_eq!(got, gf_mul_portable(x, y), "x={x:032x} y={y:032x}");
+            // And the dispatcher agrees with the portable arm.
+            assert_eq!(gf_mul(x, y), gf_mul_portable(x, y));
+        }
+    }
+
     // SAFETY: forwards its arguments to `AES_encrypt`.
     unsafe extern "C" fn aes_block(input: *const u8, out: *mut u8, key: *const c_void) {
         // SAFETY: the caller's contract.
@@ -893,6 +1061,57 @@ mod tests {
 
             CRYPTO_gcm128_release(whole);
             CRYPTO_gcm128_release(split);
+        }
+    }
+
+    /// A one-bit change in any of the ciphertext, the AAD or the tag is rejected; the
+    /// unmodified quadruple is accepted. The three arms are separate so a tamper that only
+    /// happens to move the tag cannot stand in for the other two.
+    #[test]
+    fn gcm_rejects_tampered_ciphertext_aad_and_tag() {
+        let key = [0x42u8; 16];
+        let iv = [0x24u8; 12];
+        let aad = [0x11u8; 16];
+        let pt = [0x5au8; 32];
+        let k = schedule(&key, 128);
+        // SAFETY: live locals and a live schedule.
+        unsafe {
+            let mut ct = [0u8; 32];
+            let mut tag = [0u8; 16];
+            let seal = CRYPTO_gcm128_new((&k as *const AesKey).cast_mut().cast(), aes_block);
+            CRYPTO_gcm128_setiv(seal, iv.as_ptr(), iv.len());
+            assert_eq!(CRYPTO_gcm128_aad(seal, aad.as_ptr(), aad.len()), 0);
+            assert_eq!(
+                CRYPTO_gcm128_encrypt(seal, pt.as_ptr(), ct.as_mut_ptr(), pt.len()),
+                0
+            );
+            CRYPTO_gcm128_tag(seal, tag.as_mut_ptr(), 16);
+            CRYPTO_gcm128_release(seal);
+
+            let open = |c: &[u8], a: &[u8], t: &[u8]| -> c_int {
+                let ctx = CRYPTO_gcm128_new((&k as *const AesKey).cast_mut().cast(), aes_block);
+                CRYPTO_gcm128_setiv(ctx, iv.as_ptr(), iv.len());
+                assert_eq!(CRYPTO_gcm128_aad(ctx, a.as_ptr(), a.len()), 0);
+                let mut buf = [0u8; 32];
+                assert_eq!(
+                    CRYPTO_gcm128_decrypt(ctx, c.as_ptr(), buf.as_mut_ptr(), c.len()),
+                    0
+                );
+                let r = CRYPTO_gcm128_finish(ctx, t.as_ptr(), t.len());
+                CRYPTO_gcm128_release(ctx);
+                r
+            };
+
+            assert_eq!(open(&ct, &aad, &tag), 0);
+            let mut bad_ct = ct;
+            bad_ct[5] ^= 1;
+            assert_ne!(open(&bad_ct, &aad, &tag), 0);
+            let mut bad_aad = aad;
+            bad_aad[3] ^= 1;
+            assert_ne!(open(&ct, &bad_aad, &tag), 0);
+            let mut bad_tag = tag;
+            bad_tag[15] ^= 1;
+            assert_ne!(open(&ct, &aad, &bad_tag), 0);
         }
     }
 }

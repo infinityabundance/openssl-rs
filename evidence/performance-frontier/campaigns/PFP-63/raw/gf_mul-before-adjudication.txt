@@ -1,0 +1,58 @@
+gf_mul is inlined into CRYPTO_gcm128_aad (no out-of-line symbol in the DSO).
+The loop below is the complete per-block field multiply; ecx starts 0x7f and
+decrements to 0, so the back-edge `jb` executes a fixed 128 times.
+
+  2224e2:	49 0f c9             	bswap  r9
+  2224e5:	4c 33 4f 10          	xor    r9,QWORD PTR [rdi+0x10]
+  2224e9:	4c 33 57 18          	xor    r10,QWORD PTR [rdi+0x18]
+  2224ed:	b9 7f 00 00 00       	mov    ecx,0x7f
+  2224f2:	31 db                	xor    ebx,ebx
+  2224f4:	41 be 01 00 00 00    	mov    r14d,0x1
+  2224fa:	49 bf 00 00 00 00 00 	movabs r15,0xe100000000000000
+  222501:	00 00 e1 
+  222504:	45 31 e4             	xor    r12d,r12d
+  222507:	31 d2                	xor    edx,edx
+  222509:	0f 1f 80 00 00 00 00 	nop    DWORD PTR [rax+0x0]
+  222510:	31 ed                	xor    ebp,ebp
+  222512:	4c 0f a5 f5          	shld   rbp,r14,cl
+  222516:	41 bd 01 00 00 00    	mov    r13d,0x1
+  22251c:	49 d3 e5             	shl    r13,cl
+  22251f:	f6 c1 40             	test   cl,0x40
+  222522:	49 0f 45 ed          	cmovne rbp,r13
+  222526:	4c 0f 45 eb          	cmovne r13,rbx
+  22252a:	4c 21 cd             	and    rbp,r9
+  22252d:	4d 21 d5             	and    r13,r10
+  222530:	49 09 ed             	or     r13,rbp
+  222533:	4c 89 dd             	mov    rbp,r11
+  222536:	48 0f 44 eb          	cmove  rbp,rbx
+  22253a:	4d 89 c5             	mov    r13,r8
+  22253d:	4c 0f 44 eb          	cmove  r13,rbx
+  222541:	4c 31 ea             	xor    rdx,r13
+  222544:	49 31 ec             	xor    r12,rbp
+  222547:	4c 89 c5             	mov    rbp,r8
+  22254a:	4c 0f a4 dd 3f       	shld   rbp,r11,0x3f
+  22254f:	49 d1 e8             	shr    r8,1
+  222552:	4d 89 c5             	mov    r13,r8
+  222555:	4d 31 fd             	xor    r13,r15
+  222558:	41 f6 c3 01          	test   r11b,0x1
+  22255c:	4d 0f 45 c5          	cmovne r8,r13
+  222560:	49 89 eb             	mov    r11,rbp
+  222563:	83 c1 ff             	add    ecx,0xffffffff
+  222566:	72 a8                	jb     222510 <CRYPTO_gcm128_aad+0x100>
+  222568:	48 89 57 10          	mov    QWORD PTR [rdi+0x10],rdx
+  22256c:	4c 89 67 18          	mov    QWORD PTR [rdi+0x18],r12
+  222570:	0f 57 c0             	xorps  xmm0,xmm0
+  222573:	48 8d 4f 60          	lea    rcx,[rdi+0x60]
+  222577:	0f 11 01             	movups XMMWORD PTR [rcx],xmm0
+  22257a:	48 89 c2             	mov    rdx,rax
+  22257d:	48 89 d0             	mov    rax,rdx
+  222580:	48 83 e0 f0          	and    rax,0xfffffffffffffff0
+  222584:	0f 84 f5 00 00 00    	je     22267f <CRYPTO_gcm128_aad+0x26f>
+  22258a:	48 89 54 24 08       	mov    QWORD PTR [rsp+0x8],rdx
+  22258f:	4c 8b 7f 18          	mov    r15,QWORD PTR [rdi+0x18]
+  222593:	48 8b 0f             	mov    rcx,QWORD PTR [rdi]
+  222596:	48 89 4c 24 20       	mov    QWORD PTR [rsp+0x20],rcx
+  22259b:	48 8b 4f 08          	mov    rcx,QWORD PTR [rdi+0x8]
+  22259f:	48 89 4c 24 18       	mov    QWORD PTR [rsp+0x18],rcx
+  2225a4:	48 89 7c 24 10       	mov    QWORD PTR [rsp+0x10],rdi
+  2225a9:	4c 8b 67 10          	mov    r12,QWORD PTR [rdi+0x10]

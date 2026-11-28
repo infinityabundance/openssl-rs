@@ -1,0 +1,1730 @@
+{
+  "dso": "court/tmp/pfp63/before/libcrypto.so.3",
+  "functions": {
+    "AES_decrypt": {
+      "calls": [
+        "0x474a8d QWORD PTR [rip+0x44c0c5]        # 8c0b58 <_DYNAMIC+0x2880>",
+        "0x474a9a QWORD PTR [rip+0x44bd80]        # 8c0820 <_DYNAMIC+0x2548>"
+      ],
+      "cmov": [],
+      "crypto_instructions": [],
+      "indexed_lea_arithmetic": [
+        {
+          "at": "0x474465",
+          "mnemonic": "data16",
+          "operands": "cs nop WORD PTR [rax+rax*1+0x0]"
+        }
+      ],
+      "indexed_memory_operands": [
+        {
+          "at": "0x47448c",
+          "mnemonic": "movzx",
+          "operands": "r14d,BYTE PTR [r14+r10*1]"
+        },
+        {
+          "at": "0x474495",
+          "mnemonic": "movzx",
+          "operands": "edi,BYTE PTR [rdi+r10*1]"
+        },
+        {
+          "at": "0x4744a5",
+          "mnemonic": "movzx",
+          "operands": "ebx,BYTE PTR [rbx+r10*1]"
+        },
+        {
+          "at": "0x4744b3",
+          "mnemonic": "movzx",
+          "operands": "edi,BYTE PTR [r14+r10*1]"
+        },
+        {
+          "at": "0x4744c4",
+          "mnemonic": "movzx",
+          "operands": "eax,BYTE PTR [rax+r10*1]"
+        },
+        {
+          "at": "0x4744cc",
+          "mnemonic": "movzx",
+          "operands": "edi,BYTE PTR [rdi+r10*1]"
+        },
+        {
+          "at": "0x4744d5",
+          "mnemonic": "movzx",
+          "operands": "ebx,BYTE PTR [rbx+r10*1]"
+        },
+        {
+          "at": "0x4744e8",
+          "mnemonic": "movzx",
+          "operands": "eax,BYTE PTR [rsi+r10*1]"
+        },
+        {
+          "at": "0x474502",
+          "mnemonic": "movzx",
+          "operands": "eax,BYTE PTR [rax+r10*1]"
+        },
+        {
+          "at": "0x47450b",
+          "mnemonic": "movzx",
+          "operands": "edx,BYTE PTR [rdx+r10*1]"
+        },
+        {
+          "at": "0x474513",
+          "mnemonic": "movzx",
+          "operands": "ecx,BYTE PTR [rcx+r10*1]"
+        },
+        {
+          "at": "0x474527",
+          "mnemonic": "movzx",
+          "operands": "eax,BYTE PTR [rsi+r10*1]"
+        },
+        {
+          "at": "0x47453d",
+          "mnemonic": "movzx",
+          "operands": "eax,BYTE PTR [rax+r10*1]"
+        },
+        {
+          "at": "0x474547",
+          "mnemonic": "movzx",
+          "operands": "ecx,BYTE PTR [rcx+r10*1]"
+        },
+        {
+          "at": "0x474550",
+          "mnemonic": "movzx",
+          "operands": "edx,BYTE PTR [rdx+r10*1]"
+        },
+        {
+          "at": "0x474563",
+          "mnemonic": "movzx",
+          "operands": "eax,BYTE PTR [rsi+r10*1]"
+        },
+        {
+          "at": "0x474871",
+          "mnemonic": "mov",
+          "operands": "ebx,DWORD PTR [rbx+r10*4]"
+        },
+        {
+          "at": "0x47488f",
+          "mnemonic": "xor",
+          "operands": "bl,BYTE PTR [r10+r15*1]"
+        },
+        {
+          "at": "0x4748a5",
+          "mnemonic": "xor",
+          "operands": "bl,BYTE PTR [rax+r15*1]"
+        },
+        {
+          "at": "0x4748b7",
+          "mnemonic": "xor",
+          "operands": "bl,BYTE PTR [rax+r15*1]"
+        },
+        {
+          "at": "0x4748c3",
+          "mnemonic": "xor",
+          "operands": "r10b,BYTE PTR [rax+r15*1]"
+        },
+        {
+          "at": "0x4748db",
+          "mnemonic": "mov",
+          "operands": "r11d,DWORD PTR [r14+r10*4+0x4]"
+        },
+        {
+          "at": "0x4748e9",
+          "mnemonic": "xor",
+          "operands": "bl,BYTE PTR [rax+r15*1]"
+        },
+        {
+          "at": "0x4748fa",
+          "mnemonic": "xor",
+          "operands": "dl,BYTE PTR [rax+r15*1]"
+        },
+        {
+          "at": "0x47490c",
+          "mnemonic": "xor",
+          "operands": "dil,BYTE PTR [rax+r15*1]"
+        },
+        {
+          "at": "0x474914",
+          "mnemonic": "xor",
+          "operands": "r11b,BYTE PTR [rax+r15*1]"
+        },
+        {
+          "at": "0x47491c",
+          "mnemonic": "mov",
+          "operands": "r8d,DWORD PTR [r14+r10*4+0x8]"
+        },
+        {
+          "at": "0x47492a",
+          "mnemonic": "xor",
+          "operands": "dl,BYTE PTR [rax+r15*1]"
+        },
+        {
+          "at": "0x474939",
+          "mnemonic": "xor",
+          "operands": "r13b,BYTE PTR [rax+r15*1]"
+        },
+        {
+          "at": "0x474948",
+          "mnemonic": "xor",
+          "operands": "bl,BYTE PTR [rax+r15*1]"
+        },
+        {
+          "at": "0x47494f",
+          "mnemonic": "xor",
+          "operands": "r8b,BYTE PTR [rax+r15*1]"
+        },
+        {
+          "at": "0x474953",
+          "mnemonic": "mov",
+          "operands": "eax,DWORD PTR [r14+r10*4+0xc]"
+        },
+        {
+          "at": "0x474965",
+          "mnemonic": "xor",
+          "operands": "r9b,BYTE PTR [rcx+r15*1]"
+        },
+        {
+          "at": "0x474972",
+          "mnemonic": "xor",
+          "operands": "sil,BYTE PTR [rcx+r15*1]"
+        },
+        {
+          "at": "0x474981",
+          "mnemonic": "xor",
+          "operands": "r12b,BYTE PTR [rcx+r15*1]"
+        },
+        {
+          "at": "0x47498a",
+          "mnemonic": "xor",
+          "operands": "al,BYTE PTR [rcx+r15*1]"
+        }
+      ],
+      "jcc": [
+        {
+          "at": "0x474440",
+          "context": "cmp rbx,0x2 ; mov QWORD PTR [rsp+0x48],rdx",
+          "mnemonic": "jb",
+          "operands": "474845 <AES_decrypt+0x4f5>"
+        },
+        {
+          "at": "0x47447b",
+          "context": "mov QWORD PTR [rsp+0x8],r10 ; cmp QWORD PTR [rsp+0x20],0xf",
+          "mnemonic": "je",
+          "operands": "474a7c <AES_decrypt+0x72c>"
+        },
+        {
+          "at": "0x474838",
+          "context": "mov QWORD PTR [rsp+0x20],rbx ; cmp QWORD PTR [rsp+0x30],rbx",
+          "mnemonic": "jne",
+          "operands": "474470 <AES_decrypt+0x120>"
+        },
+        {
+          "at": "0x47485d",
+          "context": "shl r10,0x2 ; cmp ebx,0xe",
+          "mnemonic": "ja",
+          "operands": "474a95 <AES_decrypt+0x745>"
+        }
+      ],
+      "n_insns": 452,
+      "range": [
+        "0x474350",
+        "0x474aa0"
+      ],
+      "setcc": [],
+      "status": "PRESENT"
+    },
+    "AES_encrypt": {
+      "calls": [
+        "0x475331 QWORD PTR [rip+0x44b821]        # 8c0b58 <_DYNAMIC+0x2880>",
+        "0x475339 QWORD PTR [rip+0x44b4e1]        # 8c0820 <_DYNAMIC+0x2548>"
+      ],
+      "cmov": [
+        {
+          "at": "0x474c7b",
+          "context": "test bl,bl ; movzx esi,sil",
+          "mnemonic": "cmovns",
+          "operands": "esi,r10d"
+        },
+        {
+          "at": "0x474c8e",
+          "context": "mov esi,0x1b ; mov r8d,0x0",
+          "mnemonic": "cmovns",
+          "operands": "esi,r8d"
+        },
+        {
+          "at": "0x474ca3",
+          "context": "test r14b,r14b ; movzx r9d,r10b",
+          "mnemonic": "cmovns",
+          "operands": "r9d,esi"
+        },
+        {
+          "at": "0x474cb1",
+          "context": "mov DWORD PTR [rsp+0x6c],r9d ; mov esi,0x1b",
+          "mnemonic": "cmovns",
+          "operands": "esi,r8d"
+        },
+        {
+          "at": "0x474cc6",
+          "context": "movzx edx,dl ; movzx edi,dil",
+          "mnemonic": "cmovns",
+          "operands": "edi,edx"
+        },
+        {
+          "at": "0x474cd1",
+          "context": "mov DWORD PTR [rsp+0x70],edi ; movzx edx,r10b",
+          "mnemonic": "cmovns",
+          "operands": "edx,esi"
+        },
+        {
+          "at": "0x474d66",
+          "context": "test r9b,r9b ; movzx esi,sil",
+          "mnemonic": "cmovns",
+          "operands": "esi,r8d"
+        },
+        {
+          "at": "0x474d79",
+          "context": "mov esi,0x1b ; mov r9d,0x0",
+          "mnemonic": "cmovns",
+          "operands": "esi,r9d"
+        },
+        {
+          "at": "0x474d8b",
+          "context": "test r11b,r11b ; movzx r8d,r8b",
+          "mnemonic": "cmovns",
+          "operands": "r8d,esi"
+        },
+        {
+          "at": "0x474d99",
+          "context": "mov DWORD PTR [rsp+0x5c],r8d ; mov esi,0x1b",
+          "mnemonic": "cmovns",
+          "operands": "esi,r9d"
+        },
+        {
+          "at": "0x474dae",
+          "context": "movzx edx,dl ; movzx edi,dil",
+          "mnemonic": "cmovns",
+          "operands": "edi,edx"
+        },
+        {
+          "at": "0x474db9",
+          "context": "mov DWORD PTR [rsp+0x60],edi ; movzx edx,r8b",
+          "mnemonic": "cmovns",
+          "operands": "edx,esi"
+        },
+        {
+          "at": "0x474e3e",
+          "context": "test r8b,r8b ; movzx ecx,cl",
+          "mnemonic": "cmovns",
+          "operands": "ecx,edi"
+        },
+        {
+          "at": "0x474e50",
+          "context": "mov ecx,0x1b ; mov r8d,0x0",
+          "mnemonic": "cmovns",
+          "operands": "ecx,r8d"
+        },
+        {
+          "at": "0x474e61",
+          "context": "test r10b,r10b ; movzx edi,dil",
+          "mnemonic": "cmovns",
+          "operands": "edi,ecx"
+        },
+        {
+          "at": "0x474e6d",
+          "context": "mov DWORD PTR [rsp+0x4c],edi ; mov ecx,0x1b",
+          "mnemonic": "cmovns",
+          "operands": "ecx,r8d"
+        },
+        {
+          "at": "0x474e80",
+          "context": "movzx eax,al ; movzx edx,dl",
+          "mnemonic": "cmovns",
+          "operands": "edx,eax"
+        },
+        {
+          "at": "0x474e8b",
+          "context": "mov DWORD PTR [rsp+0x50],edx ; movzx eax,dil",
+          "mnemonic": "cmovns",
+          "operands": "eax,ecx"
+        },
+        {
+          "at": "0x474ef7",
+          "context": "test r10b,r10b ; movzx r9d,r9b",
+          "mnemonic": "cmovns",
+          "operands": "r9d,ebx"
+        },
+        {
+          "at": "0x474f07",
+          "context": "mov r12d,0x1b ; mov r15d,0x0",
+          "mnemonic": "cmovns",
+          "operands": "r12d,r15d"
+        },
+        {
+          "at": "0x474f17",
+          "context": "test dil,dil ; movzx ebx,bl",
+          "mnemonic": "cmovns",
+          "operands": "ebx,r12d"
+        },
+        {
+          "at": "0x474f21",
+          "context": "cmovns ebx,r12d ; mov r13d,0x1b",
+          "mnemonic": "cmovns",
+          "operands": "r13d,r15d"
+        },
+        {
+          "at": "0x474f36",
+          "context": "movzx r15d,al ; movzx eax,r14b",
+          "mnemonic": "cmovns",
+          "operands": "eax,r15d"
+        },
+        {
+          "at": "0x474f3e",
+          "context": "cmovns eax,r15d ; movzx r12d,r12b",
+          "mnemonic": "cmovns",
+          "operands": "r12d,r13d"
+        }
+      ],
+      "crypto_instructions": [],
+      "indexed_lea_arithmetic": [
+        {
+          "at": "0x474bd7",
+          "mnemonic": "nop",
+          "operands": "WORD PTR [rax+rax*1+0x0]"
+        },
+        {
+          "at": "0x474c30",
+          "mnemonic": "lea",
+          "operands": "r9d,[rsi+rsi*1]"
+        },
+        {
+          "at": "0x474c47",
+          "mnemonic": "lea",
+          "operands": "esi,[rdi+rdi*1]"
+        },
+        {
+          "at": "0x474d10",
+          "mnemonic": "lea",
+          "operands": "edi,[rsi+rsi*1]"
+        },
+        {
+          "at": "0x474d2d",
+          "mnemonic": "lea",
+          "operands": "esi,[r11+r11*1]"
+        },
+        {
+          "at": "0x474df6",
+          "mnemonic": "lea",
+          "operands": "esi,[rdx+rdx*1]"
+        },
+        {
+          "at": "0x474ec1",
+          "mnemonic": "lea",
+          "operands": "r8d,[r10+r10*1]"
+        },
+        {
+          "at": "0x474ec8",
+          "mnemonic": "lea",
+          "operands": "r9d,[rcx+rcx*1]"
+        },
+        {
+          "at": "0x474f70",
+          "mnemonic": "lea",
+          "operands": "ebx,[rdi+rdi*1]"
+        },
+        {
+          "at": "0x474fe5",
+          "mnemonic": "lea",
+          "operands": "edi,[r10+r10*1]"
+        },
+        {
+          "at": "0x475000",
+          "mnemonic": "lea",
+          "operands": "edx,[rcx+rcx*1]"
+        },
+        {
+          "at": "0x47506b",
+          "mnemonic": "lea",
+          "operands": "esi,[rcx+rcx*1]"
+        },
+        {
+          "at": "0x475087",
+          "mnemonic": "lea",
+          "operands": "edx,[rdi+rdi*1]"
+        },
+        {
+          "at": "0x4750f5",
+          "mnemonic": "lea",
+          "operands": "r13d,[rbx+rbx*1]"
+        },
+        {
+          "at": "0x475112",
+          "mnemonic": "lea",
+          "operands": "edi,[rcx+rcx*1]"
+        }
+      ],
+      "indexed_memory_operands": [
+        {
+          "at": "0x474bf4",
+          "mnemonic": "movzx",
+          "operands": "esi,BYTE PTR [rdx+r15*1]"
+        },
+        {
+          "at": "0x474bfd",
+          "mnemonic": "movzx",
+          "operands": "ebx,BYTE PTR [rdx+r15*1]"
+        },
+        {
+          "at": "0x474c06",
+          "mnemonic": "movzx",
+          "operands": "edi,BYTE PTR [rdx+r15*1]"
+        },
+        {
+          "at": "0x474c17",
+          "mnemonic": "movzx",
+          "operands": "r14d,BYTE PTR [rdx+r15*1]"
+        },
+        {
+          "at": "0x474cdd",
+          "mnemonic": "movzx",
+          "operands": "esi,BYTE PTR [rdx+r15*1]"
+        },
+        {
+          "at": "0x474ce7",
+          "mnemonic": "movzx",
+          "operands": "r10d,BYTE PTR [rdx+r15*1]"
+        },
+        {
+          "at": "0x474cf0",
+          "mnemonic": "movzx",
+          "operands": "r11d,BYTE PTR [rdx+r15*1]"
+        },
+        {
+          "at": "0x474cf9",
+          "mnemonic": "movzx",
+          "operands": "r8d,BYTE PTR [rdx+r15*1]"
+        },
+        {
+          "at": "0x474dc7",
+          "mnemonic": "movzx",
+          "operands": "edx,BYTE PTR [rdx+r15*1]"
+        },
+        {
+          "at": "0x474dcf",
+          "mnemonic": "movzx",
+          "operands": "esi,BYTE PTR [rcx+r15*1]"
+        },
+        {
+          "at": "0x474dd8",
+          "mnemonic": "movzx",
+          "operands": "ecx,BYTE PTR [rcx+r15*1]"
+        },
+        {
+          "at": "0x474ddd",
+          "mnemonic": "movzx",
+          "operands": "edi,BYTE PTR [rax+r15*1]"
+        },
+        {
+          "at": "0x474ea1",
+          "mnemonic": "movzx",
+          "operands": "r10d,BYTE PTR [rax+r15*1]"
+        },
+        {
+          "at": "0x474ea6",
+          "mnemonic": "movzx",
+          "operands": "edx,BYTE PTR [rcx+r15*1]"
+        },
+        {
+          "at": "0x474eb0",
+          "mnemonic": "movzx",
+          "operands": "ecx,BYTE PTR [rax+r15*1]"
+        },
+        {
+          "at": "0x474eb5",
+          "mnemonic": "movzx",
+          "operands": "edi,BYTE PTR [rdi+r15*1]"
+        },
+        {
+          "at": "0x4751b2",
+          "mnemonic": "mov",
+          "operands": "r15d,DWORD PTR [rdx+r10*4]"
+        },
+        {
+          "at": "0x4751c7",
+          "mnemonic": "xor",
+          "operands": "r8b,BYTE PTR [rsi+rdi*1]"
+        },
+        {
+          "at": "0x4751dc",
+          "mnemonic": "xor",
+          "operands": "r8b,BYTE PTR [rsi+rdi*1]"
+        },
+        {
+          "at": "0x4751f1",
+          "mnemonic": "xor",
+          "operands": "r8b,BYTE PTR [rsi+rdi*1]"
+        },
+        {
+          "at": "0x4751fd",
+          "mnemonic": "xor",
+          "operands": "r15b,BYTE PTR [rsi+rdi*1]"
+        },
+        {
+          "at": "0x475205",
+          "mnemonic": "mov",
+          "operands": "ebx,DWORD PTR [rdx+r10*4+0x4]"
+        },
+        {
+          "at": "0x475213",
+          "mnemonic": "xor",
+          "operands": "r8b,BYTE PTR [rsi+rdi*1]"
+        },
+        {
+          "at": "0x475228",
+          "mnemonic": "xor",
+          "operands": "dl,BYTE PTR [rsi+rdi*1]"
+        },
+        {
+          "at": "0x475236",
+          "mnemonic": "xor",
+          "operands": "dl,BYTE PTR [rsi+rdi*1]"
+        },
+        {
+          "at": "0x47523c",
+          "mnemonic": "xor",
+          "operands": "bl,BYTE PTR [rcx+rdi*1]"
+        },
+        {
+          "at": "0x475243",
+          "mnemonic": "mov",
+          "operands": "ecx,DWORD PTR [r13+r10*4+0x8]"
+        },
+        {
+          "at": "0x475251",
+          "mnemonic": "xor",
+          "operands": "r12b,BYTE PTR [rsi+rdi*1]"
+        },
+        {
+          "at": "0x47525f",
+          "mnemonic": "xor",
+          "operands": "al,BYTE PTR [rsi+rdi*1]"
+        },
+        {
+          "at": "0x47526d",
+          "mnemonic": "xor",
+          "operands": "r11b,BYTE PTR [rsi+rdi*1]"
+        },
+        {
+          "at": "0x475276",
+          "mnemonic": "xor",
+          "operands": "cl,BYTE PTR [rsi+rdi*1]"
+        },
+        {
+          "at": "0x475279",
+          "mnemonic": "mov",
+          "operands": "r8d,DWORD PTR [r13+r10*4+0xc]"
+        },
+        {
+          "at": "0x47528d",
+          "mnemonic": "xor",
+          "operands": "r13b,BYTE PTR [rsi+rdi*1]"
+        },
+        {
+          "at": "0x47529c",
+          "mnemonic": "xor",
+          "operands": "bpl,BYTE PTR [rsi+rdi*1]"
+        },
+        {
+          "at": "0x4752ab",
+          "mnemonic": "xor",
+          "operands": "r10b,BYTE PTR [rsi+rdi*1]"
+        },
+        {
+          "at": "0x4752b4",
+          "mnemonic": "xor",
+          "operands": "r8b,BYTE PTR [rsi+rdi*1]"
+        }
+      ],
+      "jcc": [
+        {
+          "at": "0x474b8b",
+          "context": "movsxd r10,DWORD PTR [rdx+0xf0] ; cmp r10,0x2",
+          "mnemonic": "jb",
+          "operands": "4751a2 <AES_encrypt+0x6e2>"
+        },
+        {
+          "at": "0x474ba1",
+          "context": "lea rsi,[r10-0x10] ; cmp rsi,0xfffffffffffffff2",
+          "mnemonic": "jb",
+          "operands": "47531c <AES_encrypt+0x85c>"
+        },
+        {
+          "at": "0x47515b",
+          "context": "add QWORD PTR [rsp+0x28],0x10 ; dec rdx",
+          "mnemonic": "jne",
+          "operands": "474be0 <AES_encrypt+0x120>"
+        },
+        {
+          "at": "0x47519b",
+          "context": "mov r15d,DWORD PTR [rsp+0x10] ; mov r12d,DWORD PTR [rsp]",
+          "mnemonic": "jbe",
+          "operands": "4751ae <AES_encrypt+0x6ee>"
+        }
+      ],
+      "n_insns": 570,
+      "range": [
+        "0x474ac0",
+        "0x47533f"
+      ],
+      "setcc": [],
+      "status": "PRESENT"
+    },
+    "CRYPTO_gcm128_aad": {
+      "calls": [
+        "0x222788 QWORD PTR [rip+0x69e3ca]        # 8c0b58 <_DYNAMIC+0x2880>",
+        "0x222797 QWORD PTR [rip+0x69d233]        # 8bf9d0 <_DYNAMIC+0x16f8>",
+        "0x22279f QWORD PTR [rip+0x69e07b]        # 8c0820 <_DYNAMIC+0x2548>"
+      ],
+      "cmov": [
+        {
+          "at": "0x222482",
+          "context": "cmp rdx,r11 ; mov rcx,r11",
+          "mnemonic": "cmovb",
+          "operands": "rcx,rdx"
+        },
+        {
+          "at": "0x222522",
+          "context": "shl r13,cl ; test cl,0x40",
+          "mnemonic": "cmovne",
+          "operands": "rbp,r13"
+        },
+        {
+          "at": "0x222526",
+          "context": "test cl,0x40 ; cmovne rbp,r13",
+          "mnemonic": "cmovne",
+          "operands": "r13,rbx"
+        },
+        {
+          "at": "0x222536",
+          "context": "or r13,rbp ; mov rbp,r11",
+          "mnemonic": "cmove",
+          "operands": "rbp,rbx"
+        },
+        {
+          "at": "0x22253d",
+          "context": "cmove rbp,rbx ; mov r13,r8",
+          "mnemonic": "cmove",
+          "operands": "r13,rbx"
+        },
+        {
+          "at": "0x22255c",
+          "context": "xor r13,r15 ; test r11b,0x1",
+          "mnemonic": "cmovne",
+          "operands": "r8,r13"
+        },
+        {
+          "at": "0x222611",
+          "context": "shl rdx,cl ; test cl,0x40",
+          "mnemonic": "cmovne",
+          "operands": "rdi,rdx"
+        },
+        {
+          "at": "0x222615",
+          "context": "test cl,0x40 ; cmovne rdi,rdx",
+          "mnemonic": "cmovne",
+          "operands": "rdx,r10"
+        },
+        {
+          "at": "0x222625",
+          "context": "or rdx,rdi ; mov rdx,r9",
+          "mnemonic": "cmove",
+          "operands": "rdx,r10"
+        },
+        {
+          "at": "0x22262c",
+          "context": "cmove rdx,r10 ; mov rdi,r8",
+          "mnemonic": "cmove",
+          "operands": "rdi,r10"
+        },
+        {
+          "at": "0x22264b",
+          "context": "xor rdi,r14 ; test r9b,0x1",
+          "mnemonic": "cmovne",
+          "operands": "r8,rdi"
+        }
+      ],
+      "crypto_instructions": [],
+      "indexed_lea_arithmetic": [
+        {
+          "at": "0x22248b",
+          "mnemonic": "lea",
+          "operands": "r10,[rdi+rax*1]"
+        },
+        {
+          "at": "0x2225c7",
+          "mnemonic": "nop",
+          "operands": "WORD PTR [rax+rax*1+0x0]"
+        },
+        {
+          "at": "0x2225fa",
+          "mnemonic": "nop",
+          "operands": "WORD PTR [rax+rax*1+0x0]"
+        }
+      ],
+      "indexed_memory_operands": [
+        {
+          "at": "0x222496",
+          "mnemonic": "cs",
+          "operands": "nop WORD PTR [rax+rax*1+0x0]"
+        },
+        {
+          "at": "0x2224a9",
+          "mnemonic": "movzx",
+          "operands": "r9d,BYTE PTR [rsi+r8*1]"
+        },
+        {
+          "at": "0x2224ae",
+          "mnemonic": "xor",
+          "operands": "BYTE PTR [r10+r8*1],r9b"
+        },
+        {
+          "at": "0x2225d0",
+          "mnemonic": "mov",
+          "operands": "r13,QWORD PTR [rsi+rcx*1]"
+        },
+        {
+          "at": "0x2225d4",
+          "mnemonic": "mov",
+          "operands": "rbp,QWORD PTR [rsi+rcx*1+0x8]"
+        }
+      ],
+      "jcc": [
+        {
+          "at": "0x222428",
+          "context": "mov eax,0xfffffffe ; cmp QWORD PTR [rdi+0x78],0x0",
+          "mnemonic": "jne",
+          "operands": "222768 <CRYPTO_gcm128_aad+0x358>"
+        },
+        {
+          "at": "0x222451",
+          "context": "or r8b,al ; mov eax,0xffffffff",
+          "mnemonic": "jne",
+          "operands": "222768 <CRYPTO_gcm128_aad+0x358>"
+        },
+        {
+          "at": "0x222464",
+          "context": "mov eax,DWORD PTR [rdi+0x84] ; test rax,rax",
+          "mnemonic": "je",
+          "operands": "22257d <CRYPTO_gcm128_aad+0x16d>"
+        },
+        {
+          "at": "0x22246d",
+          "context": "je 22257d <CRYPTO_gcm128_aad+0x16d> ; cmp eax,0x10",
+          "mnemonic": "ja",
+          "operands": "222790 <CRYPTO_gcm128_aad+0x380>"
+        },
+        {
+          "at": "0x222489",
+          "context": "cmovb rcx,rdx ; test rcx,rcx",
+          "mnemonic": "je",
+          "operands": "2224ba <CRYPTO_gcm128_aad+0xaa>"
+        },
+        {
+          "at": "0x2224a3",
+          "context": "cs nop WORD PTR [rax+rax*1+0x0] ; cmp r11,r8",
+          "mnemonic": "je",
+          "operands": "222777 <CRYPTO_gcm128_aad+0x367>"
+        },
+        {
+          "at": "0x2224b8",
+          "context": "inc r8 ; cmp rcx,r8",
+          "mnemonic": "jne",
+          "operands": "2224a0 <CRYPTO_gcm128_aad+0x90>"
+        },
+        {
+          "at": "0x2224c1",
+          "context": "add rax,rcx ; cmp rax,0x10",
+          "mnemonic": "jne",
+          "operands": "22275a <CRYPTO_gcm128_aad+0x34a>"
+        },
+        {
+          "at": "0x222566",
+          "context": "mov r11,rbp ; add ecx,0xffffffff",
+          "mnemonic": "jb",
+          "operands": "222510 <CRYPTO_gcm128_aad+0x100>"
+        },
+        {
+          "at": "0x222584",
+          "context": "mov rax,rdx ; and rax,0xfffffffffffffff0",
+          "mnemonic": "je",
+          "operands": "22267f <CRYPTO_gcm128_aad+0x26f>"
+        },
+        {
+          "at": "0x222655",
+          "context": "mov r9,rdx ; add ecx,0xffffffff",
+          "mnemonic": "jb",
+          "operands": "222600 <CRYPTO_gcm128_aad+0x1f0>"
+        },
+        {
+          "at": "0x222661",
+          "context": "mov rcx,r11 ; lea r11,[r11+0x10]",
+          "mnemonic": "jb",
+          "operands": "2225d0 <CRYPTO_gcm128_aad+0x1c0>"
+        },
+        {
+          "at": "0x222682",
+          "context": "add rsi,rax ; test rdx,rdx",
+          "mnemonic": "je",
+          "operands": "22275e <CRYPTO_gcm128_aad+0x34e>"
+        },
+        {
+          "at": "0x222692",
+          "context": "xor BYTE PTR [rdi+0x60],al ; cmp rdx,0x1",
+          "mnemonic": "je",
+          "operands": "222760 <CRYPTO_gcm128_aad+0x350>"
+        },
+        {
+          "at": "0x2226a3",
+          "context": "xor BYTE PTR [rdi+0x61],al ; cmp rdx,0x2",
+          "mnemonic": "je",
+          "operands": "222760 <CRYPTO_gcm128_aad+0x350>"
+        },
+        {
+          "at": "0x2226b4",
+          "context": "xor BYTE PTR [rdi+0x62],al ; cmp rdx,0x3",
+          "mnemonic": "je",
+          "operands": "222760 <CRYPTO_gcm128_aad+0x350>"
+        },
+        {
+          "at": "0x2226c5",
+          "context": "xor BYTE PTR [rdi+0x63],al ; cmp rdx,0x4",
+          "mnemonic": "je",
+          "operands": "222760 <CRYPTO_gcm128_aad+0x350>"
+        },
+        {
+          "at": "0x2226d6",
+          "context": "xor BYTE PTR [rdi+0x64],al ; cmp rdx,0x5",
+          "mnemonic": "je",
+          "operands": "222760 <CRYPTO_gcm128_aad+0x350>"
+        },
+        {
+          "at": "0x2226e7",
+          "context": "xor BYTE PTR [rdi+0x65],al ; cmp rdx,0x6",
+          "mnemonic": "je",
+          "operands": "222760 <CRYPTO_gcm128_aad+0x350>"
+        },
+        {
+          "at": "0x2226f4",
+          "context": "xor BYTE PTR [rdi+0x66],al ; cmp rdx,0x7",
+          "mnemonic": "je",
+          "operands": "222760 <CRYPTO_gcm128_aad+0x350>"
+        },
+        {
+          "at": "0x222701",
+          "context": "xor BYTE PTR [rdi+0x67],al ; cmp rdx,0x8",
+          "mnemonic": "je",
+          "operands": "222760 <CRYPTO_gcm128_aad+0x350>"
+        },
+        {
+          "at": "0x22270e",
+          "context": "xor BYTE PTR [rdi+0x68],al ; cmp rdx,0x9",
+          "mnemonic": "je",
+          "operands": "222760 <CRYPTO_gcm128_aad+0x350>"
+        },
+        {
+          "at": "0x22271b",
+          "context": "xor BYTE PTR [rdi+0x69],al ; cmp rdx,0xa",
+          "mnemonic": "je",
+          "operands": "222760 <CRYPTO_gcm128_aad+0x350>"
+        },
+        {
+          "at": "0x222728",
+          "context": "xor BYTE PTR [rdi+0x6a],al ; cmp rdx,0xb",
+          "mnemonic": "je",
+          "operands": "222760 <CRYPTO_gcm128_aad+0x350>"
+        },
+        {
+          "at": "0x222735",
+          "context": "xor BYTE PTR [rdi+0x6b],al ; cmp rdx,0xc",
+          "mnemonic": "je",
+          "operands": "222760 <CRYPTO_gcm128_aad+0x350>"
+        },
+        {
+          "at": "0x222742",
+          "context": "xor BYTE PTR [rdi+0x6c],al ; cmp rdx,0xd",
+          "mnemonic": "je",
+          "operands": "222760 <CRYPTO_gcm128_aad+0x350>"
+        },
+        {
+          "at": "0x22274f",
+          "context": "xor BYTE PTR [rdi+0x6d],al ; cmp rdx,0xe",
+          "mnemonic": "je",
+          "operands": "222760 <CRYPTO_gcm128_aad+0x350>"
+        }
+      ],
+      "n_insns": 246,
+      "range": [
+        "0x222410",
+        "0x2227a5"
+      ],
+      "setcc": [
+        {
+          "at": "0x222435",
+          "context": "mov rcx,QWORD PTR [rdi+0x70] ; add rcx,rdx",
+          "mnemonic": "setb",
+          "operands": "al"
+        },
+        {
+          "at": "0x222445",
+          "context": "movabs r8,0x2000000000000000 ; cmp rcx,r8",
+          "mnemonic": "seta",
+          "operands": "r8b"
+        }
+      ],
+      "status": "PRESENT"
+    },
+    "CRYPTO_gcm128_decrypt": {
+      "calls": [
+        "0x2227b7 230800 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs5modes3gcm5crypt.llvm.3256867274980599799>",
+        "0x2227be QWORD PTR [rip+0x69e05c]        # 8c0820 <_DYNAMIC+0x2548>"
+      ],
+      "cmov": [],
+      "crypto_instructions": [],
+      "indexed_lea_arithmetic": [],
+      "indexed_memory_operands": [],
+      "jcc": [],
+      "n_insns": 6,
+      "range": [
+        "0x2227b0",
+        "0x2227c4"
+      ],
+      "setcc": [],
+      "status": "PRESENT"
+    },
+    "CRYPTO_gcm128_encrypt": {
+      "calls": [
+        "0x2227f4 230800 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs5modes3gcm5crypt.llvm.3256867274980599799>",
+        "0x2227fb QWORD PTR [rip+0x69e01f]        # 8c0820 <_DYNAMIC+0x2548>"
+      ],
+      "cmov": [],
+      "crypto_instructions": [],
+      "indexed_lea_arithmetic": [],
+      "indexed_memory_operands": [],
+      "jcc": [],
+      "n_insns": 6,
+      "range": [
+        "0x2227f0",
+        "0x222801"
+      ],
+      "setcc": [],
+      "status": "PRESENT"
+    },
+    "CRYPTO_gcm128_finish": {
+      "calls": [],
+      "cmov": [
+        {
+          "at": "0x2228b1",
+          "context": "shl rdx,cl ; test cl,0x40",
+          "mnemonic": "cmovne",
+          "operands": "rax,rdx"
+        },
+        {
+          "at": "0x2228b5",
+          "context": "test cl,0x40 ; cmovne rax,rdx",
+          "mnemonic": "cmovne",
+          "operands": "rdx,r15"
+        },
+        {
+          "at": "0x2228c5",
+          "context": "or rdx,rax ; mov rax,rbp",
+          "mnemonic": "cmove",
+          "operands": "rax,r15"
+        },
+        {
+          "at": "0x2228cc",
+          "context": "cmove rax,r15 ; mov rdx,r13",
+          "mnemonic": "cmove",
+          "operands": "rdx,r15"
+        },
+        {
+          "at": "0x2228eb",
+          "context": "xor rdx,rsi ; test bpl,0x1",
+          "mnemonic": "cmovne",
+          "operands": "r13,rdx"
+        },
+        {
+          "at": "0x222971",
+          "context": "shl rdx,cl ; test cl,0x40",
+          "mnemonic": "cmovne",
+          "operands": "rax,rdx"
+        },
+        {
+          "at": "0x222975",
+          "context": "test cl,0x40 ; cmovne rax,rdx",
+          "mnemonic": "cmovne",
+          "operands": "rdx,r15"
+        },
+        {
+          "at": "0x222985",
+          "context": "or rdx,rax ; mov rax,rbp",
+          "mnemonic": "cmove",
+          "operands": "rax,r15"
+        },
+        {
+          "at": "0x22298c",
+          "context": "cmove rax,r15 ; mov rdx,r13",
+          "mnemonic": "cmove",
+          "operands": "rdx,r15"
+        },
+        {
+          "at": "0x2229ab",
+          "context": "xor rdx,rsi ; test bpl,0x1",
+          "mnemonic": "cmovne",
+          "operands": "r13,rdx"
+        },
+        {
+          "at": "0x222a01",
+          "context": "shl rdx,cl ; test cl,0x40",
+          "mnemonic": "cmovne",
+          "operands": "rax,rdx"
+        },
+        {
+          "at": "0x222a05",
+          "context": "test cl,0x40 ; cmovne rax,rdx",
+          "mnemonic": "cmovne",
+          "operands": "rdx,r15"
+        },
+        {
+          "at": "0x222a15",
+          "context": "or rdx,rax ; mov rax,r9",
+          "mnemonic": "cmove",
+          "operands": "rax,r15"
+        },
+        {
+          "at": "0x222a1c",
+          "context": "cmove rax,r15 ; mov rdx,r8",
+          "mnemonic": "cmove",
+          "operands": "rdx,r15"
+        },
+        {
+          "at": "0x222a3b",
+          "context": "xor rdx,rsi ; test r9b,0x1",
+          "mnemonic": "cmovne",
+          "operands": "r8,rdx"
+        }
+      ],
+      "crypto_instructions": [],
+      "indexed_lea_arithmetic": [
+        {
+          "at": "0x222895",
+          "mnemonic": "data16",
+          "operands": "cs nop WORD PTR [rax+rax*1+0x0]"
+        },
+        {
+          "at": "0x222952",
+          "mnemonic": "data16",
+          "operands": "data16 data16 data16 cs nop WORD PTR [rax+rax*1+0x0]"
+        }
+      ],
+      "indexed_memory_operands": [
+        {
+          "at": "0x222c50",
+          "mnemonic": "mov",
+          "operands": "ecx,DWORD PTR [rsi+rdi*1]"
+        },
+        {
+          "at": "0x222c53",
+          "mnemonic": "xor",
+          "operands": "ecx,DWORD PTR [rsp+rdi*1-0x18]"
+        },
+        {
+          "at": "0x222c88",
+          "mnemonic": "movzx",
+          "operands": "edx,BYTE PTR [rsi+rax*1]"
+        },
+        {
+          "at": "0x222c8c",
+          "mnemonic": "xor",
+          "operands": "dl,BYTE PTR [rsp+rax*1-0x18]"
+        }
+      ],
+      "jcc": [
+        {
+          "at": "0x222853",
+          "context": "movabs rsi,0xe100000000000000 ; e1 ",
+          "mnemonic": "je",
+          "operands": "222906 <CRYPTO_gcm128_finish+0xd6>"
+        },
+        {
+          "at": "0x2228f5",
+          "context": "mov rbp,rax ; add ecx,0xffffffff",
+          "mnemonic": "jb",
+          "operands": "2228a0 <CRYPTO_gcm128_finish+0x70>"
+        },
+        {
+          "at": "0x222911",
+          "context": "cmp DWORD PTR [rdi+0x84],0x0 ; mov r10,QWORD PTR [rdi+0x10]",
+          "mnemonic": "je",
+          "operands": "222be2 <CRYPTO_gcm128_finish+0x3b2>"
+        },
+        {
+          "at": "0x2229b5",
+          "context": "mov rbp,rax ; add ecx,0xffffffff",
+          "mnemonic": "jb",
+          "operands": "222960 <CRYPTO_gcm128_finish+0x130>"
+        },
+        {
+          "at": "0x222a45",
+          "context": "mov r9,rax ; add ecx,0xffffffff",
+          "mnemonic": "jb",
+          "operands": "2229f0 <CRYPTO_gcm128_finish+0x1c0>"
+        },
+        {
+          "at": "0x222bab",
+          "context": "or dl,al ; mov eax,0xffffffff",
+          "mnemonic": "jne",
+          "operands": "222ca1 <CRYPTO_gcm128_finish+0x471>"
+        },
+        {
+          "at": "0x222bbe",
+          "context": "mov QWORD PTR [rsp-0x10],r8 ; test r13,r13",
+          "mnemonic": "je",
+          "operands": "222bcf <CRYPTO_gcm128_finish+0x39f>"
+        },
+        {
+          "at": "0x222bc4",
+          "context": "je 222bcf <CRYPTO_gcm128_finish+0x39f> ; cmp r13,0x4",
+          "mnemonic": "jae",
+          "operands": "222bd6 <CRYPTO_gcm128_finish+0x3a6>"
+        },
+        {
+          "at": "0x222bda",
+          "context": "jmp 222ca1 <CRYPTO_gcm128_finish+0x471> ; cmp r13,0x10",
+          "mnemonic": "jae",
+          "operands": "222bf2 <CRYPTO_gcm128_finish+0x3c2>"
+        },
+        {
+          "at": "0x222c35",
+          "context": "movd ecx,xmm0 ; cmp r13,rax",
+          "mnemonic": "je",
+          "operands": "222c9a <CRYPTO_gcm128_finish+0x46a>"
+        },
+        {
+          "at": "0x222c3b",
+          "context": "je 222c9a <CRYPTO_gcm128_finish+0x46a> ; test r13b,0xc",
+          "mnemonic": "je",
+          "operands": "222c88 <CRYPTO_gcm128_finish+0x458>"
+        },
+        {
+          "at": "0x222c66",
+          "context": "add rdi,0x4 ; cmp rax,rdi",
+          "mnemonic": "jne",
+          "operands": "222c50 <CRYPTO_gcm128_finish+0x420>"
+        },
+        {
+          "at": "0x222c98",
+          "context": "or cl,dl ; cmp r13,rax",
+          "mnemonic": "jne",
+          "operands": "222c88 <CRYPTO_gcm128_finish+0x458>"
+        }
+      ],
+      "n_insns": 323,
+      "range": [
+        "0x222830",
+        "0x222cac"
+      ],
+      "setcc": [
+        {
+          "at": "0x222b9a",
+          "context": "mov rsi,QWORD PTR [rsp-0x8] ; test rsi,rsi",
+          "mnemonic": "sete",
+          "operands": "al"
+        },
+        {
+          "at": "0x222ba1",
+          "context": "sete al ; cmp r13,0x11",
+          "mnemonic": "setae",
+          "operands": "dl"
+        },
+        {
+          "at": "0x222c9e",
+          "context": "xor eax,eax ; test cl,cl",
+          "mnemonic": "setne",
+          "operands": "al"
+        }
+      ],
+      "status": "PRESENT"
+    },
+    "CRYPTO_gcm128_setiv": {
+      "calls": [
+        "0x222f84 QWORD PTR [rip+0x69d526]        # 8c04b0 <memcpy@GLIBC_2.14>",
+        "0x2230ef rax"
+      ],
+      "cmov": [
+        {
+          "at": "0x222f11",
+          "context": "shl rax,cl ; test cl,0x40",
+          "mnemonic": "cmovne",
+          "operands": "rbx,rax"
+        },
+        {
+          "at": "0x222f15",
+          "context": "test cl,0x40 ; cmovne rbx,rax",
+          "mnemonic": "cmovne",
+          "operands": "rax,r8"
+        },
+        {
+          "at": "0x222f25",
+          "context": "or rax,rbx ; mov rax,rdi",
+          "mnemonic": "cmove",
+          "operands": "rax,r8"
+        },
+        {
+          "at": "0x222f2c",
+          "context": "cmove rax,r8 ; mov rbx,rbp",
+          "mnemonic": "cmove",
+          "operands": "rbx,r8"
+        },
+        {
+          "at": "0x222f4b",
+          "context": "xor rbx,r15 ; test dil,0x1",
+          "mnemonic": "cmovne",
+          "operands": "rbp,rbx"
+        },
+        {
+          "at": "0x222fe2",
+          "context": "shl rbx,cl ; test cl,0x40",
+          "mnemonic": "cmovne",
+          "operands": "r11,rbx"
+        },
+        {
+          "at": "0x222fe6",
+          "context": "test cl,0x40 ; cmovne r11,rbx",
+          "mnemonic": "cmovne",
+          "operands": "rbx,rdi"
+        },
+        {
+          "at": "0x222ff6",
+          "context": "or rbx,r11 ; mov r11,r10",
+          "mnemonic": "cmove",
+          "operands": "r11,rdi"
+        },
+        {
+          "at": "0x222ffd",
+          "context": "cmove r11,rdi ; mov rbx,r9",
+          "mnemonic": "cmove",
+          "operands": "rbx,rdi"
+        },
+        {
+          "at": "0x22301c",
+          "context": "xor rbx,r15 ; test r10b,0x1",
+          "mnemonic": "cmovne",
+          "operands": "r9,rbx"
+        },
+        {
+          "at": "0x223072",
+          "context": "shl r9,cl ; test cl,0x40",
+          "mnemonic": "cmovne",
+          "operands": "rdx,r9"
+        },
+        {
+          "at": "0x223076",
+          "context": "test cl,0x40 ; cmovne rdx,r9",
+          "mnemonic": "cmovne",
+          "operands": "r9,rsi"
+        },
+        {
+          "at": "0x223086",
+          "context": "or r9,rdx ; mov rdx,rax",
+          "mnemonic": "cmove",
+          "operands": "rdx,rsi"
+        },
+        {
+          "at": "0x22308d",
+          "context": "cmove rdx,rsi ; mov r9,r14",
+          "mnemonic": "cmove",
+          "operands": "r9,rsi"
+        },
+        {
+          "at": "0x2230aa",
+          "context": "xor r9,r15 ; test al,0x1",
+          "mnemonic": "cmovne",
+          "operands": "r14,r9"
+        }
+      ],
+      "crypto_instructions": [],
+      "indexed_lea_arithmetic": [
+        {
+          "at": "0x222ec3",
+          "mnemonic": "data16",
+          "operands": "data16 data16 cs nop WORD PTR [rax+rax*1+0x0]"
+        },
+        {
+          "at": "0x222fc1",
+          "mnemonic": "data16",
+          "operands": "data16 data16 data16 data16 cs nop WORD PTR [rax+rax*1+0x0]"
+        }
+      ],
+      "indexed_memory_operands": [
+        {
+          "at": "0x222ef6",
+          "mnemonic": "cs",
+          "operands": "nop WORD PTR [rax+rax*1+0x0]"
+        }
+      ],
+      "jcc": [
+        {
+          "at": "0x222e67",
+          "context": "mov QWORD PTR [rdi+0x80],0x0 ; cmp rdx,0xc",
+          "mnemonic": "jne",
+          "operands": "222e88 <CRYPTO_gcm128_setiv+0x48>"
+        },
+        {
+          "at": "0x222ea5",
+          "context": "mov QWORD PTR [rsp],rbx ; mov QWORD PTR [rsp+0x8],rdx",
+          "mnemonic": "jb",
+          "operands": "22302e <CRYPTO_gcm128_setiv+0x1ee>"
+        },
+        {
+          "at": "0x222f55",
+          "context": "mov rdi,rax ; add ecx,0xffffffff",
+          "mnemonic": "jb",
+          "operands": "222f00 <CRYPTO_gcm128_setiv+0xc0>"
+        },
+        {
+          "at": "0x222f63",
+          "context": "add rsi,0x10 ; cmp rdx,0xf",
+          "mnemonic": "ja",
+          "operands": "222ed0 <CRYPTO_gcm128_setiv+0x90>"
+        },
+        {
+          "at": "0x222f6c",
+          "context": "ja 222ed0 <CRYPTO_gcm128_setiv+0x90> ; test rdx,rdx",
+          "mnemonic": "je",
+          "operands": "22303a <CRYPTO_gcm128_setiv+0x1fa>"
+        },
+        {
+          "at": "0x223026",
+          "context": "mov r10,r11 ; add ecx,0xffffffff",
+          "mnemonic": "jb",
+          "operands": "222fd0 <CRYPTO_gcm128_setiv+0x190>"
+        },
+        {
+          "at": "0x223034",
+          "context": "xor r12d,r12d ; test rdx,rdx",
+          "mnemonic": "jne",
+          "operands": "222f72 <CRYPTO_gcm128_setiv+0x132>"
+        },
+        {
+          "at": "0x2230b4",
+          "context": "mov rax,rdx ; add ecx,0xffffffff",
+          "mnemonic": "jb",
+          "operands": "223060 <CRYPTO_gcm128_setiv+0x220>"
+        },
+        {
+          "at": "0x2230de",
+          "context": "mov rax,QWORD PTR [rbx+0x88] ; test rax,rax",
+          "mnemonic": "je",
+          "operands": "2230f5 <CRYPTO_gcm128_setiv+0x2b5>"
+        }
+      ],
+      "n_insns": 192,
+      "range": [
+        "0x222e40",
+        "0x223104"
+      ],
+      "setcc": [],
+      "status": "PRESENT"
+    },
+    "openssl_rs::aes::aes_decrypt_ni": {
+      "status": "ABSENT"
+    },
+    "openssl_rs::aes::aes_encrypt_ni": {
+      "status": "ABSENT"
+    },
+    "openssl_rs::aes::aes_expand_ni": {
+      "status": "ABSENT"
+    },
+    "openssl_rs::modes::gcm::crypt": {
+      "calls": [
+        "0x2309b1 QWORD PTR [rsp+0x30]",
+        "0x230b71 QWORD PTR [rip+0x68f819]        # 8c0390 <_DYNAMIC+0x20b8>",
+        "0x230b83 QWORD PTR [rip+0x68ffcf]        # 8c0b58 <_DYNAMIC+0x2880>",
+        "0x230b95 QWORD PTR [rip+0x68ffbd]        # 8c0b58 <_DYNAMIC+0x2880>",
+        "0x230ba2 QWORD PTR [rip+0x68f7e8]        # 8c0390 <_DYNAMIC+0x20b8>",
+        "0x230baf QWORD PTR [rip+0x68f7db]        # 8c0390 <_DYNAMIC+0x20b8>",
+        "0x230bbc QWORD PTR [rip+0x68f7ce]        # 8c0390 <_DYNAMIC+0x20b8>",
+        "0x230bc9 QWORD PTR [rip+0x68ee01]        # 8bf9d0 <_DYNAMIC+0x16f8>"
+      ],
+      "cmov": [
+        {
+          "at": "0x2308b3",
+          "context": "shl r13,cl ; test cl,0x40",
+          "mnemonic": "cmovne",
+          "operands": "r14,r13"
+        },
+        {
+          "at": "0x2308b7",
+          "context": "test cl,0x40 ; cmovne r14,r13",
+          "mnemonic": "cmovne",
+          "operands": "r13,r9"
+        },
+        {
+          "at": "0x2308c7",
+          "context": "or r13,r14 ; mov r14,r8",
+          "mnemonic": "cmove",
+          "operands": "r14,r9"
+        },
+        {
+          "at": "0x2308ce",
+          "context": "cmove r14,r9 ; mov r13,rax",
+          "mnemonic": "cmove",
+          "operands": "r13,r9"
+        },
+        {
+          "at": "0x2308ed",
+          "context": "xor r13,rbp ; test r8b,0x1",
+          "mnemonic": "cmovne",
+          "operands": "rax,r13"
+        },
+        {
+          "at": "0x2309e3",
+          "context": "sub rax,r13 ; cmp rax,rdx",
+          "mnemonic": "cmovae",
+          "operands": "rax,rdx"
+        },
+        {
+          "at": "0x230ae3",
+          "context": "shl r11,cl ; test cl,0x40",
+          "mnemonic": "cmovne",
+          "operands": "r10,r11"
+        },
+        {
+          "at": "0x230ae7",
+          "context": "test cl,0x40 ; cmovne r10,r11",
+          "mnemonic": "cmovne",
+          "operands": "r11,r14"
+        },
+        {
+          "at": "0x230af7",
+          "context": "or r11,r10 ; mov r10,r8",
+          "mnemonic": "cmove",
+          "operands": "r10,r14"
+        },
+        {
+          "at": "0x230afe",
+          "context": "cmove r10,r14 ; mov r11,rax",
+          "mnemonic": "cmove",
+          "operands": "r11,r14"
+        },
+        {
+          "at": "0x230b1d",
+          "context": "xor r11,rbx ; test r8b,0x1",
+          "mnemonic": "cmovne",
+          "operands": "rax,r11"
+        }
+      ],
+      "crypto_instructions": [],
+      "indexed_lea_arithmetic": [
+        {
+          "at": "0x230971",
+          "mnemonic": "data16",
+          "operands": "data16 data16 data16 data16 cs nop WORD PTR [rax+rax*1+0x0]"
+        },
+        {
+          "at": "0x230a47",
+          "mnemonic": "nop",
+          "operands": "WORD PTR [rax+rax*1+0x0]"
+        }
+      ],
+      "indexed_memory_operands": [
+        {
+          "at": "0x230a23",
+          "mnemonic": "movzx",
+          "operands": "esi,BYTE PTR [r12+rdx*1]"
+        },
+        {
+          "at": "0x230a28",
+          "mnemonic": "movzx",
+          "operands": "r8d,BYTE PTR [rbp+rdi*1-0x30]"
+        },
+        {
+          "at": "0x230a31",
+          "mnemonic": "mov",
+          "operands": "BYTE PTR [r15+rdx*1],r8b"
+        },
+        {
+          "at": "0x230a35",
+          "mnemonic": "mov",
+          "operands": "BYTE PTR [rbp+rdi*1+0x0],sil"
+        },
+        {
+          "at": "0x230a63",
+          "mnemonic": "movzx",
+          "operands": "esi,BYTE PTR [rbp+rdi*1-0x30]"
+        },
+        {
+          "at": "0x230a68",
+          "mnemonic": "xor",
+          "operands": "sil,BYTE PTR [r12+rdx*1]"
+        },
+        {
+          "at": "0x230a6c",
+          "mnemonic": "mov",
+          "operands": "BYTE PTR [r15+rdx*1],sil"
+        },
+        {
+          "at": "0x230a70",
+          "mnemonic": "mov",
+          "operands": "BYTE PTR [rbp+rdi*1+0x0],sil"
+        }
+      ],
+      "jcc": [
+        {
+          "at": "0x23083f",
+          "context": "or dl,sil ; mov eax,0xffffffff",
+          "mnemonic": "jne",
+          "operands": "230b5b <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs5modes3gcm5crypt.llvm.3256867274980599799+0x35b>"
+        },
+        {
+          "at": "0x230865",
+          "context": "mov QWORD PTR [rsp+0x10],r9 ; mov QWORD PTR [rsp+0x8],rcx",
+          "mnemonic": "je",
+          "operands": "23091c <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs5modes3gcm5crypt.llvm.3256867274980599799+0x11c>"
+        },
+        {
+          "at": "0x2308f7",
+          "context": "mov r8,r14 ; add ecx,0xffffffff",
+          "mnemonic": "jb",
+          "operands": "2308a0 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs5modes3gcm5crypt.llvm.3256867274980599799+0xa0>"
+        },
+        {
+          "at": "0x23092d",
+          "context": "mov QWORD PTR [rsp+0x30],rdx ; test rdx,rdx",
+          "mnemonic": "je",
+          "operands": "230b5b <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs5modes3gcm5crypt.llvm.3256867274980599799+0x35b>"
+        },
+        {
+          "at": "0x23093d",
+          "context": "mov ebx,DWORD PTR [r9+0x80] ; test rcx,rcx",
+          "mnemonic": "je",
+          "operands": "230b54 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs5modes3gcm5crypt.llvm.3256867274980599799+0x354>"
+        },
+        {
+          "at": "0x230983",
+          "context": "data16 data16 data16 data16 data16 cs nop WORD PTR [rax+rax*1+0x0] ; cmp r13,rcx",
+          "mnemonic": "jae",
+          "operands": "230b52 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs5modes3gcm5crypt.llvm.3256867274980599799+0x352>"
+        },
+        {
+          "at": "0x23098c",
+          "context": "jae 230b52 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs5modes3gcm5crypt.llvm.3256867274980599799+0x352> ; test rbx,rbx",
+          "mnemonic": "je",
+          "operands": "2309a0 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs5modes3gcm5crypt.llvm.3256867274980599799+0x1a0>"
+        },
+        {
+          "at": "0x230996",
+          "context": "mov edx,0x10 ; sub rdx,rbx",
+          "mnemonic": "jae",
+          "operands": "2309da <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs5modes3gcm5crypt.llvm.3256867274980599799+0x1da>"
+        },
+        {
+          "at": "0x2309ea",
+          "context": "cmovae rax,rdx ; test rax,rax",
+          "mnemonic": "je",
+          "operands": "230a80 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs5modes3gcm5crypt.llvm.3256867274980599799+0x280>"
+        },
+        {
+          "at": "0x2309fe",
+          "context": "mov rdi,rbx ; cmp BYTE PTR [rsp+0x1c],0x0",
+          "mnemonic": "je",
+          "operands": "230a50 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs5modes3gcm5crypt.llvm.3256867274980599799+0x250>"
+        },
+        {
+          "at": "0x230a13",
+          "context": "nop DWORD PTR [rax+0x0] ; cmp rdx,r13",
+          "mnemonic": "jb",
+          "operands": "230b6a <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs5modes3gcm5crypt.llvm.3256867274980599799+0x36a>"
+        },
+        {
+          "at": "0x230a1d",
+          "context": "jb 230b6a <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs5modes3gcm5crypt.llvm.3256867274980599799+0x36a> ; cmp rdi,0xf",
+          "mnemonic": "ja",
+          "operands": "230b89 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs5modes3gcm5crypt.llvm.3256867274980599799+0x389>"
+        },
+        {
+          "at": "0x230a43",
+          "context": "inc rdx ; dec r10",
+          "mnemonic": "jne",
+          "operands": "230a10 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs5modes3gcm5crypt.llvm.3256867274980599799+0x210>"
+        },
+        {
+          "at": "0x230a53",
+          "context": "nop WORD PTR [rax+rax*1+0x0] ; cmp rdx,r13",
+          "mnemonic": "jb",
+          "operands": "230b9b <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs5modes3gcm5crypt.llvm.3256867274980599799+0x39b>"
+        },
+        {
+          "at": "0x230a5d",
+          "context": "jb 230b9b <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs5modes3gcm5crypt.llvm.3256867274980599799+0x39b> ; cmp rdi,0xf",
+          "mnemonic": "ja",
+          "operands": "230b77 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs5modes3gcm5crypt.llvm.3256867274980599799+0x377>"
+        },
+        {
+          "at": "0x230a7e",
+          "context": "inc rdx ; dec r8",
+          "mnemonic": "jne",
+          "operands": "230a50 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs5modes3gcm5crypt.llvm.3256867274980599799+0x250>"
+        },
+        {
+          "at": "0x230a83",
+          "context": "jne 230a50 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs5modes3gcm5crypt.llvm.3256867274980599799+0x250> ; add rbx,rax",
+          "mnemonic": "jb",
+          "operands": "230ba8 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs5modes3gcm5crypt.llvm.3256867274980599799+0x3a8>"
+        },
+        {
+          "at": "0x230a8c",
+          "context": "jb 230ba8 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs5modes3gcm5crypt.llvm.3256867274980599799+0x3a8> ; add r13,rax",
+          "mnemonic": "jb",
+          "operands": "230bb5 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs5modes3gcm5crypt.llvm.3256867274980599799+0x3b5>"
+        },
+        {
+          "at": "0x230a96",
+          "context": "jb 230bb5 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs5modes3gcm5crypt.llvm.3256867274980599799+0x3b5> ; cmp rbx,0x10",
+          "mnemonic": "jne",
+          "operands": "230980 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs5modes3gcm5crypt.llvm.3256867274980599799+0x180>"
+        },
+        {
+          "at": "0x230b2d",
+          "context": "mov r8,r10 ; add ecx,0xffffffff",
+          "mnemonic": "jb",
+          "operands": "230ad0 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs5modes3gcm5crypt.llvm.3256867274980599799+0x2d0>"
+        }
+      ],
+      "n_insns": 242,
+      "range": [
+        "0x230800",
+        "0x230bcf"
+      ],
+      "setcc": [
+        {
+          "at": "0x230823",
+          "context": "mov rdi,QWORD PTR [rdi+0x78] ; add rdi,rcx",
+          "mnemonic": "setb",
+          "operands": "sil"
+        },
+        {
+          "at": "0x230834",
+          "context": "movabs rdx,0xfffffffe0 ; cmp rdi,rdx",
+          "mnemonic": "seta",
+          "operands": "dl"
+        }
+      ],
+      "status": "PRESENT"
+    },
+    "openssl_rs::modes::gcm::gf_mul": {
+      "status": "ABSENT"
+    },
+    "openssl_rs::modes::gcm::gf_mul_clmul": {
+      "status": "ABSENT"
+    }
+  },
+  "label": "before"
+}

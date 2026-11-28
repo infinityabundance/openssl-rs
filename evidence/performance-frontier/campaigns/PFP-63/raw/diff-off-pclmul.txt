@@ -1,0 +1,7 @@
+aes128gcm-16k    IDENTICAL
+aes128gcm-64     IDENTICAL
+aes256gcm-16k    IDENTICAL
+aes256gcm-64     IDENTICAL
+kat              IDENTICAL
+kat cases=16 cross-library=IDENTICAL mismatches=0
+DIFF_OK
