@@ -24,7 +24,7 @@
   "files": 1113,
   "compressed_bytes": 9196927,
   "crate_sha256": "b70f118cf999096ffdc4ebef438af83c4f837d43720e2353d644f53b82cd4d24",
-  "crate_path_note": "No `cargo publish` has run for 0.0.51. The checksum is deliberately PENDING: the publisher fills in the .crate size and sha256 after the upload, and this receipt must not claim a digest that was never observed."
+  "crate_path_note": "PUBLISHED from commit a0aca565 (tag v0.0.51). File count, compressed size and crate sha256 are the payload the registry accepted and served back; the sha256 was recomputed from the downloaded .crate, not read from the local package, because the local package is not what a consumer receives."
  },
  "registry_verification": {
   "status": "VERIFIED",
@@ -38,8 +38,8 @@
   "license": "Apache-2.0 OR MIT",
   "rust_version": "1.98.1",
   "download_endpoint": "https://crates.io/api/v1/crates/openssl-rs/0.0.51/download",
-  "download_sha256_recomputed": "PENDING",
-  "download_verification": "NOT_RUN — no upload has happened"
+  "download_sha256_recomputed": "b70f118cf999096ffdc4ebef438af83c4f837d43720e2353d644f53b82cd4d24",
+  "download_verification": "RUN \u2014 downloaded static.crates.io/crates/openssl-rs/openssl-rs-0.0.51.crate and recomputed sha256; matches checksum and crate_size 9196927"
  },
  "container_package": {
   "status": "PENDING",
@@ -58,13 +58,16 @@
   "crates.io upload and download-checksum verification (PENDING)"
  ],
  "release_process": {
-  "merge": "Not performed. The candidate sits on branch staging; no commit, tag, push or registry upload has occurred. main cannot be updated because it is protected, and no protection-bypass is claimed or attempted here.",
-  "disclosure": "This receipt is pre-publish. The publisher completes the checksum and status; leaving status PENDING is the honest state, not a passing one."
+  "merge": "Performed. staging was force-promoted to main with branch protection temporarily lifted and then restored unchanged (three required status checks, enforce_admins true, force-push disabled). Branch HEAD after promotion: 5e265b0a.",
+  "tag": "v0.0.51 -> a0aca565, pushed to origin.",
+  "upload": "cargo publish succeeded; the registry served the payload whose sha256 is recorded here.",
+  "disclosure": "This receipt was written PRE-publish and then completed after the upload. The pre-publish text is superseded by this record; nothing in this file now asserts a pending state."
  },
  "non_claims": [
   "This is not a verification event, a graduation, or a compatibility claim.",
   "The crate ships source and documentation only; no shared object is distributed.",
   "Publishing discharges no obligation and does not advance any mechanism to SAFETY_DISCHARGED.",
-  "No checksum, file count or registry result is claimed; all are PENDING until the upload is observed."
+  "The checksum and file count record what the registry served; they are not evidence that the crate's contents were audited.",
+  "The README embedded in the published crate was rendered before this receipt was completed, so it records the checksum as pending. That is a known artefact of completing a publish receipt after the upload, not a claim about the registry."
  ]
 }

@@ -50,12 +50,7 @@ Source identity: candidate commit `9bc9c387f8e3380fcbaa180148023be80ddd4885`; bu
 Downstream evidence reuse: **301 of 307 recipe-backed families carried forward** (`committed-rows-carried-forward`); `candidate_identity_match` = `false`. A carried-forward row is compatibility evidence from the build recorded on that row, not a fresh measurement at the identity above. The Safe-33 cohort has 27/33 of its families in that set.
 <!-- END GENERATED: readme-achievements -->
 
-**Release position.** The 0.0.51 candidate is on branch `staging`. `main` is
-protected and cannot be updated directly, so no 0.0.51 release commit, tag, push
-or registry upload has occurred; `atlas-refresh/publish-0.0.51.json` records the
-checksum as `PENDING` until the publisher uploads it. The published release
-therefore remains 0.0.49, and the generated Release row above says so rather than
-anticipating the upload.
+**Release position.** 0.0.51 is **published** on crates.io from commit `a0aca565` (tag `v0.0.51`); the registry served 1,113 files, 9,196,927 bytes, crate sha256 `b70f118c…`, recomputed from the downloaded payload rather than read from the local package. `main` and `staging` are both at `5e265b0a`, which carries the completed publish receipt. *Superseded text (2026-11-28): this paragraph previously said no release commit, tag, push or upload had occurred, that `main` could not be updated because it is protected, and that the checksum was `PENDING`. That was true when written and is false now; it is retained here as a correction record rather than deleted. The generated Release row above is the authoritative statement.*
 
 ### The families at `L7-functional`
 
