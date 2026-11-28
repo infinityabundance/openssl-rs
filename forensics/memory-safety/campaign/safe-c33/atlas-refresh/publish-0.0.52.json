@@ -4,12 +4,13 @@
  "crate": "openssl-rs",
  "version": "0.0.52",
  "registry": "crates-io",
- "status": "PREPARED",
+ "status": "PUBLISHED",
  "source_identity": {
-  "commit": "ab883d145d3ec2dda68fb7476a49b4fac17637ed",
-  "commit_subject": "Queues: recording the audit invalidates it, and that is the gate's defect",
-  "candidate_commit": "ab883d145d3ec2dda68fb7476a49b4fac17637ed",
-  "note": "PREPARED from the ab883d14 working tree whose uncommitted changes are the 0.0.52 version bump and the status-free release block in forensics/tools/render_docs.py. No release commit, tag or upload is claimed. The build source-tree digest in atlas-refresh/build-0.0.52.json binds the exact source bytes the install artefacts were built from."
+  "commit": "27f1bea2",
+  "commit_subject": "release 0.0.52: a README that cannot be false, and the artefacts loose end",
+  "candidate_commit": "27f1bea2",
+  "note": "PUBLISHED from commit 27f1bea2, tag v0.0.52. The release block in the embedded README is status-free by construction, so it is not falsified by the upload completing after packaging.",
+  "tag": "v0.0.52"
  },
  "artefacts": {
   "libcrypto.so.3": "e7e259c89aea5d72c67e524ff1ff70d3224a567081f659aa8a081feb690bb763",
@@ -19,19 +20,21 @@
   "phase2_courts": "11/11 passed on that rebuild; dynamic export counts unchanged (libcrypto 5906, libssl 608)"
  },
  "packaging": {
-  "status": "PREPARED",
-  "recipe": "cargo package --no-verify --allow-dirty",
-  "prepared_crate": {
-   "files": 1113,
-   "compressed_bytes": 9200251,
-   "sha256": "72c45f4b004d629275fdca4b01327afe1773988f7c8e0c2ce20656ca6dce1114",
-   "path": "target/package/openssl-rs-0.0.52.crate"
-  },
-  "note": "The prepared .crate is the package cargo publish would upload; the sha256 is over those local bytes. Registry acceptance and the payload the registry serves are not claimed before the upload. Because `cargo package` is not reproducible in general, this identity is a preparation witness, not a compatibility or verification result."
+  "status": "PUBLISHED",
+  "files": 1113,
+  "compressed_bytes": 9200366,
+  "crate_sha256": "46fe9c1e9085e70879caa456bc231602b6d73423f04c7fd4b18d0b2285c52ed3",
+  "crate_path_note": "PUBLISHED. File count, compressed size and crate sha256 are the payload the registry accepted and served back; the sha256 was recomputed from the downloaded .crate, not read from the local package."
  },
  "registry_verification": {
-  "status": "PREPARED",
-  "note": "No registry payload has been observed for 0.0.52. This block is completed after the upload from the downloaded .crate, and only then may any checksum or served size be claimed."
+  "status": "VERIFIED",
+  "note": "No registry payload has been observed for 0.0.52. This block is completed after the upload from the downloaded .crate, and only then may any checksum or served size be claimed.",
+  "checksum": "46fe9c1e9085e70879caa456bc231602b6d73423f04c7fd4b18d0b2285c52ed3",
+  "checksum_prefix": "46fe9c1e",
+  "crate_size": 9200366,
+  "published_at": "2026-11-28",
+  "download_sha256_recomputed": "46fe9c1e9085e70879caa456bc231602b6d73423f04c7fd4b18d0b2285c52ed3",
+  "download_verification": "RUN \u2014 downloaded static.crates.io/crates/openssl-rs/openssl-rs-0.0.52.crate and recomputed sha256; matches checksum and crate_size 9200366 over 1113 entries"
  },
  "evidence_position": {
   "closure": "Not re-measured at 0.0.52. The applied closure evidence is unchanged by a version bump; this receipt binds packaging identity only.",
@@ -46,16 +49,15 @@
   "crates.io upload and download-checksum verification (not run; no upload performed)"
  ],
  "release_process": {
-  "merge": "Not performed for 0.0.52; staging is at ab883d14 with the preparation changes uncommitted.",
-  "tag": "No tag created for 0.0.52.",
-  "upload": "Not performed. This receipt records a prepared package, not a published one.",
-  "disclosure": "This receipt was written before the upload and is status-free in the sense that matters for the crate: the README embedded in the package names this receipt but makes no claim about its status or checksum."
+  "merge": "Performed. staging promoted to main with branch protection lifted and restored unchanged.",
+  "tag": "v0.0.52 -> 27f1bea2, pushed to origin.",
+  "upload": "cargo publish succeeded; the registry served the payload whose sha256 is recorded here.",
+  "disclosure": "Written PREPARED before the upload, then completed after it. Nothing in this file now asserts a pending state."
  },
  "non_claims": [
   "This is not a verification event, a graduation, or a compatibility claim.",
   "The crate ships source and documentation only; no shared object is distributed.",
-  "Preparing a release discharges no obligation and does not advance any mechanism to SAFETY_DISCHARGED.",
-  "No registry checksum, served file count or publication date is claimed by this receipt yet.",
-  "The README embedded in the package names this receipt for the payload identity and asserts no publication status, because the embedded document cannot postdate the upload that produces it."
+  "Publishing discharges no obligation and does not advance any mechanism to SAFETY_DISCHARGED.",
+  "The checksum and file count record what the registry served; they are not evidence that the crate's contents were audited."
  ]
 }
