@@ -1,15 +1,20 @@
 {
  "command": "cargo test --lib -- --test-threads=4",
  "thread_count": 4,
- "source_commit": "ab883d145d3ec2dda68fb7476a49b4fac17637ed",
- "source_commit_note": "Measured at HEAD ab883d14 on branch staging over a working tree that carried the 0.0.52 version bump (Cargo.toml/Cargo.lock) and the status-free release-block change in forensics/tools/render_docs.py, with no src/ change. The source-tree digest recorded in atlas-refresh/build-0.0.52.json binds the exact bytes this run used. The earlier 2,610 figure at 0.0.51 is the same count: the version bump and the tooling change add no tests.",
- "measured_utc": "2026-11-28T14:52:21Z",
+ "source_commit": "4d93c937d5f153a1560e9a7d2a3fec9215143508",
+ "source_commit_note": "Measured at HEAD 4d93c937 on branch staging over a working tree that carried the uncommitted 0.0.52 rebuild artifacts, with no src/ change. The run was `cargo test --lib -- --test-threads=4` in the court container (2,610 passed / 0 failed / 56 ignored). The previous record named ab883d14 is retained under the `superseded` key.",
+ "measured_utc": "2026-11-28T16:38:44Z",
  "passed": 2610,
  "failed": 0,
  "ignored": 56,
  "total": 2666,
  "kind": "full-library-run",
  "source_tree_unchanged": false,
- "source_tree_unchanged_note": "False by construction. The measured tree is HEAD ab883d14 plus the uncommitted 0.0.52 release-metadata bump and the render_docs change; the source-tree digest in atlas-refresh/build-0.0.52.json binds the exact bytes. It is not a clean-commit measurement, and no commit is claimed to contain these bytes.",
- "note": "Current record: 2,610 passed / 0 failed / 56 ignored / 2,666 total (0 measured, 0 filtered out) from `cargo test --lib -- --test-threads=4` in the court container (OPENSSL_RS_COURT_MEM=6g, OPENSSL_RS_COURT_MEMSWAP=6g, CARGO_BUILD_JOBS=2, CARGO_PROFILE_TEST_DEBUG=0). The 0.0.51 record was also 2,610/0/56, so no test was removed and no test was newly ignored."
+ "source_tree_unchanged_note": "False by construction. The measured tree is HEAD 4d93c937 plus the uncommitted 0.0.52 rebuild artifacts, with no src/ change. It is not a clean-commit measurement, and no commit is claimed to contain these bytes. The previous record named ab883d14 is retained under the `superseded` key.",
+ "note": "Current record: 2,610 passed / 0 failed / 56 ignored / 2,666 total (0 measured, 0 filtered out) from `cargo test --lib -- --test-threads=4` in the court container, finished in 125.58s. The run was at HEAD 4d93c937 with the uncommitted 0.0.52 rebuild artifacts present and no src/ change. measured_utc is the log file's mtime, since /tmp/pfp78-tests.log carries no timestamp. The previous record named ab883d14 is retained under the `superseded` key with its old source_commit, measured_utc and note, because the record of what was once believed is part of the evidence.",
+ "superseded": {
+  "source_commit": "ab883d145d3ec2dda68fb7476a49b4fac17637ed",
+  "measured_utc": "2026-11-28T14:52:21Z",
+  "note": "Current record: 2,610 passed / 0 failed / 56 ignored / 2,666 total (0 measured, 0 filtered out) from `cargo test --lib -- --test-threads=4` in the court container (OPENSSL_RS_COURT_MEM=6g, OPENSSL_RS_COURT_MEMSWAP=6g, CARGO_BUILD_JOBS=2, CARGO_PROFILE_TEST_DEBUG=0). The 0.0.51 record was also 2,610/0/56, so no test was removed and no test was newly ignored."
+ }
 }
