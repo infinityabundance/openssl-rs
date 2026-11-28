@@ -51,11 +51,11 @@ use crate::bn::ctx::{
 };
 use crate::bn::exp::bn_mod_exp_mont_fixed_top;
 use crate::bn::mont::{
-    set_mersenne521_admission, BN_MONT_CTX_copy, BN_MONT_CTX_free, BN_MONT_CTX_new,
-    BN_MONT_CTX_set, MontCtx,
+    BN_MONT_CTX_copy, BN_MONT_CTX_free, BN_MONT_CTX_new, BN_MONT_CTX_set, MontCtx,
 };
 use crate::ec::curve::{ossl_ec_curve_nid_from_params, EC_GROUP_new_by_curve_name_ex};
 use crate::ec::cvt::{EC_GROUP_new_curve_GF2m, EC_GROUP_new_curve_GFp};
+use crate::ec::mont::set_group_mersenne521_admission;
 use crate::ec::mult::{
     ossl_ec_wNAF_have_precompute_mult, ossl_ec_wNAF_mul, ossl_ec_wNAF_precompute_mult,
     EC_ec_pre_comp_dup, EC_ec_pre_comp_free, EcPreCompSt,
@@ -816,7 +816,10 @@ pub unsafe extern "C" fn EC_GROUP_set_generator(
         // Any generator or parameter change invalidates a prior admission. Clear
         // first so every failure path below leaves the fast arm refused; the
         // successful tail re-establishes it only for an exact P-521 identity.
-        set_mersenne521_admission((*group).field_data1.cast::<MontCtx>(), false);
+        // The setter is gated on the group's method identity
+        // (`B-EC-MONT-FIELD-DATA1`), so `field_data1` is only interpreted when
+        // it is established to be a `MontCtx`.
+        set_group_mersenne521_admission(group, false);
         if generator.is_null() {
             // SAFETY: a compile-time-constant site (`ec_lib.c:374`, ERR_R_PASSED_NULL_PARAMETER).
             raise_site(&err_sites::EC_LIB_374);
@@ -883,10 +886,7 @@ pub unsafe extern "C" fn EC_GROUP_set_generator(
         if ok == 1 {
             // The group is fully established; admit only the exact P-521
             // identity. `admits` is the audited predicate at this boundary.
-            set_mersenne521_admission(
-                (*group).field_data1.cast::<MontCtx>(),
-                crate::ec::p521::admits(group),
-            );
+            set_group_mersenne521_admission(group, crate::ec::p521::admits(group));
         }
         ok
     }

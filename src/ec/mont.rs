@@ -22,8 +22,8 @@ use crate::bn::ctx::{
 };
 use crate::bn::exp::bn_mod_exp_mont_fixed_top;
 use crate::bn::mont::{
-    BN_MONT_CTX_copy, BN_MONT_CTX_free, BN_MONT_CTX_new, BN_MONT_CTX_set, BN_from_montgomery,
-    BN_mod_mul_montgomery, BN_to_montgomery, MontCtx,
+    set_mersenne521_admission, BN_MONT_CTX_copy, BN_MONT_CTX_free, BN_MONT_CTX_new,
+    BN_MONT_CTX_set, BN_from_montgomery, BN_mod_mul_montgomery, BN_to_montgomery, MontCtx,
 };
 use crate::ec::ecdh_ossl::ossl_ecdh_simple_compute_key;
 use crate::ec::ecdsa_ossl::{
@@ -137,6 +137,64 @@ static EC_GFP_MONT_METHOD: EcMethod = EcMethod {
 #[no_mangle]
 pub extern "C" fn EC_GFp_mont_method() -> *const EcMethod {
     &EC_GFP_MONT_METHOD
+}
+
+/// Boundary `B-EC-MONT-FIELD-DATA1` — **`BOUNDARY_COVERED`**.
+///
+/// `EcGroup::field_data1` is a `void *` whose pointee type is fixed by the
+/// group's method. The canonical Montgomery method `EC_GFP_MONT_METHOD` is the
+/// only method whose callbacks own the slot as a [`MontCtx`]:
+/// `ossl_ec_GFp_mont_group_init` leaves it NULL (`ec/mont.rs:210`),
+/// `ossl_ec_GFp_mont_group_set_curve` stores `BN_MONT_CTX_new` (`:355`),
+/// `ossl_ec_GFp_mont_group_finish` releases it with `BN_MONT_CTX_free` (`:225`),
+/// and every `ossl_ec_GFp_mont_field_*` reads it as a [`MontCtx`] (`:398`,
+/// `:422`, `:493`, `:534`, `:558`). The simple and nist methods never write it
+/// (the group is `CRYPTO_zalloc`ed, so it stays NULL), and a caller-supplied
+/// foreign `EC_METHOD` may store any type there.
+///
+/// The precondition is therefore established by **method identity**, not by
+/// assuming the slot's current contents: `None` means the method is not the
+/// canonical Montgomery one and the slot must not be interpreted at all.
+///
+/// # Safety
+///
+/// `group` is NULL or a live `EC_GROUP`. When `Some` is returned the pointer is
+/// the live `MontCtx` that `group` owns through `field_data1`.
+pub(crate) unsafe fn mont_field_data(group: *const EcGroup) -> Option<*mut MontCtx> {
+    // SAFETY: the caller guarantees `group` is NULL or live; the method pointer
+    // and the slot are read under that contract.
+    unsafe {
+        if group.is_null() {
+            return None;
+        }
+        let meth = (*group).meth;
+        if meth.is_null() || !core::ptr::eq(meth, EC_GFp_mont_method()) {
+            return None;
+        }
+        Some((*group).field_data1.cast::<MontCtx>())
+    }
+}
+
+/// Set or clear the P-521 Mersenne admission flag on the group's Montgomery
+/// field context.
+///
+/// The write is gated by [`mont_field_data`], so a group whose method is not
+/// the canonical Montgomery method is left untouched: boundary
+/// `B-EC-MONT-FIELD-DATA1` (`BOUNDARY_COVERED`) has not established that its
+/// `field_data1` is a [`MontCtx`].
+///
+/// # Safety
+///
+/// `group` is NULL or a live `EC_GROUP`.
+pub(crate) unsafe fn set_group_mersenne521_admission(group: *mut EcGroup, admitted: bool) {
+    // SAFETY: the caller guarantees `group` is NULL or live, and
+    // `mont_field_data` establishes the slot's type from the method identity
+    // before the write reaches it.
+    unsafe {
+        if let Some(mont) = mont_field_data(group) {
+            set_mersenne521_admission(mont, admitted);
+        }
+    }
 }
 
 /// `int ossl_ec_GFp_mont_group_init(EC_GROUP *group)` — `crypto/ec/ecp_mont.c:83-91`.

@@ -10,6 +10,12 @@
 //! reads that flag and re-checks the prepared modulus — it performs no unsafe
 //! operation and reads no curve parameter.
 //!
+//! The setter is reached only through `ec::mont::mont_field_data` (boundary
+//! `B-EC-MONT-FIELD-DATA1`), which establishes from the group's method identity
+//! that `field_data1` is a `MontCtx` before the slot is interpreted. A group with
+//! a foreign method therefore never has its `field_data1` read or written here,
+//! even if that slot holds some other type.
+//!
 //! A modified generator, a modified order, a different curve sharing the same
 //! `p`, and a foreign field method each keep their own semantics: [`admits`]
 //! returns `false`, `EC_GROUP_set_generator` clears the flag, and the caller
@@ -177,15 +183,17 @@ mod tests {
 
     use crate::bn::bignum::{new_owned, BN_free, BN_new, BN_set_word};
     use crate::bn::ctx::{BN_CTX_free, BN_CTX_new};
-    use crate::bn::mont::{mersenne521_admission, BN_mod_mul_montgomery, MontCtx};
+    use crate::bn::mont::{mersenne521_admission, BN_MONT_CTX_free, BN_mod_mul_montgomery};
     use crate::ec::curve::EC_GROUP_new_by_curve_name;
     use crate::ec::ecdsa::{ECDSA_SIG_free, ECDSA_do_sign, ECDSA_do_verify};
     use crate::ec::key::{EC_KEY_free, EC_KEY_generate_key, EC_KEY_new_by_curve_name};
     use crate::ec::lib::{
-        EC_GROUP_free, EC_GROUP_get0_generator, EC_GROUP_set_curve, EC_GROUP_set_generator,
-        EC_POINT_copy, EC_POINT_free, EC_POINT_mul, EC_POINT_new,
+        EC_GROUP_dup, EC_GROUP_free, EC_GROUP_get0_generator, EC_GROUP_set_asn1_flag,
+        EC_GROUP_set_curve, EC_GROUP_set_generator, EC_POINT_copy, EC_POINT_free, EC_POINT_mul,
+        EC_POINT_new,
     };
     use crate::ec::smpl::EC_GFp_simple_method;
+    use crate::evp::pkey_ctx::OPENSSL_EC_EXPLICIT_CURVE;
     use crate::runtime::obj::{NID_X9_62_prime256v1, NID_secp521r1};
 
     fn word(w: core::ffi::c_ulong) -> *mut crate::bn::bignum::BigNum {
@@ -202,12 +210,13 @@ mod tests {
         new_owned(limbs, 0)
     }
 
-    /// The flag on the group's field context.
+    /// The flag on the group's field context, read through the method-gated
+    /// accessor (`B-EC-MONT-FIELD-DATA1`). A group without a Montgomery method
+    /// has no such context to read and answers `false`.
     unsafe fn flag(group: *const EcGroup) -> bool {
         // SAFETY: the caller guarantees `group` is live.
         unsafe {
-            let mont = (*group).field_data1.cast::<MontCtx>();
-            mersenne521_admission(mont)
+            crate::ec::mont::mont_field_data(group).is_some_and(|mont| mersenne521_admission(mont))
         }
     }
 
@@ -216,7 +225,9 @@ mod tests {
     unsafe fn assert_refused(group: *const EcGroup) {
         // SAFETY: the caller guarantees `group` is live and owns its field data.
         unsafe {
-            let mont = (*group).field_data1.cast::<MontCtx>();
+            let Some(mont) = crate::ec::mont::mont_field_data(group) else {
+                unreachable!("a refused Montgomery group must still own its field context")
+            };
             assert!(!mont.is_null());
             assert!(!flag(group), "the admission flag must be clear");
             let a = word(3);
@@ -259,12 +270,13 @@ mod tests {
         unsafe {
             let group = EC_GROUP_new_by_curve_name(NID_X9_62_prime256v1);
             assert!(!group.is_null());
-            // P-256 uses the plain field method, so no `MontCtx` exists to carry
-            // the flag; if a build ever gave it one, the flag must still be clear.
-            let mont = (*group).field_data1.cast::<MontCtx>();
-            if !mont.is_null() {
-                assert!(!mersenne521_admission(mont), "P-256 must not be admitted");
-            }
+            // P-256 uses the plain field method, which never writes `field_data1`
+            // and does not establish it as a `MontCtx`, so the method-gated
+            // accessor refuses the slot outright.
+            assert!(
+                crate::ec::mont::mont_field_data(group).is_none(),
+                "a non-Montgomery method must not expose a field MontCtx"
+            );
 
             // A real P-256 multiplication exercises the field arithmetic and must
             // not enter the P-521 kernel.
@@ -425,20 +437,270 @@ mod tests {
             assert!(!generator.is_null());
             assert_eq!(EC_POINT_copy(generator, EC_GROUP_get0_generator(group)), 1);
 
-            // Install a foreign method on the same group. The parameters and the
-            // generator are unchanged, so only the method predicate can refuse.
+            // Install a foreign method on the same group. The group's field path
+            // no longer reaches `ossl_ec_GFp_mont_field_mul`, so `admits` must
+            // refuse. The old context is still a `MontCtx`, but the *current*
+            // method no longer establishes that (`B-EC-MONT-FIELD-DATA1`), so the
+            // admission setter must not interpret the slot either.
             let mont_method = (*group).meth;
             (*group).meth = EC_GFp_simple_method();
             assert_eq!(
                 EC_GROUP_set_generator(group, generator, (*group).order, (*group).cofactor),
                 1
             );
-            assert!(!flag(group), "a foreign method must leave the flag clear");
+            assert!(
+                !crate::ec::p521::admits(group),
+                "a foreign field method is never admitted"
+            );
+            assert!(
+                crate::ec::mont::mont_field_data(group).is_none(),
+                "the foreign method does not establish `field_data1` as a MontCtx"
+            );
 
             // Restore the method so the group releases its field data through
-            // the Montgomery finish; the flag stays clear (no re-admission).
+            // the Montgomery finish.
             (*group).meth = mont_method;
-            assert_refused(group);
+            EC_POINT_free(generator);
+            EC_GROUP_free(group);
+        }
+    }
+
+    /// A foreign method whose `field_data1` is **not** a `MontCtx` must never
+    /// have that slot interpreted. The sentinel is a distinct aggregate, so a
+    /// write through a `MontCtx` view would dirty its bytes; the canary catches
+    /// that without relying on a crash.
+    #[test]
+    fn a_foreign_method_with_non_mont_field_data_is_never_interpreted() {
+        #[repr(C, align(8))]
+        struct Sentinel([u64; 32]);
+        const PATTERN: u64 = 0xDEAD_BEEF_DEAD_BEEF;
+
+        // SAFETY: all objects are live for the test and released here.
+        unsafe {
+            let mut sentinel = Sentinel([PATTERN; 32]);
+            let group = EC_GROUP_new_by_curve_name(NID_secp521r1);
+            assert!(!group.is_null());
+            assert!(flag(group));
+
+            // A point built while the group is still Montgomery, so
+            // `EC_POINT_copy`'s method check accepts it (the group's own
+            // generator was built by the Montgomery method too).
+            let generator = EC_POINT_new(group);
+            assert!(!generator.is_null());
+            assert_eq!(EC_POINT_copy(generator, EC_GROUP_get0_generator(group)), 1);
+
+            // Save the genuine method and field context so the group can be
+            // released through the Montgomery finish afterwards.
+            let mont_method = (*group).meth;
+            let mont_data = (*group).field_data1;
+
+            // A foreign method plus a `field_data1` of a different type.
+            (*group).meth = EC_GFp_simple_method();
+            (*group).field_data1 = (&mut sentinel as *mut Sentinel).cast::<core::ffi::c_void>();
+
+            // The clear at entry and the re-admission at the successful tail must
+            // both skip the slot: the method does not establish its type.
+            assert_eq!(
+                EC_GROUP_set_generator(group, generator, (*group).order, (*group).cofactor),
+                1
+            );
+            assert_eq!(
+                sentinel.0, [PATTERN; 32],
+                "`field_data1` was interpreted as a MontCtx"
+            );
+            assert!(!crate::ec::p521::admits(group));
+
+            // A real group operation on the foreign method must not reach the
+            // P-521 kernel either.
+            let ctx = BN_CTX_new();
+            assert!(!ctx.is_null());
+            let out = EC_POINT_new(group);
+            assert!(!out.is_null());
+            let scalar = word(7);
+            let before = crate::bn::mersenne::probe::count();
+            let _ = EC_POINT_mul(
+                group,
+                out,
+                scalar,
+                core::ptr::null(),
+                core::ptr::null_mut(),
+                ctx,
+            );
+            assert_eq!(
+                crate::bn::mersenne::probe::count(),
+                before,
+                "the P-521 kernel must not be entered for foreign field data"
+            );
+
+            // Restore the genuine slot before release.
+            (*group).meth = mont_method;
+            (*group).field_data1 = mont_data;
+
+            BN_free(scalar);
+            EC_POINT_free(out);
+            BN_CTX_free(ctx);
+            EC_POINT_free(generator);
+            EC_GROUP_free(group);
+        }
+    }
+
+    /// A copy taken after admission carries the admitted context; a refused
+    /// source stays refused. `EC_GROUP_copy` copies every parameter before
+    /// `BN_MONT_CTX_copy`, so the flag travels with the identity it describes.
+    #[test]
+    fn a_group_copied_after_admission_keeps_the_right_verdict() {
+        // SAFETY: all objects are live for the test and released here.
+        unsafe {
+            let group = EC_GROUP_new_by_curve_name(NID_secp521r1);
+            assert!(!group.is_null());
+            assert!(flag(group));
+
+            let admitted_dup = EC_GROUP_dup(group);
+            assert!(!admitted_dup.is_null());
+            assert!(flag(admitted_dup), "the admitted context is copied");
+            assert!(
+                crate::ec::p521::admits(admitted_dup),
+                "the copy is the same P-521 identity"
+            );
+
+            // Now refuse the source by replacing its order, and copy again.
+            let generator = EC_POINT_new(group);
+            assert!(!generator.is_null());
+            assert_eq!(EC_POINT_copy(generator, EC_GROUP_get0_generator(group)), 1);
+            let mut wrong_order = tracked(FIELD_ORDER);
+            wrong_order[0] -= 1;
+            let order = bn(wrong_order.to_vec());
+            assert_eq!(
+                EC_GROUP_set_generator(group, generator, order, (*group).cofactor),
+                1
+            );
+            assert!(!flag(group));
+
+            let refused_dup = EC_GROUP_dup(group);
+            assert!(!refused_dup.is_null());
+            assert!(
+                !flag(refused_dup),
+                "a refused context stays refused across a copy"
+            );
+
+            EC_GROUP_free(refused_dup);
+            EC_GROUP_free(admitted_dup);
+            BN_free(order);
+            EC_POINT_free(generator);
+            EC_GROUP_free(group);
+        }
+    }
+
+    /// `EC_GROUP_set_curve` installs a fresh Montgomery context whose flag starts
+    /// clear; re-establishing the exact generator/order re-admits it.
+    #[test]
+    fn a_curve_change_clears_admission_until_the_generator_is_reset() {
+        // SAFETY: all objects are live for the test and released here.
+        unsafe {
+            let ctx = BN_CTX_new();
+            assert!(!ctx.is_null());
+            let group = EC_GROUP_new_by_curve_name(NID_secp521r1);
+            assert!(!group.is_null());
+            assert!(flag(group));
+
+            let p = bn(tracked(FIELD_P).to_vec());
+            let a = bn(tracked(FIELD_A).to_vec());
+            let b = bn(tracked(FIELD_B).to_vec());
+            assert_eq!(EC_GROUP_set_curve(group, p, a, b, ctx), 1);
+            assert!(!flag(group), "a fresh field context starts unadmitted");
+
+            let generator = EC_POINT_new(group);
+            assert!(!generator.is_null());
+            assert_eq!(EC_POINT_copy(generator, EC_GROUP_get0_generator(group)), 1);
+            assert_eq!(
+                EC_GROUP_set_generator(group, generator, (*group).order, (*group).cofactor),
+                1
+            );
+            assert!(flag(group), "the exact identity re-admits");
+
+            EC_POINT_free(generator);
+            BN_free(p);
+            BN_free(a);
+            BN_free(b);
+            EC_GROUP_free(group);
+            BN_CTX_free(ctx);
+        }
+    }
+
+    /// Presentation-only setters are not part of the group identity, so they do
+    /// not disturb the admission verdict.
+    #[test]
+    fn presentation_setters_preserve_admission() {
+        // SAFETY: all objects are live for the test and released here.
+        unsafe {
+            let group = EC_GROUP_new_by_curve_name(NID_secp521r1);
+            assert!(!group.is_null());
+            assert!(flag(group));
+            EC_GROUP_set_asn1_flag(group, OPENSSL_EC_EXPLICIT_CURVE);
+            assert!(flag(group), "the ASN.1 flag is not a group parameter");
+            EC_GROUP_free(group);
+        }
+    }
+
+    /// An allocation failure after the clear must leave the fast arm refused:
+    /// the tail that could re-admit is never reached.
+    #[test]
+    fn a_generator_allocation_failure_leaves_admission_clear() {
+        // SAFETY: all objects are live for the test and released here.
+        unsafe {
+            let group = EC_GROUP_new_by_curve_name(NID_secp521r1);
+            assert!(!group.is_null());
+            assert!(flag(group));
+            let generator = (*group).generator;
+            assert!(!generator.is_null());
+
+            // Make the group allocate a replacement generator and fail its first
+            // `BIGNUM` allocation. The method is still Montgomery, so the clear
+            // at entry runs; the failure returns before the re-admission tail.
+            (*group).generator = core::ptr::null_mut();
+            let ret = {
+                let _guard = crate::bn::alloc::test_fail::fail_after(0);
+                EC_GROUP_set_generator(group, generator, (*group).order, (*group).cofactor)
+            };
+            assert_eq!(ret, 0, "the injected allocation failure is reported");
+            assert!(
+                !flag(group),
+                "the pre-allocation clear must stand on the failure path"
+            );
+
+            // Restore the saved generator so the group releases it.
+            (*group).generator = generator;
+            EC_GROUP_free(group);
+        }
+    }
+
+    /// A failure in the order-Montgomery setup, reached after the generator and
+    /// order have been copied, must also leave the fast arm refused.
+    #[test]
+    fn an_order_montgomery_setup_failure_leaves_admission_clear() {
+        // SAFETY: all objects are live for the test and released here.
+        unsafe {
+            let group = EC_GROUP_new_by_curve_name(NID_secp521r1);
+            assert!(!group.is_null());
+            assert!(flag(group));
+            let generator = EC_POINT_new(group);
+            assert!(!generator.is_null());
+            assert_eq!(EC_POINT_copy(generator, EC_GROUP_get0_generator(group)), 1);
+
+            // Force `ec_precompute_mont_data` to allocate from scratch, then
+            // fail the first intercepted allocation on the path. The clear at
+            // entry must stand; the success tail is not reached.
+            BN_MONT_CTX_free((*group).mont_data);
+            (*group).mont_data = core::ptr::null_mut();
+            let ret = {
+                let _guard = crate::bn::alloc::test_fail::fail_after(0);
+                EC_GROUP_set_generator(group, generator, (*group).order, (*group).cofactor)
+            };
+            assert_eq!(ret, 0, "the injected setup failure is reported");
+            assert!(
+                !flag(group),
+                "a mid-setup failure must not re-admit the group"
+            );
 
             EC_POINT_free(generator);
             EC_GROUP_free(group);

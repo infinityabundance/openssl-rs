@@ -1,6 +1,11 @@
 //! PFP-11 phase 2 — the P-521 Mersenne REDC fast arm.
 //!
-//! ## Why this is not the generic Montgomery reduction
+//! ## Why this is a Mersenne-specialised Montgomery REDC
+//!
+//! This is still Montgomery REDC, and the Montgomery representation is
+//! unchanged: `R = 2^576`, the operands stay in the Montgomery domain and the
+//! result is `a·b·R^-1 mod p`. What is specialised is the *reduction step*, using
+//! the Mersenne structure of the prime.
 //!
 //! `p = 2^521 - 1` is represented in nine radix-`2^64` limbs, the top holding
 //! nine bits, so it is congruent to `-1` modulo `B = 2^64`. The Montgomery
@@ -26,12 +31,19 @@
 //! `T = a·b < p^2 < p·R`; `BN_to_montgomery` passes `a < R` times `R^2 mod p`;
 //! `BN_from_montgomery` is only routed here for `T < R < p·R`.
 //!
-//! Under that contract `k = Σ u_i·B^i < R`, so `T + k·p < p·R + R·p = 2·p·R`
+//! Under that contract `k = Σ u_i·B^i < R`, so
+//! `T + k·p < p·R + R·p = 2·p·R = 2·(2^521 - 1)·2^576 = 2^1098 - 2^577 < 2^1098`,
 //! and the residue `(T + k·p)/R` is `< 2p`. One masked conditional subtraction
-//! leaves a canonical representative in `[0, p)`. The accumulator is bounded by
-//! `T + k·p < 2^1042 + 2^1097 < 2^1098`, which fits the 20-limb scratch with
-//! room to spare, so no carry can leave it and `t[18]` (the possible `2p` high
-//! limb) is zero.
+//! leaves a canonical representative in `[0, p)`. That general bound fits the
+//! `ACC_LIMBS = 20` scratch (`2^1098 < 2^1152 = 2^(18·64) < 2^1280`), so no carry
+//! can leave it and `t[18]` (the possible `2p` high limb) is zero.
+//!
+//! The narrower `T + k·p < 2^1042 + 2^1097 < 2^1098` figure is the case of two
+//! canonical field operands (`T < p^2 < 2^1042`), which is what
+//! `BN_mod_mul_montgomery` passes. It is a **sufficient but not necessary** case
+//! of the contract: `BN_to_montgomery` passes one operand below `R` and one
+//! below `p`, and the kernel's reduction is valid across the whole `T < p·R`
+//! range.
 //!
 //! ## Constant time
 //!
@@ -63,9 +75,10 @@ pub(crate) const P521: [Limb; P521_LIMBS] = [
 /// `n0 = -p^-1 mod 2^64`. Since `p ≡ -1 (mod 2^64)`, this is one.
 pub(crate) const P521_N0: Limb = 1;
 
-/// The scratch accumulator: `2n = 18` product limbs plus one limb for the
-/// nine shifted additions and their carries. The bound above caps the value at
-/// `2^1098 < 2^(19·64)`, so 20 limbs is a fixed, public extent.
+/// The scratch accumulator: `2n = 18` product limbs plus room for the nine
+/// shifted additions and their carries. The general bound above caps the value
+/// at `2pR < 2^1098 < 2^1152 = 2^(18·64) < 2^1280`, so 20 limbs is a fixed,
+/// public extent with spare limbs at the top.
 const ACC_LIMBS: usize = 20;
 
 /// Whether `m` is exactly the P-521 prime.
@@ -145,7 +158,17 @@ fn redc_p521_in_place(t: &mut [Limb]) -> bool {
     true
 }
 
-/// `a·b·R^-1 mod p`, with `a, b < p` (the generic kernel's input contract).
+/// `a·b·R^-1 mod p`, with `a·b < p·R` (the generic kernel's input contract).
+///
+/// **Retained caller obligation (not enforced by the type).** The width check
+/// only establishes `a, b < 2^576 = R`; two such operands give
+/// `a·b < 2^1152`, which is *wider* than `p·R ≈ 2^1097`. The callers must keep
+/// the product inside the contract: `BN_mod_mul_montgomery` passes two canonical
+/// operands (`a, b < p`, so `a·b < p^2 < p·R`), and `BN_to_montgomery` passes
+/// `rr = R^2 mod p < p` times an `R`-bounded input. A future caller passing two
+/// non-canonical nine-limb values would violate the bound and the kernel would
+/// not detect it. Enforcement is deliberately not added at run time: a
+/// canonicality check on the operands would branch on secret field data.
 ///
 /// Safe Rust throughout: the product and reduction are slice operations with
 /// fixed, public extents. Returns `None` when the operands are the wrong width
@@ -185,8 +208,9 @@ pub(crate) fn mont_mul_p521_fallible(a: &[Limb], b: &[Limb]) -> Option<Vec<Limb>
 /// `T·R^-1 mod p` for `T < R = 2^576` (hence `T < p·R`).
 ///
 /// This is the specialized counterpart of the generic REDC used by
-/// `BN_from_montgomery`. It refuses a `T` wider than nine limbs because then
-/// the `< p·R` contract would have to be re-established by the caller.
+/// `BN_from_montgomery`. The length check enforces the contract: a value of at
+/// most nine limbs is below `2^576 = R`, so a wider `T` is refused rather than
+/// silently reduced under an unestablished bound.
 pub(crate) fn mont_reduce_p521_fallible(a: &[Limb]) -> Option<Vec<Limb>> {
     #[cfg(test)]
     probe::record();

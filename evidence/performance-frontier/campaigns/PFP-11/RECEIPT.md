@@ -143,6 +143,13 @@ exact-group predicate the phase-1 refusal named, stores its verdict in the
 opaque `MontCtx`, and adds the shift-and-add REDC it licenses. **The P-521 fast
 arm is now integrated; the phase-1 refusal applies only to phase 1.**
 
+**Terminology.** The change **specialises Montgomery REDC using the Mersenne
+structure** of `p = 2^521 − 1`; it does not abandon Montgomery representation.
+`R = 2^576`, `a`, `b` and the generator stay in the Montgomery domain, conversion
+is still `BN_to_montgomery`/`BN_from_montgomery`, and `n0 = 1` only removes the
+per-limb multiply from the REDC step. "Mersenne REDC" below means this
+specialisation, never a non-Montgomery reduction.
+
 ## 8. Identity and scope
 
 | item | value |
@@ -179,17 +186,27 @@ it. **Adding `mersenne521: bool` is ABI-neutral.**
   folded at 521 bits`, an independent shift-and-fold; a test checks it against
   the group's stored `a`, `b`, `Gx`, `Gy`.
 * The flag is cleared at the entry of `EC_GROUP_set_generator` and set only on
-  success when `admits` is true. `mont_set` clears it on every modulus
-  (re)preparation; `BN_MONT_CTX_copy` copies it (group copy copies every group
-  parameter first). The named-curve constructor reaches
-  `EC_GROUP_set_generator`, so it is covered; `EC_GROUP_set_curve` installs a
-  fresh context whose flag is clear. `ec_precompute_mont_data`'s order-modulus
-  context is a different `MontCtx` and is never admitted.
+  success when `admits` is true. **Both writes are gated on the group's method
+  identity** (`ec::mont::mont_field_data`, boundary `B-EC-MONT-FIELD-DATA1`):
+  `field_data1` is a `void *` whose pointee type is fixed by the method, and only
+  the canonical `EC_GFP_MONT_METHOD` owns it as a `MontCtx`. A foreign method
+  never has the slot read or written, even when it holds another type. This
+  closes the review finding that the prior unconditional `cast::<MontCtx>()` was
+  sound only for a group that already owned a valid context.
+* `mont_set` clears the flag on every modulus (re)preparation; `BN_MONT_CTX_copy`
+  copies it (group copy copies every group parameter first). The named-curve
+  constructor reaches `EC_GROUP_set_generator`, so it is covered;
+  `EC_GROUP_set_curve` installs a fresh context whose flag is clear.
+  `ec_precompute_mont_data`'s order-modulus context is a different `MontCtx` and
+  is never admitted.
 * Tests (`ec::p521::tests`): the named curve is admitted; a modified generator,
   a modified order, a different `b` over the same `p`, a foreign method, and
   P-256 each leave the flag clear, and a field/point operation on each does not
-  increment the kernel probe. P-256 has no `MontCtx` at all (plain field
-  method), which is the strongest form of untouched.
+  increment the kernel probe. The hardening batch adds a foreign method whose
+  `field_data1` is a **non-`MontCtx` sentinel** (canary bytes unchanged), an
+  allocation-failure path, a copy taken after admission (both verdicts), a
+  `set_curve` reset, and a presentation-only setter. P-256 has no `MontCtx` at
+  all (plain field method), which is the strongest form of untouched.
 
 **Unsafe accounting.** The reduction, its dispatch, and the flag read add
 **zero** unsafe operations (safe slice arithmetic and a plain `bool`). The new
@@ -215,10 +232,22 @@ routed here only for `T < R < p·R`). Step `i` adds `u·p·B^i = u·2^(521+64i) 
 u·B^i`; the `−u·B^i` cancels `t[i]`, so each of the **exactly n = 9** steps is a
 zero plus a shift-and-add of `u<<9` at limb `8+i`, with fixed carry propagation.
 `k = Σu_iB^i < R`, so `T+k·p < 2p·R` and the residue is `< 2p`; one masked
-conditional subtraction yields `[0,p)`. Accumulator bound: `T+k·p <
-2^1042+2^1097 < 2^1098`, so the 20-limb scratch cannot overflow and `t[18]=0`.
-The fold count is proved by the limb count, not assumed; the stray carry is
-folded into the subtraction mask rather than branched on.
+conditional subtraction yields `[0,p)`. **General accumulator bound:**
+`T+k·p < 2pR = 2(2^521−1)2^576 = 2^1098 − 2^577 < 2^1098`, which fits the
+20-limb scratch (`2^1098 < 2^1152 = 2^(18·64) < 2^1280`), so it cannot overflow
+and `t[18]=0`. The narrower `T+k·p < 2^1042+2^1097` figure is the two-canonical-
+operand case (`T < p^2`); it is **sufficient but not necessary**, because the
+kernel contract admits the whole `T < p·R` range (`BN_to_montgomery` passes one
+`R`-bounded and one `p`-bounded operand). The fold count is proved by the limb
+count, not assumed; the stray carry is folded into the subtraction mask rather
+than branched on.
+
+**Retained obligation (operand canonicality).** `mont_mul_p521_fallible` checks
+width only; a future caller passing two non-canonical nine-limb operands would
+violate `a·b < p·R` without a compile error or a run-time refusal. The current
+callers satisfy it (`BN_mod_mul_montgomery`: both `< p`; `BN_to_montgomery`:
+`rr < p` times an `R`-bounded input). It is documented at the function boundary;
+enforcing it would add secret-dependent branches to the field path.
 
 ## 13. Correctness
 
@@ -264,6 +293,27 @@ the reduction multiplications. A second two-arm run gave sign 1.856
 1.006 is within the instrument's noise and is backed by the structural fact
 that P-256 has no `MontCtx`; the new kernel is unreachable from its field path.
 
+**Authority caveat — the second comparison column.** Every `*/auth` ratio above
+is against the pinned OpenSSL 3.6.4 build, whose `ec_nistp_64_gcc_128` is
+disabled (`src/ec/curve.rs:37`; `docs/SECURITY_DIVERGENCE_POLICY.md:1733`). The
+P-521 `1.857` figure therefore compares the candidate with OpenSSL's
+**general-purpose** P-521 path, not with its optimised 64-bit implementation.
+The protocol anticipates two comparison columns — candidate vs pristine HEAD and
+candidate vs the pinned authority — and this caveat qualifies the second; the
+`1.444×`/`1.365×` deltas are cand-vs-HEAD and are unaffected.
+
+**P-256: one canonical row, two instruments.** The canonical P-256 row for this
+campaign is the control in the table above — `bench_p256.c`, 11 paired
+process-level repetitions, `head/auth 12.972` and `cand/auth 13.040
+[13.000, 13.139]`. Its timed loop calls `ECDSA_do_sign` and the
+`ECDSA_do_verify` correctness guard together (`bench_p256.c:104-121`). The M-A1
+headline `ecdsa256 = 10.2012 [10.1870, 10.2525]` is a **different instrument**:
+`bench_pfp5.c`'s `ec_step` times `ECDSA_do_sign` only, with verification run once
+outside the timed region (`bench_pfp5.c:927-935, 1026-1048`), 15 interleaved
+`--prepared` repetitions. The two numbers are not interchangeable: `13.04` is
+sign-plus-in-loop-verify, `10.20` is sign-only. Neither is quoted without its
+instrument.
+
 ## 16. Gate (final source)
 
 | check | result |
@@ -303,3 +353,53 @@ command at a time. Observed `available` 24–28 GiB, swap free 3–9 GiB, so
 `raw/phase2-audit/{cand-*.dis,*.sites.tsv,classification.md,carrier-identity.txt}`.
 Instruments: `bench_p256.c`, `phase2_timing.sh`, `phase2_before_timing.sh`,
 `phase2_compare.py`, `phase2_audit.py`, `phase2_p256_analyse.py`.
+
+## 20. Post-review hardening (2026-11-27, `staging` HEAD `3f7f7cc6`)
+
+This section records a hardening batch made after the phase-2 measurements. It
+does **not** re-identify §8's measured candidate: the phase-2 DSO/build hashes
+above describe `56a4c0f7`, and this batch is uncommitted source at `3f7f7cc6`.
+
+1. **Unsound-cast finding closed.** `field_data1` is `void *`
+   (`src/ec/mod.rs:670`); it holds a `MontCtx` only under the Montgomery method
+   (`ossl_ec_GFp_mont_group_init` sets it NULL, `..._group_set_curve` stores
+   `BN_MONT_CTX_new`, `..._group_finish` frees it, and every
+   `ossl_ec_GFp_mont_field_*` reads it as a `MontCtx`). A new accessor
+   `ec::mont::mont_field_data` establishes that method identity before the slot
+   is interpreted, and `set_group_mersenne521_admission` is the only setter the
+   group path uses (boundary `B-EC-MONT-FIELD-DATA1`, `BOUNDARY_COVERED`). No new
+   `unsafe` was added; the direct cast was removed from `EC_GROUP_set_generator`.
+2. **Accumulator bound corrected** (§12) to the general `T+k·p < 2pR < 2^1098`,
+   with the two-canonical-operand `2^1042+2^1097` figure recorded as
+   sufficient-but-not-necessary and the operand-canonicality precondition
+   recorded as a retained obligation at `mont_mul_p521_fallible`.
+3. **Admission lifecycle covered** by new tests in `ec::p521::tests`: foreign
+   method with non-`MontCtx` sentinel field data (canary unchanged, kernel probe
+   unchanged), allocation failure after the clear, `EC_GROUP_dup` after
+   admission and after refusal, `EC_GROUP_set_curve` reset, and an ASN.1 flag
+   setter that does not disturb the verdict.
+4. **Terminology, authority caveat and the two P-256 instruments** are recorded
+   in the phase-2 preamble and §15.
+5. **Gate and timing on the hardened tree.** `cargo fmt --all -- --check` and
+   `cargo clippy --all-targets -- -D warnings` passed; `cargo test --lib --
+   --test-threads=4` gave **2539 passed, 0 failed, 56 ignored** (2533 baseline
+   + 6 new tests, none ignored). The final candidate DSO is
+   `95199fc6b199bca8ec707fe08c0f4a7ab5523879e411c8bb5ecfc4d933d9622a`
+   (reproduced byte-for-byte by a fresh-target build); the P-521 authority
+   differential is **48 cases, 0 mismatches, 96 cross-verifications, PASS**
+   (P-384, Ed25519 and X25519 also PASS).
+   Re-measured P-521 `cand/auth` on this DSO was sign **1.886 [1.880, 1.891]**,
+   verify **1.764 [1.756, 1.772]**, ~1.6 % above the phase-2 record
+   (1.857/1.741); `cand/head` was 0.706/0.746 (phase 2: 0.692/0.733) while
+   `head/auth` reproduced (2.675 vs 2.682). A same-tree gate-bypass control DSO,
+   timed against the gated DSO in one session, measured 1.016/1.017
+   [1.014,1.017]/[1.015,1.020]. The three Montgomery entry points
+   (`BN_mod_mul_montgomery`, `BN_from_montgomery`, `BN_to_montgomery`) are
+   **instruction-identical** between the two DSOs after relocation
+   normalisation, so the difference is not executed gate work (the gate runs
+   once per group construction, outside the timed loop); it is a reproducible
+   code-placement effect of the added code. **This ~1.6 % endpoint difference is
+   reported, not dismissed as zero**: the fast-arm benefit is intact, but a
+   literal no-regression claim is not made. Reducing the placement effect is
+   left as deliberate layout work rather than folded into this correctness
+   batch.
