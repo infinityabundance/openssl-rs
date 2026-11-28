@@ -50,11 +50,12 @@
 //! On x86-64 with the SHA and SSE4.1 extensions, [`sha256_block`] dispatches to a
 //! `#[target_feature]` compression function built from `sha256rnds2`/`sha256msg1`/
 //! `sha256msg2`; the portable `OPENSSL_SMALL_FOOTPRINT` transcription remains the
-//! fallback and the differential reference. The dispatch is the single gated site. The
-//! `OPENSSL_ia32cap` second-vector clear mask (bit 29, the CPUID `SHA` bit) forces the
-//! fallback, which is how the portable arm is measured live. The value-set form of
-//! `OPENSSL_ia32cap` is not modelled (only the `~` clear mask), and the AArch64 SHA-2
-//! crypto extension is not implemented in this batch; both are recorded as residuals.
+//! `OPENSSL_SMALL_FOOTPRINT` transcription remains the
+//! fallback and the differential reference. The dispatch consults
+//! [`crate::runtime::cpu::has_sha`], the crate's single capability model, which honours
+//! `OPENSSL_ia32cap` (LV1 bit 29, the CPUID `SHA` bit) in every documented form. The
+//! AArch64 SHA-2 crypto extension is not implemented in this batch; that remains a
+//! recorded residual.
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
@@ -202,47 +203,6 @@ fn maj64(x: u64, y: u64, z: u64) -> u64 {
     (x & y) ^ (x & z) ^ (y & z)
 }
 
-/// The SHA extension bit in the second `OPENSSL_ia32cap` vector.
-///
-/// `OPENSSL_ia32cap`'s value is `[vec1][:vec2]`; a vector prefixed with `~` clears the named
-/// bits. `SHA` is `CPUID.(EAX=7,ECX=0).EBX` bit 29, i.e. bit 29 of the second vector. Only the
-/// clear mask is modelled, because that is the form that forces the portable path; the
-/// authority's value-set form and its other capability bits are not modelled (`RT-CPU-CAPABILITY`).
-#[cfg(target_arch = "x86_64")]
-fn ia32cap_sha_cleared(spec: Option<&str>) -> bool {
-    let Some(second) = spec.and_then(|s| s.split(':').nth(1)) else {
-        return false;
-    };
-    let Some(mask) = second.strip_prefix('~') else {
-        return false;
-    };
-    let mask = mask.trim_start_matches("0x").trim_start_matches("0X");
-    u64::from_str_radix(mask, 16)
-        .map(|m| m & (1u64 << 29) != 0)
-        .unwrap_or(false)
-}
-
-/// The SHA-NI dispatch predicate — the only runtime feature-detection site on this path.
-///
-/// `BOUNDARY_COVERED`: `is_x86_feature_detected!` is a cached CPUID read with no memory
-/// or initialisation obligation, and the `#[target_feature]` callee additionally executes
-/// SSE4.1 `blend`/SSSE3 `alignr`, so both bits are established before the call. The result
-/// is cached for the process, and `OPENSSL_ia32cap`'s SHA clear mask overrides it to force
-/// the portable arm.
-#[cfg(target_arch = "x86_64")]
-fn sha256_ni_available() -> bool {
-    use std::sync::OnceLock;
-
-    static AVAILABLE: OnceLock<bool> = OnceLock::new();
-    *AVAILABLE.get_or_init(|| {
-        let spec = std::env::var("OPENSSL_ia32cap").ok();
-        if ia32cap_sha_cleared(spec.as_deref()) {
-            return false;
-        }
-        std::is_x86_feature_detected!("sha") && std::is_x86_feature_detected!("sse4.1")
-    })
-}
-
 /// SHA-256 compression over `num` blocks using the x86 SHA-NI instructions.
 ///
 /// The register layout, the message-schedule recurrence and the final state shuffle are the
@@ -252,11 +212,14 @@ fn sha256_ni_available() -> bool {
 ///
 /// # Safety
 ///
-/// The caller must have established [`sha256_ni_available`], and `data` must be readable for
-/// `num * MD32_CBLOCK` bytes and disjoint from `*ctx` (the [`sha256_block`] contract).
+/// The caller must have established [`crate::runtime::cpu::has_sha`] (SHA and SSE4.1), and
+/// `data` must be readable for `num * MD32_CBLOCK` bytes and disjoint from `*ctx` (the
+/// [`sha256_block`] contract).
 #[cfg(target_arch = "x86_64")]
 #[target_feature(enable = "sha,sse4.1")]
 unsafe fn sha256_blocks_sha_ni(ctx: &mut Sha256Ctx, mut data: *const u8, mut num: usize) {
+    #[cfg(test)]
+    crate::runtime::cpu::path_probe::sha_ni();
     use core::arch::x86_64::*;
 
     // SAFETY: the caller's contract gives `data` for `num` blocks; `ctx.h` is the live,
@@ -332,9 +295,9 @@ unsafe fn sha256_blocks_sha_ni(ctx: &mut Sha256Ctx, mut data: *const u8, mut num
 /// is zero nothing is read.
 unsafe fn sha256_block(ctx: &mut Sha256Ctx, data: *const u8, num: usize) {
     #[cfg(target_arch = "x86_64")]
-    if num > 0 && sha256_ni_available() {
-        // SAFETY: the feature predicate above establishes the target features, and the
-        // pointer extent is this function's own contract, which is unchanged for the callee.
+    if num > 0 && crate::runtime::cpu::has_sha() {
+        // SAFETY: `has_sha` establishes SHA and SSE4.1, and the pointer extent is this
+        // function's own contract, which is unchanged for the callee.
         unsafe { sha256_blocks_sha_ni(ctx, data, num) };
         return;
     }
@@ -358,6 +321,8 @@ unsafe fn sha256_block(ctx: &mut Sha256Ctx, data: *const u8, num: usize) {
 /// nothing is read.
 unsafe fn sha256_block_portable(ctx: &mut Sha256Ctx, mut data: *const u8, mut num: usize) {
     while num > 0 {
+        #[cfg(test)]
+        crate::runtime::cpu::path_probe::sha_portable();
         let mut x = [0u32; 16];
         for (i, word) in x.iter_mut().enumerate() {
             // SAFETY: `i < 16`, so `i * 4 + 4 <= MD32_CBLOCK` and this word lies in the block
@@ -1351,19 +1316,6 @@ mod tests {
                 assert_eq!(hex(&out[..len]), want, "one-shot {i}");
             }
         }
-    }
-
-    #[cfg(target_arch = "x86_64")]
-    #[test]
-    fn the_ia32cap_clear_mask_is_the_sha_bit_only() {
-        assert!(!ia32cap_sha_cleared(None));
-        assert!(!ia32cap_sha_cleared(Some("0xffffffff")));
-        assert!(!ia32cap_sha_cleared(Some(":0x20000000")));
-        assert!(!ia32cap_sha_cleared(Some("~0x20000000")));
-        assert!(!ia32cap_sha_cleared(Some(":~0x10000000")));
-        assert!(ia32cap_sha_cleared(Some(":~0x20000000")));
-        assert!(ia32cap_sha_cleared(Some("~0x1:~0x20000000")));
-        assert!(!ia32cap_sha_cleared(Some(":~not-hex")));
     }
 
     /// The portable transcription and the dispatched block function must agree on the

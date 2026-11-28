@@ -28,9 +28,10 @@ use crate::evp::cipher_ctx::{
 use crate::provider::cipher::{
     aesni_cbc_hmac_sha256_cipher, aesni_cbc_hmac_sha256_init_key,
     aesni_cbc_hmac_sha256_set_mac_key, aesni_cbc_hmac_sha256_tls1_multiblock_aad,
-    aesni_cbc_hmac_sha256_tls1_multiblock_encrypt, ia32cap_aesni, EvpCtrlTls11MultiblockParam,
+    aesni_cbc_hmac_sha256_tls1_multiblock_encrypt, EvpCtrlTls11MultiblockParam,
     ProvAesHmacSha256Ctx, CTX_ENC,
 };
+use crate::runtime::cpu::has_aes;
 use crate::runtime::obj::{NID_aes_128_cbc_hmac_sha256, NID_aes_256_cbc_hmac_sha256};
 
 /// `EVP_ORIG_GLOBAL` — `include/crypto/evp.h`.
@@ -350,7 +351,7 @@ static AES_256_CBC_HMAC_SHA256: StaticCipher = legacy_cipher(NID_aes_256_cbc_hma
 /// `const EVP_CIPHER *EVP_aes_128_cbc_hmac_sha256(void)` — `e_aes_cbc_hmac_sha256.c:912-915`.
 #[no_mangle]
 pub extern "C" fn EVP_aes_128_cbc_hmac_sha256() -> *const EvpCipher {
-    if ia32cap_aesni() {
+    if has_aes() {
         ptr::addr_of!(AES_128_CBC_HMAC_SHA256.0)
     } else {
         ptr::null()
@@ -360,7 +361,7 @@ pub extern "C" fn EVP_aes_128_cbc_hmac_sha256() -> *const EvpCipher {
 /// `const EVP_CIPHER *EVP_aes_256_cbc_hmac_sha256(void)` — `e_aes_cbc_hmac_sha256.c:917-920`.
 #[no_mangle]
 pub extern "C" fn EVP_aes_256_cbc_hmac_sha256() -> *const EvpCipher {
-    if ia32cap_aesni() {
+    if has_aes() {
         ptr::addr_of!(AES_256_CBC_HMAC_SHA256.0)
     } else {
         ptr::null()

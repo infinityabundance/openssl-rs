@@ -29,8 +29,9 @@
 //! two are congruent mod the ring the following operations live in and `x25519_fe64_tobytes`
 //! canonicalises, which is the only place the representative is observable. `fe64_eligible`
 //! reads the two `CPUID.(EAX=7,ECX=0).EBX` bits (`BMI2` | `ADX`) the asm's
-//! `OPENSSL_ia32cap_P[2] & 0x80100 == 0x80100` test reads, so which arm the ladder takes is
-//! the same decision on either side.
+//! `OPENSSL_ia32cap_P[2] & 0x80100 == 0x80100` test reads, through
+//! [`crate::runtime::cpu`], which honours `OPENSSL_ia32cap`; which arm the ladder takes is
+//! therefore the same decision on either side, masked or not.
 //!
 //! ## The one shape a transcription gets wrong here, and this one keeps
 //!
@@ -151,16 +152,15 @@ const D2: Fe = [
 ///
 /// The asm answers `OPENSSL_ia32cap_P[2] & 0x80100` if that equals `0x80100` and zero
 /// otherwise; `OPENSSL_ia32cap_P[2]` is `CPUID.(EAX=7,ECX=0).EBX`, whose bits 8 and 19 are
-/// `BMI2` and `ADX`. The ladder's *result* is the same mathematical function either way, so
-/// only a caller that reads this answer as a value can see the difference.
+/// `BMI2` and `ADX`. The capability model honours `OPENSSL_ia32cap`, so a consumer that
+/// clears either bit gets the base-2^51 ladder on both sides. The ladder's *result* is the
+/// same mathematical function either way; only a caller that reads this answer as a value
+/// can see which arm ran.
 #[cfg(target_arch = "x86_64")]
 #[no_mangle]
 pub extern "C" fn x25519_fe64_eligible() -> c_int {
-    // SAFETY: `__cpuid_count` is a pure register read for a leaf this CPU defines.
-    let ebx = core::arch::x86_64::__cpuid_count(7, 0).ebx;
-    let m = ebx & 0x80100;
-    if m == 0x80100 {
-        m as c_int
+    if crate::runtime::cpu::has_bmi2() && crate::runtime::cpu::has_adx() {
+        0x80100
     } else {
         0
     }

@@ -648,8 +648,10 @@ fn set_config_loading() -> bool {
 /// The authority's body allocates `optsdone_lock` and `init_lock`, calls `OPENSSL_cpuid_setup()`,
 /// calls `ossl_init_thread()`, creates the configuration re-entrancy key, and sets `base_inited`.
 /// This crate's `OPTSDONE` and `CONF_SETTINGS` are atomics, so neither lock has anything to
-/// protect; `OPENSSL_cpuid_setup` and the CPU dispatch it feeds are Phase 19 and are a recorded
-/// open obligation. What is left is the two calls that can fail, and both are made.
+/// protect. The capability half of `OPENSSL_cpuid_setup` — reading and caching
+/// `OPENSSL_ia32cap` — is [`crate::runtime::cpu::init`], called here at the authority's point;
+/// the per-algorithm dispatch predicates live in the modules that use them. What is left is the
+/// two calls that can fail, and both are made.
 ///
 /// `ossl_init_thread()` is reached through [`CRYPTO_THREAD_init_local`], which calls it first
 /// for exactly the reason the authority's body calls it first: a key created before the thread
@@ -670,6 +672,10 @@ fn base_init() -> bool {
 
 /// The `ossl_init_base` body, in the shape `CRYPTO_THREAD_run_once` takes.
 extern "C" fn init_base_body() {
+    // The authority calls `OPENSSL_cpuid_setup()` before anything else in this body; this is
+    // where `OPENSSL_ia32cap` is read, so a consumer that set it before initialising the
+    // library is honoured by every dispatcher.
+    crate::runtime::cpu::init();
     // SAFETY: the key is this module's own static and the destructor is NULL, which is the
     // authority's argument. A second call would leak a key, which is why this body is inside a
     // run-once.

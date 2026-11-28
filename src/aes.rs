@@ -76,47 +76,6 @@ unsafe fn get_u32(p: *const u8) -> u32 {
     unsafe { u32::from_be_bytes([*p, *p.add(1), *p.add(2), *p.add(3)]) }
 }
 
-/// The AES bit in the first `OPENSSL_ia32cap` vector.
-///
-/// `OPENSSL_ia32cap`'s value is `[vec1][:vec2]`; a vector prefixed with `~` clears the named
-/// bits. `AES` is `CPUID.(EAX=1).ECX` bit 25, i.e. bit 25 of the first vector. Only the clear
-/// mask is modelled, because that is the form that forces the portable path; the authority's
-/// value-set form and its other capability bits are not modelled (`RT-CPU-CAPABILITY`).
-#[cfg(target_arch = "x86_64")]
-fn ia32cap_aes_cleared(spec: Option<&str>) -> bool {
-    let Some(first) = spec.and_then(|s| s.split(':').next()) else {
-        return false;
-    };
-    let Some(mask) = first.strip_prefix('~') else {
-        return false;
-    };
-    let mask = mask.trim_start_matches("0x").trim_start_matches("0X");
-    u64::from_str_radix(mask, 16)
-        .map(|m| m & (1u64 << 25) != 0)
-        .unwrap_or(false)
-}
-
-/// The AES-NI dispatch predicate — the only runtime feature-detection site on this path.
-///
-/// `BOUNDARY_COVERED`: `is_x86_feature_detected!` is a cached CPUID read with no memory or
-/// initialisation obligation; the `#[target_feature(enable = "aes")]` callees execute only
-/// SSE2 moves (baseline on x86_64) and AES-NI instructions, so the single `aes` bit is the
-/// whole precondition. The result is cached for the process, and `OPENSSL_ia32cap`'s AES clear
-/// mask overrides it to force the portable arm.
-#[cfg(target_arch = "x86_64")]
-fn aes_ni_available() -> bool {
-    use std::sync::OnceLock;
-
-    static AVAILABLE: OnceLock<bool> = OnceLock::new();
-    *AVAILABLE.get_or_init(|| {
-        let spec = std::env::var("OPENSSL_ia32cap").ok();
-        if ia32cap_aes_cleared(spec.as_deref()) {
-            return false;
-        }
-        std::is_x86_feature_detected!("aes")
-    })
-}
-
 /// `SubWord(w)` and `RotWord(SubWord(w))` for the big-endian logical word `w`, via
 /// `aeskeygenassist`.
 ///
@@ -152,6 +111,8 @@ unsafe fn ni_subword_pair(w: u32) -> (u32, u32) {
 /// # Safety
 /// `user_key` readable for `bits / 8` bytes and `key` writable, or either NULL.
 unsafe fn aes_expand_portable(user_key: *const u8, bits: c_int, key: *mut AesKey) -> c_int {
+    #[cfg(test)]
+    crate::runtime::cpu::path_probe::aes_portable();
     // SAFETY: the caller's contract.
     unsafe {
         if user_key.is_null() || key.is_null() {
@@ -188,6 +149,8 @@ unsafe fn aes_expand_portable(user_key: *const u8, bits: c_int, key: *mut AesKey
 #[cfg(target_arch = "x86_64")]
 #[target_feature(enable = "aes")]
 unsafe fn aes_expand_ni(user_key: *const u8, bits: c_int, key: *mut AesKey) -> c_int {
+    #[cfg(test)]
+    crate::runtime::cpu::path_probe::aes_ni();
     // SAFETY: the caller's contract; every read/write is within `user_key`/`key`.
     unsafe {
         if user_key.is_null() || key.is_null() {
@@ -282,8 +245,8 @@ unsafe fn aes_expand_ni(user_key: *const u8, bits: c_int, key: *mut AesKey) -> c
 /// `user_key` readable for `bits / 8` bytes and `key` writable, or either NULL.
 unsafe fn aes_expand(user_key: *const u8, bits: c_int, key: *mut AesKey) -> c_int {
     #[cfg(target_arch = "x86_64")]
-    if aes_ni_available() {
-        // SAFETY: `aes_ni_available` establishes the `aes` target feature, and the pointer
+    if crate::runtime::cpu::has_aes() {
+        // SAFETY: `has_aes` establishes the `aes` target feature, and the pointer
         // contract is this function's own, unchanged for the callee.
         return unsafe { aes_expand_ni(user_key, bits, key) };
     }
@@ -396,6 +359,8 @@ pub unsafe extern "C" fn AES_set_decrypt_key(
 #[cfg(target_arch = "x86_64")]
 #[target_feature(enable = "aes")]
 unsafe fn aes_encrypt_ni(input: *const u8, out: *mut u8, key: *const AesKey) {
+    #[cfg(test)]
+    crate::runtime::cpu::path_probe::aes_ni();
     use core::arch::x86_64::*;
 
     // SAFETY: the caller's contract gives the extents; `rk` is within the live schedule.
@@ -422,8 +387,8 @@ unsafe fn aes_encrypt_ni(input: *const u8, out: *mut u8, key: *const AesKey) {
 #[no_mangle]
 pub unsafe extern "C" fn AES_encrypt(input: *const u8, out: *mut u8, key: *const AesKey) {
     #[cfg(target_arch = "x86_64")]
-    if aes_ni_available() {
-        // SAFETY: `aes_ni_available` establishes the `aes` target feature; the pointer contract
+    if crate::runtime::cpu::has_aes() {
+        // SAFETY: `has_aes` establishes the `aes` target feature; the pointer contract
         // is this function's own, unchanged for the callee.
         unsafe { aes_encrypt_ni(input, out, key) };
         return;
@@ -440,6 +405,8 @@ pub unsafe extern "C" fn AES_encrypt(input: *const u8, out: *mut u8, key: *const
 /// # Safety
 /// As [`AES_encrypt`].
 unsafe fn aes_encrypt_portable(input: *const u8, out: *mut u8, key: *const AesKey) {
+    #[cfg(test)]
+    crate::runtime::cpu::path_probe::aes_portable();
     // SAFETY: the caller's contract.
     unsafe {
         let mut state = [0u8; 16];
@@ -461,6 +428,8 @@ unsafe fn aes_encrypt_portable(input: *const u8, out: *mut u8, key: *const AesKe
 #[cfg(target_arch = "x86_64")]
 #[target_feature(enable = "aes")]
 unsafe fn aes_decrypt_ni(input: *const u8, out: *mut u8, key: *const AesKey) {
+    #[cfg(test)]
+    crate::runtime::cpu::path_probe::aes_ni();
     use core::arch::x86_64::*;
 
     // SAFETY: the caller's contract gives the extents; `rk` is within the live schedule.
@@ -487,8 +456,8 @@ unsafe fn aes_decrypt_ni(input: *const u8, out: *mut u8, key: *const AesKey) {
 #[no_mangle]
 pub unsafe extern "C" fn AES_decrypt(input: *const u8, out: *mut u8, key: *const AesKey) {
     #[cfg(target_arch = "x86_64")]
-    if aes_ni_available() {
-        // SAFETY: `aes_ni_available` establishes the `aes` target feature; the pointer contract
+    if crate::runtime::cpu::has_aes() {
+        // SAFETY: `has_aes` establishes the `aes` target feature; the pointer contract
         // is this function's own, unchanged for the callee.
         unsafe { aes_decrypt_ni(input, out, key) };
         return;
@@ -504,6 +473,8 @@ pub unsafe extern "C" fn AES_decrypt(input: *const u8, out: *mut u8, key: *const
 /// # Safety
 /// As [`AES_encrypt`].
 unsafe fn aes_decrypt_portable(input: *const u8, out: *mut u8, key: *const AesKey) {
+    #[cfg(test)]
+    crate::runtime::cpu::path_probe::aes_portable();
     // SAFETY: the caller's contract.
     unsafe {
         let mut state = [0u8; 16];

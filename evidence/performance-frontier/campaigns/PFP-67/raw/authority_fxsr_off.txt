@@ -1,0 +1,23 @@
+cap.word0=0x4e8bffff
+cap.word1=0xedfa3221
+cap.word2=0x219c27eb
+cap.word3=0x184007bc
+cap.aes=0
+cap.pclmul=0
+cap.avx=0
+cap.avx2=1
+cap.sha=1
+cap.vaes=1
+cap.vpclmul=1
+out.aes_encrypt=69c4e0d86a7b0430d8cdb78070b4c55a
+out.aes_cbc=16628846f7334843bc7321cc7966168040f11ffaa504ce70a66fff9c5ac6f072
+out.aes_ctr=20b8dba1f0193d9f8c865667a0737795578796e6213b16c3f61b2b2795d4ff50
+out.aes_gcm=9eb46109bea8cad524aec1c8a639afadb3d9cab6871da724e0178bbe0e6c9cb9cbecde10306db75a497ab5dcc0a0ee45
+out.sha256=0c27bbaa345e7915ea7873bc293bc2938d5390af1bb4b2ded388477702c58ed2
+sel.cbc_hmac_sha1_128_null=1
+sel.cbc_hmac_sha1_256_null=1
+sel.cbc_hmac_sha256_128_null=1
+sel.cbc_hmac_sha256_256_null=1
+api.cpuinfo=CPUINFO: OPENSSL_ia32cap=0xedfa32214e8bffff:0x184007bc219c27eb:0x00000810bc104410:0x0000000000000000:0x0000000000000000 env:~0x1000000:::::
+api.cpu_settings_null=0
+probe.done=1

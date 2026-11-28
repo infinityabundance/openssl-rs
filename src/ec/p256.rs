@@ -63,12 +63,11 @@
 //! §11 admission rule. Evidence does not inherit across targets: changing the
 //! policy for another target requires that target's own measurement.
 //!
-//! **Recorded divergence.** The authority masks its capability words by the
-//! `OPENSSL_ia32cap` environment variable in `OPENSSL_cpuid_setup`. This crate
-//! reads the same CPUID bits directly and does not model that mask; the
-//! divergence is recorded by `RT-CPU-CAPABILITY` and is not introduced here. On
-//! a masked host the two sides may therefore select different arms, which is a
-//! selection difference, not an arithmetic one.
+//! **Capability selection.** The authority masks its capability words by the
+//! `OPENSSL_ia32cap` environment variable in `OPENSSL_cpuid_setup`. This crate's
+//! [`crate::runtime::cpu`] model does the same, so `Arch::new` honours a consumer that
+//! clears BMI2 or ADX and selects the portable kernel on both sides. On an unmasked host
+//! the two sides select the same arm; on a masked host they still agree.
 //!
 //! ## Bounds, per kernel
 //!
@@ -921,15 +920,12 @@ impl ArchProof {
 fn arch_supported() -> bool {
     #[cfg(target_arch = "x86_64")]
     {
-        if !std::is_x86_feature_detected!("bmi2") || !std::is_x86_feature_detected!("adx") {
-            return false;
-        }
         // The authority's `nistz256` predicate is
         // `OPENSSL_ia32cap_P[2] & 0x80100 == 0x80100`: BMI2 (bit 8) and ADX
-        // (bit 19) of `CPUID.(EAX=7,ECX=0).EBX`. This crate reads those bits
-        // directly; the `OPENSSL_ia32cap` environment mask is not modelled
-        // (recorded divergence `RT-CPU-CAPABILITY`).
-        core::arch::x86_64::__cpuid_count(7, 0).ebx & 0x8_0100 == 0x8_0100
+        // (bit 19) of `CPUID.(EAX=7,ECX=0).EBX`. The capability model reads the same
+        // bits and honours `OPENSSL_ia32cap`, so a consumer that clears either one
+        // selects the portable kernel here exactly as it does on the authority.
+        crate::runtime::cpu::has_bmi2() && crate::runtime::cpu::has_adx()
     }
     #[cfg(target_arch = "aarch64")]
     {

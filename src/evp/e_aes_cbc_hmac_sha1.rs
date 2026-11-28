@@ -4,7 +4,7 @@
 //! `EVP_aes_128_cbc_hmac_sha1()` returns the AES-NI stitched construction when the AES-NI feature
 //! bit is set and **NULL otherwise** — `e_aes_cbc_hmac_sha1.c:936-944`, whose `#else` arm at
 //! `:946-954` answers NULL. The predicate is `OPENSSL_ia32cap_P[1] & AESNI_CAPABLE`, the same
-//! runtime bit `src/provider/cipher.rs` reads (`ia32cap_aesni`), so this module answers the same
+//! runtime bit `src/provider/cipher.rs` reads (`has_aes`), so this module answers the same
 //! thing the authority does on the same host.
 //!
 //! ## The construction is the provider's, and that is the crate's own precedent
@@ -41,8 +41,9 @@ use crate::evp::cipher_ctx::{
 use crate::provider::cipher::{
     aesni_cbc_hmac_sha1_cipher, aesni_cbc_hmac_sha1_init_key, aesni_cbc_hmac_sha1_set_mac_key,
     aesni_cbc_hmac_sha1_tls1_multiblock_aad, aesni_cbc_hmac_sha1_tls1_multiblock_encrypt,
-    ia32cap_aesni, EvpCtrlTls11MultiblockParam, ProvAesHmacSha1Ctx, CTX_ENC,
+    EvpCtrlTls11MultiblockParam, ProvAesHmacSha1Ctx, CTX_ENC,
 };
+use crate::runtime::cpu::has_aes;
 use crate::runtime::err::{err_sites, raise_site};
 use crate::runtime::obj::{NID_aes_128_cbc_hmac_sha1, NID_aes_256_cbc_hmac_sha1};
 
@@ -372,7 +373,7 @@ static AES_256_CBC_HMAC_SHA1: StaticCipher = legacy_cipher(NID_aes_256_cbc_hmac_
 /// `#else` arm at `:946-949`.
 #[no_mangle]
 pub extern "C" fn EVP_aes_128_cbc_hmac_sha1() -> *const EvpCipher {
-    if ia32cap_aesni() {
+    if has_aes() {
         ptr::addr_of!(AES_128_CBC_HMAC_SHA1.0)
     } else {
         ptr::null()
@@ -382,7 +383,7 @@ pub extern "C" fn EVP_aes_128_cbc_hmac_sha1() -> *const EvpCipher {
 /// `const EVP_CIPHER *EVP_aes_256_cbc_hmac_sha1(void)` — `e_aes_cbc_hmac_sha1.c:941-944`.
 #[no_mangle]
 pub extern "C" fn EVP_aes_256_cbc_hmac_sha1() -> *const EvpCipher {
-    if ia32cap_aesni() {
+    if has_aes() {
         ptr::addr_of!(AES_256_CBC_HMAC_SHA1.0)
     } else {
         ptr::null()

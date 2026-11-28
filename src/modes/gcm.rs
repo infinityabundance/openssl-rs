@@ -10,7 +10,9 @@
 //! `gmult`/`ghash` are file-static and the non-`4bit` entry points the header exports
 //! (`ossl_gcm_*_4bit`) are not in this stratum's export set. So the court does **not** compare
 //! a function pointer or a table; it compares the ciphertext and the tag, which both
-//! implementations define identically.
+//! implementations define identically. The choice still honours `OPENSSL_ia32cap` through
+//! [`crate::runtime::cpu::has_pclmul`] (LV0 bit 33), which is how a consumer forces the
+//! portable arm.
 //!
 //! What *is* transcribed is the state machine's observable shape, because it is reachable
 //! from the caller's call boundaries rather than from the table:
@@ -147,8 +149,8 @@ impl GcmCtx {
 /// else to [`gf_mul_portable`].
 pub(crate) fn gf_mul(x: u128, y: u128) -> u128 {
     #[cfg(target_arch = "x86_64")]
-    if pclmul_available() {
-        // SAFETY: `pclmul_available` establishes the `pclmulqdq` target feature.
+    if crate::runtime::cpu::has_pclmul() {
+        // SAFETY: `has_pclmul` establishes the `pclmulqdq` target feature.
         return unsafe { gf_mul_clmul(x, y) };
     }
     gf_mul_portable(x, y)
@@ -167,6 +169,8 @@ pub(crate) fn gf_mul(x: u128, y: u128) -> u128 {
 /// being folded into its caller.
 #[inline(never)]
 fn gf_mul_portable(x: u128, y: u128) -> u128 {
+    #[cfg(test)]
+    crate::runtime::cpu::path_probe::pclmul_portable();
     let mut z: u128 = 0;
     let mut v = y;
     let mut i = 0u32;
@@ -204,43 +208,6 @@ fn negative_control_branchy_mul(x: u128, y: u128) -> u128 {
     z
 }
 
-/// The `PCLMULQDQ` bit in the first `OPENSSL_ia32cap` vector (`CPUID.(EAX=1).ECX` bit 1).
-/// Only the `~` clear mask is modelled, the form that forces the portable path.
-#[cfg(target_arch = "x86_64")]
-fn ia32cap_pclmul_cleared(spec: Option<&str>) -> bool {
-    let Some(first) = spec.and_then(|s| s.split(':').next()) else {
-        return false;
-    };
-    let Some(mask) = first.strip_prefix('~') else {
-        return false;
-    };
-    let mask = mask.trim_start_matches("0x").trim_start_matches("0X");
-    u64::from_str_radix(mask, 16)
-        .map(|m| m & (1u64 << 1) != 0)
-        .unwrap_or(false)
-}
-
-/// The PCLMULQDQ dispatch predicate — the only runtime feature-detection site on this path.
-///
-/// `BOUNDARY_COVERED`: `is_x86_feature_detected!` is a cached CPUID read with no memory or
-/// initialisation obligation; the `#[target_feature(enable = "pclmulqdq")]` callee executes
-/// only SSE2 moves (baseline on x86_64) and `pclmulqdq`, so the single bit is the whole
-/// precondition. The result is cached for the process, and `OPENSSL_ia32cap`'s clear mask
-/// overrides it to force the portable arm.
-#[cfg(target_arch = "x86_64")]
-fn pclmul_available() -> bool {
-    use std::sync::OnceLock;
-
-    static AVAILABLE: OnceLock<bool> = OnceLock::new();
-    *AVAILABLE.get_or_init(|| {
-        let spec = std::env::var("OPENSSL_ia32cap").ok();
-        if ia32cap_pclmul_cleared(spec.as_deref()) {
-            return false;
-        }
-        std::is_x86_feature_detected!("pclmulqdq")
-    })
-}
-
 /// Reduce a 256-bit carry-less product modulo `x^128 + x^7 + x^2 + x + 1`.
 ///
 /// `lo` is the low 128 bits and `hi` the high 128. Since `x^128 = x^7 + x^2 + x + 1`, the
@@ -269,6 +236,8 @@ fn reduce_gcm(lo: u128, hi: u128) -> u128 {
 #[cfg(target_arch = "x86_64")]
 #[target_feature(enable = "pclmulqdq")]
 unsafe fn gf_mul_clmul(x: u128, y: u128) -> u128 {
+    #[cfg(test)]
+    crate::runtime::cpu::path_probe::pclmul();
     use core::arch::x86_64::*;
 
     // SAFETY: the caller establishes `pclmulqdq`; `a`/`b` are locals and every load is a
@@ -449,12 +418,12 @@ fn width_override() -> Option<usize> {
 /// Whether the message-body GHASH is aggregated.
 ///
 /// Aggregation is an ILP property of the `pclmulqdq` multiply, so it is enabled exactly when
-/// that arm is: clearing the CPUID bit restores the original serial loop, which remains the
-/// differential reference.
+/// that arm is: [`crate::runtime::cpu::has_pclmul`] false (including when `OPENSSL_ia32cap`
+/// clears it) restores the original serial loop, which remains the differential reference.
 fn batching_enabled() -> bool {
     #[cfg(target_arch = "x86_64")]
     {
-        pclmul_available()
+        crate::runtime::cpu::has_pclmul()
     }
     #[cfg(not(target_arch = "x86_64"))]
     {
@@ -1623,8 +1592,8 @@ mod tests {
             let want = branchy(x, y);
             assert_eq!(gf_mul_portable(x, y), want, "x={x:032x} y={y:032x}");
             #[cfg(target_arch = "x86_64")]
-            if pclmul_available() {
-                // SAFETY: `pclmul_available` establishes the target feature.
+            if crate::runtime::cpu::has_pclmul() {
+                // SAFETY: `has_pclmul` establishes the target feature.
                 let clmul = unsafe { gf_mul_clmul(x, y) };
                 assert_eq!(gf_mul_portable(x, y), clmul, "clmul x={x:032x} y={y:032x}");
             }

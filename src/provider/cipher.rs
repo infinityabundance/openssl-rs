@@ -11050,45 +11050,24 @@ const AES_BLOCK_MASK: usize = !(AES_BLOCK_SIZE - 1);
 // `OPENSSL_ia32cap_P`'s two bits, which are this family's capability predicates
 // ---------------------------------------------------------------------------------------------
 
-/// `OPENSSL_ia32cap_P[1] & (1 << 25)` — `include/crypto/aes_platform.h:171`, `:185`.
+/// `OPENSSL_ia32cap_P[1] & (1 << 25)` — `include/crypto/aes_platform.h:171`, `:185`, read
+/// through [`crate::runtime::cpu::has_aes`].
 ///
 /// **It is a runtime bit, and that is observable.** `AESNI_CAPABLE` and `AESNI_CBC_HMAC_SHA_CAPABLE`
 /// are the same expression, and `ossl_cipher_capable_aes_cbc_hmac_sha1` returns it, so on a host
-/// without AES-NI the four non-ETM rows are not published at all. `OPENSSL_cpuid_setup` fills
-/// `OPENSSL_ia32cap_P[1]` from `CPUID.(EAX=1).ECX`, whose bit 25 is the AES-NI feature bit, so the
-/// crate reads the same bit from the same leaf rather than assuming the answer -- which is what
-/// makes the four rows' *presence* a measured fact on any host rather than this one's.
+/// without AES-NI the four non-ETM rows are not published at all. A consumer that clears the
+/// AES-NI bit through `OPENSSL_ia32cap` (in any of the documented forms) therefore drops all
+/// four rows on both the authority and this crate, which is the compatibility this predicate
+/// exists to preserve.
 ///
-/// **The `OPENSSL_ia32cap` environment variable's masking is not modelled.** `OPENSSL_cpuid_setup`
-/// clears bits named by that variable, so an environment that clears bit 25 would make the authority
-/// drop all four rows where the crate still publishes them. That is a recorded divergence
-/// (`docs/SECURITY_DIVERGENCE_POLICY.md` §4) rather than an oversight, and it is the same class as
-/// the declines D213 (RC4_options) and D222 (the Camellia table) already carry.
-pub(crate) fn ia32cap_aesni() -> bool {
-    let leaf1 = core::arch::x86_64::__cpuid(1);
-    leaf1.ecx & (1 << 25) != 0
-}
-
-/// `OPENSSL_ia32cap_P[2] & (1 << 5)` — the AVX2 bit the multiblock AAD path tests
-/// (`cipher_aes_cbc_hmac_sha1_hw.c:726`).
-///
-/// `OPENSSL_cpuid_setup` fills `OPENSSL_ia32cap_P[2]` from `CPUID.(EAX=7,ECX=0).EBX`, whose bit 5 is
-/// AVX2. The bit changes the interleave this arm selects for an input of 8192 bytes or more, and
-/// nothing else; it is read here for the same reason its sibling is, with the same recorded
-/// environment-variable divergence.
-fn ia32cap_avx2() -> bool {
-    let leaf7 = core::arch::x86_64::__cpuid_count(7, 0);
-    leaf7.ebx & (1 << 5) != 0
-}
-
 /// `int ossl_cipher_capable_aes_cbc_hmac_sha1(void)` — `cipher_aes_cbc_hmac_sha1_hw.c:40-43`.
 extern "C" fn ossl_cipher_capable_aes_cbc_hmac_sha1() -> c_int {
-    ia32cap_aesni() as c_int
+    crate::runtime::cpu::has_aes() as c_int
 }
 
 /// `int ossl_cipher_capable_aes_cbc_hmac_sha256(void)` — the same predicate in its own unit.
 extern "C" fn ossl_cipher_capable_aes_cbc_hmac_sha256() -> c_int {
-    ia32cap_aesni() as c_int
+    crate::runtime::cpu::has_aes() as c_int
 }
 
 /// `int ossl_cipher_capable_aes_cbc_hmac_sha1_etm(void)` — `cipher_aes_cbc_hmac_sha1_etm_hw.c:13-16`,
@@ -11503,7 +11482,7 @@ pub(crate) unsafe extern "C" fn aesni_cbc_hmac_sha1_tls1_multiblock_aad(
             if inp_len < 4096 {
                 return 0; // too short
             }
-            if inp_len >= 8192 && ia32cap_avx2() {
+            if inp_len >= 8192 && crate::runtime::cpu::has_avx2() {
                 n4x = 2; // AVX2
             }
         } else {
@@ -12152,7 +12131,7 @@ pub(crate) unsafe extern "C" fn aesni_cbc_hmac_sha256_tls1_multiblock_aad(
             if inp_len < 4096 {
                 return 0; // too short
             }
-            if inp_len >= 8192 && ia32cap_avx2() {
+            if inp_len >= 8192 && crate::runtime::cpu::has_avx2() {
                 n4x = 2; // AVX2
             }
         } else {
@@ -22885,12 +22864,13 @@ mod tests {
 
         // And on the **real** table, where the filter is doing work rather than passing everything
         // through. Thirteen of the 128 rows carry a predicate: the four non-ETM
-        // `AES-*-CBC-HMAC-*` rows, whose predicate is this host's AES-NI bit, and the nine ETM
-        // rows, whose predicate is the profile's constant 0 because
-        // `AES_CBC_HMAC_SHA_ETM_CAPABLE` is aarch64-only and the hw files compile the stub. The
-        // expected kept sequence is *derived by calling the same predicates*, so the test states
-        // the relation rather than a copy of the table, and the refused set is asserted by name --
-        // which is what makes "the nine ETM rows are dropped on this profile" an observation.
+        // `AES-*-CBC-HMAC-*` rows, whose predicate is the process capability model's AES-NI bit
+        // (so `OPENSSL_ia32cap` can clear it), and the nine ETM rows, whose predicate is the
+        // profile's constant 0 because `AES_CBC_HMAC_SHA_ETM_CAPABLE` is aarch64-only and the hw
+        // files compile the stub. The expected kept sequence is *derived by calling the same
+        // predicates*, so the test states the relation rather than a copy of the table, and the
+        // refused set is asserted by name -- which is what makes "the nine ETM rows are dropped on
+        // this profile, and the four CBC-HMAC rows follow AES-NI" an observation.
         let mut real = [NULL_ROW; DEFLT_CIPHERS.len()];
         // SAFETY: `DEFLT_CIPHERS` is `NULL`-named terminated with 130 rows; `real` has 131 slots.
         unsafe { ossl_prov_cache_exported_algorithms(DEFLT_CIPHERS.as_ptr(), real.as_mut_ptr()) };
@@ -22916,14 +22896,17 @@ mod tests {
             }
         }
         assert_eq!(gated, 13, "the thirteen gated rows are the CBC-HMAC family");
+        // The nine ETM rows are refused unconditionally on this profile; the four non-ETM rows
+        // are refused exactly when AES-NI is unavailable *or* `OPENSSL_ia32cap` clears it.
+        let aes_available = crate::runtime::cpu::has_aes();
         assert_eq!(
             refused.len(),
-            9,
-            "the nine ETM rows are the ones the profile's predicates refuse"
+            if aes_available { 9 } else { 13 },
+            "the ETM rows, plus the CBC-HMAC rows when AES-NI is unavailable, are refused"
         );
         for name in &refused {
             assert!(
-                name.ends_with(b"-ETM".as_slice()),
+                name.ends_with(b"-ETM".as_slice()) || !aes_available,
                 "{name:?} is refused but is not an ETM row, so the profile's predicates changed"
             );
         }
