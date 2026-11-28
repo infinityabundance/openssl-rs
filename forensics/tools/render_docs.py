@@ -311,36 +311,49 @@ def test_row(tests: dict, label: str, verb: str = "passing") -> str:
     return f"| {label} | {result} | {evidence} |"
 
 
+def _version_tuple(version: str) -> tuple[int, ...]:
+    return tuple(int(part) for part in version.split(".") if part.isdigit())
+
+
 def publish_identity(refresh: Path, root: Path, version: str, candidate: dict) -> dict:
-    receipts = [load_json(p) for p in refresh.glob(PUBLISH_GLOB)]
-    published = [r for r in receipts if r.get("status") == "PUBLISHED"]
-    if not published:
-        raise RenderError("no PUBLISHED receipt under atlas-refresh/")
-    ordered = sorted(
-        published, key=lambda r: (r.get("date", ""), r.get("version", ""))
-    )
-    latest = ordered[-1]
-    previous = ordered[-2] if len(ordered) > 1 else None
-    verification = latest.get("registry_verification") or {}
-    artefacts = latest.get("artefacts") or {}
-    published_version = latest.get("version", version)
-    # A version string is not an identity: the working tree can carry a
-    # published version number while containing later source changes.  Call
-    # the tree the published crate only when every candidate library hash is
-    # the hash recorded in the publish receipt.
-    same_artefacts = all(
-        str(artefacts.get(name) or "") == digest
-        for name, digest in candidate.get("libs") or []
-    )
+    """The receipt that carries this version's payload identity.
+
+    The receipt is named, never paraphrased, and it is the *only* place registry
+    facts live.  It exists before the upload (``status: PREPARED``) as well as
+    after it (``status: PUBLISHED``), so the document can name it while the
+    package is being prepared without asserting a status or a checksum.
+
+    Why the rendered block must be status-free: this README is compiled into the
+    crate, so its text is fixed before the crate exists and cannot be rewritten
+    by the upload that follows.  A document that must postdate the event it
+    describes cannot be embedded in the artefact that event produces.  The
+    block therefore states only pre-packaging facts -- version, source commit and
+    the receipt name -- and defers every post-upload fact to that receipt.
+    """
+    path = refresh / f"publish-{version}.json"
+    receipt = load_json(path)
+    receipt_version = str(receipt.get("version", ""))
+    if receipt_version != version:
+        raise RenderError(
+            f"{path.name} records version {receipt_version!r}, expected {version!r}"
+        )
+    source = receipt.get("source_identity") or {}
+    commit = str(source.get("commit") or source.get("candidate_commit") or "")
+    if not commit:
+        commit = str((candidate or {}).get("commit") or "")
+    if not commit:
+        raise RenderError(f"{path.name} records no source commit")
+    earlier = [
+        other
+        for other in (p.stem[len("publish-"):] for p in refresh.glob(PUBLISH_GLOB))
+        if _version_tuple(other) < _version_tuple(version)
+    ]
+    earlier.sort(key=_version_tuple)
     return {
-        "version": published_version,
-        "date": latest.get("date", ""),
-        "checksum": verification.get("checksum_prefix", ""),
-        "libcrypto": str(artefacts.get("libcrypto.so.3", ""))[:8],
-        "libssl": str(artefacts.get("libssl.so.3", ""))[:8],
-        "source": f"atlas-refresh/publish-{published_version}.json",
-        "is_candidate": published_version == version and same_artefacts,
-        "previous": (previous or {}).get("version", ""),
+        "version": version,
+        "commit": commit,
+        "source": f"atlas-refresh/publish-{version}.json",
+        "previous": earlier[-1] if earlier else "",
     }
 
 
@@ -808,16 +821,13 @@ class Evidence:
                 "`Cargo.toml`/`Cargo.lock`, and the library hashes below describe the "
                 "build tree, not a rebuild at this version)"
             )
-        if self.publish["is_candidate"]:
-            bits.append(
-                f"crate version `{self.version}` (**published** "
-                f"{self.publish['date']}, checksum `{self.publish['checksum']}…`)"
-            )
-        else:
-            bits.append(
-                f"working-tree crate version `{self.version}` (**not published "
-                "at this candidate identity**)"
-            )
+        # Status-free by construction: the README is inside the crate, so it is
+        # written before the upload and cannot report its outcome.  The receipt
+        # named here is where that outcome is recorded.
+        bits.append(
+            f"crate version `{self.version}` (payload identity recorded in "
+            f"`{self.publish['source']}`)"
+        )
         bits.extend(
             f"`{name}` sha256 `{digest}`" for name, digest in self.build["libs"]
         )
@@ -971,41 +981,35 @@ class Evidence:
         )
 
     def release_text(self) -> str:
-        """The published release, and whether it is the candidate tree itself.
+        """The release identity, stated so it cannot be false in the crate.
 
-        The published version and the tree version are separate facts. When a
-        publish receipt names the tree version *and* the build receipt's
-        library hashes are the receipt's, the tree is released and the row says
-        so instead of repeating a stale "not published" claim.  The row also
-        states what the crate payload contains: source and documentation only.
-        The install-tree hashes describe a repository build, never the payload.
+        This README is compiled into the crate, so it is fixed before the upload
+        and cannot be updated by it.  A block that asserted a publication status,
+        a registry checksum or a served file count would therefore be false in
+        the very artefact the upload produces.  The block instead names the
+        version, the source commit and the receipt that carries the payload
+        identity; every post-upload fact belongs to that receipt.
         """
-        published = (
-            f"**Published: {self.publish['version']}** on crates.io "
-            f"({self.publish['date']}), checksum `{self.publish['checksum']}…`, "
-            f"install-tree artefacts `libcrypto.so.3` `{self.publish['libcrypto']}…` / "
-            f"`libssl.so.3` `{self.publish['libssl']}…`."
+        libs = dict(self.build["libs"])
+        install = (
+            "Install-tree artefacts `libcrypto.so.3` "
+            f"`{libs.get('libcrypto.so.3', '')[:8]}…` / `libssl.so.3` "
+            f"`{libs.get('libssl.so.3', '')[:8]}…` from `{self.build['source']}`"
         )
         payload = (
-            " The published crate ships **source and documentation only, with no "
+            " The crate payload ships **source and documentation only, with no "
             "binaries**; those install-tree hashes describe the repository build "
-            "recorded in the receipt, not the crate payload."
+            "recorded in the build receipt, not the crate payload."
         )
         previous = (
-            f" {self.publish['previous']} remains the previous release."
+            f" The previous version receipt is `{self.publish['previous']}`."
             if self.publish["previous"]
             else ""
         )
-        if self.publish["is_candidate"]:
-            return (
-                f"{published}{payload} This evidence is bound to the {self.version} "
-                f"tree, which is the published {self.publish['version']} crate.{previous}"
-            )
         return (
-            f"{published}{payload} **Working tree: {self.version} — the candidate, "
-            "not yet published.** This evidence is bound to the "
-            f"{self.version} tree, not to the published "
-            f"{self.publish['version']} crate.{previous}"
+            f"**Crate version `{self.publish['version']}`** from commit "
+            f"`{self.publish['commit']}`; payload identity recorded in "
+            f"`{self.publish['source']}`. {install}.{payload}{previous}"
         )
 
     def l7_families(self) -> str:
@@ -1252,40 +1256,22 @@ class Evidence:
                 f"| candidate identity | {self.identity_text()} | "
                 f"`{self.build['source']}`; `Cargo.toml` |",
                 "| working-tree version | "
-                + (
-                    f"**{self.version}** — **published** on crates.io "
-                    f"({self.publish['date']}, checksum "
-                    f"`{self.publish['checksum']}…`) | `Cargo.toml`; "
-                    f"`{self.publish['source']}` |"
-                    if self.publish["is_candidate"]
-                    else f"**{self.version}** — **not published at this candidate "
-                    "identity** | `Cargo.toml` |"
-                ),
-                "| published release | "
-                f"**{self.publish['version']}** on crates.io ({self.publish['date']}, "
-                f"checksum `{self.publish['checksum']}…`), install-tree artefacts "
-                f"`libcrypto.so.3` `{self.publish['libcrypto']}…` / "
-                f"`libssl.so.3` `{self.publish['libssl']}…`; the crate payload is "
-                "source and documentation only, with no binaries | "
+                f"**{self.version}** — payload identity recorded in "
+                f"`{self.publish['source']}` | `Cargo.toml`; "
+                f"`{self.publish['source']}` |",
+                "| release receipt | "
+                f"`{self.publish['source']}` records crate version "
+                f"`{self.publish['version']}` from commit "
+                f"`{self.publish['commit']}` and the install-tree artefact hashes "
+                f"from `{self.build['source']}`; the crate payload is source and "
+                "documentation only, with no binaries | "
                 f"`{self.publish['source']}` |",
                 "| evidence binding | "
-                + (
-                    f"the evidence in this table is bound to the "
-                    f"**{self.version} tree**, which is the published "
-                    f"{self.publish['version']} crate; downstream rows are bound to "
-                    "the candidate identity recorded in the atlas | this document; "
-                    f"`{ATLAS_S}` (`body.candidate_identity`, "
-                    "`body.evidence_reuse`) |"
-                    if self.publish["is_candidate"]
-                    else (
-                        "the evidence in this table is bound to the "
-                        f"**{self.version} tree**, not to the published "
-                        f"{self.publish['version']} crate; downstream rows are bound "
-                        "to the candidate identity recorded in the atlas | this "
-                        f"document; `{ATLAS_S}` (`body.candidate_identity`, "
-                        "`body.evidence_reuse`) |"
-                    )
-                ),
+                "the evidence in this table is bound to the "
+                f"**{self.version} tree**; downstream rows are bound to the "
+                "candidate identity recorded in the atlas | this document; "
+                f"`{ATLAS_S}` (`body.candidate_identity`, "
+                "`body.evidence_reuse`) |",
                 test_row(self.tests, "library tests", verb="passed"),
                 "| cohort | "
                 f"**{self.consumers['l7_functional']}/{self.consumers['families_total']}** "

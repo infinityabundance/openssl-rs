@@ -94,3 +94,8 @@ __pycache__/
 # Phase-25 in-container toolchain/scratch homes (bind-mounted at /work; must never be committed)
 /.phase25-*/
 /target*/
+
+# Rebuilt performance-frontier binaries. The digests and reproduction scripts are
+# committed and ARTEFACTS-NOT-COMMITTED.md explains the omission; ~39 MB per
+# release of rebuildable .so/.debug bytes must never enter the repository.
+/evidence/performance-frontier/campaigns/*/raw/artefacts/

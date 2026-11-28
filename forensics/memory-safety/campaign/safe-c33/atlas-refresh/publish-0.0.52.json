@@ -1,0 +1,61 @@
+{
+ "receipt": "publish-0.0.52",
+ "date": "2026-11-28",
+ "crate": "openssl-rs",
+ "version": "0.0.52",
+ "registry": "crates-io",
+ "status": "PREPARED",
+ "source_identity": {
+  "commit": "ab883d145d3ec2dda68fb7476a49b4fac17637ed",
+  "commit_subject": "Queues: recording the audit invalidates it, and that is the gate's defect",
+  "candidate_commit": "ab883d145d3ec2dda68fb7476a49b4fac17637ed",
+  "note": "PREPARED from the ab883d14 working tree whose uncommitted changes are the 0.0.52 version bump and the status-free release block in forensics/tools/render_docs.py. No release commit, tag or upload is claimed. The build source-tree digest in atlas-refresh/build-0.0.52.json binds the exact source bytes the install artefacts were built from."
+ },
+ "artefacts": {
+  "libcrypto.so.3": "e7e259c89aea5d72c67e524ff1ff70d3224a567081f659aa8a081feb690bb763",
+  "libssl.so.3": "a761fd55e50af91cbe15c04aa8b8606551d11963d576023149ec87a8606f46",
+  "openssl": "3184e48388ea04c43b63ef80e78c5a57e7353ec18e16c10b4481da35412fbce0",
+  "note": "Install-tree hashes from the build recorded in atlas-refresh/build-0.0.52.json. The crate ships no binaries, so these hashes describe the repository install, not the crate payload.",
+  "phase2_courts": "11/11 passed on that rebuild; dynamic export counts unchanged (libcrypto 5906, libssl 608)"
+ },
+ "packaging": {
+  "status": "PREPARED",
+  "recipe": "cargo package --no-verify --allow-dirty",
+  "prepared_crate": {
+   "files": 1113,
+   "compressed_bytes": 9200251,
+   "sha256": "72c45f4b004d629275fdca4b01327afe1773988f7c8e0c2ce20656ca6dce1114",
+   "path": "target/package/openssl-rs-0.0.52.crate"
+  },
+  "note": "The prepared .crate is the package cargo publish would upload; the sha256 is over those local bytes. Registry acceptance and the payload the registry serves are not claimed before the upload. Because `cargo package` is not reproducible in general, this identity is a preparation witness, not a compatibility or verification result."
+ },
+ "registry_verification": {
+  "status": "PREPARED",
+  "note": "No registry payload has been observed for 0.0.52. This block is completed after the upload from the downloaded .crate, and only then may any checksum or served size be claimed."
+ },
+ "evidence_position": {
+  "closure": "Not re-measured at 0.0.52. The applied closure evidence is unchanged by a version bump; this receipt binds packaging identity only.",
+  "safe_compatible": "0 of the 33 admitted cohort families carry a SAFE_COMPATIBLE graduation. `openssh` is the one risk-accepted family (ETP-T15, 2026-11-23); risk acceptance is not a graduation and is not extended to any other family.",
+  "mechanism_grade": "No mechanism grade is changed by this receipt. The campaign ledger remains the authority.",
+  "boundary_seal": "BOUNDARY and SEAL gates remain NOT_RUN for the S16-S61 cluster. Preparing a release discharges nothing and is not a verification event."
+ },
+ "instruments_not_run_at_this_identity": [
+  "both consumer closures (not re-measured at 0.0.52)",
+  "ASan, TSan, dudect, authority differential, full forensic regeneration",
+  "independent review of the release itself",
+  "crates.io upload and download-checksum verification (not run; no upload performed)"
+ ],
+ "release_process": {
+  "merge": "Not performed for 0.0.52; staging is at ab883d14 with the preparation changes uncommitted.",
+  "tag": "No tag created for 0.0.52.",
+  "upload": "Not performed. This receipt records a prepared package, not a published one.",
+  "disclosure": "This receipt was written before the upload and is status-free in the sense that matters for the crate: the README embedded in the package names this receipt but makes no claim about its status or checksum."
+ },
+ "non_claims": [
+  "This is not a verification event, a graduation, or a compatibility claim.",
+  "The crate ships source and documentation only; no shared object is distributed.",
+  "Preparing a release discharges no obligation and does not advance any mechanism to SAFETY_DISCHARGED.",
+  "No registry checksum, served file count or publication date is claimed by this receipt yet.",
+  "The README embedded in the package names this receipt for the payload identity and asserts no publication status, because the embedded document cannot postdate the upload that produces it."
+ ]
+}

@@ -1,15 +1,15 @@
 {
-  "command": "cargo test --lib -- --test-threads=4",
-  "thread_count": 4,
-  "source_commit": "9bc9c387f8e3380fcbaa180148023be80ddd4885",
-  "source_commit_note": "Measured at HEAD 9bc9c387 on branch staging over a working tree that carried the PFP-73 divstep-domain restriction, its four tests (three in src/bn/blinding.rs, one in src/bn/divstep/tests.rs), and the 0.0.51 version bump. That exact tree is committed as the 0.0.51 release commit, so 2,610 is the count of the release tree, not a dirty-worktree artefact. The earlier 2,606 figure described the tree before those four tests existed. A previous revision of this note said clean HEAD would be 2,606; that was true only until the tests were committed, and is superseded.",
-  "measured_utc": "2026-11-28T14:01:18Z",
-  "passed": 2610,
-  "failed": 0,
-  "ignored": 56,
-  "total": 2666,
-  "kind": "full-library-run",
-  "source_tree_unchanged": false,
-  "source_tree_unchanged_note": "False by construction. The measured tree is HEAD 9bc9c387 plus uncommitted src/bn work (4 added tests) and the 0.0.51 release-metadata bump; the source-tree digest recorded in atlas-refresh/build-0.0.51.json binds the exact bytes this run used. It is not a clean-commit measurement, and no commit is claimed to contain these bytes.",
-  "note": "Current record: 2,610 passed / 0 failed / 56 ignored / 2,666 total (0 measured, 0 filtered out) from `cargo test --lib -- --test-threads=4` in the court container (OPENSSL_RS_COURT_MEM=6g, CARGO_BUILD_JOBS=2, CARGO_PROFILE_TEST_DEBUG=0). The 2,231/0/52 record at cc7762e5d and the older 1,962/0/42 floor are superseded. The expected clean-HEAD figure for this release was 2,606 passed / 0 failed / 56 ignored; the observed 2,610 includes the four pre-existing uncommitted bn tests described above. No test was removed and no test was newly ignored (56 ignored is the expected figure)."
+ "command": "cargo test --lib -- --test-threads=4",
+ "thread_count": 4,
+ "source_commit": "ab883d145d3ec2dda68fb7476a49b4fac17637ed",
+ "source_commit_note": "Measured at HEAD ab883d14 on branch staging over a working tree that carried the 0.0.52 version bump (Cargo.toml/Cargo.lock) and the status-free release-block change in forensics/tools/render_docs.py, with no src/ change. The source-tree digest recorded in atlas-refresh/build-0.0.52.json binds the exact bytes this run used. The earlier 2,610 figure at 0.0.51 is the same count: the version bump and the tooling change add no tests.",
+ "measured_utc": "2026-11-28T14:52:21Z",
+ "passed": 2610,
+ "failed": 0,
+ "ignored": 56,
+ "total": 2666,
+ "kind": "full-library-run",
+ "source_tree_unchanged": false,
+ "source_tree_unchanged_note": "False by construction. The measured tree is HEAD ab883d14 plus the uncommitted 0.0.52 release-metadata bump and the render_docs change; the source-tree digest in atlas-refresh/build-0.0.52.json binds the exact bytes. It is not a clean-commit measurement, and no commit is claimed to contain these bytes.",
+ "note": "Current record: 2,610 passed / 0 failed / 56 ignored / 2,666 total (0 measured, 0 filtered out) from `cargo test --lib -- --test-threads=4` in the court container (OPENSSL_RS_COURT_MEM=6g, OPENSSL_RS_COURT_MEMSWAP=6g, CARGO_BUILD_JOBS=2, CARGO_PROFILE_TEST_DEBUG=0). The 0.0.51 record was also 2,610/0/56, so no test was removed and no test was newly ignored."
 }
