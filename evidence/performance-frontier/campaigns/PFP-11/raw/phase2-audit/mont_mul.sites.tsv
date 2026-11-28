@@ -1,0 +1,18 @@
+symbol	addr	kind	insn	flag_source	class	consumed
+mont_mul_p521_fallible	1d49b9	jcc	je	or %rdx,%r8	a-public-geom	-
+mont_mul_p521_fallible	1d4a02	jcc	je	cmpb $0x0,0x20(%rsp)	a-public	-
+mont_mul_p521_fallible	1d4aa7	setcc	setb	adc 0x8(%rbx,%rcx,8),%r12	b-flag	movzbl %dil,%edi
+mont_mul_p521_fallible	1d4aca	setcc	setb	add 0x10(%rbx,%rcx,8),%rdi	b-flag	adc %rdx,%r13
+mont_mul_p521_fallible	1d4ae6	setcc	setb	add 0x18(%rbx,%rcx,8),%r13	b-flag	adc %rdx,%rdi
+mont_mul_p521_fallible	1d4b03	setcc	setb	add 0x20(%rbx,%rcx,8),%rdi	b-flag	adc %rdx,%r13
+mont_mul_p521_fallible	1d4b1f	setcc	setb	add 0x28(%rbx,%rcx,8),%r13	b-flag	adc %rdx,%rdi
+mont_mul_p521_fallible	1d4b3c	setcc	setb	add 0x30(%rbx,%rcx,8),%rdi	b-flag	adc %rdx,%r13
+mont_mul_p521_fallible	1d4b58	setcc	setb	add 0x38(%rbx,%rcx,8),%r13	b-flag	adc %rdx,%rdi
+mont_mul_p521_fallible	1d4b74	setcc	setb	add 0x40(%rbx,%rcx,8),%rdi	b-flag	adc %rdx,%rsi
+mont_mul_p521_fallible	1d4b92	jcc	jne	cmp $0x9,%rcx	a-public	-
+mont_mul_p521_fallible	1d4ba7	jcc	jne	test %al,%al	a-public	-
+mont_mul_p521_fallible	1d4bf1	jcc	jne	cmp $0xa7,%rax	a-public	-
+mont_mul_p521_fallible	1d4c3b	jcc	jne	cmpb $0x0,0x20(%rsp)	a-public	-
+mont_mul_p521_fallible	1d4cd7	jcc	jne	cmp $0xa7,%rax	a-public	-
+
+counts: a-public=6, a-public-geom=1, b-flag=8

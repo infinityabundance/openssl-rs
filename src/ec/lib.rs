@@ -51,7 +51,8 @@ use crate::bn::ctx::{
 };
 use crate::bn::exp::bn_mod_exp_mont_fixed_top;
 use crate::bn::mont::{
-    BN_MONT_CTX_copy, BN_MONT_CTX_free, BN_MONT_CTX_new, BN_MONT_CTX_set, MontCtx,
+    set_mersenne521_admission, BN_MONT_CTX_copy, BN_MONT_CTX_free, BN_MONT_CTX_new,
+    BN_MONT_CTX_set, MontCtx,
 };
 use crate::ec::curve::{ossl_ec_curve_nid_from_params, EC_GROUP_new_by_curve_name_ex};
 use crate::ec::cvt::{EC_GROUP_new_curve_GF2m, EC_GROUP_new_curve_GFp};
@@ -812,6 +813,10 @@ pub unsafe extern "C" fn EC_GROUP_set_generator(
 ) -> c_int {
     // SAFETY: the enclosing function's `# Safety` section is the contract for every pointer used here.
     unsafe {
+        // Any generator or parameter change invalidates a prior admission. Clear
+        // first so every failure path below leaves the fast arm refused; the
+        // successful tail re-establishes it only for an exact P-521 identity.
+        set_mersenne521_admission((*group).field_data1.cast::<MontCtx>(), false);
         if generator.is_null() {
             // SAFETY: a compile-time-constant site (`ec_lib.c:374`, ERR_R_PASSED_NULL_PARAMETER).
             raise_site(&err_sites::EC_LIB_374);
@@ -868,13 +873,22 @@ pub unsafe extern "C" fn EC_GROUP_set_generator(
             return 0;
         }
 
-        if BN_is_odd((*group).order) != 0 {
-            return ec_precompute_mont_data(group);
+        let ok = if BN_is_odd((*group).order) != 0 {
+            ec_precompute_mont_data(group)
+        } else {
+            BN_MONT_CTX_free((*group).mont_data);
+            (*group).mont_data = ptr::null_mut();
+            1
+        };
+        if ok == 1 {
+            // The group is fully established; admit only the exact P-521
+            // identity. `admits` is the audited predicate at this boundary.
+            set_mersenne521_admission(
+                (*group).field_data1.cast::<MontCtx>(),
+                crate::ec::p521::admits(group),
+            );
         }
-
-        BN_MONT_CTX_free((*group).mont_data);
-        (*group).mont_data = ptr::null_mut();
-        1
+        ok
     }
 }
 

@@ -125,6 +125,13 @@ pub struct MontCtx {
     radix_bits: u32,
     /// The reduction kernel the residues were prepared for.
     backend: MontBackend,
+    /// Admission for the P-521 Mersenne REDC fast arm. It is cleared by every
+    /// modulus (re)preparation and by `BN_MONT_CTX_copy`'s copy of this field,
+    /// and can only be set by the EC group's exact-identity predicate at the
+    /// point the generator and curve are established. A plain `bool` here has
+    /// no ABI consequence: `MontCtx` is an opaque, Rust-owned `Box`, not
+    /// `#[repr(C)]`, and no consumer sees its layout.
+    mersenne521: bool,
 }
 
 // The cached-context slot is a caller-owned `*mut MontCtx` in the ABI structs
@@ -201,6 +208,7 @@ fn new_mont() -> *mut MontCtx {
         flags: 0,
         radix_bits: 0,
         backend: MontBackend::PortableRedc,
+        mersenne521: false,
     })
     .unwrap_or(core::ptr::null_mut())
 }
@@ -299,6 +307,9 @@ fn mont_set(mont: &mut MontCtx, m: &[Limb]) -> bool {
     mont.flags = 0;
     mont.radix_bits = MONT_RADIX_BITS;
     mont.backend = MontBackend::PortableRedc;
+    // A new modulus invalidates any prior admission; only the EC group's
+    // exact-identity predicate may re-establish it.
+    mont.mersenne521 = false;
     mont.rr = rr;
     mont.one = one;
     true
@@ -320,6 +331,40 @@ impl MontCtx {
             one: &self.one[..],
         }
     }
+}
+
+/// Record `admitted` on the `MontCtx` behind `mont`.
+///
+/// # Safety
+///
+/// `mont` must be null or a live, uniquely-owned `MontCtx` — the group's
+/// `field_data1`, which the caller's group contract owns.
+pub(crate) unsafe fn set_mersenne521_admission(mont: *mut MontCtx, admitted: bool) {
+    // SAFETY: the caller's contract.
+    if let Some(mc) = unsafe { as_mut_mont(mont) } {
+        mc.mersenne521 = admitted;
+    }
+}
+
+/// The test-only read side of the admission flag.
+///
+/// # Safety
+///
+/// `mont` must be null or a live `MontCtx`.
+#[cfg(test)]
+pub(crate) unsafe fn mersenne521_admission(mont: *const MontCtx) -> bool {
+    // SAFETY: the caller's contract.
+    unsafe { as_ref_mont(mont) }.is_some_and(|mc| mc.mersenne521)
+}
+
+/// Whether the prepared domain is admitted **and** still holds exactly the
+/// P-521 modulus with `n0 = 1`. The flag is set only by the EC predicate, so
+/// this is defence in depth; the modulus compare keeps a stale or mis-set flag
+/// from reaching the specialized kernel.
+fn mersenne521_active(mc: &MontCtx) -> bool {
+    mc.mersenne521
+        && mc.n0[0] == crate::bn::mersenne::P521_N0
+        && crate::bn::mersenne::is_p521(&mc.n)
 }
 
 /// Whether `mc` is a prepared domain for exactly `md`.
@@ -583,6 +628,10 @@ pub unsafe extern "C" fn BN_MONT_CTX_copy(to: *mut MontCtx, from: *mut MontCtx) 
         dst.flags = src.flags;
         dst.radix_bits = src.radix_bits;
         dst.backend = src.backend;
+        // The source's admission travels with the copy: `ossl_ec_GFp_mont_group_copy`
+        // copies the curve, generator, order and cofactor first, so an admitted
+        // source is an admitted destination and a refused one stays refused.
+        dst.mersenne521 = src.mersenne521;
         to
     })
 }
@@ -712,7 +761,13 @@ pub unsafe extern "C" fn BN_to_montgomery(
             let Some(padded) = pad_to(&ad, mc.n.len()) else {
                 return 0;
             };
-            let Some(v) = mont_mul_fallible(&padded, &mc.rr, &mc.n, mc.n0[0]) else {
+            let fast = mersenne521_active(mc);
+            let reduced = if fast {
+                crate::bn::mersenne::mont_mul_p521_fallible(&padded, &mc.rr)
+            } else {
+                mont_mul_fallible(&padded, &mc.rr, &mc.n, mc.n0[0])
+            };
+            let Some(v) = reduced else {
                 return 0;
             };
             v
@@ -756,7 +811,14 @@ pub unsafe extern "C" fn BN_from_montgomery(
         if mc.n.is_empty() {
             return 0;
         }
-        let Some(value) = mont_reduce(&ad, &mc.n, mc.n0[0]) else {
+        // The specialized REDC is valid for `T < p·R = p·2^576`; a nine-limb
+        // input is below `2^576 < p·R`. Anything wider keeps the general path.
+        let reduced = if mersenne521_active(mc) && ad.len() <= crate::bn::mersenne::P521_LIMBS {
+            crate::bn::mersenne::mont_reduce_p521_fallible(&ad)
+        } else {
+            mont_reduce(&ad, &mc.n, mc.n0[0])
+        };
+        let Some(value) = reduced else {
             return 0;
         };
         // SAFETY: `r` is null-or-live per this function's `# Safety` section.
@@ -810,7 +872,13 @@ pub unsafe extern "C" fn BN_mod_mul_montgomery(
             let Some(pb) = pad_to(&bd, mc.n.len()) else {
                 return 0;
             };
-            let Some(v) = mont_mul_fallible(&pa, &pb, &mc.n, mc.n0[0]) else {
+            let fast = mersenne521_active(mc);
+            let reduced = if fast {
+                crate::bn::mersenne::mont_mul_p521_fallible(&pa, &pb)
+            } else {
+                mont_mul_fallible(&pa, &pb, &mc.n, mc.n0[0])
+            };
+            let Some(v) = reduced else {
                 return 0;
             };
             v

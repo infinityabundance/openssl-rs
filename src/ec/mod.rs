@@ -97,6 +97,7 @@ pub mod kdf;
 pub mod key;
 pub mod kmeth;
 pub(crate) mod p256;
+pub(crate) mod p521;
 // Phase 8.8's `crypto/ec/ec_pmeth.c` (D355): the `EC` `EVP_PKEY_METHOD` object and its callbacks,
 // published as `PMETH_STANDARD_METHODS`' row for `EVP_PKEY_EC`.
 pub mod lib;

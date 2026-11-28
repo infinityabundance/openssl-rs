@@ -1,0 +1,6 @@
+dso_sha256=d672bf83cab7cf63dc403423993d7f4f8b0cf259c3feeb58ca4198732eabda62
+dso_build_id=c4ba12a516364ec10585685bda989c1916c2acac
+source_commit=56a4c0f7ce020938f51d22eafaa8d7af7c8096dc
+worktree_build_inputs=6
+symbol redc_p521_in_place 0x1d4730 0x262
+symbol mont_mul_p521_fallible 0x1d49a0 0x33e

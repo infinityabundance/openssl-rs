@@ -71,6 +71,7 @@ pub mod gf2m;
 pub(crate) mod intern;
 pub mod kron;
 pub mod limbs;
+pub(crate) mod mersenne;
 pub mod mont;
 pub mod nist;
 pub(crate) mod prime_data;

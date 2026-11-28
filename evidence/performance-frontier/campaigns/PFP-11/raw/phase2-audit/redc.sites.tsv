@@ -1,0 +1,28 @@
+symbol	addr	kind	insn	flag_source	class	consumed
+redc_p521_in_place	1d4734	jcc	jb	cmp $0x14,%rsi	a-public	-
+redc_p521_in_place	1d477e	jcc	je	cmp $0x9,%r8	a-public	-
+redc_p521_in_place	1d47a7	setcc	setb	adcq $0x0,0x50(%rdi,%r8,8)	b-flag	movzbl %r9b,%r9d
+redc_p521_in_place	1d47bd	jcc	je	cmp %rcx,%r11	a-public	-
+redc_p521_in_place	1d47c5	setcc	setb	add %r9,0x58(%rdi,%r10,1)	b-flag	mov %r11b,%r9b
+redc_p521_in_place	1d47d3	jcc	je	cmp $0x40,%r10	a-public	-
+redc_p521_in_place	1d47dc	jcc	jne	cmp %r10,%rdx	a-public	-
+redc_p521_in_place	1d47f7	setcc	setne	inc %r9	b-flag	sub %rcx,%r8
+redc_p521_in_place	1d47fd	setcc	setne	inc %r8	b-flag	or %dl,%cl
+redc_p521_in_place	1d4803	setcc	setb	sub %rcx,%r8	b-flag	or %dl,%cl
+redc_p521_in_place	1d4817	setcc	setne	inc %r10	b-flag	or %dl,%cl
+redc_p521_in_place	1d481d	setcc	setb	sub %rcx,%r10	b-flag	or %dl,%cl
+redc_p521_in_place	1d4831	setcc	setne	inc %rbx	b-flag	or %dl,%cl
+redc_p521_in_place	1d4837	setcc	setb	sub %rcx,%rbx	b-flag	or %dl,%cl
+redc_p521_in_place	1d484b	setcc	setne	inc %r15	b-flag	or %dl,%cl
+redc_p521_in_place	1d4851	setcc	setb	sub %rcx,%r15	b-flag	or %dl,%cl
+redc_p521_in_place	1d4865	setcc	setne	inc %r13	b-flag	or %dl,%cl
+redc_p521_in_place	1d486b	setcc	setb	sub %rcx,%r13	b-flag	or %dl,%cl
+redc_p521_in_place	1d487d	setcc	setne	inc %rdx	b-flag	or %sil,%cl
+redc_p521_in_place	1d4884	setcc	setb	sub %rcx,%rdx	b-flag	or %sil,%cl
+redc_p521_in_place	1d489a	setcc	setne	inc %r11	b-flag	or %sil,%cl
+redc_p521_in_place	1d48a1	setcc	setb	sub %rcx,%r11	b-flag	or %sil,%cl
+redc_p521_in_place	1d48bd	setcc	setae	sub $0x1ff,%r14	b-flag	and %sil,%cl
+redc_p521_in_place	1d48c4	setcc	setae	sub %rcx,%r14	b-flag	and %sil,%cl
+redc_p521_in_place	1d498e	setcc	setae	cmp $0x14,%rsi	a-public	-
+
+counts: a-public=6, b-flag=19
