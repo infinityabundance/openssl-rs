@@ -1,0 +1,26 @@
+   Compiling openssl-rs v0.0.49 (/work)
+    Finished `test` profile [unoptimized] target(s) in 28.12s
+     Running unittests src/lib.rs (target/debug/deps/openssl_rs-bcfdf4d0f51f39b5)
+
+running 18 tests
+test context::namemap::tests::add_names_splits_and_refuses_the_two_ways ... ok
+test bn::mont::tests::an_unflagged_public_exponent_uses_the_exponent_bit_length ... ok
+test evp::pmeth_gn::tests::keygen_info_refuses_the_index_it_does_not_have ... ok
+test evp::digest::tests::a_failed_init_refuses_the_params_entry_points_without_asking_the_provider ... ok
+test dsa::ossl::tests::dsa_verify_pair_uses_the_public_exponents_bit_lengths ... ok
+test provider::kdf::tests::adv_probe::sskdf_defaulted_kmac_cleanse_uses_the_allocation_length ... ignored, allocator-injection probe; run via scripts/adv-probe.sh
+test rand::pool::tests::add_refuses_the_pointer_add_begin_handed_out ... ok
+test mac::cmac::tests::copy_refuses_the_identity_and_leaves_the_source_alone ... ok
+test dsa::ossl::tests::fermat_inverse_uses_the_group_order_width ... ok
+test property::store::tests::add_takes_a_reference_and_refuses_the_unusable_arguments ... ok
+test runtime::err::tests::error_string_uses_the_authority_format ... ok
+test runtime::owned_buf::tests::new_cleansed_uses_the_allocation_length ... ok
+test rsa::tests::the_oaep_padding_refuses_the_two_lengths_it_names ... ok
+test store::store_lib::adv_probe::refused_loader_params_refuses_the_attach_without_publishing_a_null_loader ... ignored, requires OPENSSL_RS_ADV_PROBE=1; run scripts/adv-probe.sh (--ignored, one process per probe)
+test x509::v3_addr::tests::validation_err_after_the_callback_clears_itself_uses_the_default ... ok
+test ssl::ssl_sess::cache_lifecycle_tests::ssl_sess_tls12_resumption_without_tickets_reuses_the_session_id ... ok
+test ssl::statem::statem_clnt::certificate_request_sigalgs::tls12_client_signer_uses_the_requested_scheme ... ok
+test ssl::statem::statem_clnt::certificate_request_sigalgs::tls13_request_without_sigalgs_uses_the_defaults ... ok
+
+test result: ok. 16 passed; 0 failed; 2 ignored; 0 measured; 2618 filtered out; finished in 0.53s
+

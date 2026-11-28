@@ -1,0 +1,10 @@
+ABI candidate: 161 lines IDENTICAL to authority
+ABI authority lines: 161
+ABI MX=150 RSA=8 DH=2
+OK  modp2048/nid/priv_preset_pub_present/long_modulus_2048: rc=1 pub=True errs=[]
+OK  modp2048/nid/priv_preset_pub_present/long_2400bit: rc=1 pub=True errs=[]
+MATRIX rows=30 mismatches=0
+harness_source_sha256=04098db7211b4ee1fe5947c36b2622cd3558e7713efd45aada3232953af2eb63
+authority_sha256=611e511db4273c4b6b522031fd171efce71b80661bb8310c2a21dfd18ec0efd2
+dso_candidate_sha256=5b52e4736a7c5bb23f6cf0e3962cfd333ad941a6e62aa7a9033712c0ea50e65c
+abi differential + DH court: done

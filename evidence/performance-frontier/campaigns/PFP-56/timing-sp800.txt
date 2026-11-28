@@ -1,0 +1,10 @@
+   Compiling openssl-rs v0.0.49 (/work)
+    Finished `test` profile [unoptimized] target(s) in 29.93s
+     Running unittests src/lib.rs (target/debug/deps/openssl_rs-bcfdf4d0f51f39b5)
+
+running 1 test
+test rsa::sp800::tests::sp800_pairwise_public_step_before_and_after ... PFP56-PAIRWISE-E old_ns=421437832 new_ns=80683275 old_per_op_ns=4214378 new_per_op_ns=806832
+ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 2636 filtered out; finished in 0.65s
+

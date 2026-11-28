@@ -1,0 +1,27 @@
+   Compiling openssl-rs v0.0.49 (/work)
+    Finished `test` profile [unoptimized] target(s) in 28.55s
+     Running unittests src/lib.rs (target/debug/deps/openssl_rs-bcfdf4d0f51f39b5)
+
+running 19 tests
+test bn::arith::tests::ctgrind_secret_base_fold_and_ladder ... ok
+test bn::arith::tests::a_failed_allocation_in_the_constant_time_ladder_returns_none ... ok
+test bn::arith::tests::pfp43_widened_ladder_matches_independent_paths_and_the_authority_constant ... ok
+test bn::arith::tests::the_constant_time_ladder_matches_the_variable_time_ladder ... ok
+test bn::blinding::tests::create_param_sizes_the_public_exponent_ladder_from_the_exponent ... ok
+test bn::mont::tests::a_prepared_domain_matches_the_unprepared_ladder_over_adversarial_operands ... ok
+test bn::mont::tests::ladder_width_arms_resolve_to_pinned_iteration_counts ... ok
+test bn::mont::tests::the_public_exponent_ladder_matches_the_modulus_width_ladder ... ok
+test bn::rsa_fips186_4::tests::the_fips_186_5_tables_are_the_published_ladder ... ok
+test ec::curve25519::tests::x25519_both_ladders_agree ... ok
+test bn::arith::tests::pfp43_widened_ladder_covers_the_size_boundaries ... ok
+test ec::p256::fixed_base::tests::out_of_range_scalars_match_the_generator_ladder ... ok
+test ec::p256::fixed_base::tests::the_jacobian_reference_matches_the_ladder ... ok
+test ec::p256::tests::every_kernel_ladder_step_matches_the_generic_arithmetic ... ok
+test ec::smpl::tests::the_workspace_ladder_step_is_bit_identical_to_the_authoritys_step ... ok
+test rsa::mp::tests::the_multip_cap_is_the_authoritys_ladder ... ok
+test bn::arith::tests::policy_width_matches_the_modulus_width_ladder ... ok
+test bn::arith::tests::pfp5_window_matches_the_bit_at_a_time_ladder ... ok
+test ec::mult::pfp2_tests::the_engine_ladder_matches_the_bignum_ladder_for_every_kernel ... ok
+
+test result: ok. 19 passed; 0 failed; 0 ignored; 0 measured; 2617 filtered out; finished in 2.98s
+

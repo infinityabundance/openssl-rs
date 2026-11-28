@@ -42,6 +42,7 @@ use crate::bn::bignum::{
 use crate::bn::ctx::{
     BN_CTX_end, BN_CTX_free, BN_CTX_get, BN_CTX_new_ex, BN_CTX_start, BnCtx, BnGencb,
 };
+use crate::bn::mont::{bn_mod_exp_mont_impl, LadderWidth};
 use crate::rsa::check::{
     ossl_rsa_check_pminusq_diff, ossl_rsa_check_public_exponent, ossl_rsa_get_lcm,
 };
@@ -545,6 +546,15 @@ pub(crate) unsafe fn ossl_rsa_sp800_56b_generate_key(
 /// `RSA_R_PAIRWISE_TEST_FAILURE`, and the reason [`ossl_rsa_sp800_56b_generate_key`]
 /// cannot answer 1 without an actual exponentiation having succeeded.
 ///
+/// `k` is marked `BN_FLG_CONSTTIME` for the **second** exponentiation, whose
+/// exponent `d` is secret. That flag also routes the first exponentiation, whose
+/// exponent `e` is public, through the fixed-pattern ladder; PFP-56 therefore
+/// gives that step the exponent-width arm (`LadderWidth::PublicExponent`) instead
+/// of the modulus-width arm, exactly as the blinding refresh does. For
+/// `e = 65537` this is one limb instead of the modulus' limbs, with no change to
+/// the constant-time property: `e`'s length is public, and `d` still selects the
+/// modulus-width ladder.
+///
 /// **A NULL `k` answers 0 without raising**: it is the authority's `goto err`, which
 /// skips the `RSA_R_PAIRWISE_TEST_FAILURE` line.
 ///
@@ -567,7 +577,17 @@ pub(crate) unsafe fn ossl_rsa_sp800_56b_pairwise_test(rsa: *mut Rsa, ctx: *mut B
             BN_set_flags(k, BN_FLG_CONSTTIME);
             ret = c_int::from(
                 BN_set_word(k, 2) != 0
-                    && BN_mod_exp(tmp, k, (*rsa).e, (*rsa).n, ctx) != 0
+                    // SAFETY: `tmp`, `k`, `rsa->e` and `rsa->n` are live; the
+                    // modulus is odd for a valid RSA key, and
+                    // `bn_mod_exp_mont_impl` validates `in_mont` (NULL here).
+                    && bn_mod_exp_mont_impl(
+                        tmp,
+                        k,
+                        (*rsa).e,
+                        (*rsa).n,
+                        core::ptr::null_mut(),
+                        LadderWidth::PublicExponent,
+                    ) != 0
                     && BN_mod_exp(tmp, tmp, (*rsa).d, (*rsa).n, ctx) != 0
                     && BN_cmp(k, tmp) == 0,
             );
@@ -645,6 +665,105 @@ mod tests {
             BN_clear_free(rsa.p);
             BN_clear_free(rsa.q);
             BN_CTX_free(ctx);
+        }
+    }
+
+    /// PFP-56: the pairwise test's public-exponent step runs the exponent-width
+    /// ladder (64 iterations for `e = 65537`), while the secret-`d` step keeps the
+    /// modulus width (1024 iterations for a 1024-bit modulus). Before the fix both
+    /// steps ran 1024 iterations.
+    #[test]
+    fn the_pairwise_test_sizes_the_public_exponent_step_from_the_exponent() {
+        use crate::bn::arith::ladder_probe;
+        use crate::rsa::gen::RSA_generate_key_ex;
+        use crate::rsa::object::{RSA_free, RSA_new};
+
+        // SAFETY: every object below is this test's own and live.
+        unsafe {
+            let e = BN_new();
+            assert_eq!(BN_set_word(e, 65537), 1);
+            let rsa = RSA_new();
+            assert_eq!(RSA_generate_key_ex(rsa, 1024, e, core::ptr::null_mut()), 1);
+            let ctx = BN_CTX_new_ex(core::ptr::null_mut());
+            assert!(!ctx.is_null());
+
+            ladder_probe::reset();
+            assert_eq!(ossl_rsa_sp800_56b_pairwise_test(rsa, ctx), 1);
+            assert_eq!(
+                ladder_probe::ladder_bits(),
+                vec![64, 1024],
+                "e step: one limb; d step: the 16-limb modulus"
+            );
+            assert_eq!(ladder_probe::vartime_bits(), Vec::<usize>::new());
+
+            BN_CTX_free(ctx);
+            RSA_free(rsa);
+        }
+    }
+
+    /// PFP-56 measurement for the one production site this batch fixes: the
+    /// pairwise test's public-exponent step. The old shape is `BN_mod_exp` with a
+    /// `BN_FLG_CONSTTIME` base, which selects the modulus-width ladder; the new
+    /// shape is the same ladder at `LadderWidth::PublicExponent`. Both answer the
+    /// same value; the schedules are 1024 and 64 iterations for a 1024-bit key.
+    #[test]
+    fn sp800_pairwise_public_step_before_and_after() {
+        use crate::bn::arith::BN_ucmp;
+        use crate::rsa::gen::RSA_generate_key_ex;
+        use crate::rsa::object::{RSA_free, RSA_new};
+        use std::time::Instant;
+
+        const REPS: u128 = 100;
+        // SAFETY: every object below is this test's own and live.
+        unsafe {
+            let e = BN_new();
+            assert_eq!(BN_set_word(e, 65537), 1);
+            let rsa = RSA_new();
+            assert_eq!(RSA_generate_key_ex(rsa, 1024, e, core::ptr::null_mut()), 1);
+            let ctx = BN_CTX_new_ex(core::ptr::null_mut());
+            let k = BN_new();
+            let before = BN_new();
+            let after = BN_new();
+            assert!(!ctx.is_null() && !k.is_null() && !before.is_null() && !after.is_null());
+            assert_eq!(BN_set_word(k, 2), 1);
+            BN_set_flags(k, BN_FLG_CONSTTIME);
+
+            let t0 = Instant::now();
+            for _ in 0..REPS {
+                assert_eq!(BN_mod_exp(before, k, (*rsa).e, (*rsa).n, ctx), 1);
+            }
+            let old = t0.elapsed();
+
+            let t1 = Instant::now();
+            for _ in 0..REPS {
+                assert_eq!(
+                    bn_mod_exp_mont_impl(
+                        after,
+                        k,
+                        (*rsa).e,
+                        (*rsa).n,
+                        core::ptr::null_mut(),
+                        LadderWidth::PublicExponent
+                    ),
+                    1
+                );
+            }
+            let new = t1.elapsed();
+
+            assert_eq!(BN_ucmp(before, after), 0, "same value");
+            eprintln!(
+                "PFP56-PAIRWISE-E old_ns={} new_ns={} old_per_op_ns={} new_per_op_ns={}",
+                old.as_nanos(),
+                new.as_nanos(),
+                old.as_nanos() / REPS,
+                new.as_nanos() / REPS
+            );
+
+            BN_free(before);
+            BN_free(after);
+            BN_free(k);
+            BN_CTX_free(ctx);
+            RSA_free(rsa);
         }
     }
 }

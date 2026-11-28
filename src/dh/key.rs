@@ -1567,4 +1567,139 @@ mod tests {
             DH_free(dh);
         }
     }
+
+    /// PFP-52: the ladder width is bound at ingestion. Mutating the exponent
+    /// `BIGNUM` through the pointer the caller retained after `DH_set0_key`
+    /// changes the value the ladder consumes, but not the schedule: `priv_limbs`
+    /// was captured once and the resolution stays `max(policy, modulus, stored)`.
+    ///
+    /// The authority re-derives its schedule per call from `p->top`
+    /// (`crypto/bn/bn_exp.c:637`), so the same mutation shrinks its ladder from
+    /// 2048 iterations to 64. This test proves the divergence in our favour.
+    #[test]
+    fn mutating_the_exponent_after_set0_key_cannot_change_the_resolved_schedule() {
+        use crate::bn::arith::ladder_probe;
+        use crate::bn::bignum::{BN_bin2bn, BN_bn2binpad, BN_num_bits, BN_set_word};
+        use crate::dh::group_params::DH_new_by_nid;
+        use crate::dh::object::{DH_free, DH_get0_key, DH_set0_key, DH_size};
+        use crate::runtime::obj::NID_ffdhe2048;
+
+        let priv_bytes = [0xabu8; 256]; // 2048 bits: 32 normalised limbs
+                                        // SAFETY: every object and buffer below is this test's own and live;
+                                        // `DH_set0_key` takes ownership of `priv_key` exactly once, and the test
+                                        // deliberately keeps the C pointer to exercise the authority's aliasing.
+        unsafe {
+            let dh = DH_new_by_nid(NID_ffdhe2048);
+            let peer = DH_new_by_nid(NID_ffdhe2048);
+            assert!(!dh.is_null() && !peer.is_null());
+
+            let priv_key = BN_bin2bn(
+                priv_bytes.as_ptr(),
+                priv_bytes.len() as c_int,
+                ptr::null_mut(),
+            );
+            assert!(!priv_key.is_null());
+            assert_eq!(BN_num_bits(priv_key), 2048);
+            assert_eq!(DH_set0_key(dh, ptr::null_mut(), priv_key), 1);
+            assert_eq!((*dh).priv_limbs, 32, "32 limbs captured at ingestion");
+
+            assert_eq!(DH_generate_key(peer), 1);
+            let mut peer_pub: *const BigNum = ptr::null();
+            DH_get0_key(peer, &mut peer_pub, ptr::null_mut());
+            assert!(!peer_pub.is_null());
+
+            let len = DH_size(dh) as usize;
+            let mut before = vec![0u8; len];
+            ladder_probe::reset();
+            assert!(DH_compute_key(before.as_mut_ptr(), peer_pub, dh) > 0);
+            assert_eq!(
+                ladder_probe::ladder_bits(),
+                vec![2048],
+                "the ladder runs the ingested 32-limb width"
+            );
+
+            // Mutate the value through the caller-retained pointer: 1 is one limb.
+            assert_eq!(BN_set_word(priv_key, 1), 1);
+            assert_eq!(BN_num_bits(priv_key), 1);
+            assert_eq!(
+                (*dh).priv_limbs,
+                32,
+                "the ingested count is not re-derived from the mutated object"
+            );
+
+            let mut after = vec![0u8; len];
+            ladder_probe::reset();
+            assert!(DH_compute_key(after.as_mut_ptr(), peer_pub, dh) > 0);
+            assert_eq!(
+                ladder_probe::ladder_bits(),
+                vec![2048],
+                "the schedule is still the ingested 32-limb width"
+            );
+            assert_eq!(
+                ladder_probe::vartime_bits(),
+                Vec::<usize>::new(),
+                "the mutation did not move the operation onto the variable-time core"
+            );
+
+            // The value did change: `peer_pub^1 mod p` is the peer's public key,
+            // zero-padded to the modulus width.
+            let mut expected = vec![0u8; len];
+            assert_eq!(
+                BN_bn2binpad(peer_pub, expected.as_mut_ptr(), len as c_int),
+                len as c_int
+            );
+            assert_eq!(
+                after, expected,
+                "the mutated exponent's value is still honoured"
+            );
+
+            DH_free(dh);
+            DH_free(peer);
+        }
+    }
+
+    /// PFP-56: a conforming DH private key runs the declared policy width, not the
+    /// modulus width. ffdhe2048 declares a 225-bit private key (4 limbs), so the
+    /// ladder is 256 iterations even though the modulus is 32 limbs.
+    #[test]
+    fn a_conforming_dh_private_key_runs_the_policy_width() {
+        use crate::bn::arith::ladder_probe;
+        use crate::bn::bignum::BN_bin2bn;
+        use crate::dh::group_params::DH_new_by_nid;
+        use crate::dh::object::{DH_free, DH_get0_key, DH_set0_key, DH_size};
+        use crate::runtime::obj::NID_ffdhe2048;
+
+        let priv_bytes = [0xffu8; 13]; // 104 bits: 2 limbs, inside the 4-limb policy
+                                       // SAFETY: every object and buffer below is this test's own and live.
+        unsafe {
+            let dh = DH_new_by_nid(NID_ffdhe2048);
+            let peer = DH_new_by_nid(NID_ffdhe2048);
+            assert!(!dh.is_null() && !peer.is_null());
+            let priv_key = BN_bin2bn(
+                priv_bytes.as_ptr(),
+                priv_bytes.len() as c_int,
+                ptr::null_mut(),
+            );
+            assert!(!priv_key.is_null());
+            assert_eq!(DH_set0_key(dh, ptr::null_mut(), priv_key), 1);
+            assert_eq!((*dh).priv_limbs, 2);
+
+            assert_eq!(DH_generate_key(peer), 1);
+            let mut peer_pub: *const BigNum = ptr::null();
+            DH_get0_key(peer, &mut peer_pub, ptr::null_mut());
+            assert!(!peer_pub.is_null());
+
+            let mut out = vec![0u8; DH_size(dh) as usize];
+            ladder_probe::reset();
+            assert!(DH_compute_key(out.as_mut_ptr(), peer_pub, dh) > 0);
+            assert_eq!(
+                ladder_probe::ladder_bits(),
+                vec![256],
+                "the 4-limb policy, not the 32-limb modulus"
+            );
+
+            DH_free(dh);
+            DH_free(peer);
+        }
+    }
 }
