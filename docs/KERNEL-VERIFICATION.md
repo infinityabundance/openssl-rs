@@ -175,7 +175,7 @@ hold several at once:
 | `UNASSESSED` | nothing is asserted; the scope records why |
 | `SOURCE_REVIEWED` | a source identity plus a non-empty written invariant argument (`scope` and `assumptions`), an instrument and an existing `evidence_path` |
 | `SOURCE_TAINT_TESTED` | the above plus taint evidence bound to that source identity and a **firing negative control** with an existing evidence path |
-| `ARTEFACT_AUDITED` | an artefact subject the checker **hashes itself**, an `ARTEFACT`-bound record, and an audit whose structured `verdict` is `PASS` and whose digest is that subject |
+| `ARTEFACT_AUDITED` | an artefact subject the checker **hashes itself** (or records `SUBJECT_NOT_RETRIEVABLE` when an uncommitted subject is absent, with a retrieval/reproduction clause and its expected digest), an `ARTEFACT`-bound record, an audit whose structured `verdict` is `PASS` and whose digest is that subject, and a four-state secret-dependence record (`OBSERVED_ZERO`, `OBSERVED_NONZERO`, `UNDETERMINED`, `NOT_ASSESSED`) per target and property; a verdict is never read from `UNDETERMINED` or `NOT_ASSESSED`, and the legacy Boolean/int/list shape is refused |
 | `ARTEFACT_TAINT_TESTED` | the hashable subject plus `ARTEFACT`-bound taint evidence and a firing negative control |
 | `STATISTICALLY_TESTED` | the hashable subject plus a declared experiment (sample count, statistic, threshold, environment) and a result |
 | `MACHINE_CHECKED` | a named mechanised tool plus a harness path that exists and a digest the checker re-hashes; a prose proof string is refused |
