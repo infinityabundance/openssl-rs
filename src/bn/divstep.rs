@@ -10,8 +10,10 @@
 //! control included) and a `jcc`/`setcc`/`cmov` audit, and measured it at
 //! ~0.38-0.40x the GCD on composite 1024/2048-bit moduli. It is now the
 //! odd-modulus inverse used by the RSA blinding refresh
-//! ([`crate::bn::blinding`]); the even-modulus arm keeps the variable-time
-//! helper. The P-256 loci still use Fermat, which wins there.
+//! ([`crate::bn::blinding`]), but only when the modulus is inside its verified
+//! iteration-bound domain (46..=4096 bits); an even or out-of-domain modulus
+//! keeps the previous variable-time / fixed-iteration helper. The P-256 loci
+//! still use Fermat, which wins there.
 //!
 //! ## Algorithm
 //!
@@ -47,15 +49,53 @@
 //!     N = floor((3787 * L + 2166) / 1644),   L = 64 * m.len()
 //! ```
 //!
-//! This is the published `hddivsteps` bound (sipa/safegcd-bounds): for
-//! `0 <= g <= f <= M` and `M >= 2301079`, the number of `hddivsteps` iterations is
-//! at most that value, computationally verified for all `M <= 2^4096`. Our
-//! domains (`L` between 256 and 2048, `m` far above the floor) are inside that
-//! verified range. `L` is the *bit width* of the buffer, so the count is a
-//! function of public geometry, never of a limb value. For 256 bits this is
-//! **591**, for 1024 bits **2360**, for 2048 bits **4718**. The original
-//! `delta = 1` variant needs 741/724 for 256 bits (paper/safegcd-bounds), so the
-//! half-delta variant is not a cosmetic choice.
+//! This is the published `hddivsteps` bound (Wuille's `sipa/safegcd-bounds`),
+//! written with `d = L` (the bit width):
+//!
+//! ```text
+//!     N = floor((45907 * d + 26313) / 19929)
+//! ```
+//!
+//! **These are two forms of one bound, not two independent estimates.** The
+//! rational functions are not identical — they disagree by one at six
+//! non-limb-aligned bit lengths in `[46, 4096]` (`335, 760, 1185, 1979, 2404,
+//! 3623`) — but they agree at **every** bit length that is a multiple of 64.
+//! This module only ever evaluates the bound at `d = L = 64 * m.len()` (the
+//! buffer width), and at `256, 512, 1024, 1536, 2048, 3072, 4096` both forms give
+//! `591, 1180, 2360, 3539, 4718, 7077, 9436`. Because `64 * m.len()` is at least
+//! the modulus' real bit length, evaluating the limb-aligned form is never
+//! smaller than Wuille's bit-length form.
+//!
+//! ## What kind of evidence, and the exact domain
+//!
+//! The bound is a **computer-aided analysis, not a machine-checked proof**: the
+//! safegcd-bounds computation enumerates reachable `(delta, f, g)` states and
+//! fits the iteration count. Its conditions are `0 <= g <= f <= M` with odd `M`,
+//! `M >= 2301079` (equivalently `d >= 46` as used here), and `M <= 2^4096`. Too
+//! few iterations on an input outside those conditions returns a **wrong**
+//! coefficient, so the domain is a **correctness** precondition, not a timing
+//! remark.
+//!
+//! [`modulus_is_in_verified_domain`] is therefore the admission predicate used
+//! by the RSA blinding caller ([`crate::bn::blinding`]). A modulus outside it
+//! falls back to [`crate::bn::limbs::mod_inverse_consttime`]; no caller receives
+//! an inverse computed with an unproven iteration count. The documented range is
+//! through 4096 bits, and the differential population exercised here is 256,
+//! 1024, 2048 and 3072 bits; the 4096-bit point is checked by the resolved
+//! bound assertion and a sampled convergence check, **not** by an exhaustive
+//! proof at that width.
+//!
+//! **A CRT result check is not a substitute for a bound that holds.** A CRT
+//! consistency check can only reject a bad inverse *after* it was computed, and
+//! the retry would still be computed with the same unproven iteration count; it
+//! cannot make a too-small bound safe. The admission predicate is what makes the
+//! domain safe, and it is checked before any coefficient is computed.
+//!
+//! `L` is the *bit width* of the buffer, so the count is a function of public
+//! geometry, never of a limb value. For 256 bits this is **591**, for 1024 bits
+//! **2360**, for 2048 bits **4718**, for 3072 bits **7077**, for 4096 bits
+//! **9436**. The original `delta = 1` variant needs 741/724 for 256 bits
+//! (paper/safegcd-bounds), so the half-delta variant is not a cosmetic choice.
 //!
 //! ## Constant-time discipline
 //!
@@ -76,6 +116,61 @@
 //!   `Drop` volatile-wipes the whole allocation on every exit path. The returned
 //!   coefficient is copied out into an ordinary result vector, exactly as the
 //!   fixed-iteration binary GCD does.
+//!
+//! ## Input staging and the blinding factor's length (PFP-74)
+//!
+//! `mod_inverse_divstep_with_mask` stages the operand with
+//! `copy_from_slice(&a[..a.len().min(w)])`, and the destination is zeroed scratch
+//! (the same pattern appears in the test-only `convergence_steps`). The copy
+//! length is the operand's **normalised limb count**, which for the RSA caller is
+//! a function of the secret random blinding draw.
+//!
+//! This is classified as a **residual leakage channel, not an authorised
+//! declassification.** An observer of the copy loop's duration learns at most the
+//! number of leading zero *64-bit limbs* of the draw; it learns nothing about the
+//! draw's nonzero limbs or bits.
+//!
+//! The information is bounded and small in the RSA setting. The modulus' top bit
+//! is set and the draw is uniform in `[0, m)`, so the top limb is zero with
+//! probability at most `2^-64` when the modulus' bit length is a multiple of 64
+//! (the common case: a `k`-bit RSA modulus has `k` a multiple of 8, and 2048 bits
+//! is 32 limbs). When the bit length is not limb-aligned the top limb can be zero
+//! with probability up to about `2^-1`, but that still reveals only the single
+//! decision "the leading limb is zero", never a limb value. The timing cost is at
+//! most `w` limb copies against a fixed step count of
+//! `floor((3787*64*w + 2166)/1644)` (9436 steps at 4096 bits), so it is a bounded
+//! additive term independent of the private exponent the blinding protects. A
+//! fresh draw is used for every refresh, so the property is not linkable across
+//! operations.
+//!
+//! It is recorded as a residual obligation rather than promoted to a
+//! declassification: eliminating it needs a fixed-width, masked staging copy,
+//! which is a separate change and would itself have to preserve the branch-free
+//! property. **No constant-time claim is made about this channel.**
+//!
+//! ## Toolchain requalification (PFP-74)
+//!
+//! `core::hint::black_box` is a **best-effort optimisation barrier, not a
+//! constant-time guarantee.** It hides a value from the optimiser *as that
+//! toolchain implements it*; a compiler version whose `black_box` lowering,
+//! inlining or code-generation heuristics differ can fold the barrier away and
+//! re-introduce the secret-dependent branch PFP-58 removed.
+//!
+//! The PFP-58 release-artifact audit (zero secret-derived `jcc`/`cmov` in the
+//! fixed-step loop, with the ctgrind firing control firing in the same run) was
+//! performed under:
+//!
+//! * **`rustc 1.98.1 (48a229cea 2026-09-01)`**, target `x86_64-unknown-linux-gnu`;
+//! * release profile `opt-level = 3`, `debug = 0`, `overflow-checks = true`,
+//!   `codegen-units = 16`, no LTO;
+//! * `valgrind 3.19.0` memcheck (ctgrind technique) and an `objdump`
+//!   `jcc`/`setcc`/`cmov` audit of the shipped DSO.
+//!
+//! **Standing obligation:** any change to the compiler version, target,
+//! optimisation level, codegen-units, LTO or `black_box` implementation requires
+//! that audit and the ctgrind firing control to be **re-run** before the
+//! branch-free claim is reused. Do not claim the barrier survives a compiler
+//! upgrade.
 //!
 //! ## Domain
 //!
@@ -388,10 +483,38 @@ fn divstep(
 // Bound
 // ---------------------------------------------------------------------------
 
+/// Lowest modulus bit length for which the published `hddivsteps` bound is
+/// established.
+///
+/// The analysis assumes `M >= 2301079` and states the equivalent condition
+/// `d >= 46`; a shorter modulus is outside the computer-aided verification and
+/// must use the fixed-iteration binary GCD.
+pub(crate) const VERIFIED_MIN_MODULUS_BITS: usize = 46;
+
+/// Highest modulus bit length covered by the published computational bound
+/// (`M <= 2^4096`).
+///
+/// A wider modulus would make [`iteration_bound`] return a count at a buffer
+/// width the analysis never covered, so the divstep is not admitted there.
+pub(crate) const VERIFIED_MAX_MODULUS_BITS: usize = 4096;
+
+/// Whether a modulus of `bit_len` normalised bits is inside the domain where
+/// [`iteration_bound`] is the published, computer-aided bound.
+///
+/// This is the admission predicate the RSA blinding refresh uses. Inside it the
+/// fixed-step divstep may compute the inverse; outside it the caller must use
+/// [`crate::bn::limbs::mod_inverse_consttime`]. The predicate is on the modulus'
+/// bit length, which is public, so it adds no secret-dependent branch.
+pub(crate) fn modulus_is_in_verified_domain(bit_len: usize) -> bool {
+    (VERIFIED_MIN_MODULUS_BITS..=VERIFIED_MAX_MODULUS_BITS).contains(&bit_len)
+}
+
 /// The fixed `hddivsteps` iteration count for a buffer of `limbs` limbs.
 ///
-/// `floor((3787 * 64 * limbs + 2166) / 1644)` — the published half-delta bound,
-/// verified for `M <= 2^4096`. `None` only on arithmetic overflow of the public
+/// `floor((3787 * 64 * limbs + 2166) / 1644)` — the limb-aligned form of
+/// Wuille's published half-delta bound. It is a computer-aided result valid for
+/// the domain guarded by [`modulus_is_in_verified_domain`], not a
+/// machine-checked proof. `None` only on arithmetic overflow of the public
 /// width.
 pub(crate) fn iteration_bound(limbs: usize) -> Option<usize> {
     let bits = limbs.checked_mul(Limb::BITS as usize)?;
@@ -446,6 +569,10 @@ pub(crate) fn mod_inverse_divstep_with_mask(a: &[Limb], m: &[Limb]) -> Option<(V
     let (t3, _rest) = rest.split_at_mut(w);
 
     f[..w].copy_from_slice(m);
+    // PFP-74: `take` is the operand's normalised limb count, so the copy length
+    // is a function of the secret draw. This is a bounded residual timing channel
+    // (see "Input staging" above), documented rather than hidden; the destination
+    // is zeroed scratch, so the omitted limbs are already zero.
     let take = a.len().min(w);
     g[..take].copy_from_slice(&a[..take]);
     r[0] = 1;

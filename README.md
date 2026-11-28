@@ -31,13 +31,13 @@ at. Every row names its own machine-readable evidence; none of them is a claim
 of completeness.
 
 <!-- BEGIN GENERATED: readme-achievements -->
-Source identity: candidate commit `1e7c221f0229ea7ae7d3a55ff2ce8aa9db242134`; build source-tree digest `ca7d39b9bcfbe9827ded8b255a66980d32f16a9fbd15902f80dc1b921839d1c4`; crate version `0.0.49` (**published** 2026-11-18, checksum `4231962b…`); `libcrypto.so.3` sha256 `fd25cc9e6424ea79aaaff05df22b3f6e1d46aa22d5666cfe7589dce95ffd88a9`; `libssl.so.3` sha256 `648f8caecda245d2186813fb67ceadedd798b9ce609c8b041a84f195946c5f68`. Derived by `forensics/tools/render_docs.py`; `--check` fails if a block and its evidence disagree.
+Source identity: candidate commit `9bc9c387f8e3380fcbaa180148023be80ddd4885`; build source-tree digest `9b72d872acd6b2a2f2984362b63d01c4d83af4c63f1442ab97facab0dd05b2e8`; working-tree crate version `0.0.51` (**not published at this candidate identity**); `libcrypto.so.3` sha256 `6db37244c961585ce25e2da80575d22cd2734f73668cb0224aeab96238900299`; `libssl.so.3` sha256 `c8ec33915e004d7f63397104c564b0cb56f65af917e8abb9f87957259c5ea81e`. Derived by `forensics/tools/render_docs.py`; `--check` fails if a block and its evidence disagree.
 
 | Dimension | Result | Evidence |
 |---|---|---|
 | **Downstream drop-in, Safe-33 cohort** | **33 / 33 families at `L7-functional`**, candidate and authority; **carried forward** — 27/33 cohort rows are in `evidence_reuse.reused_families` and `candidate_identity_match=false`; the consumer counter is 0/33 `SAFE_COMPATIBLE` with 1 risk-accepted family (`openssh`) (a functional-level count is not a consumer graduation) | `forensics/downstream/runtime-functional-atlas.json` (`body.runs`); `CAMPAIGN-STATUS.json` (`consumers`) |
 | **Downstream drop-in, 1000-family corpus** | **207 / 1000 at `L7-functional`**; candidate 207 / authority 209 `L7-functional`; measured asymmetry: authority-only `ewftools`, `xilinx-bootgen`; **307 recipes, 253 built, 245 linked**; 223 loaded, 22 `L4-linked`, 7 failed, 755 not attempted (693 with no recipe); 301 of 307 recipe-backed rows carried forward | same atlas, `body.counts.by_subject`, `body.evidence_reuse`; `forensics/downstream/build-link-atlas.json` |
-| **Library test suite** | **2,231 passing, 0 failing, 52 ignored** at `cc7762e5d` — a **floor**, not the current count: later commits add tests without a further full run | `atlas-refresh/test-baseline.json` (`full-library-run`) |
+| **Library test suite** | **2,610 passing, 0 failing, 56 ignored** | `atlas-refresh/test-baseline.json` (`full-library-run`) |
 | **Memory safety: mechanisms** | **6 mechanisms discharged at mechanism scope** — RC-1 refcounting, OB-1 OwnedBuf release state, OB-2 OwnedStr string ownership, OB-3 OwnedCtx/RawCtx context ownership, ERR-1 ERR error-queue ownership and allocator file-coordinate seam, GEN-1 GENERAL_NAME selected-arm representation | `CAMPAIGN-STATUS.json` (`mechanism_discharges`) |
 | **Memory safety: boundaries** | 19 scoped boundary discharges (B23, B25, B27, B29, B45, B48, B49, B50, B51, B52, B53, B54, B55, B56, B57, B60, B67, B69, B70); 4 proposals not applied (B28, B46, B47, B71); **B39–B40 independently checked**; B41–B43 batch-checked; B44 author-evidenced | `atlas-refresh/boundary-sweep-*.json` |
 | **Memory safety: files converted / partial** | **877 files**: 92 `ZERO_UNSAFE`, 18 `BOUNDARY_COVERED`, 761 `PARTIAL` (audited 761/761), 6 `TEST_ONLY`, **0 unaccounted** | `atlas-refresh/unsafe-census.json`, `atlas-refresh/post-census-delta.json` |
@@ -45,10 +45,17 @@ Source identity: candidate commit `1e7c221f0229ea7ae7d3a55ff2ce8aa9db242134`; bu
 | **BOUNDARY / SEAL gates** | **`NOT_RUN` / `NOT_RUN`** — no independent caller/dependency-closure audit, Miri/ASan/Loom/mutation control, authority differential, full forensic regeneration or held-out compatibility for the S16–S61 cluster | `CAMPAIGN-STATUS.json` (`gates.boundary_gate`, `gates.seal_gate`) |
 | **Allocator / ABI invariants** | **preserved** — recorded invariant planes: `abi_courts`, `allocator_seam`, `exported_symbols`, `repr_c_layouts`, `unsafe_lints` | `CAMPAIGN-STATUS.json` (`structural_invariants`) |
 | **Known gaps** | `CLOSURE-NON-MONOTONE` REPAIRED; `S21-O1` CLOSED; `S22-RETAINED` RETAINED; `DOWNSTREAM-IMPLEMENTATION` 0 OPEN AT THE MEASURED IDENTITY; `DOWNSTREAM-h2o` CLOSED; `DOWNSTREAM-charybdis` CLOSED IN S61 (carried forward); `DOWNSTREAM-fastd` ENVIRONMENT; `DOWNSTREAM-HARNESS-FIXTURE` 76 CARRIED S59-S60 BLOCKERS + 25 NEW VENUE/BUILD BLOCKERS; `DOWNSTREAM-BELOW-L7` 100 FAMILIES; `DOWNSTREAM-S42-SYMMETRIC-LOSSES` CLOSED IN S44; `DOWNSTREAM-partclone` CLOSED; `DOWNSTREAM-perl-net-ssleay` CLOSED; `DOWNSTREAM-NO-RECIPE` 693 UNMEASURED; `DOWNSTREAM-MEDUSA` HARNESS; `DOWNSTREAM-S53-YIELD` 2 NEW L7 / 35 ADMITTED; `DOWNSTREAM-S60-YIELD` 7 NEW L7 / 30 ADMITTED; `S56-RESIDUALS` RETAINED; `S57-RACE` DATA-RACE FREEDOM NOT ESTABLISHED; `S58-SECURITY-CALLBACK` PERMISSIVE ARMS RETAINED; `S61-RESIDUALS` OTHER CALLBACK ARMS REMAIN PERMISSIVE; `ELEMENT-7-PRECISION` OPEN — FAIL; `CONTRACTED-OBLIGATIONS-BLOCKED` 215 BLOCKED at the applied v1u closure (222 at the historical v1r closure); `RELEASE-EVIDENCE-DEBT` OPEN; `SSL-CONF-WITNESS` OPEN — blocks 18 SSL_SESSION sites | `CAMPAIGN-STATUS.json` (`known_gaps`) |
-| **Release** | **Published: 0.0.49** on crates.io (2026-11-18), checksum `4231962b…`, install-tree artefacts `libcrypto.so.3` `fd25cc9e…` / `libssl.so.3` `648f8cae…`. The published crate ships **source and documentation only, with no binaries**; those install-tree hashes describe the repository build recorded in the receipt, not the crate payload. This evidence is bound to the 0.0.49 tree, which is the published 0.0.49 crate. 0.0.48 remains the previous release. | `atlas-refresh/publish-0.0.49.json`; `Cargo.toml` |
+| **Release** | **Published: 0.0.49** on crates.io (2026-11-18), checksum `4231962b…`, install-tree artefacts `libcrypto.so.3` `fd25cc9e…` / `libssl.so.3` `648f8cae…`. The published crate ships **source and documentation only, with no binaries**; those install-tree hashes describe the repository build recorded in the receipt, not the crate payload. **Working tree: 0.0.51 — the candidate, not yet published.** This evidence is bound to the 0.0.51 tree, not to the published 0.0.49 crate. 0.0.48 remains the previous release. | `atlas-refresh/publish-0.0.49.json`; `Cargo.toml` |
 
 Downstream evidence reuse: **301 of 307 recipe-backed families carried forward** (`committed-rows-carried-forward`); `candidate_identity_match` = `false`. A carried-forward row is compatibility evidence from the build recorded on that row, not a fresh measurement at the identity above. The Safe-33 cohort has 27/33 of its families in that set.
 <!-- END GENERATED: readme-achievements -->
+
+**Release position.** The 0.0.51 candidate is on branch `staging`. `main` is
+protected and cannot be updated directly, so no 0.0.51 release commit, tag, push
+or registry upload has occurred; `atlas-refresh/publish-0.0.51.json` records the
+checksum as `PENDING` until the publisher uploads it. The published release
+therefore remains 0.0.49, and the generated Release row above says so rather than
+anticipating the upload.
 
 ### The families at `L7-functional`
 
@@ -152,9 +159,11 @@ and verification, then ML-DSA, then the remaining provider and algorithm cores.
 
 Apart from the b85c record above, receipts only: no other graduation is claimed,
 and nothing here claims constant-time behaviour or that the BOUNDARY/SEAL gates
-passed. This section was refreshed for the 0.0.44 candidate. 0.0.44 is a
+passed. This section was refreshed for the 0.0.51 candidate. 0.0.51 is a
 packaging/documentation release, **not a verification event**: nothing below was
-re-measured at it unless a bullet says so.
+re-measured at it unless a bullet says so. References to 0.0.43 and earlier remain
+as the identity at which a measurement was taken; they are history, not current
+claims.
 
 - **The consumer closure is ACCEPTED, with zero refusals**
   (`evidence/closure-ssh-v1r.json`, `evidence/inventory-sshd-v1r.json`;
@@ -176,7 +185,7 @@ re-measured at it unless a bullet says so.
   target-bounded unresolved sites moved **81 → 71** and base-slot-partial
   **50 → 39** (10 sites proved), with the reachable-function digest unchanged
   and obligations unchanged. Element 7 remains FAIL. This checkpoint is **not
-  re-measured at 0.0.44**.
+  re-measured at 0.0.51**.
 - **The engine lock precondition is now explicit**
   (`evidence/mechanism-discharge-ENGINE-CLEANUP.json`, independent verdict in
   `evidence/mechanism-discharge-ENGINE-CLEANUP-review.json`):
@@ -242,7 +251,7 @@ re-measured at it unless a bullet says so.
   unresolved** indirect sites, **81 target-bounded** and 60 contract-bounded
   (46 `ABI_CONTRACT_EXPORT_CALLBACK` + 14 `ABI_CONTRACT_PROVIDER`), 0
   unclassified. A pre-engine analyzer checkpoint reduced target-bounded to
-  **71** (base-slot-partial 50 → 39) but is **not re-measured at 0.0.44**.
+  **71** (base-slot-partial 50 → 39) but is **not re-measured at 0.0.51**.
   `SAFE_COMPATIBLE` therefore stays **0/33** on the cohort counter (see the
   2026-11-17 b85c record above for the principal-issued verdict): 215 obligations
   are contracted
@@ -284,18 +293,21 @@ re-measured at it unless a bullet says so.
      returns 1).
   The legacy digest crashes are **fixed** (5, 6); the fixed-point re-derivation
   is **implemented** (1–3).
-- **The downstream corpus is green at 0.0.43** (`f8f366298`,
+- **The downstream corpus was green at 0.0.43** (`f8f366298`,
   `courts/phase17/downstream`): all six families — curl, git, haproxy, nginx,
-  openssh, python — pass, `RT-DOWNSTREAM-CORPUS` passes, and OpenSSH is
-  restored to **31/31** after the GCM fix. The historic S'' freeze
-  (`atlas-refresh/freeze-S-double-prime.json`) still records the 0.0.42
-  source/artefact/consumer identity, and published 0.0.42 carries that source.
+  openssh, python — passed, `RT-DOWNSTREAM-CORPUS` passed, and OpenSSH was
+  restored to **31/31** after the GCM fix. That is a historical measurement,
+  **superseded as a current statement** by the generated atlas above (all 307
+  recipe-backed rows are carried forward, `candidate_identity_match=false`).
+  The historic S'' freeze (`atlas-refresh/freeze-S-double-prime.json`) still
+  records the 0.0.42 source/artefact/consumer identity, and published 0.0.42
+  carried that source.
 
 **Known open work**
 
 - **Element-7 precision**: the accepted v1r closure has 81 target-bounded
   reachable sites. The pre-engine analyzer checkpoint reduced that to **71**
-  (base-slot-partial 50 → 39), but it is **not re-measured at 0.0.44** and the
+  (base-slot-partial 50 → 39), but it is **not re-measured at 0.0.51** and the
   sites still lack a bounded target set, so element 7 remains FAIL.
 - **215 contracted obligations awaiting discharge** (BLOCKED) at the applied
   v1u closure (222 at the historical v1r closure), inside each family's
@@ -311,8 +323,9 @@ re-measured at it unless a bullet says so.
   from the stale candidate; 892 prerequisite findings are correctly gated until
   those strata seal; and the required CI gates remain **red** (892 prerequisite
   findings; phases 18/20/23/24/25). They were relaxed and then restored for the
-  0.0.43 merge; that is recorded as debt, not as a success. The 0.0.44 release is
-  **not** a verification event.
+  0.0.43 merge; that is recorded as debt, not as a success. The 0.0.44 release was
+  **not** a verification event, and 0.0.51 is likewise a packaging/documentation
+  release, **not** a verification event.
 - The 13 `src/evp/legacy_sha.rs` update/final/ctrl callbacks still dereference
   `md_data` without a check (`atlas-refresh/openssh-v1j-sites.json`; BLOCKED).
 - S56/S57 races are not established; no faithful Loom model exists
@@ -419,6 +432,13 @@ under "Implementation state"; this page types none of those counts. No symbol is
 > Generated evidence is authoritative over descriptive prose. Where a document
 > and a generated artifact disagree, the artifact is right.
 
+**Performance position (current, approximate).** Against the pinned upstream
+authority, the private Rust implementation is a few times slower on RSA, DH and
+modexp, near parity on AES-GCM and SHA-256, and still around 10× slower on P-256
+ECDSA. These are approximate current measurements, not a uniform multiplier and
+not a compatibility result; no symbol is `PARITY_VERIFIED`, and no performance
+figure promotes a symbol to any verified state.
+
 Evidence and method:
 [`PARITY_MODEL.md`](https://github.com/infinityabundance/openssl-rs/blob/main/docs/PARITY_MODEL.md) ·
 [`REPRODUCIBILITY.md`](https://github.com/infinityabundance/openssl-rs/blob/main/docs/REPRODUCIBILITY.md) ·
@@ -461,15 +481,16 @@ The local gate is exactly:
 cargo fmt --all -- --check && cargo clippy --all-targets -- -D warnings && cargo test --lib -- --test-threads=4
 ```
 
-The last full library run on record is **2,231 passed, 0 failed, 52 ignored**
+The last full library run on record is **2,610 passed, 0 failed, 56 ignored**
 (`cargo test --lib -- --test-threads=4`; `atlas-refresh/test-baseline.json`). It
-was measured at `cc7762e5d` during the engine lock repair. It was **not re-run
-for 0.0.44**, so for the release tree it is a floor, not a current count. The
-floor the campaign previously quoted, 1,962 passed / 42 ignored, is superseded by
-that run; the rule is no unexplained removals and no newly ignored tests, not a
-frozen literal. 0.0.44 is a packaging/documentation release, **not a
-verification event**. The `cargo test` line above is the library gate only: it is
-not the differential courts, which run in the court against the pinned authority.
+was measured on 2026-11-28 against the 0.0.51 working tree (HEAD `9bc9c387` plus
+the four uncommitted `bn` tests and the version bump); the corresponding
+clean-HEAD figure is **2,606 passed / 0 failed / 56 ignored**. The older
+2,231/52 record at `cc7762e5d` and the campaign's earlier 1,962/42 floor are
+superseded; the rule is no unexplained removals and no newly ignored tests, not a
+frozen literal. 0.0.51 is a packaging/documentation release, **not a verification
+event**. The `cargo test` line above is the library gate only: it is not the
+differential courts, which run in the court against the pinned authority.
 
 ## Architecture
 
@@ -486,8 +507,8 @@ rule: `nm -D --defined-only <file> | wc -l`, which **includes** the
 linker-emitted version-node definition symbols and gives **5,906** for
 `libcrypto.so.3` and **608** for `libssl.so.3`. The owned-export rule, which
 strips those definitions, gives **5,896** and **603**. Both rule totals are
-identical at v1p and at the 0.0.43 rebuild, with 0 added and 0 removed
-(`atlas-refresh/build-0.0.43.json`).
+identical at v1p, the 0.0.43 rebuild and the 0.0.51 rebuild, with 0 added and 0
+removed (`atlas-refresh/build-0.0.51.json`).
 
 The single implementation still emits the multiple runtime artifacts the
 distribution contract requires, with their own symbol namespaces, SONAMEs and
@@ -524,8 +545,8 @@ are under [`docs/`](https://github.com/infinityabundance/openssl-rs/tree/main/do
 - **Memory safety is measured, not established.** The memory-safety benefit of
   Rust is not asserted here: the crate still carries a large `unsafe` surface,
   measured per module by `forensics/tools/unsafe_footprint.py` and rendered in
-  `forensics/STATUS.md`: **61,454 unsafe sites, 10,980 `extern "C" fn`, 877
-  files, 858,173 lines, 89.4% of the unsafe sites in the parser/algorithm core
+  `forensics/STATUS.md`: **62,824 unsafe sites, 11,013 `extern "C" fn`, 878
+  files, 894,609 lines, 89.5% of the unsafe sites in the parser/algorithm core
   rather than a boundary shim**. `docs/UNSAFE.md` cites the generated table and
   the `UNSAFE-FOOTPRINT` growth ceiling; the count is a footprint, not a proof
   that the unsafe code is correct.

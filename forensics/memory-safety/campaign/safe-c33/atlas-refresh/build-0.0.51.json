@@ -1,0 +1,111 @@
+{
+  "receipt": "build-0.0.51",
+  "kind": "candidate-install-build",
+  "recorded_utc": "2026-11-28",
+  "crate": "openssl-rs",
+  "version": "0.0.51",
+  "status": "BUILT (pending publish)",
+  "release_commit": null,
+  "published_as": "pending: atlas-refresh/publish-0.0.51.json (checksum PENDING)",
+  "purpose": "The install-tree identity rendered into README.md for the 0.0.51 candidate. The artefacts were built from the frozen working tree by the canonical recipe; this receipt binds the rendered identity to the bytes that build actually produced.",
+  "source_identity": {
+    "candidate_branch": "staging",
+    "measured_source_commit": "9bc9c387f8e3380fcbaa180148023be80ddd4885",
+    "measured_source_commit_subject": "Queues: the build does build, and that premise is withdrawn",
+    "build_ran_at_head": "9bc9c387f8e3380fcbaa180148023be80ddd4885",
+    "measured_source_commit_note": "The test run and the build ran against the working tree whose uncommitted changes were the 0.0.51 version bump (Cargo.toml/Cargo.lock), pre-existing src/bn/blinding.rs, src/bn/divstep.rs and src/bn/divstep/tests.rs edits (four added tests), the regenerated documentation and this receipt. The tree is therefore NOT commit 9bc9c387 alone; the build source-tree digest below binds the exact bytes that were measured and built. Commit 9bc9c387 contains neither the 0.0.51 version string nor the four bn tests.",
+    "measured_source_tree_digest": "9b72d872acd6b2a2f2984362b63d01c4d83af4c63f1442ab97facab0dd05b2e8",
+    "build_source_tree_digest": "9b72d872acd6b2a2f2984362b63d01c4d83af4c63f1442ab97facab0dd05b2e8",
+    "build_source_tree_digest_rule": "sha256 over canonical JSON of sorted [relpath, size, sha256] for src/, Cargo.toml, Cargo.lock, build.rs (forensics/tools/phase7_courts.py::_source_tree_digest)",
+    "release_tree_digest": "9b72d872acd6b2a2f2984362b63d01c4d83af4c63f1442ab97facab0dd05b2e8",
+    "release_tree_digest_recomputed_at": "working tree at 9bc9c387f8e3380fcbaa180148023be80ddd4885 (no release commit exists yet)",
+    "release_tree_digest_rule": "same rule and same enumeration, computed over the 0.0.51 packaging tree (the working tree's src/, Cargo.toml, Cargo.lock, build.rs).",
+    "release_tree_digest_note": "The version bump is uncommitted, so the build tree and the packaging tree are the same working tree: both digest 909 entries to 9b72d872… . No commit is claimed to contain these bytes, and the receipt must be reissued if the publisher commits a different tree.",
+    "working_tree_at_build": "dirty by design: Cargo.toml and Cargo.lock at 0.0.51, four pre-existing uncommitted bn tests under src/bn, the regenerated documentation blocks, the campaign-status/reduction edits and this receipt. No other src/ change accompanies the bump."
+  },
+  "build": {
+    "recipe": "bash forensics/tools/build_phase2.sh",
+    "court_container": "openssl-rs-court",
+    "court_image": "openssl-rs-court:1",
+    "court_memory_cap": "6g",
+    "courts_cpu": 8,
+    "cargo_build_jobs": 2,
+    "exit_status": 0,
+    "wall_seconds": null,
+    "wall_seconds_note": "not instrumented for this run; the recipe completed successfully and the Phase-2 courts ran against the produced artefacts.",
+    "completed_utc": "2026-11-28T14:02:00Z",
+    "toolchain": {
+      "rustc": "1.98.1 (48a229cea 2026-09-01)",
+      "cargo": "1.98.1 (797e8a9bc 2026-08-05)",
+      "cc": "cc (Debian 12.2.0-14+deb12u1) 12.2.0",
+      "python": "3.11.2",
+      "authority": "openssl-3.6.4-production"
+    },
+    "phase2_courts": {
+      "receipt": "artifacts/phase2/COURTS.json",
+      "all_pass": true,
+      "courts": 11,
+      "passed": 11
+    },
+    "rebuilt_for_this_release": true,
+    "why_rebuilt": "the receipt must carry artefact hashes produced by an actual build of this tree; the committed artefacts were bound to 0.0.49 and the version bump and src/bn changes alter the bytes."
+  },
+  "artefacts": {
+    "libcrypto.so.3": {
+      "path": "artifacts/phase2/install/lib/libcrypto.so.3",
+      "sha256": "6db37244c961585ce25e2da80575d22cd2734f73668cb0224aeab96238900299",
+      "size": 17189224,
+      "soname": "libcrypto.so.3",
+      "needed": [
+        "libgcc_s.so.1",
+        "libc.so.6",
+        "ld-linux-x86-64.so.2"
+      ],
+      "runpath": null,
+      "dynamic_defined_symbols": 5906
+    },
+    "libssl.so.3": {
+      "path": "artifacts/phase2/install/lib/libssl.so.3",
+      "sha256": "c8ec33915e004d7f63397104c564b0cb56f65af917e8abb9f87957259c5ea81e",
+      "size": 16902296,
+      "soname": "libssl.so.3",
+      "needed": [
+        "libcrypto.so.3",
+        "libgcc_s.so.1",
+        "libc.so.6",
+        "ld-linux-x86-64.so.2"
+      ],
+      "runpath": null,
+      "dynamic_defined_symbols": 608
+    },
+    "legacy.so": {
+      "path": "artifacts/phase2/install/lib/ossl-modules/legacy.so",
+      "sha256": "98186ffaca9e9fe3a9ebea3b0a305df4e0f00ddd57f222a2a0fad97586270577",
+      "size": 16865208,
+      "runpath": "$ORIGIN/.."
+    },
+    "openssl": {
+      "path": "artifacts/phase2/install/bin/openssl",
+      "sha256": "bfab638f0d8e74b4a9839189ddc3e09db33eb216ec3fa6b240ed8a11e12fcce6",
+      "size": 12695616
+    }
+  },
+  "crate_package": {
+    "status": "PENDING",
+    "note": "No crate package was produced or uploaded for 0.0.51. The publisher performs `cargo publish`, which re-packs and verifies from the committed tree; the crate checksum is recorded as PENDING in atlas-refresh/publish-0.0.51.json and is not claimed here."
+  },
+  "evidence_carried_forward": {
+    "closure": "the applied closure is not re-measured at this candidate; this receipt binds build identity only.",
+    "closure_not_re_measured": true,
+    "why": "re-running the safety closure is a deliberate verification activity, not part of packaging.",
+    "safe_compatible": "not adjudicated by this receipt; the campaign counter records 0/33 SAFE_COMPATIBLE with 1 risk-accepted family (openssh), and no family is graduated here.",
+    "mechanism_discharges": "none claimed here; the ledger at measured_source_commit is the authority."
+  },
+  "non_claims": [
+    "No obligation is discharged by this receipt, and none is discharged by rebuilding.",
+    "The closure and downstream evidence are not re-measured at 0.0.51.",
+    "Passing the Phase 2 courts is an ABI/install-layout result, not a safety or cryptographic result.",
+    "The export counts are unchanged from 0.0.49 (libcrypto 5906, libssl 608); the artefact bytes differ because the version metadata and src/bn code differ, which is not a regression and not a safety result.",
+    "The recorded source identity is HEAD plus a working-tree digest; the version bump and four bn tests are uncommitted, so no commit is claimed to contain the built bytes."
+  ]
+}

@@ -451,6 +451,19 @@ fn fixed_composite_2048() -> (Vec<Limb>, Vec<Limb>, Vec<Limb>) {
     (m, p.clone(), p)
 }
 
+/// Two odd 1536-bit factors; their product is an odd 3072-bit composite, still
+/// inside the divstep's verified 4096-bit bound.
+fn fixed_composite_3072() -> (Vec<Limb>, Vec<Limb>, Vec<Limb>) {
+    let mut p = vec![0x9e37_79b9_7f4a_7c15u64; 24];
+    let mut q = vec![0xd1b5_4a32_d192_ed03u64; 24];
+    p[0] |= 1;
+    q[0] |= 1;
+    p[23] |= 1 << 63;
+    q[23] |= 1 << 63;
+    let m = limbs::mul(&p, &q);
+    (m, p, q)
+}
+
 #[test]
 fn composite_moduli_match_the_gcd_oracle() {
     // PFP-58: the blinding inverse takes an odd *composite*. Primality is not
@@ -458,6 +471,7 @@ fn composite_moduli_match_the_gcd_oracle() {
     for (label, (m, p, q), limbs_wanted) in [
         ("composite-1024", fixed_composite_1024(), 16usize),
         ("composite-2048", fixed_composite_2048(), 32usize),
+        ("composite-3072", fixed_composite_3072(), 48usize),
     ] {
         assert_eq!(m.len(), limbs_wanted, "{label}: width");
         assert_eq!(m[0] & 1, 1, "{label}: odd");
@@ -487,7 +501,11 @@ fn composite_moduli_match_the_gcd_oracle() {
         }
 
         let mut rng = Rng::new(0x5046_500A ^ limbs_wanted as u64);
-        let cases = if limbs_wanted == 16 { 96 } else { 48 };
+        let cases = match limbs_wanted {
+            16 => 96,
+            32 => 48,
+            _ => 24,
+        };
         let mut invertible = 0usize;
         for _ in 0..cases {
             let a = reduce(&rng.limbs(m.len()), &m);
@@ -517,22 +535,56 @@ fn composite_moduli_match_the_gcd_oracle() {
 
 #[test]
 fn iteration_bounds_are_the_published_half_delta_values() {
+    // The bound is resolved from the buffer width, so these are exact integer
+    // answers, not estimates: 256, 512, 1024, 1536, 2048, 3072 and 4096 bits.
     assert_eq!(iteration_bound(4), Some(591));
+    assert_eq!(iteration_bound(8), Some(1180));
     assert_eq!(iteration_bound(16), Some(2360));
+    assert_eq!(iteration_bound(24), Some(3539));
     assert_eq!(iteration_bound(32), Some(4718));
+    assert_eq!(iteration_bound(48), Some(7077));
+    assert_eq!(iteration_bound(64), Some(9436));
+}
+
+#[test]
+fn the_admission_domain_is_the_published_bit_length_interval() {
+    use crate::bn::divstep::{
+        modulus_is_in_verified_domain, VERIFIED_MAX_MODULUS_BITS, VERIFIED_MIN_MODULUS_BITS,
+    };
+    assert_eq!(VERIFIED_MIN_MODULUS_BITS, 46);
+    assert_eq!(VERIFIED_MAX_MODULUS_BITS, 4096);
+    assert!(!modulus_is_in_verified_domain(0));
+    assert!(!modulus_is_in_verified_domain(45));
+    assert!(modulus_is_in_verified_domain(46));
+    assert!(modulus_is_in_verified_domain(1024));
+    assert!(modulus_is_in_verified_domain(2048));
+    assert!(modulus_is_in_verified_domain(3072));
+    assert!(modulus_is_in_verified_domain(4096));
+    assert!(!modulus_is_in_verified_domain(4097));
 }
 
 #[test]
 fn realised_steps_are_within_the_bound() {
     let mut rng = Rng::new(0x5046_500C);
     let mut worst: f64 = 0.0;
-    for w in [4usize, 5, 8, 16] {
+    // The larger widths are sampled, not exhausted: that is supporting evidence
+    // for the bound at 3072/4096 bits, not a proof of it. The proof remains the
+    // published computer-aided analysis plus the admission predicate.
+    for (w, cases) in [
+        (4usize, 64usize),
+        (5, 64),
+        (8, 64),
+        (16, 64),
+        (32, 8),
+        (48, 8),
+        (64, 8),
+    ] {
         // Odd moduli of the full width, top bit set.
         let mut m = rng.limbs(w);
         m[0] |= 1;
         m[w - 1] |= 1 << 63;
         let bound = iteration_bound(w).expect("bound");
-        for _ in 0..64 {
+        for _ in 0..cases {
             let a = reduce(&rng.limbs(w), &m);
             let steps = convergence_steps(&a, &m, bound + 1).expect("terminates within bound+1");
             assert!(

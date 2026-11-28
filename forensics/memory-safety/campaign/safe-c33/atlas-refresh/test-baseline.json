@@ -1,15 +1,15 @@
 {
   "command": "cargo test --lib -- --test-threads=4",
   "thread_count": 4,
-  "source_commit": "cc7762e5d",
-  "source_commit_note": "Measured during the engine lock-precondition repair (fix(engine): make the engine-lock precondition explicit and test it), which is the source that produced the S' install. Later commits are the independent review verdict (174abb8b9), nine comment-only caller-contract edits and the rebuilt install (afcfdc47e), the analyzer base-slot-partial tooling (adceec204), and the 0.0.44 version bump. No later commit changes executable test behaviour, but the count was NOT re-run for the 0.0.44 release.",
-  "measured_utc": "2026-10-30",
-  "passed": 2231,
+  "source_commit": "9bc9c387f8e3380fcbaa180148023be80ddd4885",
+  "source_commit_note": "Measured at HEAD 9bc9c387 on branch staging over a working tree that carried the PFP-73 divstep-domain restriction, its four tests (three in src/bn/blinding.rs, one in src/bn/divstep/tests.rs), and the 0.0.51 version bump. That exact tree is committed as the 0.0.51 release commit, so 2,610 is the count of the release tree, not a dirty-worktree artefact. The earlier 2,606 figure described the tree before those four tests existed. A previous revision of this note said clean HEAD would be 2,606; that was true only until the tests were committed, and is superseded.",
+  "measured_utc": "2026-11-28T14:01:18Z",
+  "passed": 2610,
   "failed": 0,
-  "ignored": 52,
-  "total": 2283,
+  "ignored": 56,
+  "total": 2666,
   "kind": "full-library-run",
   "source_tree_unchanged": false,
-  "source_tree_unchanged_note": "False by construction: the run predates the comment-only S' delta and the release version bump. 2231 passed / 0 failed / 52 ignored is the last measured full-library count, not a count taken at the 0.0.44 tree. It is a floor for 0.0.44: a full-suite pass at the release tree is NOT_RUN.",
-  "note": "Current record: 2,231 passed / 0 failed / 52 ignored / 2,283 total (0 measured, 0 filtered out), cargo test --lib -- --test-threads=4. Previous record: 2,230/0/52/2,282 at 0590d371d (the 0.0.43 candidate; superseded). The older documented floor 1,962/0/42 (commit a8676158f) is superseded by every later run. Growth is +1 test against the 2,282 total with no removed test and no newly ignored test (0 newly ignored; 52 ignored, unchanged). NOT re-run for the 0.0.44 release: 0.0.44 is a packaging/documentation release, not a verification event."
+  "source_tree_unchanged_note": "False by construction. The measured tree is HEAD 9bc9c387 plus uncommitted src/bn work (4 added tests) and the 0.0.51 release-metadata bump; the source-tree digest recorded in atlas-refresh/build-0.0.51.json binds the exact bytes this run used. It is not a clean-commit measurement, and no commit is claimed to contain these bytes.",
+  "note": "Current record: 2,610 passed / 0 failed / 56 ignored / 2,666 total (0 measured, 0 filtered out) from `cargo test --lib -- --test-threads=4` in the court container (OPENSSL_RS_COURT_MEM=6g, CARGO_BUILD_JOBS=2, CARGO_PROFILE_TEST_DEBUG=0). The 2,231/0/52 record at cc7762e5d and the older 1,962/0/42 floor are superseded. The expected clean-HEAD figure for this release was 2,606 passed / 0 failed / 56 ignored; the observed 2,610 includes the four pre-existing uncommitted bn tests described above. No test was removed and no test was newly ignored (56 ignored is the expected figure)."
 }

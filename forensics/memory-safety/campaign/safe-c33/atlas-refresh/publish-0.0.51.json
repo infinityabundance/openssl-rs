@@ -1,0 +1,70 @@
+{
+ "receipt": "publish-0.0.51",
+ "date": "2026-11-28",
+ "crate": "openssl-rs",
+ "version": "0.0.51",
+ "registry": "crates-io",
+ "status": "PENDING",
+ "source_identity": {
+  "commit": "9bc9c387f8e3380fcbaa180148023be80ddd4885",
+  "commit_subject": "Queues: the build does build, and that premise is withdrawn",
+  "candidate_commit": "9bc9c387f8e3380fcbaa180148023be80ddd4885",
+  "tag": null,
+  "note": "PRE-PUBLISH. The candidate is HEAD 9bc9c387 plus the uncommitted 0.0.51 version bump, four pre-existing bn tests and the regenerated documentation. The packaging-tree digest of src/, Cargo.toml, Cargo.lock and build.rs is 9b72d872acd6b2a2f2984362b63d01c4d83af4c63f1442ab97facab0dd05b2e8, identical to the tree the install artefacts were built from (atlas-refresh/build-0.0.51.json). No tag exists and no commit contains these bytes, so the publisher must commit exactly this tree or reissue both receipts."
+ },
+ "artefacts": {
+  "libcrypto.so.3": "6db37244c961585ce25e2da80575d22cd2734f73668cb0224aeab96238900299",
+  "libssl.so.3": "c8ec33915e004d7f63397104c564b0cb56f65af917e8abb9f87957259c5ea81e",
+  "openssl": "bfab638f0d8e74b4a9839189ddc3e09db33eb216ec3fa6b240ed8a11e12fcce6",
+  "note": "Install-tree hashes from the build recorded in atlas-refresh/build-0.0.51.json. The crate ships no binaries, so these hashes describe the repository install, not the crate payload.",
+  "phase2_courts": "11/11 passed on that rebuild; dynamic export counts unchanged (libcrypto 5906, libssl 608)"
+ },
+ "packaging": {
+  "status": "PENDING",
+  "files": null,
+  "compressed_bytes": null,
+  "crate_sha256": "PENDING",
+  "crate_path_note": "No `cargo publish` has run for 0.0.51. The checksum is deliberately PENDING: the publisher fills in the .crate size and sha256 after the upload, and this receipt must not claim a digest that was never observed."
+ },
+ "registry_verification": {
+  "status": "PENDING",
+  "endpoint": "https://crates.io/api/v1/crates/openssl-rs/0.0.51",
+  "checksum": "PENDING",
+  "checksum_prefix": "PENDING",
+  "crate_size": null,
+  "published_at": null,
+  "published_by": null,
+  "yanked": null,
+  "license": "Apache-2.0 OR MIT",
+  "rust_version": "1.98.1",
+  "download_endpoint": "https://crates.io/api/v1/crates/openssl-rs/0.0.51/download",
+  "download_sha256_recomputed": "PENDING",
+  "download_verification": "NOT_RUN — no upload has happened"
+ },
+ "container_package": {
+  "status": "PENDING",
+  "note": "No container image has been built or pushed for 0.0.51. No tag, digest or visibility is claimed."
+ },
+ "evidence_position": {
+  "closure": "Not re-measured at 0.0.51. The applied closure evidence is unchanged by a version bump; this receipt binds packaging identity only.",
+  "safe_compatible": "0 of the 33 admitted cohort families carry a SAFE_COMPATIBLE graduation. `openssh` is the one risk-accepted family (ETP-T15, 2026-11-23); risk acceptance is not a graduation and is not extended to any other family.",
+  "mechanism_grade": "No mechanism grade is changed by this receipt. The campaign ledger remains the authority.",
+  "boundary_seal": "BOUNDARY and SEAL gates remain NOT_RUN for the S16-S61 cluster. Publishing discharges nothing and is not a verification event."
+ },
+ "instruments_not_run_at_this_identity": [
+  "both consumer closures (not re-measured at 0.0.51)",
+  "ASan, TSan, dudect, authority differential, full forensic regeneration",
+  "independent review of the release itself",
+  "crates.io upload and download-checksum verification (PENDING)"
+ ],
+ "release_process": {
+  "merge": "Not performed. The candidate sits on branch staging; no commit, tag, push or registry upload has occurred. main cannot be updated because it is protected, and no protection-bypass is claimed or attempted here.",
+  "disclosure": "This receipt is pre-publish. The publisher completes the checksum and status; leaving status PENDING is the honest state, not a passing one."
+ },
+ "non_claims": [
+  "This is not a verification event, a graduation, or a compatibility claim.",
+  "The crate ships source and documentation only; no shared object is distributed.",
+  "Publishing discharges no obligation and does not advance any mechanism to SAFETY_DISCHARGED.",
+  "No checksum, file count or registry result is claimed; all are PENDING until the upload is observed."
+ ]
+}

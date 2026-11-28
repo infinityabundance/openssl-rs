@@ -75,16 +75,50 @@ const BN_BLINDING_NO_RECREATE: c_ulong = 0x0000_0002;
 /// `BN_FLG_CONSTTIME` — `include/openssl/bn.h:67`.
 const BN_FLG_CONSTTIME: c_int = 0x04;
 
-/// PFP-58 measurement hook. Test-only: selects the pre-admission binary GCD in
-/// place of the divstep so the end-to-end comparison can be replayed in one
-/// process. The release path below always uses the divstep.
+// PFP-58 measurement hook. Test-only: selects the pre-admission binary GCD in
+// place of the divstep so the end-to-end comparison can be replayed in one
+// process. The release path always uses the divstep when the modulus is inside
+// divstep's verified iteration-bound domain.
+//
+// Thread-local (PFP-74). It was process-global in an `AtomicBool`, which let two
+// concurrently running tests change each other's inverse; a per-thread `Cell`
+// keeps each test's choice private to its own call path.
 #[cfg(test)]
-static PFP58_USE_DIVSTEP: core::sync::atomic::AtomicBool =
-    core::sync::atomic::AtomicBool::new(true);
+std::thread_local! {
+    static PFP58_USE_DIVSTEP: core::cell::Cell<bool> = const { core::cell::Cell::new(true) };
+}
 
 #[cfg(test)]
 pub(crate) fn pfp58_set_use_divstep(on: bool) {
-    PFP58_USE_DIVSTEP.store(on, core::sync::atomic::Ordering::Relaxed);
+    PFP58_USE_DIVSTEP.with(|v| v.set(on));
+}
+
+#[cfg(test)]
+fn pfp58_use_divstep() -> bool {
+    PFP58_USE_DIVSTEP.with(core::cell::Cell::get)
+}
+
+/// Which inverse mechanism an odd-modulus call actually selected.
+///
+/// Test-only: the admission tests assert this instead of inferring the route
+/// from a timing or a side effect.
+#[cfg(test)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum InverseRoute {
+    Divstep,
+    Consttime,
+}
+
+// Test-only, thread-local for the same reason as the selector above.
+#[cfg(test)]
+std::thread_local! {
+    static LAST_INVERSE_ROUTE: core::cell::Cell<Option<InverseRoute>> =
+        const { core::cell::Cell::new(None) };
+}
+
+#[cfg(test)]
+pub(crate) fn take_inverse_route() -> Option<InverseRoute> {
+    LAST_INVERSE_ROUTE.with(|v| v.replace(None))
 }
 
 /// The bare signature of the authority's `bn_mod_exp` member, named so the
@@ -811,10 +845,15 @@ pub unsafe extern "C" fn BN_BLINDING_convert_ex(
 /// That is a recorded divergence, not a silent one.
 ///
 /// The consttime branch (`bn_mod_inverse_no_branch`, `crypto/bn/bn_gcd.c:215`) is
-/// the path taken here whenever the modulus is non-zero and odd: the blinding
-/// factor `A` is a secret random draw and the modulus is the RSA modulus, so the
-/// value of `A` must not choose the work. An even modulus (which RSA never has)
-/// keeps the variable-time path, and that dispatch reads only the modulus'
+/// the path taken here whenever the modulus is non-zero and odd and **inside the
+/// divstep's verified iteration-bound domain** (PFP-73). The blinding factor `A`
+/// is a secret random draw and the modulus is the RSA modulus, so the value of
+/// `A` must not choose the work. An even modulus (which RSA never has) keeps the
+/// variable-time path, and that dispatch reads only the modulus' parity. An odd
+/// modulus outside 46..=4096 bits uses the previous fixed-iteration binary GCD:
+/// the divstep's step count is a correctness bound, and admitting a width the
+/// published computer-aided analysis never covered could return a wrong
+/// coefficient. Both dispatches read only the modulus' public bit length and
 /// parity. `BN_FLG_CONSTTIME` is still carried onto the modulus by
 /// `BN_BLINDING_new` for observability parity, but this helper no longer depends
 /// on it to find the constant-time algorithm.
@@ -848,19 +887,34 @@ unsafe fn int_bn_mod_inverse(dst: *mut BigNum, a: *const BigNum, n: *const BigNu
             None => true,
         };
     }
+    // PFP-73: the divstep's iteration count is a correctness bound, so admit it
+    // only inside the domain where that bound is established. The modulus' bit
+    // length is public; the decision reveals nothing about the secret draw.
+    let qualified = crate::bn::divstep::modulus_is_in_verified_domain(limbs::bit_len(&nd));
+    #[cfg(test)]
+    let route = if qualified && pfp58_use_divstep() {
+        InverseRoute::Divstep
+    } else {
+        InverseRoute::Consttime
+    };
+    #[cfg(test)]
+    LAST_INVERSE_ROUTE.with(|v| v.set(Some(route)));
     // PFP-58: the Bernstein-Yang half-delta divstep. It is branch-free at the
     // release artifact (see the PFP-58 receipt), and on this workload it is
     // ~0.38-0.40x the fixed-iteration GCD at 1024/2048 bits. The caller's draw
     // `a` is `0 <= a < mod` (`BN_priv_rand_range_ex`), and the modulus here is
     // odd and greater than one, which are exactly the divstep preconditions.
     #[cfg(test)]
-    let inverse = if PFP58_USE_DIVSTEP.load(core::sync::atomic::Ordering::Relaxed) {
+    let inverse = match route {
+        InverseRoute::Divstep => crate::bn::divstep::mod_inverse_divstep(&ad, &nd),
+        InverseRoute::Consttime => limbs::mod_inverse_consttime(&ad, &nd),
+    };
+    #[cfg(not(test))]
+    let inverse = if qualified {
         crate::bn::divstep::mod_inverse_divstep(&ad, &nd)
     } else {
         limbs::mod_inverse_consttime(&ad, &nd)
     };
-    #[cfg(not(test))]
-    let inverse = crate::bn::divstep::mod_inverse_divstep(&ad, &nd);
     match inverse {
         Some(inv) => {
             // SAFETY: `dst` is live per this function's `# Safety` section.
@@ -2113,5 +2167,94 @@ mod tests {
             BN_free(e);
             BN_free(m);
         }
+    }
+
+    // -----------------------------------------------------------------------
+    // PFP-73: the divstep admission predicate and its fallback
+    // -----------------------------------------------------------------------
+
+    /// Store a little-endian limb vector into a fresh owning `BIGNUM`.
+    fn bn_from_limbs(d: Vec<limbs::Limb>) -> *mut BigNum {
+        // SAFETY: `BN_new` takes no pointers.
+        let b = unsafe { BN_new() };
+        assert!(!b.is_null());
+        // SAFETY: `b` is live and uniquely owned here.
+        assert!(unsafe { store(as_mut(b), d, false) });
+        b
+    }
+
+    /// An odd composite of exactly `limbs_wanted` limbs: the product of two odd
+    /// factors with their top bit set.
+    fn composite_of_width(limbs_wanted: usize) -> Vec<limbs::Limb> {
+        let half = limbs_wanted / 2;
+        let mut p = vec![0x9e37_79b9_7f4a_7c15u64; half];
+        let mut q = vec![0xd1b5_4a32_d192_ed03u64; half];
+        p[0] |= 1;
+        q[0] |= 1;
+        p[half - 1] |= 1 << 63;
+        q[half - 1] |= 1 << 63;
+        limbs::mul(&p, &q)
+    }
+
+    fn inverse_round_trips(inv: &[limbs::Limb], a: &[limbs::Limb], m: &[limbs::Limb]) -> bool {
+        let product = limbs::mul(a, inv);
+        let mut rem = limbs::rem(&product, m);
+        limbs::normalise(&mut rem);
+        rem == vec![1u64]
+    }
+
+    /// Drive the real admission path with `a = 2` (coprime to every odd
+    /// modulus) and answer the selected route plus the round-trip verdict.
+    fn route_for(m_limbs: Vec<limbs::Limb>) -> (Option<InverseRoute>, bool) {
+        let m = bn_from_limbs(m_limbs.clone());
+        let a_limbs = vec![2u64];
+        let a = bn_from_limbs(a_limbs.clone());
+        let dst = bn_from_limbs(Vec::new());
+        take_inverse_route();
+        // SAFETY: all three objects are live and `dst` is uniquely owned.
+        let no_inverse = unsafe { int_bn_mod_inverse(dst, a, m) };
+        assert!(!no_inverse, "2 is invertible modulo an odd modulus");
+        let inv = {
+            // SAFETY: `dst` is live per this helper's construction.
+            unsafe { parts_fallible(as_ref(dst)) }.map_or_else(Vec::new, |parts| parts.0)
+        };
+        let ok = inverse_round_trips(&inv, &a_limbs, &m_limbs);
+        let route = take_inverse_route();
+        // SAFETY: the three objects were allocated in this call and are not aliased.
+        unsafe {
+            BN_free(dst);
+            BN_free(a);
+            BN_free(m);
+        }
+        (route, ok)
+    }
+
+    #[test]
+    fn pfp73_composite_moduli_inside_the_domain_take_the_divstep() {
+        for bits in [1024usize, 2048, 3072] {
+            let (route, ok) = route_for(composite_of_width(bits / 64));
+            assert_eq!(
+                route,
+                Some(InverseRoute::Divstep),
+                "{bits}-bit composite must take divstep"
+            );
+            assert!(ok, "{bits}-bit composite inverse must round-trip");
+        }
+    }
+
+    #[test]
+    fn pfp73_a_modulus_above_the_documented_range_takes_the_fallback() {
+        // 65 limbs = 4160 bits, odd, top bit set: above the 4096-bit bound.
+        let (route, ok) = route_for(vec![0xffff_ffff_ffff_ffffu64; 65]);
+        assert_eq!(route, Some(InverseRoute::Consttime));
+        assert!(ok);
+    }
+
+    #[test]
+    fn pfp73_a_modulus_below_the_domain_takes_the_fallback() {
+        // 65537 is 17 bits, odd and prime: below the d >= 46 floor.
+        let (route, ok) = route_for(vec![65537]);
+        assert_eq!(route, Some(InverseRoute::Consttime));
+        assert!(ok);
     }
 }
