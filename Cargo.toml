@@ -65,6 +65,15 @@ categories = ["cryptography", "api-bindings"]
 #   tests/**                 the crate's own evidence-binding tests.
 exclude = [
     "forensics/atlas/**",
+    # 0.0.50 hit crates.io's 10 MiB upload cap at 10.0 MiB compressed, so the
+    # largest non-essential records are dropped from the package. These are
+    # campaign and decision history, reproducible from the repository, and none
+    # is read by build.rs: the decision log, the ETP queue, and the ETP5 crypto
+    # vector corpus. Source, tests, the constitution and the ABI machinery all
+    # still ship.
+    "docs/DECISIONS.md",
+    "docs/ETP-TODO.md",
+    "forensics/etp5_crypto/**",
     # Phase 23's derived multitrack evidence planes and edge deltas: reproducible from
     # the release catalogue, the authority registries and the build receipts, and the
     # single largest of them (the entity lineage) is 25 MB -- shipping them would bloat
