@@ -36,6 +36,10 @@ pub mod constant_time;
 pub mod ctype;
 #[forbid(unsafe_code)]
 pub mod ctype_table;
+// The one capability model: parses `OPENSSL_ia32cap` once and answers every dispatcher's
+// feature predicate. See the module docs for the authority grammar and the deliberate
+// restriction that an override may only disable, never fabricate, a CPU feature.
+pub(crate) mod cpu;
 pub mod defaults;
 pub mod dir;
 pub mod dso_shared;

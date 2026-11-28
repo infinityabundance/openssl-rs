@@ -502,6 +502,277 @@ unsafe extern "C" fn aes_decrypt_block(input: *const u8, out: *mut u8, key: *con
     unsafe { AES_decrypt(input, out, key.cast::<AesKey>()) }
 }
 
+/// `ctr128_f` AES-CTR: `blocks` counter blocks starting at `ivec`'s low 32-bit big-endian
+/// counter, XORed into `input`/`out`. The counter held in `ivec` is not advanced (the caller
+/// owns it), matching `include/openssl/modes.h`'s `ctr128_f`.
+///
+/// This is the multi-block carrier GCM uses for its bulk: eight blocks in flight on VAES-256
+/// (`vaes` + `avx2`), four on AES-NI, and a per-block portable fallback when AES-NI is absent
+/// (including when `OPENSSL_ia32cap` clears the AES bit).
+///
+/// VAES is selected only for eight or more blocks: its loop needs a full 256-bit pair in each
+/// of four accumulators to hide round latency, and below that the AES-NI four-way path measured
+/// faster on the pinned host (see the PFP-68 `vaes-contribution.txt`). The dispatch is per
+/// call, so GCM's short tail blocks take the AES-NI path while its eight-block bulk takes VAES.
+///
+/// # Safety
+/// `input` readable and `out` writable for `blocks * 16` bytes; `key` a live AES schedule;
+/// `ivec` readable for 16 bytes. `input` and `out` may alias (in-place CTR).
+#[cfg_attr(not(target_arch = "x86_64"), allow(dead_code))]
+pub(crate) unsafe extern "C" fn aes_ctr32_encrypt_blocks(
+    input: *const u8,
+    out: *mut u8,
+    blocks: usize,
+    key: *const c_void,
+    ivec: *const u8,
+) {
+    let key = key.cast::<AesKey>();
+    #[cfg(target_arch = "x86_64")]
+    {
+        if blocks >= 8
+            && crate::runtime::cpu::has_vaes()
+            && crate::runtime::cpu::has_avx2()
+            && crate::runtime::cpu::has_aes()
+        {
+            // SAFETY: the predicates establish `vaes`, `avx2` and `aes`; the pointer contract
+            // is this function's own, forwarded unchanged.
+            unsafe { aes_ctr32_vaes(input, out, blocks, key, ivec) };
+            return;
+        }
+        if crate::runtime::cpu::has_aes() {
+            // SAFETY: `has_aes` establishes the target feature; same pointer contract.
+            unsafe { aes_ctr32_ni(input, out, blocks, key, ivec) };
+            return;
+        }
+    }
+    // SAFETY: the caller's contract, unchanged for the portable per-block arm.
+    unsafe { aes_ctr32_portable(input, out, blocks, key, ivec) }
+}
+
+/// The 12 fixed leading bytes of the counter block and its low 32-bit big-endian word.
+///
+/// # Safety
+/// `ivec` readable for 16 bytes.
+#[cfg(target_arch = "x86_64")]
+#[inline]
+unsafe fn ctr_parts(ivec: *const u8) -> ([u8; 12], u32) {
+    let mut prefix = [0u8; 12];
+    let mut word = [0u8; 4];
+    // SAFETY: the caller's contract.
+    unsafe {
+        ptr::copy_nonoverlapping(ivec, prefix.as_mut_ptr(), 12);
+        ptr::copy_nonoverlapping(ivec.add(12), word.as_mut_ptr(), 4);
+    }
+    (prefix, u32::from_be_bytes(word))
+}
+
+/// Eight-block CTR on VAES-256: two counter blocks per `aesenc` per 256-bit register.
+///
+/// # Safety
+/// As [`aes_ctr32_encrypt_blocks`]; the caller must have established `vaes`, `avx2` and `aes`.
+#[cfg(target_arch = "x86_64")]
+#[target_feature(enable = "vaes,avx2,aes")]
+unsafe fn aes_ctr32_vaes(
+    input: *const u8,
+    out: *mut u8,
+    blocks: usize,
+    key: *const AesKey,
+    ivec: *const u8,
+) {
+    use core::arch::x86_64::*;
+
+    // SAFETY: the caller's contract gives `key` a live schedule, `ivec` sixteen readable
+    // bytes and `input`/`out` `blocks * 16` bytes; the target features are established.
+    unsafe {
+        let rk = (*key).rd_key.as_ptr();
+        let rounds = (*key).rounds as usize;
+        // SAFETY: the caller's contract gives `ivec` sixteen readable bytes.
+        let (prefix, mut ctr) = ctr_parts(ivec);
+        let k0 = _mm256_broadcastsi128_si256(_mm_loadu_si128(rk.cast()));
+        let mut n = 0usize;
+
+        while n + 8 <= blocks {
+            let mut cb = [0u8; 128];
+            let mut k = 0usize;
+            while k < 8 {
+                cb[k * 16..k * 16 + 12].copy_from_slice(&prefix);
+                cb[k * 16 + 12..k * 16 + 16]
+                    .copy_from_slice(&ctr.wrapping_add(k as u32).to_be_bytes());
+                k += 1;
+            }
+            let mut s0 = _mm256_loadu_si256(cb.as_ptr().cast());
+            let mut s1 = _mm256_loadu_si256(cb.as_ptr().add(32).cast());
+            let mut s2 = _mm256_loadu_si256(cb.as_ptr().add(64).cast());
+            let mut s3 = _mm256_loadu_si256(cb.as_ptr().add(96).cast());
+            s0 = _mm256_xor_si256(s0, k0);
+            s1 = _mm256_xor_si256(s1, k0);
+            s2 = _mm256_xor_si256(s2, k0);
+            s3 = _mm256_xor_si256(s3, k0);
+            let mut r = 1usize;
+            while r < rounds {
+                let kr = _mm256_broadcastsi128_si256(_mm_loadu_si128(rk.add(4 * r).cast()));
+                s0 = _mm256_aesenc_epi128(s0, kr);
+                s1 = _mm256_aesenc_epi128(s1, kr);
+                s2 = _mm256_aesenc_epi128(s2, kr);
+                s3 = _mm256_aesenc_epi128(s3, kr);
+                r += 1;
+            }
+            let kl = _mm256_broadcastsi128_si256(_mm_loadu_si128(rk.add(4 * rounds).cast()));
+            s0 = _mm256_aesenclast_epi128(s0, kl);
+            s1 = _mm256_aesenclast_epi128(s1, kl);
+            s2 = _mm256_aesenclast_epi128(s2, kl);
+            s3 = _mm256_aesenclast_epi128(s3, kl);
+            // XOR with the input and store; each 32-byte block is loaded before it is written, so
+            // an in-place call is well defined.
+            let p0 = _mm256_loadu_si256(input.add(n * 16).cast());
+            let p1 = _mm256_loadu_si256(input.add(n * 16 + 32).cast());
+            let p2 = _mm256_loadu_si256(input.add(n * 16 + 64).cast());
+            let p3 = _mm256_loadu_si256(input.add(n * 16 + 96).cast());
+            _mm256_storeu_si256(out.add(n * 16).cast(), _mm256_xor_si256(s0, p0));
+            _mm256_storeu_si256(out.add(n * 16 + 32).cast(), _mm256_xor_si256(s1, p1));
+            _mm256_storeu_si256(out.add(n * 16 + 64).cast(), _mm256_xor_si256(s2, p2));
+            _mm256_storeu_si256(out.add(n * 16 + 96).cast(), _mm256_xor_si256(s3, p3));
+            ctr = ctr.wrapping_add(8);
+            n += 8;
+        }
+
+        // Tail: fewer than eight blocks, one at a time through the AES-NI single-block carrier.
+        while n < blocks {
+            let mut cb = [0u8; 16];
+            cb[..12].copy_from_slice(&prefix);
+            cb[12..].copy_from_slice(&ctr.to_be_bytes());
+            let mut ks = [0u8; 16];
+            // SAFETY: `aes` is enabled by this function; the pointers are the caller's.
+            aes_encrypt_ni(cb.as_ptr(), ks.as_mut_ptr(), key);
+            let a = _mm_loadu_si128(input.add(n * 16).cast());
+            let b = _mm_loadu_si128(ks.as_ptr().cast());
+            _mm_storeu_si128(out.add(n * 16).cast(), _mm_xor_si128(a, b));
+            ctr = ctr.wrapping_add(1);
+            n += 1;
+        }
+    }
+}
+
+/// Four-block CTR on AES-NI, for hosts with AES but without VAES.
+///
+/// # Safety
+/// As [`aes_ctr32_encrypt_blocks`]; the caller must have established `aes`.
+#[cfg(target_arch = "x86_64")]
+#[target_feature(enable = "aes")]
+unsafe fn aes_ctr32_ni(
+    input: *const u8,
+    out: *mut u8,
+    blocks: usize,
+    key: *const AesKey,
+    ivec: *const u8,
+) {
+    use core::arch::x86_64::*;
+
+    // SAFETY: the caller's contract gives `key` a live schedule, `ivec` sixteen readable
+    // bytes and `input`/`out` `blocks * 16` bytes; `aes` is established.
+    unsafe {
+        let rk = (*key).rd_key.as_ptr();
+        let rounds = (*key).rounds as usize;
+        // SAFETY: the caller's contract gives `ivec` sixteen readable bytes.
+        let (prefix, mut ctr) = ctr_parts(ivec);
+        let k0 = _mm_loadu_si128(rk.cast());
+        let mut n = 0usize;
+
+        while n + 4 <= blocks {
+            let mut cb = [0u8; 64];
+            let mut k = 0usize;
+            while k < 4 {
+                cb[k * 16..k * 16 + 12].copy_from_slice(&prefix);
+                cb[k * 16 + 12..k * 16 + 16]
+                    .copy_from_slice(&ctr.wrapping_add(k as u32).to_be_bytes());
+                k += 1;
+            }
+            let mut s0 = _mm_loadu_si128(cb.as_ptr().cast());
+            let mut s1 = _mm_loadu_si128(cb.as_ptr().add(16).cast());
+            let mut s2 = _mm_loadu_si128(cb.as_ptr().add(32).cast());
+            let mut s3 = _mm_loadu_si128(cb.as_ptr().add(48).cast());
+            s0 = _mm_xor_si128(s0, k0);
+            s1 = _mm_xor_si128(s1, k0);
+            s2 = _mm_xor_si128(s2, k0);
+            s3 = _mm_xor_si128(s3, k0);
+            let mut r = 1usize;
+            while r < rounds {
+                let kr = _mm_loadu_si128(rk.add(4 * r).cast());
+                s0 = _mm_aesenc_si128(s0, kr);
+                s1 = _mm_aesenc_si128(s1, kr);
+                s2 = _mm_aesenc_si128(s2, kr);
+                s3 = _mm_aesenc_si128(s3, kr);
+                r += 1;
+            }
+            let kl = _mm_loadu_si128(rk.add(4 * rounds).cast());
+            s0 = _mm_aesenclast_si128(s0, kl);
+            s1 = _mm_aesenclast_si128(s1, kl);
+            s2 = _mm_aesenclast_si128(s2, kl);
+            s3 = _mm_aesenclast_si128(s3, kl);
+            let p0 = _mm_loadu_si128(input.add(n * 16).cast());
+            let p1 = _mm_loadu_si128(input.add(n * 16 + 16).cast());
+            let p2 = _mm_loadu_si128(input.add(n * 16 + 32).cast());
+            let p3 = _mm_loadu_si128(input.add(n * 16 + 48).cast());
+            _mm_storeu_si128(out.add(n * 16).cast(), _mm_xor_si128(s0, p0));
+            _mm_storeu_si128(out.add(n * 16 + 16).cast(), _mm_xor_si128(s1, p1));
+            _mm_storeu_si128(out.add(n * 16 + 32).cast(), _mm_xor_si128(s2, p2));
+            _mm_storeu_si128(out.add(n * 16 + 48).cast(), _mm_xor_si128(s3, p3));
+            ctr = ctr.wrapping_add(4);
+            n += 4;
+        }
+
+        while n < blocks {
+            let mut cb = [0u8; 16];
+            cb[..12].copy_from_slice(&prefix);
+            cb[12..].copy_from_slice(&ctr.to_be_bytes());
+            let mut ks = [0u8; 16];
+            // SAFETY: `aes` is enabled by this function; the pointers are the caller's.
+            aes_encrypt_ni(cb.as_ptr(), ks.as_mut_ptr(), key);
+            let a = _mm_loadu_si128(input.add(n * 16).cast());
+            let b = _mm_loadu_si128(ks.as_ptr().cast());
+            _mm_storeu_si128(out.add(n * 16).cast(), _mm_xor_si128(a, b));
+            ctr = ctr.wrapping_add(1);
+            n += 1;
+        }
+    }
+}
+
+/// The portable per-block CTR fallback.
+///
+/// # Safety
+/// As [`aes_ctr32_encrypt_blocks`].
+unsafe fn aes_ctr32_portable(
+    input: *const u8,
+    out: *mut u8,
+    blocks: usize,
+    key: *const AesKey,
+    ivec: *const u8,
+) {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let mut prefix = [0u8; 12];
+        let mut word = [0u8; 4];
+        ptr::copy_nonoverlapping(ivec, prefix.as_mut_ptr(), 12);
+        ptr::copy_nonoverlapping(ivec.add(12), word.as_mut_ptr(), 4);
+        let mut ctr = u32::from_be_bytes(word);
+        let mut n = 0usize;
+        while n < blocks {
+            let mut cb = [0u8; 16];
+            cb[..12].copy_from_slice(&prefix);
+            cb[12..].copy_from_slice(&ctr.to_be_bytes());
+            let mut ks = [0u8; 16];
+            aes_encrypt_portable(cb.as_ptr(), ks.as_mut_ptr(), key);
+            let mut j = 0usize;
+            while j < 16 {
+                *out.add(n * 16 + j) = *input.add(n * 16 + j) ^ ks[j];
+                j += 1;
+            }
+            ctr = ctr.wrapping_add(1);
+            n += 1;
+        }
+    }
+}
+
 /// `const char *AES_options(void)` — `crypto/aes/aes_misc.c:20-28`. The authority's perlasm
 /// object answers `aes(partial)` (measured from `libcrypto.so.3`'s strings).
 ///

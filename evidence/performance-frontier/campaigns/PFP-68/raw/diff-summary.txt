@@ -1,0 +1,20 @@
+arm=default op=aes128gcm-64 once=IDENTICAL
+arm=default op=aes128gcm-16k once=IDENTICAL
+arm=default op=aes256gcm-16k once=IDENTICAL
+arm=default kat=IDENTICAL
+arm=aes_off op=aes128gcm-64 once=IDENTICAL
+arm=aes_off op=aes128gcm-16k once=IDENTICAL
+arm=aes_off op=aes256gcm-16k once=IDENTICAL
+arm=aes_off kat=IDENTICAL
+arm=pclmul_off op=aes128gcm-64 once=IDENTICAL
+arm=pclmul_off op=aes128gcm-16k once=IDENTICAL
+arm=pclmul_off op=aes256gcm-16k once=IDENTICAL
+arm=pclmul_off kat=IDENTICAL
+arm=both_off op=aes128gcm-64 once=IDENTICAL
+arm=both_off op=aes128gcm-16k once=IDENTICAL
+arm=both_off op=aes256gcm-16k once=IDENTICAL
+arm=both_off kat=IDENTICAL
+arm=value_set op=aes128gcm-64 once=IDENTICAL
+arm=value_set op=aes128gcm-16k once=IDENTICAL
+arm=value_set op=aes256gcm-16k once=IDENTICAL
+arm=value_set kat=IDENTICAL

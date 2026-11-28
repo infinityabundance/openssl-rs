@@ -1,0 +1,29 @@
+PFP-68 — does CTR issue AES one block at a time?
+
+Answer: YES, on the pre-change candidate. The AES rounds of consecutive blocks
+could not overlap, and that cost is independent of GHASH.
+
+Evidence
+1. Source path. The benchmark's EVP/provider AES-GCM body is
+   src/provider/cipher_gcm.rs::generic_aes_gcm_cipher_update, which called
+   CRYPTO_gcm128_encrypt (the block-callback entry point), not the `_ctr32`
+   one. `ossl_gcm_cipher_update` and the e_aes legacy arm did the same.
+   src/modes/gcm.rs::crypt called `block(counter, out, key)` once per 16-byte
+   block, both in the serial arm and inside the aggregation group loop:
+       while k < w { block(counter.as_ptr(), ks + k*16, key); ... }
+   so the GHASH width never changed the AES issue width.
+
+2. Instruction counts (callgrind, 16 KiB, 2 aead_rounds = 4 GCTR passes =
+   4096 message blocks):
+       aes_encrypt_ni  270,864 Ir  over ~4,096 calls = 66.1 Ir/call
+   i.e. exactly one AES-NI block call per 16-byte block, each with a serial
+   `aesenc` chain (~10 rounds). No block-pair or block-quad interleave existed.
+   For comparison gf_mul_clmul was called 4,132 times over the same window
+   (the 4,096 message blocks plus AAD/length/IV and H-power derivation).
+
+3. Consequence. After the GHASH conversion (stage 2) and group reduction
+   (stage 4) the 16 KiB time only fell 63.0 -> 45.2 us; the remaining time was
+   the serialised AES + the byte-at-a-time CTR XOR. Stage 5 replaced that with
+   a multi-block `ctr128_f` (8 blocks in flight on VAES-256, 4 on AES-NI),
+   which is what produced 45.2 -> 7.7 us. That confirms the one-block-at-a-time
+   AES issue was a first-order cost and is not a GHASH problem.

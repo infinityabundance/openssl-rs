@@ -1,0 +1,46 @@
+PFP-68 — one gf_mul_clmul call, attributed (BEFORE any change)
+
+Identity: HEAD c27e9373 + the required `pub(crate) mod cpu;` declaration in
+src/runtime/mod.rs. Candidate DSO sha256
+962742b51b326ba8cea2e3b4ba30b43320776d190beec245fcd572450ca5634f
+(before-DSO). Authority DSO 611e511db4273c4b6b522031fd171efce71b80661bb8310c2a21dfd18ec0efd2.
+
+Method
+  valgrind --tool=callgrind --dump-instr=yes \
+    court/tmp/pfp68/bench --lib <before-DSO> --op aes128gcm-16k --iters 1 --runs 1
+  Per-instruction counts were read from the callgrind output for
+  openssl_rs::modes::gcm::gf_mul_clmul (0x2f4040..0x2f4298) and summed over the
+  address ranges of each stage.
+
+Per-call attribution (4,132 calls, 164 instructions/call, 677,648 Ir total)
+
+  stage                         instructions   share of gf_mul_clmul
+  push/prologue                       8,264                1.22%
+  reverse_bits(x)                   152,884               22.56%
+  build __m128i from x               12,396                1.83%
+  reverse_bits(y)                   157,016               23.17%
+  build __m128i from y                    0                0.00%
+  4x pclmulqdq + XOR tree            28,924                4.27%
+  extract halves / Karatsuba         37,188                5.49%
+  two-fold reduction                128,092               18.90%
+  reverse_bits(result)              140,488               20.73%
+  pop/ret                            12,396                1.83%
+
+  bit reversal (in + in + out) = 450,388 Ir = 66.46% of the multiply.
+  four carry-less convolutions  =  28,924 Ir =  4.27%.
+  reduction                     = 128,092 Ir = 18.90%.
+  stack round-trip              =       0 Ir: LLVM had already folded the
+    `[u64;2]` store/load pair to `movq`/`pshufd` register moves. The source
+    array did not reach the stack. This is why PFP-69 measured no throughput
+    gain on this toolchain.
+
+Program context for the same run
+  PROGRAM TOTALS                    14,817,757 Ir
+  gf_mul_clmul                         677,648 Ir (4.57%)
+  gcm::crypt (exclusive)             1,660,729 Ir (11.21%)  byte-at-a-time CTR XOR
+  aes_encrypt_ni                       270,864 Ir (1.83%)
+
+Conclusion: the number supports hypothesis (a) — the bit-order conversion is
+the material per-call cost (two thirds), not aggregation and not the stack.
+PFP-62 (aggregation) is pointless until the conversion is removed, which is
+what PFP-68 stage 2 did.

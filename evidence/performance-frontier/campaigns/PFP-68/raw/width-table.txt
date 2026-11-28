@@ -1,0 +1,14 @@
+width=2 aes128gcm-64 RESULT aes128gcm-64 bytes=64 median_us=1.4922 min_us=1.4831 max_us=1.5167 runs=9 iters=3000
+width=3 aes128gcm-64 RESULT aes128gcm-64 bytes=64 median_us=1.4958 min_us=1.4859 max_us=1.5149 runs=9 iters=3000
+width=4 aes128gcm-64 RESULT aes128gcm-64 bytes=64 median_us=1.5141 min_us=1.4980 max_us=1.5313 runs=9 iters=3000
+width=5 aes128gcm-64 RESULT aes128gcm-64 bytes=64 median_us=1.5031 min_us=1.4982 max_us=1.5172 runs=9 iters=3000
+width=6 aes128gcm-64 RESULT aes128gcm-64 bytes=64 median_us=1.5298 min_us=1.5213 max_us=1.5757 runs=9 iters=3000
+width=7 aes128gcm-64 RESULT aes128gcm-64 bytes=64 median_us=1.5224 min_us=1.5124 max_us=1.5502 runs=9 iters=3000
+width=8 aes128gcm-64 RESULT aes128gcm-64 bytes=64 median_us=1.5326 min_us=1.5258 max_us=1.5382 runs=9 iters=3000
+width=2 aes128gcm-16k RESULT aes128gcm-16k bytes=16384 median_us=9.7175 min_us=9.7019 max_us=9.8853 runs=9 iters=8
+width=3 aes128gcm-16k RESULT aes128gcm-16k bytes=16384 median_us=8.9527 min_us=8.9241 max_us=9.0107 runs=9 iters=8
+width=4 aes128gcm-16k RESULT aes128gcm-16k bytes=16384 median_us=8.0950 min_us=8.0599 max_us=9.5243 runs=9 iters=8
+width=5 aes128gcm-16k RESULT aes128gcm-16k bytes=16384 median_us=8.2791 min_us=8.2160 max_us=9.9744 runs=9 iters=8
+width=6 aes128gcm-16k RESULT aes128gcm-16k bytes=16384 median_us=8.4150 min_us=8.3310 max_us=14.5046 runs=9 iters=8
+width=7 aes128gcm-16k RESULT aes128gcm-16k bytes=16384 median_us=8.6848 min_us=8.6178 max_us=10.0291 runs=9 iters=8
+width=8 aes128gcm-16k RESULT aes128gcm-16k bytes=16384 median_us=7.6241 min_us=7.5878 max_us=11.5620 runs=9 iters=8

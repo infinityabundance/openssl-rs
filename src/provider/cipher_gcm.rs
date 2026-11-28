@@ -25,10 +25,13 @@
 //! assembly arms — the same decision D266 and D269 record for SM4 and AES generally — and
 //! `ossl_prov_aes_hw_gcm`/`ossl_prov_sm4_hw_gcm` answer the C tables. ARIA has no assembly arm.
 //! The consequence for `ctr` is measured, not assumed: `AES_CTR_ASM` is defined only for
-//! `s390x` and `c64xplus` (`crypto/aes/build.info:30,55`), so on this host the C `initkey` installs
-//! `ctx->ctr = NULL` and the `_ctr32` cipher-update branch is never taken. The branch is transcribed
-//! anyway, because it is part of the C body and the crate's `_ctr32` entry points accept its
-//! `ctr128_f`.
+//! `s390x` and `c64xplus` (`crypto/aes/build.info:30,55`), so the authority's **portable C** arm
+//! would install `ctx->ctr = NULL`. This crate instead installs its own multi-block AES-CTR
+//! carrier in `aes_gcm_initkey` (`aes_ctr32_encrypt_blocks`, which dispatches to VAES-256,
+//! AES-NI 4-way, or the portable per-block arm). That is a deliberate, measured divergence from
+//! the C-only transcription and matches the authority's own x86_64 AES-NI arm, which does install
+//! a `ctr128_f`; `OPENSSL_ia32cap` still selects the portable behaviour because the carrier
+//! dispatches on the same predicates as the block callback.
 //!
 //! ## What is deliberately not transcribed
 //!
@@ -69,7 +72,7 @@
 use core::ffi::{c_char, c_int, c_uchar, c_uint, c_void, CStr};
 use core::ptr;
 
-use crate::aes::{AES_encrypt, AES_set_encrypt_key, AesKey};
+use crate::aes::{aes_ctr32_encrypt_blocks, AES_encrypt, AES_set_encrypt_key, AesKey};
 use crate::context::dispatch::{OsslDispatch, OSSL_DISPATCH_END};
 use crate::evp::cipher::{
     OSSL_FUNC_CIPHER_CIPHER, OSSL_FUNC_CIPHER_DECRYPT_INIT, OSSL_FUNC_CIPHER_DUPCTX,
@@ -1682,9 +1685,12 @@ pub(crate) struct ProvAesGcmCtx {
     pub plat: c_int,
 }
 
-/// `aes_gcm_initkey` — `cipher_aes_gcm_hw.c:20-59`'s portable arm, the
-/// `GCM_HW_SET_KEY_CTR_FN(AES_set_encrypt_key, AES_encrypt, NULL)` expansion (`AES_CTR_ASM` is not
-/// defined on this host, `crypto/aes/build.info:30,55`), so `ctx->ctr` is NULL.
+/// `aes_gcm_initkey` — `cipher_aes_gcm_hw.c:20-59`. The authority's x86_64 AES-NI arm installs
+/// a multi-block `ctr128_f`; this profile's portable C expansion sets it NULL. The candidate
+/// installs its own multi-block AES-CTR carrier here ([`aes_ctr32_encrypt_blocks`]), which
+/// dispatches to VAES-256, AES-NI 4-way, or the portable per-block arm and therefore honours
+/// `OPENSSL_ia32cap` exactly as the block callback does. The `_ctr32` cipher-update branch is
+/// retained for the general case where a caller supplies a different stream.
 ///
 /// # Safety
 /// `ctx` is a `PROV_AES_GCM_CTX`; `key` is readable for `keylen` bytes.
@@ -1696,16 +1702,15 @@ unsafe fn aes_gcm_initkey(ctx: *mut ProvGcmCtx, key: *const c_uchar, keylen: usi
 
         AES_set_encrypt_key(key, (keylen * 8) as c_int, ks);
         CRYPTO_gcm128_init(ptr::addr_of_mut!((*ctx).gcm), ks.cast(), aes_block_encrypt);
-        (*ctx).ctr = None;
+        (*ctx).ctr = Some(aes_ctr32_encrypt_blocks);
         (*ctx).bits.set_key_set(true);
         1
     }
 }
 
-/// `generic_aes_gcm_cipher_update` — `cipher_aes_gcm_hw.c:61-124`'s portable arm (the
-/// `AES_GCM_ASM` bulk arms are not compiled). It dispatches on `ctx->ctr`, which this profile
-/// leaves NULL; the `_ctr32` branch is kept because it is the C body's and the crate's `_ctr32`
-/// entry point accepts its `ctr128_f`.
+/// `generic_aes_gcm_cipher_update` — `cipher_aes_gcm_hw.c:61-124`. When `ctx->ctr` is present
+/// (this profile installs [`aes_ctr32_encrypt_blocks`] at key setup) the bulk uses the
+/// multi-block `_ctr32` entry point; otherwise it falls back to the per-block callback.
 ///
 /// # Safety
 /// The `PROV_GCM_HW::cipherupdate` contract.

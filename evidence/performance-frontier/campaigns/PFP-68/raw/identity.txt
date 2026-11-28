@@ -1,0 +1,5 @@
+source_commit=c27e93739b259254d1404d19de994c574fc92254
+candidate_dso=f53e2622112379f9a74b584a336b52cf282b7b38c83949efacb3a1a33c9ad926
+authority_dso=611e511db4273c4b6b522031fd171efce71b80661bb8310c2a21dfd18ec0efd2
+bench_binary=65500d9a4cdd3dcc88aae6d834eb8d4ceda17f481bb8451b4f248a245ec41ebd
+cpu=13th Gen Intel(R) Core(TM) i9-13900K

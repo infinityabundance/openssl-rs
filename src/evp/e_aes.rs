@@ -39,7 +39,8 @@ use core::ptr;
 use core::sync::atomic::AtomicI32;
 
 use crate::aes::{
-    AES_cbc_encrypt, AES_decrypt, AES_encrypt, AES_set_decrypt_key, AES_set_encrypt_key, AesKey,
+    aes_ctr32_encrypt_blocks, AES_cbc_encrypt, AES_decrypt, AES_encrypt, AES_set_decrypt_key,
+    AES_set_encrypt_key, AesKey,
 };
 use crate::evp::cipher::{
     CipherLegacyCleanupFn, CipherLegacyCtrlFn, CipherLegacyDoFn, CipherLegacyInitFn,
@@ -56,8 +57,8 @@ use crate::modes::ccm::{
     CRYPTO_ccm128_setiv, CRYPTO_ccm128_tag, CcmCtx,
 };
 use crate::modes::gcm::{
-    CRYPTO_gcm128_aad, CRYPTO_gcm128_decrypt, CRYPTO_gcm128_encrypt, CRYPTO_gcm128_finish,
-    CRYPTO_gcm128_init, CRYPTO_gcm128_setiv, CRYPTO_gcm128_tag, GcmCtx,
+    CRYPTO_gcm128_aad, CRYPTO_gcm128_decrypt_ctr32, CRYPTO_gcm128_encrypt_ctr32,
+    CRYPTO_gcm128_finish, CRYPTO_gcm128_init, CRYPTO_gcm128_setiv, CRYPTO_gcm128_tag, GcmCtx,
 };
 use crate::modes::ocb::{
     CRYPTO_ocb128_aad, CRYPTO_ocb128_cleanup, CRYPTO_ocb128_copy_ctx, CRYPTO_ocb128_decrypt,
@@ -1059,7 +1060,14 @@ unsafe extern "C" fn aes_gcm_tls_cipher(
         let out = out.add(EVP_GCM_TLS_EXPLICIT_IV_LEN);
         let len = len - (EVP_GCM_TLS_EXPLICIT_IV_LEN + EVP_GCM_TLS_TAG_LEN);
         if EVP_CIPHER_CTX_is_encrypting(ctx) != 0 {
-            if CRYPTO_gcm128_encrypt(ptr::addr_of_mut!((*gctx).gcm), in_, out, len) != 0 {
+            if CRYPTO_gcm128_encrypt_ctr32(
+                ptr::addr_of_mut!((*gctx).gcm),
+                in_,
+                out,
+                len,
+                aes_ctr32_encrypt_blocks,
+            ) != 0
+            {
                 (*gctx).iv_set = 0;
                 (*gctx).tls_aad_len = -1;
                 return rv;
@@ -1068,7 +1076,14 @@ unsafe extern "C" fn aes_gcm_tls_cipher(
             CRYPTO_gcm128_tag(ptr::addr_of_mut!((*gctx).gcm), out, EVP_GCM_TLS_TAG_LEN);
             rv = (len + EVP_GCM_TLS_EXPLICIT_IV_LEN + EVP_GCM_TLS_TAG_LEN) as c_int;
         } else {
-            if CRYPTO_gcm128_decrypt(ptr::addr_of_mut!((*gctx).gcm), in_, out, len) != 0 {
+            if CRYPTO_gcm128_decrypt_ctr32(
+                ptr::addr_of_mut!((*gctx).gcm),
+                in_,
+                out,
+                len,
+                aes_ctr32_encrypt_blocks,
+            ) != 0
+            {
                 (*gctx).iv_set = 0;
                 (*gctx).tls_aad_len = -1;
                 return rv;
@@ -1127,10 +1142,24 @@ unsafe extern "C" fn aes_gcm_cipher(
                     return -1;
                 }
             } else if EVP_CIPHER_CTX_is_encrypting(ctx) != 0 {
-                if CRYPTO_gcm128_encrypt(ptr::addr_of_mut!((*gctx).gcm), in_, out, len) != 0 {
+                if CRYPTO_gcm128_encrypt_ctr32(
+                    ptr::addr_of_mut!((*gctx).gcm),
+                    in_,
+                    out,
+                    len,
+                    aes_ctr32_encrypt_blocks,
+                ) != 0
+                {
                     return -1;
                 }
-            } else if CRYPTO_gcm128_decrypt(ptr::addr_of_mut!((*gctx).gcm), in_, out, len) != 0 {
+            } else if CRYPTO_gcm128_decrypt_ctr32(
+                ptr::addr_of_mut!((*gctx).gcm),
+                in_,
+                out,
+                len,
+                aes_ctr32_encrypt_blocks,
+            ) != 0
+            {
                 return -1;
             }
             return len as c_int;

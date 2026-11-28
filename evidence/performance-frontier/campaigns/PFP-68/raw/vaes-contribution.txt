@@ -1,0 +1,4 @@
+vaes_on  aes128gcm-64 RESULT aes128gcm-64 bytes=64 median_us=1.4994 min_us=1.4810 max_us=1.5324 runs=9 iters=3000
+vaes_off aes128gcm-64 RESULT aes128gcm-64 bytes=64 median_us=1.4836 min_us=1.4767 max_us=1.5011 runs=9 iters=3000
+vaes_on  aes128gcm-16k RESULT aes128gcm-16k bytes=16384 median_us=7.5946 min_us=7.5495 max_us=7.6628 runs=9 iters=8
+vaes_off aes128gcm-16k RESULT aes128gcm-16k bytes=16384 median_us=8.0409 min_us=8.0286 max_us=8.3424 runs=9 iters=8

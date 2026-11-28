@@ -40,6 +40,9 @@
 use core::ffi::{c_int, c_void};
 use core::ptr::{self, NonNull};
 
+#[cfg(target_arch = "x86_64")]
+use core::arch::x86_64::__m128i;
+
 use crate::modes::{Block128F, Ctr128F};
 use crate::runtime::mem::{CRYPTO_clear_free, CRYPTO_free, CRYPTO_malloc, CRYPTO_memcmp};
 
@@ -208,28 +211,40 @@ fn negative_control_branchy_mul(x: u128, y: u128) -> u128 {
     z
 }
 
-/// Reduce a 256-bit carry-less product modulo `x^128 + x^7 + x^2 + x + 1`.
+/// The GHASH field multiply with `pclmulqdq`, in the **reflected representation**.
 ///
-/// `lo` is the low 128 bits and `hi` the high 128. Since `x^128 = x^7 + x^2 + x + 1`, the
-/// first fold adds `hi << {7,2,1,0}` to `lo`, collecting the overflow bits
-/// `hi >> {121,126,127}` in `carry`, which is at most seven bits. The second fold adds
-/// `carry << {7,2,1,0}`, which is below `2^14` and so cannot overflow again. Two folds, fixed
-/// shift/XOR counts, no loop and no branch.
-#[cfg(target_arch = "x86_64")]
-#[inline]
-fn reduce_gcm(lo: u128, hi: u128) -> u128 {
-    let carry = (hi >> 121) ^ (hi >> 126) ^ (hi >> 127);
-    let acc = lo ^ (hi << 7) ^ (hi << 2) ^ (hi << 1) ^ hi;
-    acc ^ (carry << 7) ^ (carry << 2) ^ (carry << 1) ^ carry
-}
-
-/// The GHASH field multiply with `pclmulqdq`: carry-less multiply, fixed two-fold reduction.
+/// ## Why no bit reversal is needed
 ///
-/// GCM stores the coefficient of `x^0` in the most significant bit of the big-endian value,
-/// so the polynomial integers are the bit reversal of the `u128` operands: reverse in,
-/// carry-less multiply, reduce, reverse out. The reflection is pure arithmetic and the
-/// multiply/reduce are fixed-shape; no memory is indexed by either operand and no branch
-/// depends on them.
+/// GCM places the coefficient of `x^0` in the most significant bit of the big-endian block,
+/// so the big-endian `u128` a caller passes is already the *bit-reflected* polynomial integer:
+/// bit `i` of the value is the coefficient of `x^(127-i)`. Carry-less multiplication of two
+/// reflected integers, followed by reduction modulo the reciprocal polynomial
+/// `x^128 + x^127 + x^126 + x^121 + 1`, yields the reflected product. The result is therefore
+/// returned in the same `u128` convention with **no reflection at either end**: the three full
+/// 128-bit `reverse_bits` expansions the previous implementation performed per multiply
+/// (about two thirds of its instructions) are gone.
+///
+/// There is one wrinkle, and it is the classic GCM trap: the reciprocal-domain multiplication
+/// consumes `x` and `x*H` (the H operand is *pre-twisted* by the reflected `H << 1` carry
+/// step). So the product is `alg9(clmul(x, twist(y)))`, not `alg9(clmul(x, y))`. The model in
+/// `court/tmp/pfp68/model.py` establishes this against the bit-by-bit multiply over 8,000
+/// random pairs and 64 edge pairs; the in-crate tests do the same on every build.
+///
+/// `reduction_alg9` below is the reflected reduction; the reflected modulus has its low terms
+/// at the top (`x^127`, `x^126`, `x^121`), which is why it cannot reuse the ordinary two-fold
+/// reduction shape.
+///
+/// ## Carriers
+///
+/// Operands and results are fixed-size values: `_mm_set_epi64x` in,
+/// `_mm_cvtsi128_si64`/`_mm_unpackhi_epi64` out. No raw pointer crosses the boundary and no
+/// array is spilled to the stack. Inside this `#[target_feature]` function the body is safe
+/// Rust arithmetic on values; the only unsafe operation on the path is the dispatch call in
+/// [`gf_mul`].
+///
+/// ## Constant time
+/// The shape is fixed: four `pclmulqdq`, a fixed XOR tree, the fixed Alg9 shift/XOR sequence,
+/// and a branch-free twist. No memory is indexed by an operand and no branch depends on one.
 ///
 /// # Safety
 /// The caller must have established the `pclmulqdq` target feature.
@@ -240,39 +255,84 @@ unsafe fn gf_mul_clmul(x: u128, y: u128) -> u128 {
     crate::runtime::cpu::path_probe::pclmul();
     use core::arch::x86_64::*;
 
-    // SAFETY: the caller establishes `pclmulqdq`; `a`/`b` are locals and every load is a
-    // sixteen-byte read of one of them.
-    unsafe {
-        let a = x.reverse_bits();
-        let b = y.reverse_bits();
-        let va = _mm_loadu_si128((&a as *const u128).cast());
-        let vb = _mm_loadu_si128((&b as *const u128).cast());
+    // Value-only carriers: the reflected operands are built directly in registers.
+    let va = _mm_set_epi64x((x >> 64) as i64, x as i64);
+    let vb = _mm_set_epi64x((y >> 64) as i64, y as i64);
+    let vh = clmul_twist(vb);
 
-        // Each product is a 128-bit polynomial; `l` is its low 64 bits, `h` its high 64.
-        let p00 = _mm_clmulepi64_si128::<0x00>(va, vb);
-        let p01 = _mm_clmulepi64_si128::<0x01>(va, vb);
-        let p10 = _mm_clmulepi64_si128::<0x10>(va, vb);
-        let p11 = _mm_clmulepi64_si128::<0x11>(va, vb);
+    // 256-bit carry-less product: p11*2^128 + (p01 ^ p10)*2^64 + p00.
+    let p00 = _mm_clmulepi64_si128::<0x00>(va, vh);
+    let p01 = _mm_clmulepi64_si128::<0x01>(va, vh);
+    let p10 = _mm_clmulepi64_si128::<0x10>(va, vh);
+    let p11 = _mm_clmulepi64_si128::<0x11>(va, vh);
+    let mid = _mm_xor_si128(p01, p10);
+    let lo = _mm_xor_si128(p00, _mm_slli_si128::<8>(mid));
+    let hi = _mm_xor_si128(p11, _mm_srli_si128::<8>(mid));
 
-        let mut t = [0u64; 2];
-        _mm_storeu_si128(t.as_mut_ptr().cast(), p00);
-        let (l00, h00) = (t[0], t[1]);
-        _mm_storeu_si128(t.as_mut_ptr().cast(), p01);
-        let (l01, h01) = (t[0], t[1]);
-        _mm_storeu_si128(t.as_mut_ptr().cast(), p10);
-        let (l10, h10) = (t[0], t[1]);
-        _mm_storeu_si128(t.as_mut_ptr().cast(), p11);
-        let (l11, h11) = (t[0], t[1]);
+    let xi = clmul_reduce(lo, hi);
 
-        // p11*2^128 + (p01 ^ p10)*2^64 + p00, with XOR (carry-less) addition.
-        let w0 = l00;
-        let w1 = h00 ^ l01 ^ l10;
-        let w2 = h01 ^ h10 ^ l11;
-        let w3 = h11;
-        let lo = ((w1 as u128) << 64) | w0 as u128;
-        let hi = ((w3 as u128) << 64) | w2 as u128;
-        reduce_gcm(lo, hi).reverse_bits()
-    }
+    // Fixed-size value out: low lane, then the high lane moved down by `unpackhi` (SSE2).
+    // The intermediate `u64` cast is required: `_mm_cvtsi128_si64` returns `i64`, and casting
+    // that straight to `u128` would sign-extend the lane into the upper half.
+    let low = _mm_cvtsi128_si64(xi) as u64 as u128;
+    let high = _mm_cvtsi128_si64(_mm_unpackhi_epi64(xi, xi)) as u64 as u128;
+    low | (high << 64)
+}
+
+/// The reflected `H << 1` carry step: shift each 64-bit lane left by one, move the low lane's
+/// carry into the high lane, and — when the 128-bit shift carries out — XOR the reflected
+/// reduction constant `x^127 + x^126 + x^121 + 1`. Branch-free; the carry is a computed mask.
+///
+/// SSE2 only (no carry-less multiply), so it is an ordinary safe function; it is inlined into
+/// [`gf_mul_clmul`], whose `pclmulqdq` scope also carries the `sse2` requirement.
+#[cfg(target_arch = "x86_64")]
+#[target_feature(enable = "pclmulqdq")]
+#[inline]
+fn clmul_twist(v: __m128i) -> __m128i {
+    use core::arch::x86_64::*;
+
+    let shifted = _mm_slli_epi64::<1>(v);
+    let msbs = _mm_srli_epi64::<63>(v);
+    let cross = _mm_slli_si128::<8>(msbs);
+    let shifted = _mm_or_si128(shifted, cross);
+    // All-ones dwords exactly when bit 127 of `v` is set.
+    let carry = _mm_srai_epi32::<31>(_mm_shuffle_epi32::<0xFF>(v));
+    let constant = _mm_set_epi64x(0xC200_0000_0000_0000u64 as i64, 1);
+    _mm_xor_si128(shifted, _mm_and_si128(carry, constant))
+}
+
+/// OpenSSL's `reduction_alg9`: reduce the 256-bit reflected product `hi:lo` modulo
+/// `x^128 + x^127 + x^126 + x^121 + 1`, returning the reflected result. Fixed shifts and
+/// XORs, no loop, no branch, SSE2 only.
+#[cfg(target_arch = "x86_64")]
+#[target_feature(enable = "pclmulqdq")]
+#[inline]
+fn clmul_reduce(lo: __m128i, hi: __m128i) -> __m128i {
+    use core::arch::x86_64::*;
+
+    let mut hi = hi;
+    // Phase 1: multiply `lo` by the folded constant and cross the 64-bit lane boundary.
+    let mut t2 = lo;
+    let mut t1 = lo;
+    let mut xi = _mm_slli_epi64::<5>(lo);
+    t1 = _mm_xor_si128(t1, xi);
+    xi = _mm_slli_epi64::<1>(xi);
+    xi = _mm_xor_si128(xi, t1);
+    xi = _mm_slli_epi64::<57>(xi);
+    t1 = xi;
+    xi = _mm_slli_si128::<8>(xi);
+    t1 = _mm_srli_si128::<8>(t1);
+    xi = _mm_xor_si128(xi, t2);
+    hi = _mm_xor_si128(hi, t1);
+    // Phase 2: reduce the remaining high half.
+    t2 = xi;
+    xi = _mm_srli_epi64::<1>(xi);
+    hi = _mm_xor_si128(hi, t2);
+    t2 = _mm_xor_si128(t2, xi);
+    xi = _mm_srli_epi64::<5>(xi);
+    xi = _mm_xor_si128(xi, t2);
+    xi = _mm_srli_epi64::<1>(xi);
+    _mm_xor_si128(xi, hi)
 }
 
 /// `void ossl_gcm_init_4bit(u128 Htable[16], const u64 H[2])` — `crypto/modes/gcm128.c:563-569`.
@@ -337,51 +397,153 @@ fn ossl_gcm_ghash_4bit(xi: &mut u128, h: u128, data: &[u8]) {
 /// The largest aggregation width the independent-multiplication GHASH evaluates.
 const GHASH_MAX_WIDTH: usize = 8;
 
+/// Blocks per multi-block AES-CTR call on the stream path.
+///
+/// This is deliberately independent of [`GHASH_MAX_WIDTH`]: the stream wants enough blocks to
+/// hide AES round latency (eight on VAES-256, four on AES-NI), while GHASH is measured
+/// separately (see the PFP-62 width table).
+const GCM_CTR_CHUNK: usize = 8;
+
+/// The reflected `H << 1` carry step used by the multiplicative group form.
+///
+/// In the reflected domain this is exactly a 128-bit left shift with the carry out of bit
+/// 127 folded back through the reciprocal constant. Branch-free: the carry word is either
+/// zero or all-ones, so the XOR is always executed.
+#[inline]
+fn twist(v: u128) -> u128 {
+    const C: u128 = 0xC200_0000_0000_0000_0000_0000_0000_0001;
+    let carry = 0u128.wrapping_sub(v >> 127);
+    (v << 1) ^ (carry & C)
+}
+
 /// `H^1 ..= H^max`, computed once per GCM call from `H`.
 ///
 /// These values are secret-derived (every power is a function of the GHASH key), so they
 /// live only in this struct and are never placed in a table indexed by ciphertext, counter
 /// or any other data. The only selector is `width`, which is a public loop bound; see the
 /// constant-time note on [`ghash_group`].
+///
+/// `p` holds the powers in the ordinary reflected field convention (used by the serial
+/// reference); `tw` holds the pre-twisted operands the carry-less multiply needs, computed
+/// once here so the hot group loop never re-twists a key power.
 struct GhashPowers {
     p: [u128; GHASH_MAX_WIDTH + 1],
+    tw: [u128; GHASH_MAX_WIDTH + 1],
     max: usize,
 }
 
 impl GhashPowers {
-    /// Derive `H^2 ..= H^max` from `H` with `max - 1` field multiplies.
+    /// Derive `H^1 ..= H^max` and their twisted forms with `max - 1` field multiplies.
     fn compute(h: u128, max: usize) -> GhashPowers {
         let mut p = [0u128; GHASH_MAX_WIDTH + 1];
+        let mut tw = [0u128; GHASH_MAX_WIDTH + 1];
         p[1] = h;
         let mut i = 2usize;
         while i <= max {
             p[i] = gf_mul(p[i - 1], h);
             i += 1;
         }
-        GhashPowers { p, max }
+        let mut i = 1usize;
+        while i <= max {
+            tw[i] = twist(p[i]);
+            i += 1;
+        }
+        GhashPowers { p, tw, max }
     }
 }
 
 /// `Y' = (Y ^ X_1)·H^w ^ X_2·H^(w-1) ^ … ^ X_w·H` over `width` complete blocks.
 ///
 /// This is the independent-multiplication form: the `w` field products of one group share
-/// no operand, so their carry-less multiplies are arithmetic-independent and can overlap in
-/// the pipeline. The terms are combined with XOR, which is addition in the field.
+/// no operand, so their carry-less multiplies are arithmetic-independent. Reduction is
+/// linear over GF(2), so the group sums the `w` full 256-bit products and applies **one**
+/// reduction at the end instead of one per term.
 ///
-/// Constant-time: `width` is public, and `p[width]`/`p[width - j]` are selected by the loop
-/// index, never by a ciphertext byte. No branch depends on a block or on a key power.
+/// On `pclmulqdq` the group runs in SIMD ([`ghash_group_clmul`]); otherwise the serial
+/// reference [`ghash_group_serial`] is used. The dispatcher's predicate is the same
+/// capability decision the rest of the module uses, so `OPENSSL_ia32cap` still forces the
+/// portable arm.
+///
+/// Constant-time: `width` is public, and `p`/`tw` entries are selected by the loop index,
+/// never by a ciphertext byte. No branch depends on a block or on a key power.
 fn ghash_group(xi: u128, p: &GhashPowers, data: &[u8], width: usize) -> u128 {
     debug_assert!(width >= 2 && width <= p.max && data.len() == width * 16);
+    #[cfg(target_arch = "x86_64")]
+    if crate::runtime::cpu::has_pclmul() {
+        // SAFETY: `has_pclmul` establishes `pclmulqdq`; `data` is `width * 16` bytes by the
+        // debug assertion and every caller's contract, and the selectors are public indices.
+        return unsafe { ghash_group_clmul(xi, &p.tw, data, width) };
+    }
+    ghash_group_serial(xi, &p.p, data, width)
+}
+
+/// The serial reference: `w` independent multiplies, each with its own reduction.
+fn ghash_group_serial(
+    xi: u128,
+    p: &[u128; GHASH_MAX_WIDTH + 1],
+    data: &[u8],
+    width: usize,
+) -> u128 {
     let mut block = [0u8; 16];
     block.copy_from_slice(&data[..16]);
-    let mut acc = gf_mul(xi ^ u128::from_be_bytes(block), p.p[width]);
+    let mut acc = gf_mul(xi ^ u128::from_be_bytes(block), p[width]);
     let mut j = 1usize;
     while j < width {
         block.copy_from_slice(&data[j * 16..j * 16 + 16]);
-        acc ^= gf_mul(u128::from_be_bytes(block), p.p[width - j]);
+        acc ^= gf_mul(u128::from_be_bytes(block), p[width - j]);
         j += 1;
     }
     acc
+}
+
+/// The group form on `pclmulqdq`, summing the 256-bit products and reducing once.
+///
+/// `tw` holds *twisted* key powers; the message block is the untwisted operand, exactly as
+/// [`gf_mul_clmul`] uses them. `u128::from_be_bytes` is the byte shuffle that converts the
+/// stored block to the reflected operand; it is a `bswap`, not a bit reversal.
+///
+/// # Safety
+/// The caller must have established `pclmulqdq`; `data.len() >= width * 16`; `tw` holds at
+/// least `width` twisted powers.
+#[cfg(target_arch = "x86_64")]
+#[target_feature(enable = "pclmulqdq")]
+unsafe fn ghash_group_clmul(
+    xi: u128,
+    tw: &[u128; GHASH_MAX_WIDTH + 1],
+    data: &[u8],
+    width: usize,
+) -> u128 {
+    use core::arch::x86_64::*;
+
+    let mut acc_lo = _mm_setzero_si128();
+    let mut acc_hi = _mm_setzero_si128();
+    let mut j = 0usize;
+    while j < width {
+        let mut blk = [0u8; 16];
+        blk.copy_from_slice(&data[j * 16..j * 16 + 16]);
+        let mut v = u128::from_be_bytes(blk);
+        if j == 0 {
+            v ^= xi;
+        }
+        let a = _mm_set_epi64x((v >> 64) as i64, v as i64);
+        let hk = tw[width - j];
+        let b = _mm_set_epi64x((hk >> 64) as i64, hk as i64);
+
+        // Full 256-bit product, not reduced yet.
+        let p00 = _mm_clmulepi64_si128::<0x00>(a, b);
+        let p01 = _mm_clmulepi64_si128::<0x01>(a, b);
+        let p10 = _mm_clmulepi64_si128::<0x10>(a, b);
+        let p11 = _mm_clmulepi64_si128::<0x11>(a, b);
+        let mid = _mm_xor_si128(p01, p10);
+        acc_lo = _mm_xor_si128(acc_lo, _mm_xor_si128(p00, _mm_slli_si128::<8>(mid)));
+        acc_hi = _mm_xor_si128(acc_hi, _mm_xor_si128(p11, _mm_srli_si128::<8>(mid)));
+        j += 1;
+    }
+
+    let res = clmul_reduce(acc_lo, acc_hi);
+    let low = _mm_cvtsi128_si64(res) as u64 as u128;
+    let high = _mm_cvtsi128_si64(_mm_unpackhi_epi64(res, res)) as u64 as u128;
+    low | (high << 64)
 }
 
 /// The aggregation width for one call.
@@ -711,6 +873,38 @@ unsafe fn crypt(ctx: *mut GcmCtx, input: *const u8, out: *mut u8, len: usize, de
     unsafe { crypt_width(ctx, input, out, len, dec, None) }
 }
 
+/// Hash `data` (a whole number of blocks) into `xi`, in groups of at most `width` blocks.
+///
+/// With `powers` present, each group is the independent-multiplication form and therefore
+/// uses one reduction per group; without it (the portable arm) every block is hashed
+/// serially. `width` is a public loop bound, never derived from secret data.
+fn ghash_blocks(
+    xi: u128,
+    h: u128,
+    powers: Option<&GhashPowers>,
+    data: &[u8],
+    width: usize,
+) -> u128 {
+    let mut acc = xi;
+    let mut off = 0usize;
+    while off + 16 <= data.len() {
+        if let Some(p) = powers {
+            let rem = (data.len() - off) / 16;
+            let w = std::cmp::min(rem, width);
+            if w >= 2 {
+                acc = ghash_group(acc, p, &data[off..off + w * 16], w);
+                off += w * 16;
+                continue;
+            }
+        }
+        let mut b = [0u8; 16];
+        b.copy_from_slice(&data[off..off + 16]);
+        acc = gf_mul(acc ^ u128::from_be_bytes(b), h);
+        off += 16;
+    }
+    acc
+}
+
 /// [`crypt`] with an explicit aggregation width, for the differential tests.
 ///
 /// `forced_width == Some(1)` selects the original serial loop; production always passes
@@ -725,6 +919,28 @@ unsafe fn crypt_width(
     len: usize,
     dec: bool,
     forced_width: Option<usize>,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe { crypt_core(ctx, input, out, len, dec, forced_width, None) }
+}
+
+/// The implementation behind [`crypt_width`], with an optional multi-block `stream`.
+///
+/// When `stream` is present (the AES path) the bulk is a multi-block CTR XOR followed by
+/// GHASH over the resulting blocks; the aggregation width and the stream's AES width are
+/// independent knobs. When it is absent (a generic block cipher such as ARIA) the original
+/// per-block `block` loop is used.
+///
+/// # Safety
+/// As [`crypt`].
+unsafe fn crypt_core(
+    ctx: *mut GcmCtx,
+    input: *const u8,
+    out: *mut u8,
+    len: usize,
+    dec: bool,
+    forced_width: Option<usize>,
+    stream: Option<Ctr128F>,
 ) -> c_int {
     // SAFETY: the caller's contract.
     unsafe {
@@ -761,6 +977,44 @@ unsafe fn crypt_width(
 
         while i < len {
             if n == 0 {
+                if let Some(stream) = stream {
+                    let remaining_blocks = (len - i) / 16;
+                    if remaining_blocks >= 1 {
+                        let nb = std::cmp::min(remaining_blocks, GCM_CTR_CHUNK);
+                        let bytes = nb * 16;
+                        let mut ivec = (*ctx).yi;
+                        ivec[12..16].copy_from_slice(&ctr.to_be_bytes());
+                        if dec {
+                            // Hash the ciphertext before the stream overwrites it, so an
+                            // in-place decrypt is well defined.
+                            let xi = (*ctx).xi_val();
+                            let src = core::slice::from_raw_parts(input.add(i), bytes);
+                            (*ctx).set_xi(ghash_blocks(
+                                xi,
+                                (*ctx).h_val(),
+                                powers.as_ref(),
+                                src,
+                                width,
+                            ));
+                            stream(input.add(i), out.add(i), nb, (*ctx).key, ivec.as_ptr());
+                        } else {
+                            stream(input.add(i), out.add(i), nb, (*ctx).key, ivec.as_ptr());
+                            let xi = (*ctx).xi_val();
+                            let dst = core::slice::from_raw_parts(out.add(i), bytes);
+                            (*ctx).set_xi(ghash_blocks(
+                                xi,
+                                (*ctx).h_val(),
+                                powers.as_ref(),
+                                dst,
+                                width,
+                            ));
+                        }
+                        ctr = ctr.wrapping_add(nb as u32);
+                        store_counter(ctx, ctr);
+                        i += bytes;
+                        continue;
+                    }
+                }
                 if let Some(p) = powers.as_ref() {
                     let remaining_blocks = (len - i) / 16;
                     if remaining_blocks >= 2 {
@@ -868,13 +1122,13 @@ pub unsafe extern "C" fn CRYPTO_gcm128_decrypt(
 }
 
 /// `int CRYPTO_gcm128_encrypt_ctr32(GCM128_CONTEXT *ctx, const unsigned char *in, unsigned
-/// char *out, size_t len, ctr128_f stream)` — `crypto/modes/gcm128.c:1228`. The authority's
-/// 3.6.4 body is a second copy of the same GCTR loop that uses `stream` for its bulk; the
-/// bytes and the return value are identical to [`CRYPTO_gcm128_encrypt`]'s, so this delegates
-/// rather than keeping a second transcription of one function.
+/// char *out, size_t len, ctr128_f stream)` — `crypto/modes/gcm128.c:1228`. The stream
+/// performs the `blocks`-block CTR XOR; the bytes and return value are identical to
+/// [`CRYPTO_gcm128_encrypt`]'s.
 ///
 /// # Safety
-/// As [`CRYPTO_gcm128_encrypt`]; `stream` is unused.
+/// As [`CRYPTO_gcm128_encrypt`]; `stream` must satisfy the `ctr128_f` contract for `len / 16`
+/// blocks at a time.
 #[no_mangle]
 pub unsafe extern "C" fn CRYPTO_gcm128_encrypt_ctr32(
     ctx: *mut GcmCtx,
@@ -883,16 +1137,15 @@ pub unsafe extern "C" fn CRYPTO_gcm128_encrypt_ctr32(
     len: usize,
     stream: Ctr128F,
 ) -> c_int {
-    let _ = stream;
-    // SAFETY: the caller's contract.
-    unsafe { crypt(ctx, input, out, len, false) }
+    // SAFETY: the caller's contract, plus the stream's own.
+    unsafe { crypt_core(ctx, input, out, len, false, None, Some(stream)) }
 }
 
 /// `int CRYPTO_gcm128_decrypt_ctr32(...)` — `crypto/modes/gcm128.c:1382`. As
 /// [`CRYPTO_gcm128_encrypt_ctr32`]'s note.
 ///
 /// # Safety
-/// As [`CRYPTO_gcm128_encrypt`]; `stream` is unused.
+/// As [`CRYPTO_gcm128_encrypt`]; `stream` must satisfy the `ctr128_f` contract.
 #[no_mangle]
 pub unsafe extern "C" fn CRYPTO_gcm128_decrypt_ctr32(
     ctx: *mut GcmCtx,
@@ -901,9 +1154,8 @@ pub unsafe extern "C" fn CRYPTO_gcm128_decrypt_ctr32(
     len: usize,
     stream: Ctr128F,
 ) -> c_int {
-    let _ = stream;
-    // SAFETY: the caller's contract.
-    unsafe { crypt(ctx, input, out, len, true) }
+    // SAFETY: the caller's contract, plus the stream's own.
+    unsafe { crypt_core(ctx, input, out, len, true, None, Some(stream)) }
 }
 
 /// `int CRYPTO_gcm128_finish(GCM128_CONTEXT *ctx, const unsigned char *tag, size_t len)` —
@@ -1507,6 +1759,224 @@ mod tests {
                     let mut p = vec![0u8; c.len().max(1)];
                     assert_eq!(
                         crypt_width(ctx, c.as_ptr(), p.as_mut_ptr(), c.len(), true, Some(width)),
+                        0
+                    );
+                    let r = CRYPTO_gcm128_finish(ctx, t.as_ptr(), t.len());
+                    CRYPTO_gcm128_release(ctx);
+                    r
+                };
+                assert_eq!(open(&ct_ref, &aad, &tag_ref), 0, "accept width={width}");
+                let mut bad_ct = ct_ref.clone();
+                bad_ct[5] ^= 1;
+                assert_ne!(open(&bad_ct, &aad, &tag_ref), 0, "bad ct width={width}");
+                let mut bad_aad = aad;
+                bad_aad[3] ^= 1;
+                assert_ne!(
+                    open(&ct_ref, &bad_aad, &tag_ref),
+                    0,
+                    "bad aad width={width}"
+                );
+                let mut bad_tag = tag_ref;
+                bad_tag[15] ^= 1;
+                assert_ne!(open(&ct_ref, &aad, &bad_tag), 0, "bad tag width={width}");
+            }
+        }
+    }
+
+    /// Seal with an explicit aggregation width through the **stream** path.
+    ///
+    /// # Safety
+    /// Live locals and a live schedule; every slice pointer is valid for its length.
+    unsafe fn seal_width_stream(
+        key: &[u8],
+        iv: &[u8],
+        aad: &[u8],
+        pt: &[u8],
+        width: usize,
+    ) -> (Vec<u8>, [u8; 16]) {
+        // SAFETY: the caller's contract.
+        unsafe {
+            let bits = (key.len() * 8) as c_int;
+            let k = schedule(key, bits);
+            let ctx = CRYPTO_gcm128_new((&k as *const AesKey).cast_mut().cast(), aes_block);
+            CRYPTO_gcm128_setiv(ctx, iv.as_ptr(), iv.len());
+            assert_eq!(CRYPTO_gcm128_aad(ctx, aad.as_ptr(), aad.len()), 0);
+            let mut ct = vec![0u8; pt.len().max(1)];
+            assert_eq!(
+                crypt_core(
+                    ctx,
+                    pt.as_ptr(),
+                    ct.as_mut_ptr(),
+                    pt.len(),
+                    false,
+                    Some(width),
+                    Some(crate::aes::aes_ctr32_encrypt_blocks as Ctr128F),
+                ),
+                0
+            );
+            ct.truncate(pt.len());
+            let mut tag = [0u8; 16];
+            CRYPTO_gcm128_tag(ctx, tag.as_mut_ptr(), 16);
+            CRYPTO_gcm128_release(ctx);
+            (ct, tag)
+        }
+    }
+
+    /// The multi-block AES-CTR stream path (the one EVP uses) is the same function as the
+    /// serial block path, at every aggregation width, over the required sizes and the
+    /// partial/non-multiple-of-16 messages where multi-block code breaks.
+    #[test]
+    fn gcm_stream_path_matches_serial_reference() {
+        let key128 = [0x11u8; 16];
+        let key256 = [0x22u8; 32];
+        let iv12 = [0x33u8; 12];
+        let iv_odd = pattern(13, 0x5a);
+        let sizes = [
+            (0usize, 0usize),
+            (0, 16),
+            (16, 0),
+            (64, 16),
+            (16384, 16),
+            (1, 0),
+            (15, 1),
+            (17, 3),
+            (31, 7),
+            (33, 15),
+            (63, 17),
+            (65, 31),
+            (95, 0),
+            (127, 33),
+            (129, 16),
+            (255, 64),
+            (1000, 129),
+        ];
+        for key in [&key128[..], &key256[..]] {
+            for &iv in &[&iv12[..], &iv_odd[..]] {
+                for &(ptlen, aadlen) in &sizes {
+                    let pt = pattern(ptlen, 1);
+                    let aad = pattern(aadlen, 2);
+                    // SAFETY: live locals; the helper establishes each context.
+                    let (ct_ref, tag_ref) = unsafe { seal_width(key, iv, &aad, &pt, 1) };
+                    for width in 1..=GHASH_MAX_WIDTH {
+                        // SAFETY: as above.
+                        let (ct, tag) = unsafe { seal_width_stream(key, iv, &aad, &pt, width) };
+                        assert_eq!(
+                            ct,
+                            ct_ref,
+                            "stream ct keylen={} ivlen={} pt={ptlen} aad={aadlen} width={width}",
+                            key.len(),
+                            iv.len()
+                        );
+                        assert_eq!(
+                            tag,
+                            tag_ref,
+                            "stream tag keylen={} ivlen={} pt={ptlen} aad={aadlen} width={width}",
+                            key.len(),
+                            iv.len()
+                        );
+                    }
+                }
+            }
+        }
+    }
+
+    /// The stream path across call boundaries that cut mid-block and on block edges, in place,
+    /// and with a one-bit tamper of ciphertext, AAD or tag at the stream-capable widths.
+    #[test]
+    fn gcm_stream_path_split_inplace_and_tamper() {
+        let key = [0x42u8; 16];
+        let iv = [0x24u8; 12];
+        let aad = [0x11u8; 16];
+        let pt = pattern(100, 9);
+        for width in [2usize, 4, 8] {
+            // SAFETY: live locals; every pointer is valid for its length.
+            unsafe {
+                let k = schedule(&key, 128);
+                let (ct_ref, tag_ref) = seal_width(&key, &iv, &aad, &pt, width);
+                let stream = Some(crate::aes::aes_ctr32_encrypt_blocks as Ctr128F);
+
+                // In place: output aliases input exactly.
+                let mut buf = pt.clone();
+                let ctx = CRYPTO_gcm128_new((&k as *const AesKey).cast_mut().cast(), aes_block);
+                CRYPTO_gcm128_setiv(ctx, iv.as_ptr(), iv.len());
+                assert_eq!(CRYPTO_gcm128_aad(ctx, aad.as_ptr(), aad.len()), 0);
+                assert_eq!(
+                    crypt_core(
+                        ctx,
+                        buf.as_ptr(),
+                        buf.as_mut_ptr(),
+                        buf.len(),
+                        false,
+                        Some(width),
+                        stream,
+                    ),
+                    0
+                );
+                let mut tag = [0u8; 16];
+                CRYPTO_gcm128_tag(ctx, tag.as_mut_ptr(), 16);
+                CRYPTO_gcm128_release(ctx);
+                assert_eq!(buf, ct_ref, "stream in-place width={width}");
+                assert_eq!(tag, tag_ref, "stream in-place tag width={width}");
+
+                // Split on and inside block boundaries.
+                let cuts = [7usize, 16, 33, 44];
+                let mut ct_split = vec![0u8; pt.len()];
+                let ctx = CRYPTO_gcm128_new((&k as *const AesKey).cast_mut().cast(), aes_block);
+                CRYPTO_gcm128_setiv(ctx, iv.as_ptr(), iv.len());
+                assert_eq!(CRYPTO_gcm128_aad(ctx, aad.as_ptr(), aad.len()), 0);
+                let mut off = 0usize;
+                for &cut in &cuts {
+                    if cut <= off {
+                        continue;
+                    }
+                    assert_eq!(
+                        crypt_core(
+                            ctx,
+                            pt.as_ptr().add(off),
+                            ct_split.as_mut_ptr().add(off),
+                            cut - off,
+                            false,
+                            Some(width),
+                            stream,
+                        ),
+                        0
+                    );
+                    off = cut;
+                }
+                assert_eq!(
+                    crypt_core(
+                        ctx,
+                        pt.as_ptr().add(off),
+                        ct_split.as_mut_ptr().add(off),
+                        pt.len() - off,
+                        false,
+                        Some(width),
+                        stream,
+                    ),
+                    0
+                );
+                let mut tag_split = [0u8; 16];
+                CRYPTO_gcm128_tag(ctx, tag_split.as_mut_ptr(), 16);
+                CRYPTO_gcm128_release(ctx);
+                assert_eq!(ct_split, ct_ref, "stream split width={width}");
+                assert_eq!(tag_split, tag_ref, "stream split tag width={width}");
+
+                // Tamper arms.
+                let open = |c: &[u8], a: &[u8], t: &[u8]| -> c_int {
+                    let ctx = CRYPTO_gcm128_new((&k as *const AesKey).cast_mut().cast(), aes_block);
+                    CRYPTO_gcm128_setiv(ctx, iv.as_ptr(), iv.len());
+                    assert_eq!(CRYPTO_gcm128_aad(ctx, a.as_ptr(), a.len()), 0);
+                    let mut p = vec![0u8; c.len().max(1)];
+                    assert_eq!(
+                        crypt_core(
+                            ctx,
+                            c.as_ptr(),
+                            p.as_mut_ptr(),
+                            c.len(),
+                            true,
+                            Some(width),
+                            stream,
+                        ),
                         0
                     );
                     let r = CRYPTO_gcm128_finish(ctx, t.as_ptr(), t.len());

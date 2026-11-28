@@ -1,0 +1,38 @@
+PFP-68/69/62/5 — stage-by-stage isolated contribution
+
+All numbers are candidate-only, same instrument (bench_pfp12 / bench_pfp63),
+pinned to one CPU, median of 9-11 process runs, AES-128-GCM, seal+open.
+"ratio" is cand/auth measured in the same command where shown.
+
+stage / source state                         16 KiB us   64 B us   note
+--------------------------------------------------------------------------
+baseline (HEAD + cpu mod declaration)           63.02     1.689   no change
+  PFP-69 value-only SIMD carriers (s1)          63.11     1.696   ~0 (LLVM had
+                                                                already removed
+                                                                the stack trip)
+  PFP-68 reflected domain, no bit reversal (s2) 48.81     1.622   -22.7% / -4.4%
+  PFP-62 single-reduction group, w=2/8 (s4)     45.16     1.614   -7.5% / -0.5%
+  stream wired at e_aes only (s5)               45.12     1.631   no effect: EVP
+                                                                uses the provider
+                                                                GCM path
+  PFP-5 multi-block AES stream + VAES-256 (s5b)  7.72     1.500   -82.9% / -6.4%
+final paired authority ratio                    1.999     2.303
+--------------------------------------------------------------------------
+
+Total candidate speedup 63.02 -> 7.72 us (8.16x) at 16 KiB.
+16 KiB ratio 13.206x -> 1.999x; 64 B ratio 2.495x -> 2.303x.
+
+Stage notes
+* PFP-69 is a boundary-soundness win with no measurable throughput effect: the
+  before disassembly showed zero stack traffic. Reported as a lost stage, not
+  as a gain.
+* PFP-62's aggregation only pays off once the serialised AES cost is gone.
+  Before stage 5 the width sweep preferred w=2 at 16 KiB (45.75 us) over w=8
+  (48.73 us); after stage 5 it prefers w=8 (7.63 us) over w=2 (9.73 us).
+  This is the arithmetic-independence delivery the generic carry-save arms did
+  not show: it needed the competing serial bottleneck removed first.
+* VAES-256 contribution (16 KiB): 7.5946 us with VAES vs 8.0409 us with the VAES
+  bit cleared (AES-NI 4-way) = 5.6% / 0.45 us. At 64 B VAES is gated off
+  (fewer than 8 blocks), so both arms take AES-NI 4-way.
+
+AES-256-GCM final: 8.2245 us at 16 KiB (1.879x), 1.5211 us at 64 B (2.302x).
