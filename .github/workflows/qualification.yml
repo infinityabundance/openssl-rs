@@ -1,0 +1,386 @@
+# openssl-rs — qualification lane (frozen candidate)
+#
+# Why this exists
+# ---------------
+# `ci.yml` sets `concurrency.cancel-in-progress: true`, so on `staging` a fast
+# stream of pushes cancels the previous run before the full acceptance suite has
+# finished. That is the correct trade for the development lane, but it means the
+# complete gate has not been observed completing: the expensive steps (the
+# courts, the re-derived regression guard) are exactly the ones a later push
+# interrupts. A `BOUNDARY` or `SEAL` gate needs a run that is keyed to a frozen
+# source identity and is never cancelled by a newer commit.
+#
+# This workflow is that lane. It runs the **same** acceptance steps as
+# `ci.yml`'s seal mode, reusing its command lines verbatim rather than inventing
+# new ones, but:
+#
+#   * it is triggered only by an explicit dispatch naming a full commit SHA, or
+#     by pushing a `qualif-*` tag, so it never runs on an ordinary push;
+#   * its concurrency group is the qualified commit itself, and
+#     `cancel-in-progress` is `false`, so a later commit can never cancel a
+#     frozen candidate's run — a re-dispatch of the same commit queues, it does
+#     not supersede;
+#   * it checks out the exact commit named, not the branch tip, and records the
+#     resolved SHA in the job log and the step summary.
+#
+# Required status contexts on `main`
+# ----------------------------------
+# `ci.yml` owns the required check names on `main`. This workflow deliberately
+# reuses its *commands* but gives every job a distinct name (prefixed
+# `qualification:`), so it neither weakens nor duplicates those required
+# contexts. It produces its own, separately named contexts for a frozen
+# candidate.
+
+name: qualification
+
+on:
+  workflow_dispatch:
+    inputs:
+      commit:
+        description: "Full SHA of the frozen candidate to qualify"
+        required: true
+        type: string
+      label:
+        description: "Optional human label for this qualification run"
+        required: false
+        type: string
+  push:
+    tags:
+      - "qualif-*"
+
+# Keyed to the candidate, never to the ref: a later commit has a different SHA
+# and therefore a different group, so it cannot cancel a frozen candidate. The
+# only way two runs share a group is re-qualifying the same commit, and that
+# queues rather than supersedes.
+concurrency:
+  group: qualification-${{ inputs.commit || github.sha }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    # The same hard gate as `ci.yml`'s `lint` job: clippy enforces the
+    # `undocumented_unsafe_blocks` / `missing_safety_doc` deny policy.
+    name: qualification: lints (clippy)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.commit || github.sha }}
+
+      - name: Resolve and record the qualified commit
+        run: |
+          set -euo pipefail
+          resolved="$(git rev-parse HEAD)"
+          echo "qualified commit: ${resolved}"
+          if [ -n "${{ inputs.label }}" ]; then
+            echo "qualification label: ${{ inputs.label }}"
+          fi
+          echo "qualified commit: \`${resolved}\`" >> "$GITHUB_STEP_SUMMARY"
+
+      # The test targets embed authority vectors with `include_str!`, so the
+      # authority source tree must be present before compilation (see ci.yml).
+      - name: Acquire authority
+        run: python3 forensics/tools/authority_acquire.py --all
+
+      - name: Clippy
+        run: cargo clippy --all-targets -- -D warnings
+
+  adversarial:
+    # Negative-control probes, one process per probe, verbatim from ci.yml.
+    name: qualification: adversarial probes
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.commit || github.sha }}
+
+      - name: Resolve and record the qualified commit
+        run: |
+          set -euo pipefail
+          resolved="$(git rev-parse HEAD)"
+          echo "qualified commit: ${resolved}"
+          if [ -n "${{ inputs.label }}" ]; then
+            echo "qualification label: ${{ inputs.label }}"
+          fi
+          echo "qualified commit: \`${resolved}\`" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Acquire authority
+        run: python3 forensics/tools/authority_acquire.py --all
+
+      - name: Run adversarial probes (one process per probe)
+        run: bash scripts/adv-probe.sh
+
+  static:
+    name: qualification: static gates
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # The trusted baseline is read through git, so the history has to be
+          # present (see ci.yml).
+          ref: ${{ inputs.commit || github.sha }}
+          fetch-depth: 0
+
+      - name: Resolve and record the qualified commit
+        run: |
+          set -euo pipefail
+          resolved="$(git rev-parse HEAD)"
+          echo "qualified commit: ${resolved}"
+          if [ -n "${{ inputs.label }}" ]; then
+            echo "qualification label: ${{ inputs.label }}"
+          fi
+          echo "qualified commit: \`${resolved}\`" >> "$GITHUB_STEP_SUMMARY"
+
+      # Every step below is a seal-mode step. In `ci.yml` the seal-mode steps are
+      # gated to `main` / pull_request / workflow_dispatch; in this lane every run
+      # is a seal run, so the mode gate is removed and they run unconditionally.
+
+      - name: Toolchain
+        run: |
+          rustup show
+          rustc --version
+          cargo --version
+
+      - name: Formatting
+        run: cargo fmt --all -- --check
+
+      - name: Build
+        run: cargo build --release
+
+      # Acquired for the two unit-test steps and then stood back down, because
+      # every later static step is designed to run without the authority source
+      # tree (see ci.yml D414).
+      - name: Acquire authority, for the test targets
+        run: python3 forensics/tools/authority_acquire.py --all
+
+      - name: Unit tests
+        run: cargo test --lib -- --test-threads=1
+
+      - name: Unit tests (parallel-safety gate)
+        run: cargo test --lib
+
+      - name: Stand the authority back down
+        run: rm -rf forensics/authorities/src forensics/authorities/downloads
+
+      - name: Forbidden implementation backends
+        run: python3 forensics/tools/check_forbidden_dependencies.py
+
+      - name: No dependencies
+        run: |
+          python3 - <<'PY'
+          import tomllib, sys
+          with open("Cargo.toml", "rb") as f:
+              doc = tomllib.load(f)
+          deps = doc.get("dependencies") or {}
+          build = doc.get("build-dependencies") or {}
+          if deps or build:
+              print("unexpected dependencies:", deps, build)
+              sys.exit(1)
+          print("no dependencies declared (ok)")
+          PY
+
+      - name: Callback enumeration completeness (extension-slot registrations vs inventory)
+        run: |
+          set -euo pipefail
+          closure=$(python3 - <<'PY'
+          import json
+          d = json.load(open(
+              'forensics/memory-safety/campaign/safe-c33/CAMPAIGN-STATUS.json'))
+          print(d['current_applied_state']['closure_receipts'][0])
+          PY
+          )
+          if [ ! -f "$closure" ]; then
+            echo "::error::callback gate prerequisite missing: $closure"
+            exit 1
+          fi
+          python3 forensics/tools/callback_enumeration_gate.py \
+            --root . --closure "$closure" \
+            --out-dir "${RUNNER_TEMP}/callback-enumeration-gate"
+
+      - name: Callback artifact cross-check (compiled registration targets vs manifest)
+        run: |
+          set -euo pipefail
+          artifact=artifacts/phase2/install/lib/libcrypto.so.3
+          manifest=forensics/memory-safety/campaign/safe-c33/atlas-refresh/callback-registration-manifest.json
+          if [ ! -f "$artifact" ]; then
+            echo "::error::callback artifact cross-check prerequisite missing: $artifact"
+            exit 1
+          fi
+          if [ ! -f "$manifest" ]; then
+            echo "::error::callback artifact cross-check prerequisite missing: $manifest"
+            exit 1
+          fi
+          python3 forensics/tools/callback_artifact_crosscheck.py \
+            --artifact "$artifact" --manifest "$manifest" \
+            --out "${RUNNER_TEMP}/callback-artifact-crosscheck.json"
+
+      - name: Evidence determinism
+        run: python3 forensics/tools/evidence_determinism.py
+
+      - name: Phase completion predicate (and its sensitivity controls)
+        run: python3 forensics/tools/phase_state.py --self-test
+
+      - name: Symbol ownership
+        run: python3 forensics/tools/ownership_audit.py
+
+      - name: Prerequisite coverage
+        run: python3 forensics/tools/prerequisite_gate.py
+
+      - name: Plan reconciliation
+        run: python3 forensics/tools/plan_reconciliation.py
+
+      - name: Prerequisite atlases (committed artefacts)
+        run: python3 forensics/tools/gen_prerequisite_atlas.py --check
+
+      - name: Export prototypes
+        run: python3 forensics/tools/prototype_court.py
+
+      - name: Provider dispatch plane
+        run: python3 forensics/tools/dispatch_court.py
+
+      - name: FRF court declarations match their table
+        run: python3 forensics/tools/gen_frf_courts.py --check
+
+      - name: Evidence portability (no host binutils)
+        run: python3 forensics/tools/check_evidence_portability.py
+
+      - name: Resolve trusted baseline ref
+        id: baseline
+        run: |
+          set -eu
+          if [ -n "${GITHUB_BASE_REF:-}" ]; then
+            git fetch --no-tags origin "${GITHUB_BASE_REF}"
+            REF="$(git merge-base HEAD FETCH_HEAD)"
+          else
+            BEFORE="${{ github.event.before }}"
+            if [ -n "$BEFORE" ] && \
+               [ "$BEFORE" != "0000000000000000000000000000000000000000" ] && \
+               git cat-file -e "${BEFORE}^{commit}" 2>/dev/null; then
+              REF="$BEFORE"
+            else
+              git fetch --no-tags origin "${GITHUB_REF_NAME}"
+              REF="$(git merge-base HEAD FETCH_HEAD)"
+            fi
+          fi
+          echo "ref=$REF" >> "$GITHUB_OUTPUT"
+          echo "trusted baseline ref: $REF"
+          git --no-pager log -1 --oneline "$REF"
+
+      - name: Regression guard
+        run: |
+          python3 forensics/tools/regression_guard.py \
+            --baseline-ref "${{ steps.baseline.outputs.ref }}" \
+            --require-current \
+            --allow-missing-baseline
+
+  courts:
+    name: qualification: courts
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.commit || github.sha }}
+          fetch-depth: 0
+
+      - name: Resolve and record the qualified commit
+        run: |
+          set -euo pipefail
+          resolved="$(git rev-parse HEAD)"
+          echo "qualified commit: ${resolved}"
+          if [ -n "${{ inputs.label }}" ]; then
+            echo "qualification label: ${{ inputs.label }}"
+          fi
+          echo "qualified commit: \`${resolved}\`" >> "$GITHUB_STEP_SUMMARY"
+
+      # Created before the container runs so the later runner-user write stays
+      # permission-clean (see ci.yml).
+      - name: Prepare the shared scratch directory
+        run: mkdir -p court
+
+      - name: Build court image
+        run: bash docker/openssl-rs-court.sh build
+
+      - name: Start court container
+        run: bash docker/openssl-rs-court.sh up
+
+      - name: Court preconditions
+        run: bash docker/openssl-rs-court.sh verify
+
+      - name: Acquire authority
+        run: bash docker/openssl-rs-court.sh exec python3 forensics/tools/authority_acquire.py --all
+
+      - name: Build authority
+        run: bash docker/openssl-rs-court.sh exec python3 forensics/tools/authority_build.py --all
+
+      - name: Every active stratum's courts, derived from the phase registry
+        run: bash docker/openssl-rs-court.sh exec python3 forensics/tools/run_courts.py
+
+      - name: Re-derive the prerequisite atlases
+        run: |
+          bash docker/openssl-rs-court.sh exec python3 forensics/tools/gen_prerequisite_atlas.py
+          git diff --exit-code -- \
+            forensics/atlas/internal-symbols.json \
+            forensics/atlas/macro-owners.json \
+            forensics/atlas/typedef-owners.json \
+            forensics/atlas/transcription-edges.json || {
+            echo "::error::the prerequisite atlases are stale; regenerate and commit them";
+            exit 1;
+          }
+
+      - name: Probe hygiene (each probe must answer the same at every -O level)
+        run: |
+          bash docker/openssl-rs-court.sh exec python3 forensics/tools/probe_hygiene.py
+          # The committed record is compared, not merely regenerated. A gate that
+          # passes while its own evidence file has gone stale is the failure mode
+          # `run_courts.py` exists to prevent for the courts, and the artefact is
+          # byte-deterministic (measured), so an exact comparison is available.
+          git diff --exit-code -- artifacts/probe-hygiene.json || {
+            echo "::error::artifacts/probe-hygiene.json changed; regenerate and commit it";
+            exit 1;
+          }
+
+      - name: Resolve trusted baseline ref
+        id: baseline
+        run: |
+          set -eu
+          if [ -n "${GITHUB_BASE_REF:-}" ]; then
+            git fetch --no-tags origin "${GITHUB_BASE_REF}"
+            REF="$(git merge-base HEAD FETCH_HEAD)"
+          else
+            BEFORE="${{ github.event.before }}"
+            if [ -n "$BEFORE" ] && \
+               [ "$BEFORE" != "0000000000000000000000000000000000000000" ] && \
+               git cat-file -e "${BEFORE}^{commit}" 2>/dev/null; then
+              REF="$BEFORE"
+            else
+              git fetch --no-tags origin "${GITHUB_REF_NAME}"
+              REF="$(git merge-base HEAD FETCH_HEAD)"
+            fi
+          fi
+          echo "ref=$REF" >> "$GITHUB_OUTPUT"
+          echo "trusted baseline ref: $REF"
+
+      - name: Extract the trusted baseline
+        run: |
+          mkdir -p court
+          git show "${{ steps.baseline.outputs.ref }}:forensics/regression-baseline.json" \
+            > court/trusted-baseline.json
+          echo "authority baseline:"
+          head -c 200 court/trusted-baseline.json; echo
+
+      - name: Regression guard (re-derived evidence)
+        run: |
+          bash docker/openssl-rs-court.sh exec python3 \
+            forensics/tools/regression_guard.py \
+            --baseline-file /work/court/trusted-baseline.json
+
+      - name: Stop court container
+        if: always()
+        run: bash docker/openssl-rs-court.sh down
