@@ -1,0 +1,12 @@
+== harness ==
+rustc 1.98.1, release profile, x86_64
+== hardware dispatch (default) ==
+dispatch: hardware if present (iters=20000000)
+AES-128: encrypt 5271.2 MB/s, decrypt 5185.3 MB/s
+AES-192: encrypt 4128.2 MB/s, decrypt 4402.5 MB/s
+AES-256: encrypt 4635.9 MB/s, decrypt 4648.8 MB/s
+== portable dispatch (OPENSSL_ia32cap=~0x2000000) ==
+dispatch: portable (forced) (iters=2000000)
+AES-128: encrypt 13.4 MB/s, decrypt 12.4 MB/s
+AES-192: encrypt 11.2 MB/s, decrypt 10.4 MB/s
+AES-256: encrypt 9.6 MB/s, decrypt 8.9 MB/s

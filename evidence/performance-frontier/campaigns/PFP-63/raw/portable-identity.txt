@@ -1,0 +1,40 @@
+branch:
+staging
+HEAD:
+d0bb66fb07cb56758c015b830073bd6d323ff712
+
+batch files (git status --porcelain, scoped to src/examples/evidence):
+ M src/aes.rs
+ M src/digest/tables.rs
+ M src/modes/gcm.rs
+?? evidence/performance-frontier/campaigns/PFP-63/PORTABLE.md
+?? evidence/performance-frontier/campaigns/PFP-63/raw/portable-audit.sh
+?? evidence/performance-frontier/campaigns/PFP-63/raw/portable-audit.txt
+?? evidence/performance-frontier/campaigns/PFP-63/raw/portable-bench-debug.txt
+?? evidence/performance-frontier/campaigns/PFP-63/raw/portable-bench-release.txt
+?? evidence/performance-frontier/campaigns/PFP-63/raw/portable-diff.patch
+?? evidence/performance-frontier/campaigns/PFP-63/raw/portable-gate.txt
+?? evidence/performance-frontier/campaigns/PFP-63/raw/portable-identity.sh
+?? evidence/performance-frontier/campaigns/PFP-63/raw/portable-identity.txt
+?? evidence/performance-frontier/campaigns/PFP-63/raw/portable-leakage-status.txt
+?? evidence/performance-frontier/campaigns/PFP-63/raw/portable-memory.txt
+?? examples/pfp63_bench.rs
+?? src/aes/
+
+whole-working-tree diff digest (includes pre-existing uncommitted work):
+014daece4ebaa207df8d1d79a1146b9834e999e558073d8f5af24479f7db97f0  evidence/performance-frontier/campaigns/PFP-63/raw/portable-diff.patch
+
+source hashes:
+0ebfb080317298a829bdd62f501c98792052a0aa3f400ff621a2ffb59801e523  src/aes.rs
+f89ab4eb40a6663831389914de9d2611f74191e36112777975c909252e82101a  src/aes/portable.rs
+a29c09ffdfae11d709caed0a73e2b422064f234617319323b40d2bbfa10dea62  src/aes/reference.rs
+dd2081748cc6e7659978725652ee63ccef3837f93abfad6fede4d4912af0a2bf  src/aes/research.rs
+b360fd25cee36769e687cbac36b1b883ae06cca1873a7006cc177c962a8dc5b3  src/digest/tables.rs
+a90626898b7869185c94b5ffdcd269a1bc34cd8338b66875a10293dcbb8ac38f  src/modes/gcm.rs
+43af63f10f56bbb760dcd28a8986f5b6a800b8a752ad9ba15983d31f9682d903  forensics/tools/gen_phase8_tables.py
+c62c71d4d3b27b60cd4bede1d14bd0fa4cef0b6a8b658898a34b4c860f3ef0e4  examples/pfp63_bench.rs
+
+release audit artefact:
+659ad8c409faafbf1fb47342e2308ddce902cfedd1634b6cd0ab5f98f6858753  target/release/examples/pfp63_bench
+debug control artefact:
+1744f8524de5fe9296f5ce029d3246a1b9ac2aabb6c5d31cfa38f097a06d5f1e  target/debug/deps/openssl_rs-bcfdf4d0f51f39b5

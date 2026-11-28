@@ -1,0 +1,241 @@
+== release artefact ==
+659ad8c409faafbf1fb47342e2308ddce902cfedd1634b6cd0ab5f98f6858753  target/release/examples/pfp63_bench
+000000000004bd40 t openssl_rs::aes::portable::inv_planes
+000000000004c160 t openssl_rs::aes::portable::add_round_key
+000000000004c870 t openssl_rs::aes::portable::encrypt_block
+000000000004e660 t openssl_rs::aes::portable::sub_bytes
+000000000004a2c0 t openssl_rs::modes::gcm::gf_mul_portable
+
+--- portable::sub_bytes (SubBytes/InvSubBytes circuit carrier) (target/release/examples/pfp63_bench 0x4e660..0x4ecb0) ---
+indexed memory / conditional transfer / call lines:
+   4e95f:	call   4bd40 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs3aes8portable10inv_planes>
+
+--- portable::inv_planes (field inverse) (target/release/examples/pfp63_bench 0x4bd40..0x4c160) ---
+indexed memory / conditional transfer / call lines:
+   4bdf5:	data16 cs nopw 0x0(%rax,%rax,1)
+   4c0d4:	jne    4be00 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs3aes8portable10inv_planes+0xc0>
+
+--- portable::encrypt_block (round driver) (target/release/examples/pfp63_bench 0x4c870..0x4cca0) ---
+indexed memory / conditional transfer / call lines:
+   4c956:	jb     4cc10 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs3aes8portable13encrypt_block+0x3a0>
+   4c96b:	nopl   0x0(%rax,%rax,1)
+   4c978:	call   4e660 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs3aes8portable9sub_bytes>
+   4c9e6:	lea    (%r14,%r14,1),%r15d
+   4ca07:	lea    (%r12,%r12,1),%eax
+   4ca24:	lea    (%rbx,%rbx,1),%ecx
+   4ca5f:	lea    (%rbx,%rbx,1),%ebp
+   4ca7b:	lea    (%r11,%r11,1),%r14d
+   4caa8:	lea    (%rdx,%rdx,1),%r10d
+   4caef:	lea    (%r10,%r10,1),%r11d
+   4caf9:	lea    (%r9,%r9,1),%ecx
+   4cb0a:	lea    (%rdi,%rdi,1),%ebx
+   4cb33:	lea    (%rdx,%rdx,1),%edi
+   4cb72:	lea    (%r8,%r8,1),%eax
+   4cb8a:	lea    (%rdx,%rdx,1),%ecx
+   4cba7:	lea    (%rsi,%rsi,1),%r8d
+   4cbcb:	lea    (%r9,%r9,1),%eax
+   4cbff:	call   4c160 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs3aes8portable13add_round_key>
+   4cc0a:	jne    4c970 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs3aes8portable13encrypt_block+0x100>
+   4cc13:	call   4e660 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs3aes8portable9sub_bytes>
+   4cc9b:	jmp    4c160 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs3aes8portable13add_round_key>
+
+--- portable::add_round_key (target/release/examples/pfp63_bench 0x4c160..0x4c280) ---
+indexed memory / conditional transfer / call lines:
+   4c168:	jne    4c250 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs3aes8portable13add_round_key+0xf0>
+   4c17a:	jae    4c25d <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs3aes8portable13add_round_key+0xfd>
+   4c180:	mov    0xc(%rsi,%rax,4),%edx
+   4c184:	mov    0x8(%rsi,%rax,4),%r8d
+   4c189:	mov    (%rsi,%rax,4),%ecx
+   4c18c:	mov    0x4(%rsi,%rax,4),%eax
+   4c257:	call   *0x49efb(%rip)        # 96158 <_DYNAMIC+0x388>
+   4c26c:	call   *0x49e76(%rip)        # 960e8 <_DYNAMIC+0x318>
+
+--- AES_set_decrypt_key (schedule transform) (target/release/examples/pfp63_bench 0x48310..0x48840) ---
+indexed memory / conditional transfer / call lines:
+   48331:	jne    487b5 <AES_set_decrypt_key+0x4a5>
+   4833e:	je     485fd <AES_set_decrypt_key+0x2ed>
+   4834c:	call   49300 <_RNvNtCsfBoMNNx3tZr_10openssl_rs3aes13aes_expand_ni.llvm.2308628919022874238>
+   48353:	js     4871c <AES_set_decrypt_key+0x40c>
+   48363:	js     487ff <AES_set_decrypt_key+0x4ef>
+   4836b:	je     4864d <AES_set_decrypt_key+0x33d>
+   48382:	data16 data16 data16 data16 cs nopw 0x0(%rax,%rax,1)
+   48394:	jae    487e5 <AES_set_decrypt_key+0x4d5>
+   4839e:	jae    487df <AES_set_decrypt_key+0x4cf>
+   483a4:	mov    (%rbx,%rcx,4),%eax
+   483a7:	mov    (%rbx,%rdi,4),%esi
+   483aa:	mov    %esi,(%rbx,%rcx,4)
+   483ad:	mov    %eax,(%rbx,%rdi,4)
+   483b0:	mov    0x4(%rbx,%rcx,4),%eax
+   483b4:	mov    0x4(%rbx,%rdi,4),%esi
+   483b8:	mov    %esi,0x4(%rbx,%rcx,4)
+   483bc:	mov    %eax,0x4(%rbx,%rdi,4)
+   483c0:	mov    0x8(%rbx,%rcx,4),%eax
+   483c4:	mov    0x8(%rbx,%rdi,4),%esi
+   483c8:	mov    %esi,0x8(%rbx,%rcx,4)
+   483cc:	mov    %eax,0x8(%rbx,%rdi,4)
+   483d0:	mov    0xc(%rbx,%rcx,4),%eax
+   483d4:	mov    0xc(%rbx,%rdi,4),%esi
+   483d8:	mov    %esi,0xc(%rbx,%rcx,4)
+   483dc:	mov    %eax,0xc(%rbx,%rdi,4)
+   483eb:	jb     48390 <AES_set_decrypt_key+0x80>
+   483f0:	je     485be <AES_set_decrypt_key+0x2ae>
+   48421:	data16 data16 data16 data16 data16 cs nopw 0x0(%rax,%rax,1)
+   48434:	je     487ee <AES_set_decrypt_key+0x4de>
+   4843a:	movdqu (%rbx,%rdi,4),%xmm6
+   485ac:	movdqu %xmm3,(%rbx,%rdi,4)
+   485b8:	jne    48430 <AES_set_decrypt_key+0x120>
+   485c9:	je     4880e <AES_set_decrypt_key+0x4fe>
+   485d9:	jne    4881d <AES_set_decrypt_key+0x50d>
+   485e2:	je     4871a <AES_set_decrypt_key+0x40a>
+   485f4:	ja     4865c <AES_set_decrypt_key+0x34c>
+   485f8:	jmp    48700 <AES_set_decrypt_key+0x3f0>
+   48605:	je     4871c <AES_set_decrypt_key+0x40c>
+   4860e:	je     4871c <AES_set_decrypt_key+0x40c>
+   4861a:	je     4873d <AES_set_decrypt_key+0x42d>
+   48626:	je     4872e <AES_set_decrypt_key+0x41e>
+   48637:	jne    4871c <AES_set_decrypt_key+0x40c>
+   48648:	jmp    48748 <AES_set_decrypt_key+0x438>
+   4865a:	jbe    485f6 <AES_set_decrypt_key+0x2e6>
+   48665:	cmovb  %rdx,%rcx
+   48676:	cmovne %rdx,%rsi
+   48683:	data16 data16 data16 cs nopw 0x0(%rax,%rax,1)
+   48690:	movdqu (%rbx,%rdx,4),%xmm1
+   48695:	movdqu 0x10(%rbx,%rdx,4),%xmm2
+   486e3:	movdqu %xmm1,(%rbx,%rdx,4)
+   486e8:	movdqu %xmm2,0x10(%rbx,%rdx,4)
+   486f5:	jne    48690 <AES_set_decrypt_key+0x380>
+   486f7:	nopw   0x0(%rax,%rax,1)
+   48704:	je     487c6 <AES_set_decrypt_key+0x4b6>
+   4870a:	mov    (%rbx,%rcx,4),%edx
+   4870f:	mov    %edx,(%rbx,%rcx,4)
+   48718:	jne    48700 <AES_set_decrypt_key+0x3f0>
+   4873b:	jmp    48750 <AES_set_decrypt_key+0x440>
+   48752:	call   *0x4d9d8(%rip)        # 96130 <memset@GLIBC_2.2.5>
+   48766:	call   *0x4d984(%rip)        # 960f0 <memcpy@GLIBC_2.14>
+   48779:	call   4d2b0 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs3aes8portable18expand_encrypt_key>
+   48788:	jne    48351 <AES_set_decrypt_key+0x41>
+   487a2:	call   *0x4d948(%rip)        # 960f0 <memcpy@GLIBC_2.14>
+   487b0:	jmp    48351 <AES_set_decrypt_key+0x41>
+   487bc:	call   4b874 <_RINvMNtNtCs9k3SxhrAWiO_3std4sync9once_lockINtB3_8OnceLockbE10initializeNCINvB2_11get_or_initNCNvNtCsfBoMNNx3tZr_10openssl_rs3aes16aes_ni_available0E0zEB1y_>
+   487c1:	jmp    48337 <AES_set_decrypt_key+0x27>
+   487d7:	call   *0x4d90b(%rip)        # 960e8 <_DYNAMIC+0x318>
+   487dd:	jmp    4882a <AES_set_decrypt_key+0x51a>
+   487e3:	jmp    487ee <AES_set_decrypt_key+0x4de>
+   487f7:	call   *0x4d8eb(%rip)        # 960e8 <_DYNAMIC+0x318>
+   487fd:	jmp    4882a <AES_set_decrypt_key+0x51a>
+   48806:	call   *0x4d94c(%rip)        # 96158 <_DYNAMIC+0x388>
+   4880c:	jmp    4882a <AES_set_decrypt_key+0x51a>
+   48815:	call   *0x4d8dd(%rip)        # 960f8 <_DYNAMIC+0x328>
+   4881b:	jmp    4882a <AES_set_decrypt_key+0x51a>
+   48824:	call   *0x4d92e(%rip)        # 96158 <_DYNAMIC+0x388>
+   4882c:	call   *0x4d8ae(%rip)        # 960e0 <_DYNAMIC+0x310>
+
+Interpretation: the only indexed loads in the portable AES carriers are the four
+schedule words in add_round_key. Their index is %rax, the public round counter,
+never a key or state byte. sub_bytes, inv_planes and encrypt_block contain no
+indexed memory operand at all; the shifts in encrypt_block are MixColumns' xtime.
+The AES_set_decrypt_key transform indexes rd_key only by its public i/j/off loop
+counters; no key byte selects an address.
+
+--- gcm::gf_mul_portable (portable GHASH field multiply) (target/release/examples/pfp63_bench 0x4a2c0..0x4a358) ---
+indexed memory / conditional transfer / call lines:
+   4a320:	cmovne %rbp,%r13
+   4a324:	cmovne %r10,%rbp
+   4a331:	cmove  %r10,%rdx
+   4a335:	cmove  %r10,%r8
+   4a348:	jb     4a2f0 <_RNvNtNtCsfBoMNNx3tZr_10openssl_rs5modes3gcm15gf_mul_portable.llvm.2308628919022874238+0x30>
+
+Interpretation: no indexed memory operand. The only conditional transfer is the
+fixed 128-count loop back-edge; operand-bit selection is cmov/mask.
+
+== debug test artefact (firing controls) ==
+1744f8524de5fe9296f5ce029d3246a1b9ac2aabb6c5d31cfa38f097a06d5f1e  target/debug/deps/openssl_rs-bcfdf4d0f51f39b5
+00000000015c4300 t openssl_rs::aes::portable::sub_bytes
+0000000001d417f0 t openssl_rs::aes::reference::sub_bytes
+0000000001414320 t openssl_rs::modes::gcm::negative_control_branchy_mul
+
+--- reference::sub_bytes (table lookup; instrument must fire) (target/debug/deps/openssl_rs-bcfdf4d0f51f39b5 0x1d417f0..0x1d41890) ---
+indexed memory / conditional transfer / call lines:
+ 1d417f9:	call   157b880 <_RNvMNtCsgxBkk5gSRhY_4core5sliceSh8iter_mutCs7AsppLVNDvq_10openssl_rs>
+ 1d41804:	call   16a3750 <_RNvXNtNtNtCsgxBkk5gSRhY_4core4iter6traits7collectINtNtNtB8_5slice4iter7IterMuthENtB2_12IntoIterator9into_iterCs7AsppLVNDvq_10openssl_rs>
+ 1d41818:	call   16a8e40 <_RNvXs2Q_NtNtCsgxBkk5gSRhY_4core5slice4iterINtB6_7IterMuthENtNtNtNtBa_4iter6traits8iterator8Iterator4nextCs7AsppLVNDvq_10openssl_rs>
+ 1d41832:	cmove  %rcx,%rax
+ 1d4183c:	je     1d41859 <_RNvNtNtCs7AsppLVNDvq_10openssl_rs3aes9reference9sub_bytes+0x69>
+ 1d41855:	jb     1d4185e <_RNvNtNtCs7AsppLVNDvq_10openssl_rs3aes9reference9sub_bytes+0x6e>
+ 1d41857:	jmp    1d41875 <_RNvNtNtCs7AsppLVNDvq_10openssl_rs3aes9reference9sub_bytes+0x85>
+ 1d4186e:	mov    (%rcx,%rdx,1),%cl
+ 1d41873:	jmp    1d41813 <_RNvNtNtCs7AsppLVNDvq_10openssl_rs3aes9reference9sub_bytes+0x23>
+ 1d41886:	call   *0x3abd2c(%rip)        # 20ed5b8 <_DYNAMIC+0x5ea8>
+
+Interpretation: the table reference emits an indexed load from the S-box base.
+
+--- negative_control_branchy_mul (pre-conversion GHASH; instrument must fire) (target/debug/deps/openssl_rs-bcfdf4d0f51f39b5 0x1414320..0x1414460) ---
+indexed memory / conditional transfer / call lines:
+ 141435a:	jb     141436b <_RNvNtNtCs7AsppLVNDvq_10openssl_rs5modes3gcm28negative_control_branchy_mul+0x4b>
+ 1414381:	jb     1414390 <_RNvNtNtCs7AsppLVNDvq_10openssl_rs5modes3gcm28negative_control_branchy_mul+0x70>
+ 141438c:	jb     141439d <_RNvNtNtCs7AsppLVNDvq_10openssl_rs5modes3gcm28negative_control_branchy_mul+0x7d>
+ 141438e:	jmp    14143c8 <_RNvNtNtCs7AsppLVNDvq_10openssl_rs5modes3gcm28negative_control_branchy_mul+0xa8>
+ 1414397:	call   *0xcd920b(%rip)        # 20ed5a8 <_DYNAMIC+0x5e98>
+ 14143be:	cmovne %rcx,%rax
+ 14143c4:	jne    14143fa <_RNvNtNtCs7AsppLVNDvq_10openssl_rs5modes3gcm28negative_control_branchy_mul+0xda>
+ 14143c6:	jmp    14143d5 <_RNvNtNtCs7AsppLVNDvq_10openssl_rs5modes3gcm28negative_control_branchy_mul+0xb5>
+ 14143cf:	call   *0xcd91f3(%rip)        # 20ed5c8 <_DYNAMIC+0x5eb8>
+ 14143f6:	jne    141442e <_RNvNtNtCs7AsppLVNDvq_10openssl_rs5modes3gcm28negative_control_branchy_mul+0x10e>
+ 14143f8:	jmp    141441b <_RNvNtNtCs7AsppLVNDvq_10openssl_rs5modes3gcm28negative_control_branchy_mul+0xfb>
+ 1414419:	jmp    14143d5 <_RNvNtNtCs7AsppLVNDvq_10openssl_rs5modes3gcm28negative_control_branchy_mul+0xb5>
+ 141442a:	jb     1414447 <_RNvNtNtCs7AsppLVNDvq_10openssl_rs5modes3gcm28negative_control_branchy_mul+0x127>
+ 141442c:	jmp    141443a <_RNvNtNtCs7AsppLVNDvq_10openssl_rs5modes3gcm28negative_control_branchy_mul+0x11a>
+ 1414438:	jmp    141441b <_RNvNtNtCs7AsppLVNDvq_10openssl_rs5modes3gcm28negative_control_branchy_mul+0xfb>
+ 1414442:	jmp    1414352 <_RNvNtNtCs7AsppLVNDvq_10openssl_rs5modes3gcm28negative_control_branchy_mul+0x32>
+ 141444e:	call   *0xcd914c(%rip)        # 20ed5a0 <_DYNAMIC+0x5e90>
+
+Interpretation: the branchy control emits data-dependent conditional transfers.
+
+--- portable::sub_bytes (same instrument; must not fire) (target/debug/deps/openssl_rs-bcfdf4d0f51f39b5 0x15c4300..0x15c4350) ---
+indexed memory / conditional transfer / call lines:
+ 15c4310:	call   15c4350 <_RNvNtNtCs7AsppLVNDvq_10openssl_rs3aes8portable9transposeB5_>
+ 15c431f:	call   15bf850 <_RNvNtNtCs7AsppLVNDvq_10openssl_rs3aes8portable11sbox_planesB5_>
+ 15c432e:	call   15bf990 <_RNvNtNtCs7AsppLVNDvq_10openssl_rs3aes8portable11untransposeB5_>
+
+--- gcm::gf_mul_portable (same instrument; must not fire) (target/debug/deps/openssl_rs-bcfdf4d0f51f39b5 0x1413e90..0x1413ff0) ---
+indexed memory / conditional transfer / call lines:
+ 1413eca:	jb     1413edb <_RNvNtNtCs7AsppLVNDvq_10openssl_rs5modes3gcm15gf_mul_portable+0x4b>
+ 1413ef1:	jb     1413f03 <_RNvNtNtCs7AsppLVNDvq_10openssl_rs5modes3gcm15gf_mul_portable+0x73>
+ 1413efc:	jb     1413f10 <_RNvNtNtCs7AsppLVNDvq_10openssl_rs5modes3gcm15gf_mul_portable+0x80>
+ 1413efe:	jmp    1413fc8 <_RNvNtNtCs7AsppLVNDvq_10openssl_rs5modes3gcm15gf_mul_portable+0x138>
+ 1413f0a:	call   *0xcd9698(%rip)        # 20ed5a8 <_DYNAMIC+0x5e98>
+ 1413f31:	cmovne %rcx,%rax
+ 1413fc4:	jb     1413fe2 <_RNvNtNtCs7AsppLVNDvq_10openssl_rs5modes3gcm15gf_mul_portable+0x152>
+ 1413fc6:	jmp    1413fd5 <_RNvNtNtCs7AsppLVNDvq_10openssl_rs5modes3gcm15gf_mul_portable+0x145>
+ 1413fcf:	call   *0xcd95f3(%rip)        # 20ed5c8 <_DYNAMIC+0x5eb8>
+ 1413fdd:	jmp    1413ec2 <_RNvNtNtCs7AsppLVNDvq_10openssl_rs5modes3gcm15gf_mul_portable+0x32>
+ 1413fe9:	call   *0xcd95b1(%rip)        # 20ed5a0 <_DYNAMIC+0x5e90>
+
+Note: the debug build enables overflow checks, so the debug gf_mul_portable also
+contains public loop-bound/overflow branches. The adjudicated artefact is the
+release example above; the debug copy is used only for the firing controls.
+
+== production table reachability ==
+src/digest/tables.rs:495:pub(crate) static AES_SBOX: [u8; 256] = [
+src/digest/tables.rs:517:pub(crate) static AES_INV_SBOX: [u8; 256] = [
+src/aes/portable.rs:540:    use crate::digest::tables::{AES_INV_SBOX, AES_SBOX};
+src/aes/portable.rs:548:            assert_eq!(sbox_byte(x), AES_SBOX[x as usize], "sbox({x:#04x})");
+src/aes/portable.rs:551:                AES_INV_SBOX[x as usize],
+src/aes/reference.rs:4://! schedule's `SubWord` read [`AES_SBOX`]/[`AES_INV_SBOX`] by secret state. It exists
+src/aes/reference.rs:15:use crate::digest::tables::{AES_INV_SBOX, AES_RCON, AES_SBOX};
+src/aes/reference.rs:51:        *b = AES_SBOX[*b as usize];
+src/aes/reference.rs:57:        *b = AES_INV_SBOX[*b as usize];
+src/aes/reference.rs:134:    (u32::from(AES_SBOX[(w >> 24) as usize]) << 24)
+src/aes/reference.rs:135:        | (u32::from(AES_SBOX[((w >> 16) & 0xff) as usize]) << 16)
+src/aes/reference.rs:136:        | (u32::from(AES_SBOX[((w >> 8) & 0xff) as usize]) << 8)
+src/aes/reference.rs:137:        | u32::from(AES_SBOX[(w & 0xff) as usize])
+src/aes/reference.rs:141:    (u32::from(AES_SBOX[((w >> 16) & 0xff) as usize]) << 24)
+src/aes/reference.rs:142:        | (u32::from(AES_SBOX[((w >> 8) & 0xff) as usize]) << 16)
+src/aes/reference.rs:143:        | (u32::from(AES_SBOX[(w & 0xff) as usize]) << 8)
+src/aes/reference.rs:144:        | u32::from(AES_SBOX[(w >> 24) as usize])
+src/aes/research.rs:25:use crate::digest::tables::AES_SBOX;
+src/aes/research.rs:291:        let table = AES_SBOX[x as usize];
+src/aes/research.rs:339:    let table = sbox_bench(iters, |x| AES_SBOX[x as usize]);
+
+The two statics are #[cfg(test)]; their only readers are src/aes/reference.rs and
+src/aes/portable.rs's cfg(test) tests, plus src/aes/research.rs (test-only).

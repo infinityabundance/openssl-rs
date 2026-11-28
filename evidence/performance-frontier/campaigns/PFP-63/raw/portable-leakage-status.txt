@@ -1,0 +1,35 @@
+PFP-63 portable half — leakage-instrument status
+
+Observed in this session:
+
+  default court (`openssl-rs-court:1`, the venue for the gate):
+      which objdump  -> /usr/bin/objdump
+      which nm       -> /usr/bin/nm
+      which readelf  -> /usr/bin/readelf
+      which valgrind -> (absent)
+      which perf     -> (absent)
+
+  timing-tools image (`openssl-rs-court-tools:1`, used by a separate
+  container in this session):
+      which valgrind -> /usr/bin/valgrind
+      which perf     -> /usr/bin/perf
+
+No ctgrind poison harness (VALGRIND_MAKE_MEM_UNDEFINED integration) and no
+dudect harness were supplied with this task, and the default gate court has no
+valgrind at all. The dynamic cache-leakage / ctgrind check is therefore:
+
+    NOT_RUN
+
+Reason: the instrument was not available in the admitted gate venue and no
+harness exists to mark the key/state as secret and observe secret-dependent
+branches or addresses. This is recorded as NOT_RUN, never as a pass.
+
+What was done instead:
+  * emitted-code audit of the release example 659ad8c4… (raw/portable-audit.txt):
+    no secret-indexed loads in the AES portable carriers; portable GHASH has no
+    indexed memory and only cmov/mask plus its fixed loop transfer;
+  * firing negative controls on the same instrument: the table reference emits
+    an indexed S-box load, and the pre-conversion branchy GHASH control emits
+    data-dependent conditional transfers.
+
+No constant-time claim is made from these observations.

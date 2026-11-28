@@ -1,0 +1,19 @@
+PFP-63 portable-half memory record
+
+Host `free -g` measured immediately before the heavy gate (fmt + clippy + full
+`cargo test --lib`), inside the same session:
+
+                 total        used        free      shared  buff/cache   available
+    Mem:            45          18          25           0           2          27
+    Swap:           45          44           1
+
+Available = 27 GiB (>= 16 GiB mandatory). Swap free = 1 GiB, below 16 GiB, so
+cap = min(4, available - 8) = min(4, 19) = 4 GiB, floor 2 apply -> 4g, recorded.
+The running court container reports:
+
+    memory.max     4294967296
+    memory.current 1411215360   (at the end of the gate)
+
+Commands run one heavy command at a time, in the court, with
+CARGO_BUILD_JOBS=1 and CARGO_PROFILE_TEST_DEBUG=0. No release --test build was
+made. `/proc/pressure/io` was quiet (avg10=0.00) before the gate.

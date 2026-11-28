@@ -30,12 +30,18 @@
 use core::ffi::{c_char, c_int, c_void};
 use core::ptr;
 
-use crate::digest::tables::{AES_INV_SBOX, AES_RCON, AES_SBOX};
+use crate::digest::tables::AES_RCON;
 use crate::modes::wrap::{unwrap128, wrap128};
 use crate::modes::{
     CRYPTO_cbc128_decrypt, CRYPTO_cbc128_encrypt, CRYPTO_cfb128_1_encrypt, CRYPTO_cfb128_8_encrypt,
     CRYPTO_cfb128_encrypt, CRYPTO_ofb128_encrypt,
 };
+
+mod portable;
+#[cfg(test)]
+mod reference;
+#[cfg(test)]
+mod research;
 
 /// `AES_BLOCK_SIZE` — `include/openssl/aes.h:29`.
 pub const AES_BLOCK_SIZE: usize = 16;
@@ -68,94 +74,6 @@ const _: () = {
 unsafe fn get_u32(p: *const u8) -> u32 {
     // SAFETY: the caller's contract.
     unsafe { u32::from_be_bytes([*p, *p.add(1), *p.add(2), *p.add(3)]) }
-}
-
-/// `xtime(a)` — multiplication by `x` in `GF(2^8)` with the AES polynomial.
-fn xtime(a: u8) -> u8 {
-    (a << 1) ^ (if a & 0x80 != 0 { 0x1b } else { 0 })
-}
-
-/// Multiplication in `GF(2^8)`, used by the inverse MixColumns.
-fn gmul(a: u8, b: u8) -> u8 {
-    let mut a = a;
-    let mut b = b;
-    let mut r = 0u8;
-    while b != 0 {
-        if b & 1 != 0 {
-            r ^= a;
-        }
-        a = xtime(a);
-        b >>= 1;
-    }
-    r
-}
-
-/// `AddRoundKey` — XOR the sixteen state bytes with one round key, big-endian per column.
-fn add_round_key(state: &mut [u8; 16], rk: &[u32; 60], round: usize) {
-    for c in 0..4 {
-        // The stored word is the authority's memory-order representation; the logical word is
-        // its byte swap, and the bytes are then the key bytes in order.
-        let word = rk[4 * round + c].swap_bytes();
-        for r in 0..4 {
-            state[4 * c + r] ^= ((word >> (24 - 8 * r)) & 0xff) as u8;
-        }
-    }
-}
-
-fn sub_bytes(state: &mut [u8; 16]) {
-    for b in state.iter_mut() {
-        *b = AES_SBOX[*b as usize];
-    }
-}
-
-fn inv_sub_bytes(state: &mut [u8; 16]) {
-    for b in state.iter_mut() {
-        *b = AES_INV_SBOX[*b as usize];
-    }
-}
-
-fn shift_rows(state: &mut [u8; 16]) {
-    let old = *state;
-    for r in 0..4 {
-        for c in 0..4 {
-            state[4 * c + r] = old[4 * ((c + r) % 4) + r];
-        }
-    }
-}
-
-fn inv_shift_rows(state: &mut [u8; 16]) {
-    let old = *state;
-    for r in 0..4 {
-        for c in 0..4 {
-            state[4 * c + r] = old[4 * ((c + 4 - r) % 4) + r];
-        }
-    }
-}
-
-fn mix_columns(state: &mut [u8; 16]) {
-    for c in 0..4 {
-        let a0 = state[4 * c];
-        let a1 = state[4 * c + 1];
-        let a2 = state[4 * c + 2];
-        let a3 = state[4 * c + 3];
-        state[4 * c] = xtime(a0) ^ (xtime(a1) ^ a1) ^ a2 ^ a3;
-        state[4 * c + 1] = a0 ^ xtime(a1) ^ (xtime(a2) ^ a2) ^ a3;
-        state[4 * c + 2] = a0 ^ a1 ^ xtime(a2) ^ (xtime(a3) ^ a3);
-        state[4 * c + 3] = (xtime(a0) ^ a0) ^ a1 ^ a2 ^ xtime(a3);
-    }
-}
-
-fn inv_mix_columns(state: &mut [u8; 16]) {
-    for c in 0..4 {
-        let a0 = state[4 * c];
-        let a1 = state[4 * c + 1];
-        let a2 = state[4 * c + 2];
-        let a3 = state[4 * c + 3];
-        state[4 * c] = gmul(a0, 14) ^ gmul(a1, 11) ^ gmul(a2, 13) ^ gmul(a3, 9);
-        state[4 * c + 1] = gmul(a0, 9) ^ gmul(a1, 14) ^ gmul(a2, 11) ^ gmul(a3, 13);
-        state[4 * c + 2] = gmul(a0, 13) ^ gmul(a1, 9) ^ gmul(a2, 14) ^ gmul(a3, 11);
-        state[4 * c + 3] = gmul(a0, 11) ^ gmul(a1, 13) ^ gmul(a2, 9) ^ gmul(a3, 14);
-    }
 }
 
 /// The AES bit in the first `OPENSSL_ia32cap` vector.
@@ -226,9 +144,10 @@ unsafe fn ni_subword_pair(w: u32) -> (u32, u32) {
     }
 }
 
-/// The logical key expansion: the standard `GETU32` words, the authority's round structure.
-/// The public entry points byte-swap the result on the way out, because the authority's
-/// perlasm key schedule stores each word in memory order and `RT-CIPHER` observes it.
+/// The portable key expansion: read the caller's key into a local, then let the safe
+/// portable module produce the logical `GETU32` words. The public entry points
+/// byte-swap the result on the way out, because the authority's perlasm key schedule
+/// stores each word in memory order and `RT-CIPHER` observes it.
 ///
 /// # Safety
 /// `user_key` readable for `bits / 8` bytes and `key` writable, or either NULL.
@@ -238,104 +157,22 @@ unsafe fn aes_expand_portable(user_key: *const u8, bits: c_int, key: *mut AesKey
         if user_key.is_null() || key.is_null() {
             return -1;
         }
-        if bits != 128 && bits != 192 && bits != 256 {
-            return -2;
-        }
-        let rk = &mut (*key).rd_key;
-        (*key).rounds = if bits == 128 {
-            10
-        } else if bits == 192 {
-            12
-        } else {
-            14
+        let n: usize = match bits {
+            128 => 16,
+            192 => 24,
+            256 => 32,
+            _ => return -2,
         };
-
-        rk[0] = get_u32(user_key);
-        rk[1] = get_u32(user_key.add(4));
-        rk[2] = get_u32(user_key.add(8));
-        rk[3] = get_u32(user_key.add(12));
-
-        if bits == 128 {
-            let mut i = 0usize;
-            let mut off = 0usize;
-            loop {
-                let temp = rk[off + 3];
-                rk[off + 4] = rk[off]
-                    ^ ((AES_SBOX[((temp >> 16) & 0xff) as usize] as u32) << 24)
-                    ^ ((AES_SBOX[((temp >> 8) & 0xff) as usize] as u32) << 16)
-                    ^ ((AES_SBOX[(temp & 0xff) as usize] as u32) << 8)
-                    ^ (AES_SBOX[(temp >> 24) as usize] as u32)
-                    ^ AES_RCON[i];
-                rk[off + 5] = rk[off + 1] ^ rk[off + 4];
-                rk[off + 6] = rk[off + 2] ^ rk[off + 5];
-                rk[off + 7] = rk[off + 3] ^ rk[off + 6];
-                i += 1;
-                if i == 10 {
-                    return 0;
-                }
-                off += 4;
+        let mut key_bytes = [0u8; 32];
+        ptr::copy_nonoverlapping(user_key, key_bytes.as_mut_ptr(), n);
+        match portable::expand_encrypt_key(&key_bytes[..n], bits) {
+            Some((words, rounds)) => {
+                (*key).rd_key = words;
+                (*key).rounds = rounds as c_int;
+                0
             }
+            None => -2,
         }
-
-        rk[4] = get_u32(user_key.add(16));
-        rk[5] = get_u32(user_key.add(20));
-        if bits == 192 {
-            let mut i = 0usize;
-            let mut off = 0usize;
-            loop {
-                let temp = rk[off + 5];
-                rk[off + 6] = rk[off]
-                    ^ ((AES_SBOX[((temp >> 16) & 0xff) as usize] as u32) << 24)
-                    ^ ((AES_SBOX[((temp >> 8) & 0xff) as usize] as u32) << 16)
-                    ^ ((AES_SBOX[(temp & 0xff) as usize] as u32) << 8)
-                    ^ (AES_SBOX[(temp >> 24) as usize] as u32)
-                    ^ AES_RCON[i];
-                rk[off + 7] = rk[off + 1] ^ rk[off + 6];
-                rk[off + 8] = rk[off + 2] ^ rk[off + 7];
-                rk[off + 9] = rk[off + 3] ^ rk[off + 8];
-                i += 1;
-                if i == 8 {
-                    return 0;
-                }
-                rk[off + 10] = rk[off + 4] ^ rk[off + 9];
-                rk[off + 11] = rk[off + 5] ^ rk[off + 10];
-                off += 6;
-            }
-        }
-
-        rk[6] = get_u32(user_key.add(24));
-        rk[7] = get_u32(user_key.add(28));
-        if bits == 256 {
-            let mut i = 0usize;
-            let mut off = 0usize;
-            loop {
-                let temp = rk[off + 7];
-                rk[off + 8] = rk[off]
-                    ^ ((AES_SBOX[((temp >> 16) & 0xff) as usize] as u32) << 24)
-                    ^ ((AES_SBOX[((temp >> 8) & 0xff) as usize] as u32) << 16)
-                    ^ ((AES_SBOX[(temp & 0xff) as usize] as u32) << 8)
-                    ^ (AES_SBOX[(temp >> 24) as usize] as u32)
-                    ^ AES_RCON[i];
-                rk[off + 9] = rk[off + 1] ^ rk[off + 8];
-                rk[off + 10] = rk[off + 2] ^ rk[off + 9];
-                rk[off + 11] = rk[off + 3] ^ rk[off + 10];
-                i += 1;
-                if i == 7 {
-                    return 0;
-                }
-                let temp = rk[off + 11];
-                rk[off + 12] = rk[off + 4]
-                    ^ ((AES_SBOX[(temp >> 24) as usize] as u32) << 24)
-                    ^ ((AES_SBOX[((temp >> 16) & 0xff) as usize] as u32) << 16)
-                    ^ ((AES_SBOX[((temp >> 8) & 0xff) as usize] as u32) << 8)
-                    ^ (AES_SBOX[(temp & 0xff) as usize] as u32);
-                rk[off + 13] = rk[off + 5] ^ rk[off + 12];
-                rk[off + 14] = rk[off + 6] ^ rk[off + 13];
-                rk[off + 15] = rk[off + 7] ^ rk[off + 14];
-                off += 8;
-            }
-        }
-        0
     }
 }
 
@@ -596,7 +433,9 @@ pub unsafe extern "C" fn AES_encrypt(input: *const u8, out: *mut u8, key: *const
     unsafe { aes_encrypt_portable(input, out, key) }
 }
 
-/// The portable FIPS-197 §5.1 byte-oriented round, the fallback for CPUs without AES-NI.
+/// The portable constant-pattern FIPS-197 §5.1 round, the fallback for CPUs without
+/// AES-NI. The state copy is the only pointer work; the round itself is the safe
+/// [`portable`] implementation.
 ///
 /// # Safety
 /// As [`AES_encrypt`].
@@ -605,20 +444,7 @@ unsafe fn aes_encrypt_portable(input: *const u8, out: *mut u8, key: *const AesKe
     unsafe {
         let mut state = [0u8; 16];
         ptr::copy_nonoverlapping(input, state.as_mut_ptr(), 16);
-        let rk = &(*key).rd_key;
-        let rounds = (*key).rounds as usize;
-
-        add_round_key(&mut state, rk, 0);
-        for round in 1..rounds {
-            sub_bytes(&mut state);
-            shift_rows(&mut state);
-            mix_columns(&mut state);
-            add_round_key(&mut state, rk, round);
-        }
-        sub_bytes(&mut state);
-        shift_rows(&mut state);
-        add_round_key(&mut state, rk, rounds);
-
+        portable::encrypt_block(&mut state, &(*key).rd_key, (*key).rounds as usize);
         ptr::copy_nonoverlapping(state.as_ptr(), out, 16);
     }
 }
@@ -672,7 +498,8 @@ pub unsafe extern "C" fn AES_decrypt(input: *const u8, out: *mut u8, key: *const
     unsafe { aes_decrypt_portable(input, out, key) }
 }
 
-/// The portable FIPS-197 §5.3 byte-oriented round, the fallback for CPUs without AES-NI.
+/// The portable constant-pattern FIPS-197 §5.3 round, the fallback for CPUs without
+/// AES-NI.
 ///
 /// # Safety
 /// As [`AES_encrypt`].
@@ -681,20 +508,7 @@ unsafe fn aes_decrypt_portable(input: *const u8, out: *mut u8, key: *const AesKe
     unsafe {
         let mut state = [0u8; 16];
         ptr::copy_nonoverlapping(input, state.as_mut_ptr(), 16);
-        let rk = &(*key).rd_key;
-        let rounds = (*key).rounds as usize;
-
-        add_round_key(&mut state, rk, 0);
-        for round in 1..rounds {
-            inv_sub_bytes(&mut state);
-            inv_shift_rows(&mut state);
-            inv_mix_columns(&mut state);
-            add_round_key(&mut state, rk, round);
-        }
-        inv_sub_bytes(&mut state);
-        inv_shift_rows(&mut state);
-        add_round_key(&mut state, rk, rounds);
-
+        portable::decrypt_block(&mut state, &(*key).rd_key, (*key).rounds as usize);
         ptr::copy_nonoverlapping(state.as_ptr(), out, 16);
     }
 }
@@ -1240,6 +1054,16 @@ mod tests {
                 assert_eq!(AES_set_decrypt_key(key.as_ptr(), bits, &mut dk), 0);
                 AES_decrypt(out.as_ptr(), dec.as_mut_ptr(), &dk);
                 assert_eq!(dec, FIPS_PT);
+
+                // The portable circuit carrier is checked against the same known-answer
+                // vectors directly, not only through the dispatch that takes AES-NI here.
+                let mut pout = [0u8; 16];
+                aes_encrypt_portable(FIPS_PT.as_ptr(), pout.as_mut_ptr(), &k);
+                let phex: String = pout.iter().map(|b| format!("{b:02x}")).collect();
+                assert_eq!(phex, want, "portable FIPS encrypt bits={bits}");
+                let mut pdec = [0u8; 16];
+                aes_decrypt_portable(out.as_ptr(), pdec.as_mut_ptr(), &dk);
+                assert_eq!(pdec, FIPS_PT, "portable FIPS decrypt bits={bits}");
             }
         }
     }
@@ -1445,6 +1269,182 @@ mod tests {
             );
             assert_eq!(m, 7);
             assert_eq!(back7[..7], PT7);
+        }
+    }
+
+    /// Deterministic byte stream for the differential key/block population.
+    fn next_byte(seed: &mut u64) -> u8 {
+        *seed = seed
+            .wrapping_mul(6364136223846793005)
+            .wrapping_add(1442695040888963407);
+        (*seed >> 32) as u8
+    }
+
+    fn must_expand(res: Option<([u32; 60], usize)>) -> ([u32; 60], usize) {
+        match res {
+            Some(v) => v,
+            None => unreachable!("bits is 128, 192 or 256"),
+        }
+    }
+
+    /// All-zero, all-ones, every single-bit key, then random keys.
+    fn keys_for(bits: usize) -> Vec<Vec<u8>> {
+        let n = bits / 8;
+        let mut keys = Vec::new();
+        keys.push(vec![0x00; n]);
+        keys.push(vec![0xff; n]);
+        for bit in 0..bits {
+            let mut k = vec![0u8; n];
+            k[bit / 8] = 1 << (bit % 8);
+            keys.push(k);
+        }
+        let mut seed = 0x0f1e_2d3c_4b5a_6978u64 ^ bits as u64;
+        for _ in 0..512 {
+            let mut k = vec![0u8; n];
+            for b in &mut k {
+                *b = next_byte(&mut seed);
+            }
+            keys.push(k);
+        }
+        keys
+    }
+
+    fn bswapped(mut rk: [u32; 60], rounds: usize) -> [u32; 60] {
+        for w in rk.iter_mut().take(4 * (rounds + 1)) {
+            *w = w.swap_bytes();
+        }
+        rk
+    }
+
+    /// The authority's decrypt-schedule transform on logical words, transcribed here so
+    /// the test can derive the expected bytes independently of `AES_set_decrypt_key`.
+    fn decrypt_from_logical(mut rk: [u32; 60], rounds: usize) -> [u32; 60] {
+        let mut i = 0usize;
+        let mut j = 4 * rounds;
+        while i < j {
+            for k in 0..4 {
+                rk.swap(i + k, j + k);
+            }
+            i += 4;
+            j -= 4;
+        }
+        let mut off = 0usize;
+        for _ in 1..rounds {
+            off += 4;
+            for jj in 0..4 {
+                let tp1 = rk[off + jj];
+                let m = tp1 & 0x8080_8080;
+                let tp2 = ((tp1 & 0x7f7f_7f7f) << 1) ^ ((m.wrapping_sub(m >> 7)) & 0x1b1b_1b1b);
+                let m = tp2 & 0x8080_8080;
+                let tp4 = ((tp2 & 0x7f7f_7f7f) << 1) ^ ((m.wrapping_sub(m >> 7)) & 0x1b1b_1b1b);
+                let m = tp4 & 0x8080_8080;
+                let tp8 = ((tp4 & 0x7f7f_7f7f) << 1) ^ ((m.wrapping_sub(m >> 7)) & 0x1b1b_1b1b);
+                let tp9 = tp8 ^ tp1;
+                let tpb = tp9 ^ tp2;
+                let tpd = tp9 ^ tp4;
+                let tpe = tp8 ^ tp4 ^ tp2;
+                rk[off + jj] = tpe ^ tpd.rotate_left(16) ^ tp9.rotate_left(24) ^ tpb.rotate_left(8);
+            }
+        }
+        rk
+    }
+
+    /// The circuit expansion is byte-identical to the table transcription for every
+    /// key class, both schedules.
+    #[test]
+    fn portable_schedule_matches_reference_for_all_sizes() {
+        for bits in [128usize, 192, 256] {
+            for key in keys_for(bits) {
+                let p = must_expand(portable::expand_encrypt_key(&key, bits as c_int));
+                let r = must_expand(reference::expand_encrypt_key(&key, bits as c_int));
+                assert_eq!(p, r, "encrypt schedule bits={bits} key={key:02x?}");
+
+                let expect_dec = bswapped(decrypt_from_logical(r.0, r.1), r.1);
+
+                let mut k = AesKey {
+                    rd_key: [0; 60],
+                    rounds: 0,
+                };
+                // SAFETY: live locals; the exported entry may take the AES-NI arm, whose
+                // expansion the existing NI/portable test proves equal to the circuit.
+                unsafe {
+                    assert_eq!(AES_set_decrypt_key(key.as_ptr(), bits as c_int, &mut k), 0);
+                }
+                assert_eq!(k.rounds, r.1 as c_int);
+                assert_eq!(
+                    k.rd_key, expect_dec,
+                    "decrypt schedule bits={bits} key={key:02x?}"
+                );
+            }
+        }
+    }
+
+    /// The exported encryption schedule bytes are unchanged from the reference.
+    #[test]
+    fn exported_encrypt_schedule_is_byte_identical_to_reference() {
+        for bits in [128usize, 192, 256] {
+            for key in keys_for(bits) {
+                let r = must_expand(reference::expand_encrypt_key(&key, bits as c_int));
+                let expect = bswapped(r.0, r.1);
+                let mut k = AesKey {
+                    rd_key: [0; 60],
+                    rounds: 0,
+                };
+                // SAFETY: live locals.
+                unsafe {
+                    assert_eq!(AES_set_encrypt_key(key.as_ptr(), bits as c_int, &mut k), 0);
+                }
+                assert_eq!(k.rounds, r.1 as c_int);
+                assert_eq!(k.rd_key, expect, "bits={bits} key={key:02x?}");
+            }
+        }
+    }
+
+    /// Blocks from the portable circuit equal the table reference, and decrypt inverts
+    /// encrypt, over the same key population.
+    #[test]
+    fn portable_block_matches_reference_and_round_trips() {
+        let mut seed = 0x1357_9bdf_2468_ace0u64;
+        for bits in [128usize, 192, 256] {
+            for key in keys_for(bits) {
+                let mut ek = AesKey {
+                    rd_key: [0; 60],
+                    rounds: 0,
+                };
+                let mut dk = AesKey {
+                    rd_key: [0; 60],
+                    rounds: 0,
+                };
+                // SAFETY: live locals.
+                unsafe {
+                    assert_eq!(AES_set_encrypt_key(key.as_ptr(), bits as c_int, &mut ek), 0);
+                    assert_eq!(AES_set_decrypt_key(key.as_ptr(), bits as c_int, &mut dk), 0);
+                }
+                for _ in 0..8 {
+                    let mut pt = [0u8; 16];
+                    for b in &mut pt {
+                        *b = next_byte(&mut seed);
+                    }
+                    let mut got = [0u8; 16];
+                    let mut want = pt;
+                    // SAFETY: live locals; the reference is the table transcription.
+                    unsafe {
+                        aes_encrypt_portable(pt.as_ptr(), got.as_mut_ptr(), &ek);
+                    }
+                    reference::encrypt_block(&mut want, &ek.rd_key, ek.rounds as usize);
+                    assert_eq!(got, want, "encrypt bits={bits} key={key:02x?}");
+
+                    let mut back = [0u8; 16];
+                    let mut want_dec = got;
+                    // SAFETY: live locals.
+                    unsafe {
+                        aes_decrypt_portable(got.as_ptr(), back.as_mut_ptr(), &dk);
+                    }
+                    reference::decrypt_block(&mut want_dec, &dk.rd_key, dk.rounds as usize);
+                    assert_eq!(back, want_dec, "decrypt bits={bits} key={key:02x?}");
+                    assert_eq!(back, pt, "round trip bits={bits} key={key:02x?}");
+                }
+            }
         }
     }
 }

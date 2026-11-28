@@ -1,0 +1,1121 @@
+diff --git a/forensics/tools/gen_phase8_tables.py b/forensics/tools/gen_phase8_tables.py
+index 8ea0c08fc..3ff3b8a00 100644
+--- a/forensics/tools/gen_phase8_tables.py
++++ b/forensics/tools/gen_phase8_tables.py
+@@ -275,11 +275,19 @@ def render(t: dict) -> str:
+     A(f"pub(crate) static WP_RC: [u64; 10] = {fmt_hex64(t['wp']['rc'])};")
+     A("")
+     A("/// AES's S-box — `crypto/aes/aes_core.c`'s `Te4`.")
++    A("///")
++    A("/// Test-only: the portable AES replaced every production lookup with a")
++    A("/// constant-pattern circuit; this table is retained only as the differential")
++    A("/// reference, so it is absent from non-test builds.")
++    A("#[cfg(test)]")
+     A("pub(crate) static AES_SBOX: [u8; 256] = [")
+     for i in range(0, 256, 16):
+         A("    " + " ".join(f"0x{v:02x}," for v in t["aes"]["sbox"][i:i + 16]))
+     A("];")
+     A("/// AES's inverse S-box — `crypto/aes/aes_core.c`'s `Td4`.")
++    A("///")
++    A("/// Test-only, as the forward table above.")
++    A("#[cfg(test)]")
+     A("pub(crate) static AES_INV_SBOX: [u8; 256] = [")
+     for i in range(0, 256, 16):
+         A("    " + " ".join(f"0x{v:02x}," for v in t["aes"]["inv_sbox"][i:i + 16]))
+diff --git a/src/aes.rs b/src/aes.rs
+index ef138f3cd..3d5d81b3f 100644
+--- a/src/aes.rs
++++ b/src/aes.rs
+@@ -30,13 +30,19 @@
+ use core::ffi::{c_char, c_int, c_void};
+ use core::ptr;
+ 
+-use crate::digest::tables::{AES_INV_SBOX, AES_RCON, AES_SBOX};
++use crate::digest::tables::AES_RCON;
+ use crate::modes::wrap::{unwrap128, wrap128};
+ use crate::modes::{
+     CRYPTO_cbc128_decrypt, CRYPTO_cbc128_encrypt, CRYPTO_cfb128_1_encrypt, CRYPTO_cfb128_8_encrypt,
+     CRYPTO_cfb128_encrypt, CRYPTO_ofb128_encrypt,
+ };
+ 
++mod portable;
++#[cfg(test)]
++mod reference;
++#[cfg(test)]
++mod research;
++
+ /// `AES_BLOCK_SIZE` — `include/openssl/aes.h:29`.
+ pub const AES_BLOCK_SIZE: usize = 16;
+ /// `AES_ENCRYPT` — `include/openssl/aes.h:34`.
+@@ -70,94 +76,6 @@ unsafe fn get_u32(p: *const u8) -> u32 {
+     unsafe { u32::from_be_bytes([*p, *p.add(1), *p.add(2), *p.add(3)]) }
+ }
+ 
+-/// `xtime(a)` — multiplication by `x` in `GF(2^8)` with the AES polynomial.
+-fn xtime(a: u8) -> u8 {
+-    (a << 1) ^ (if a & 0x80 != 0 { 0x1b } else { 0 })
+-}
+-
+-/// Multiplication in `GF(2^8)`, used by the inverse MixColumns.
+-fn gmul(a: u8, b: u8) -> u8 {
+-    let mut a = a;
+-    let mut b = b;
+-    let mut r = 0u8;
+-    while b != 0 {
+-        if b & 1 != 0 {
+-            r ^= a;
+-        }
+-        a = xtime(a);
+-        b >>= 1;
+-    }
+-    r
+-}
+-
+-/// `AddRoundKey` — XOR the sixteen state bytes with one round key, big-endian per column.
+-fn add_round_key(state: &mut [u8; 16], rk: &[u32; 60], round: usize) {
+-    for c in 0..4 {
+-        // The stored word is the authority's memory-order representation; the logical word is
+-        // its byte swap, and the bytes are then the key bytes in order.
+-        let word = rk[4 * round + c].swap_bytes();
+-        for r in 0..4 {
+-            state[4 * c + r] ^= ((word >> (24 - 8 * r)) & 0xff) as u8;
+-        }
+-    }
+-}
+-
+-fn sub_bytes(state: &mut [u8; 16]) {
+-    for b in state.iter_mut() {
+-        *b = AES_SBOX[*b as usize];
+-    }
+-}
+-
+-fn inv_sub_bytes(state: &mut [u8; 16]) {
+-    for b in state.iter_mut() {
+-        *b = AES_INV_SBOX[*b as usize];
+-    }
+-}
+-
+-fn shift_rows(state: &mut [u8; 16]) {
+-    let old = *state;
+-    for r in 0..4 {
+-        for c in 0..4 {
+-            state[4 * c + r] = old[4 * ((c + r) % 4) + r];
+-        }
+-    }
+-}
+-
+-fn inv_shift_rows(state: &mut [u8; 16]) {
+-    let old = *state;
+-    for r in 0..4 {
+-        for c in 0..4 {
+-            state[4 * c + r] = old[4 * ((c + 4 - r) % 4) + r];
+-        }
+-    }
+-}
+-
+-fn mix_columns(state: &mut [u8; 16]) {
+-    for c in 0..4 {
+-        let a0 = state[4 * c];
+-        let a1 = state[4 * c + 1];
+-        let a2 = state[4 * c + 2];
+-        let a3 = state[4 * c + 3];
+-        state[4 * c] = xtime(a0) ^ (xtime(a1) ^ a1) ^ a2 ^ a3;
+-        state[4 * c + 1] = a0 ^ xtime(a1) ^ (xtime(a2) ^ a2) ^ a3;
+-        state[4 * c + 2] = a0 ^ a1 ^ xtime(a2) ^ (xtime(a3) ^ a3);
+-        state[4 * c + 3] = (xtime(a0) ^ a0) ^ a1 ^ a2 ^ xtime(a3);
+-    }
+-}
+-
+-fn inv_mix_columns(state: &mut [u8; 16]) {
+-    for c in 0..4 {
+-        let a0 = state[4 * c];
+-        let a1 = state[4 * c + 1];
+-        let a2 = state[4 * c + 2];
+-        let a3 = state[4 * c + 3];
+-        state[4 * c] = gmul(a0, 14) ^ gmul(a1, 11) ^ gmul(a2, 13) ^ gmul(a3, 9);
+-        state[4 * c + 1] = gmul(a0, 9) ^ gmul(a1, 14) ^ gmul(a2, 11) ^ gmul(a3, 13);
+-        state[4 * c + 2] = gmul(a0, 13) ^ gmul(a1, 9) ^ gmul(a2, 14) ^ gmul(a3, 11);
+-        state[4 * c + 3] = gmul(a0, 11) ^ gmul(a1, 13) ^ gmul(a2, 9) ^ gmul(a3, 14);
+-    }
+-}
+-
+ /// The AES bit in the first `OPENSSL_ia32cap` vector.
+ ///
+ /// `OPENSSL_ia32cap`'s value is `[vec1][:vec2]`; a vector prefixed with `~` clears the named
+@@ -226,9 +144,10 @@ unsafe fn ni_subword_pair(w: u32) -> (u32, u32) {
+     }
+ }
+ 
+-/// The logical key expansion: the standard `GETU32` words, the authority's round structure.
+-/// The public entry points byte-swap the result on the way out, because the authority's
+-/// perlasm key schedule stores each word in memory order and `RT-CIPHER` observes it.
++/// The portable key expansion: read the caller's key into a local, then let the safe
++/// portable module produce the logical `GETU32` words. The public entry points
++/// byte-swap the result on the way out, because the authority's perlasm key schedule
++/// stores each word in memory order and `RT-CIPHER` observes it.
+ ///
+ /// # Safety
+ /// `user_key` readable for `bits / 8` bytes and `key` writable, or either NULL.
+@@ -238,104 +157,22 @@ unsafe fn aes_expand_portable(user_key: *const u8, bits: c_int, key: *mut AesKey
+         if user_key.is_null() || key.is_null() {
+             return -1;
+         }
+-        if bits != 128 && bits != 192 && bits != 256 {
+-            return -2;
+-        }
+-        let rk = &mut (*key).rd_key;
+-        (*key).rounds = if bits == 128 {
+-            10
+-        } else if bits == 192 {
+-            12
+-        } else {
+-            14
++        let n: usize = match bits {
++            128 => 16,
++            192 => 24,
++            256 => 32,
++            _ => return -2,
+         };
+-
+-        rk[0] = get_u32(user_key);
+-        rk[1] = get_u32(user_key.add(4));
+-        rk[2] = get_u32(user_key.add(8));
+-        rk[3] = get_u32(user_key.add(12));
+-
+-        if bits == 128 {
+-            let mut i = 0usize;
+-            let mut off = 0usize;
+-            loop {
+-                let temp = rk[off + 3];
+-                rk[off + 4] = rk[off]
+-                    ^ ((AES_SBOX[((temp >> 16) & 0xff) as usize] as u32) << 24)
+-                    ^ ((AES_SBOX[((temp >> 8) & 0xff) as usize] as u32) << 16)
+-                    ^ ((AES_SBOX[(temp & 0xff) as usize] as u32) << 8)
+-                    ^ (AES_SBOX[(temp >> 24) as usize] as u32)
+-                    ^ AES_RCON[i];
+-                rk[off + 5] = rk[off + 1] ^ rk[off + 4];
+-                rk[off + 6] = rk[off + 2] ^ rk[off + 5];
+-                rk[off + 7] = rk[off + 3] ^ rk[off + 6];
+-                i += 1;
+-                if i == 10 {
+-                    return 0;
+-                }
+-                off += 4;
++        let mut key_bytes = [0u8; 32];
++        ptr::copy_nonoverlapping(user_key, key_bytes.as_mut_ptr(), n);
++        match portable::expand_encrypt_key(&key_bytes[..n], bits) {
++            Some((words, rounds)) => {
++                (*key).rd_key = words;
++                (*key).rounds = rounds as c_int;
++                0
+             }
++            None => -2,
+         }
+-
+-        rk[4] = get_u32(user_key.add(16));
+-        rk[5] = get_u32(user_key.add(20));
+-        if bits == 192 {
+-            let mut i = 0usize;
+-            let mut off = 0usize;
+-            loop {
+-                let temp = rk[off + 5];
+-                rk[off + 6] = rk[off]
+-                    ^ ((AES_SBOX[((temp >> 16) & 0xff) as usize] as u32) << 24)
+-                    ^ ((AES_SBOX[((temp >> 8) & 0xff) as usize] as u32) << 16)
+-                    ^ ((AES_SBOX[(temp & 0xff) as usize] as u32) << 8)
+-                    ^ (AES_SBOX[(temp >> 24) as usize] as u32)
+-                    ^ AES_RCON[i];
+-                rk[off + 7] = rk[off + 1] ^ rk[off + 6];
+-                rk[off + 8] = rk[off + 2] ^ rk[off + 7];
+-                rk[off + 9] = rk[off + 3] ^ rk[off + 8];
+-                i += 1;
+-                if i == 8 {
+-                    return 0;
+-                }
+-                rk[off + 10] = rk[off + 4] ^ rk[off + 9];
+-                rk[off + 11] = rk[off + 5] ^ rk[off + 10];
+-                off += 6;
+-            }
+-        }
+-
+-        rk[6] = get_u32(user_key.add(24));
+-        rk[7] = get_u32(user_key.add(28));
+-        if bits == 256 {
+-            let mut i = 0usize;
+-            let mut off = 0usize;
+-            loop {
+-                let temp = rk[off + 7];
+-                rk[off + 8] = rk[off]
+-                    ^ ((AES_SBOX[((temp >> 16) & 0xff) as usize] as u32) << 24)
+-                    ^ ((AES_SBOX[((temp >> 8) & 0xff) as usize] as u32) << 16)
+-                    ^ ((AES_SBOX[(temp & 0xff) as usize] as u32) << 8)
+-                    ^ (AES_SBOX[(temp >> 24) as usize] as u32)
+-                    ^ AES_RCON[i];
+-                rk[off + 9] = rk[off + 1] ^ rk[off + 8];
+-                rk[off + 10] = rk[off + 2] ^ rk[off + 9];
+-                rk[off + 11] = rk[off + 3] ^ rk[off + 10];
+-                i += 1;
+-                if i == 7 {
+-                    return 0;
+-                }
+-                let temp = rk[off + 11];
+-                rk[off + 12] = rk[off + 4]
+-                    ^ ((AES_SBOX[(temp >> 24) as usize] as u32) << 24)
+-                    ^ ((AES_SBOX[((temp >> 16) & 0xff) as usize] as u32) << 16)
+-                    ^ ((AES_SBOX[((temp >> 8) & 0xff) as usize] as u32) << 8)
+-                    ^ (AES_SBOX[(temp & 0xff) as usize] as u32);
+-                rk[off + 13] = rk[off + 5] ^ rk[off + 12];
+-                rk[off + 14] = rk[off + 6] ^ rk[off + 13];
+-                rk[off + 15] = rk[off + 7] ^ rk[off + 14];
+-                off += 8;
+-            }
+-        }
+-        0
+     }
+ }
+ 
+@@ -596,7 +433,9 @@ pub unsafe extern "C" fn AES_encrypt(input: *const u8, out: *mut u8, key: *const
+     unsafe { aes_encrypt_portable(input, out, key) }
+ }
+ 
+-/// The portable FIPS-197 §5.1 byte-oriented round, the fallback for CPUs without AES-NI.
++/// The portable constant-pattern FIPS-197 §5.1 round, the fallback for CPUs without
++/// AES-NI. The state copy is the only pointer work; the round itself is the safe
++/// [`portable`] implementation.
+ ///
+ /// # Safety
+ /// As [`AES_encrypt`].
+@@ -605,20 +444,7 @@ unsafe fn aes_encrypt_portable(input: *const u8, out: *mut u8, key: *const AesKe
+     unsafe {
+         let mut state = [0u8; 16];
+         ptr::copy_nonoverlapping(input, state.as_mut_ptr(), 16);
+-        let rk = &(*key).rd_key;
+-        let rounds = (*key).rounds as usize;
+-
+-        add_round_key(&mut state, rk, 0);
+-        for round in 1..rounds {
+-            sub_bytes(&mut state);
+-            shift_rows(&mut state);
+-            mix_columns(&mut state);
+-            add_round_key(&mut state, rk, round);
+-        }
+-        sub_bytes(&mut state);
+-        shift_rows(&mut state);
+-        add_round_key(&mut state, rk, rounds);
+-
++        portable::encrypt_block(&mut state, &(*key).rd_key, (*key).rounds as usize);
+         ptr::copy_nonoverlapping(state.as_ptr(), out, 16);
+     }
+ }
+@@ -672,7 +498,8 @@ pub unsafe extern "C" fn AES_decrypt(input: *const u8, out: *mut u8, key: *const
+     unsafe { aes_decrypt_portable(input, out, key) }
+ }
+ 
+-/// The portable FIPS-197 §5.3 byte-oriented round, the fallback for CPUs without AES-NI.
++/// The portable constant-pattern FIPS-197 §5.3 round, the fallback for CPUs without
++/// AES-NI.
+ ///
+ /// # Safety
+ /// As [`AES_encrypt`].
+@@ -681,20 +508,7 @@ unsafe fn aes_decrypt_portable(input: *const u8, out: *mut u8, key: *const AesKe
+     unsafe {
+         let mut state = [0u8; 16];
+         ptr::copy_nonoverlapping(input, state.as_mut_ptr(), 16);
+-        let rk = &(*key).rd_key;
+-        let rounds = (*key).rounds as usize;
+-
+-        add_round_key(&mut state, rk, 0);
+-        for round in 1..rounds {
+-            inv_sub_bytes(&mut state);
+-            inv_shift_rows(&mut state);
+-            inv_mix_columns(&mut state);
+-            add_round_key(&mut state, rk, round);
+-        }
+-        inv_sub_bytes(&mut state);
+-        inv_shift_rows(&mut state);
+-        add_round_key(&mut state, rk, rounds);
+-
++        portable::decrypt_block(&mut state, &(*key).rd_key, (*key).rounds as usize);
+         ptr::copy_nonoverlapping(state.as_ptr(), out, 16);
+     }
+ }
+@@ -1240,6 +1054,16 @@ mod tests {
+                 assert_eq!(AES_set_decrypt_key(key.as_ptr(), bits, &mut dk), 0);
+                 AES_decrypt(out.as_ptr(), dec.as_mut_ptr(), &dk);
+                 assert_eq!(dec, FIPS_PT);
++
++                // The portable circuit carrier is checked against the same known-answer
++                // vectors directly, not only through the dispatch that takes AES-NI here.
++                let mut pout = [0u8; 16];
++                aes_encrypt_portable(FIPS_PT.as_ptr(), pout.as_mut_ptr(), &k);
++                let phex: String = pout.iter().map(|b| format!("{b:02x}")).collect();
++                assert_eq!(phex, want, "portable FIPS encrypt bits={bits}");
++                let mut pdec = [0u8; 16];
++                aes_decrypt_portable(out.as_ptr(), pdec.as_mut_ptr(), &dk);
++                assert_eq!(pdec, FIPS_PT, "portable FIPS decrypt bits={bits}");
+             }
+         }
+     }
+@@ -1447,4 +1271,180 @@ mod tests {
+             assert_eq!(back7[..7], PT7);
+         }
+     }
++
++    /// Deterministic byte stream for the differential key/block population.
++    fn next_byte(seed: &mut u64) -> u8 {
++        *seed = seed
++            .wrapping_mul(6364136223846793005)
++            .wrapping_add(1442695040888963407);
++        (*seed >> 32) as u8
++    }
++
++    fn must_expand(res: Option<([u32; 60], usize)>) -> ([u32; 60], usize) {
++        match res {
++            Some(v) => v,
++            None => unreachable!("bits is 128, 192 or 256"),
++        }
++    }
++
++    /// All-zero, all-ones, every single-bit key, then random keys.
++    fn keys_for(bits: usize) -> Vec<Vec<u8>> {
++        let n = bits / 8;
++        let mut keys = Vec::new();
++        keys.push(vec![0x00; n]);
++        keys.push(vec![0xff; n]);
++        for bit in 0..bits {
++            let mut k = vec![0u8; n];
++            k[bit / 8] = 1 << (bit % 8);
++            keys.push(k);
++        }
++        let mut seed = 0x0f1e_2d3c_4b5a_6978u64 ^ bits as u64;
++        for _ in 0..512 {
++            let mut k = vec![0u8; n];
++            for b in &mut k {
++                *b = next_byte(&mut seed);
++            }
++            keys.push(k);
++        }
++        keys
++    }
++
++    fn bswapped(mut rk: [u32; 60], rounds: usize) -> [u32; 60] {
++        for w in rk.iter_mut().take(4 * (rounds + 1)) {
++            *w = w.swap_bytes();
++        }
++        rk
++    }
++
++    /// The authority's decrypt-schedule transform on logical words, transcribed here so
++    /// the test can derive the expected bytes independently of `AES_set_decrypt_key`.
++    fn decrypt_from_logical(mut rk: [u32; 60], rounds: usize) -> [u32; 60] {
++        let mut i = 0usize;
++        let mut j = 4 * rounds;
++        while i < j {
++            for k in 0..4 {
++                rk.swap(i + k, j + k);
++            }
++            i += 4;
++            j -= 4;
++        }
++        let mut off = 0usize;
++        for _ in 1..rounds {
++            off += 4;
++            for jj in 0..4 {
++                let tp1 = rk[off + jj];
++                let m = tp1 & 0x8080_8080;
++                let tp2 = ((tp1 & 0x7f7f_7f7f) << 1) ^ ((m.wrapping_sub(m >> 7)) & 0x1b1b_1b1b);
++                let m = tp2 & 0x8080_8080;
++                let tp4 = ((tp2 & 0x7f7f_7f7f) << 1) ^ ((m.wrapping_sub(m >> 7)) & 0x1b1b_1b1b);
++                let m = tp4 & 0x8080_8080;
++                let tp8 = ((tp4 & 0x7f7f_7f7f) << 1) ^ ((m.wrapping_sub(m >> 7)) & 0x1b1b_1b1b);
++                let tp9 = tp8 ^ tp1;
++                let tpb = tp9 ^ tp2;
++                let tpd = tp9 ^ tp4;
++                let tpe = tp8 ^ tp4 ^ tp2;
++                rk[off + jj] = tpe ^ tpd.rotate_left(16) ^ tp9.rotate_left(24) ^ tpb.rotate_left(8);
++            }
++        }
++        rk
++    }
++
++    /// The circuit expansion is byte-identical to the table transcription for every
++    /// key class, both schedules.
++    #[test]
++    fn portable_schedule_matches_reference_for_all_sizes() {
++        for bits in [128usize, 192, 256] {
++            for key in keys_for(bits) {
++                let p = must_expand(portable::expand_encrypt_key(&key, bits as c_int));
++                let r = must_expand(reference::expand_encrypt_key(&key, bits as c_int));
++                assert_eq!(p, r, "encrypt schedule bits={bits} key={key:02x?}");
++
++                let expect_dec = bswapped(decrypt_from_logical(r.0, r.1), r.1);
++
++                let mut k = AesKey {
++                    rd_key: [0; 60],
++                    rounds: 0,
++                };
++                // SAFETY: live locals; the exported entry may take the AES-NI arm, whose
++                // expansion the existing NI/portable test proves equal to the circuit.
++                unsafe {
++                    assert_eq!(AES_set_decrypt_key(key.as_ptr(), bits as c_int, &mut k), 0);
++                }
++                assert_eq!(k.rounds, r.1 as c_int);
++                assert_eq!(
++                    k.rd_key, expect_dec,
++                    "decrypt schedule bits={bits} key={key:02x?}"
++                );
++            }
++        }
++    }
++
++    /// The exported encryption schedule bytes are unchanged from the reference.
++    #[test]
++    fn exported_encrypt_schedule_is_byte_identical_to_reference() {
++        for bits in [128usize, 192, 256] {
++            for key in keys_for(bits) {
++                let r = must_expand(reference::expand_encrypt_key(&key, bits as c_int));
++                let expect = bswapped(r.0, r.1);
++                let mut k = AesKey {
++                    rd_key: [0; 60],
++                    rounds: 0,
++                };
++                // SAFETY: live locals.
++                unsafe {
++                    assert_eq!(AES_set_encrypt_key(key.as_ptr(), bits as c_int, &mut k), 0);
++                }
++                assert_eq!(k.rounds, r.1 as c_int);
++                assert_eq!(k.rd_key, expect, "bits={bits} key={key:02x?}");
++            }
++        }
++    }
++
++    /// Blocks from the portable circuit equal the table reference, and decrypt inverts
++    /// encrypt, over the same key population.
++    #[test]
++    fn portable_block_matches_reference_and_round_trips() {
++        let mut seed = 0x1357_9bdf_2468_ace0u64;
++        for bits in [128usize, 192, 256] {
++            for key in keys_for(bits) {
++                let mut ek = AesKey {
++                    rd_key: [0; 60],
++                    rounds: 0,
++                };
++                let mut dk = AesKey {
++                    rd_key: [0; 60],
++                    rounds: 0,
++                };
++                // SAFETY: live locals.
++                unsafe {
++                    assert_eq!(AES_set_encrypt_key(key.as_ptr(), bits as c_int, &mut ek), 0);
++                    assert_eq!(AES_set_decrypt_key(key.as_ptr(), bits as c_int, &mut dk), 0);
++                }
++                for _ in 0..8 {
++                    let mut pt = [0u8; 16];
++                    for b in &mut pt {
++                        *b = next_byte(&mut seed);
++                    }
++                    let mut got = [0u8; 16];
++                    let mut want = pt;
++                    // SAFETY: live locals; the reference is the table transcription.
++                    unsafe {
++                        aes_encrypt_portable(pt.as_ptr(), got.as_mut_ptr(), &ek);
++                    }
++                    reference::encrypt_block(&mut want, &ek.rd_key, ek.rounds as usize);
++                    assert_eq!(got, want, "encrypt bits={bits} key={key:02x?}");
++
++                    let mut back = [0u8; 16];
++                    let mut want_dec = got;
++                    // SAFETY: live locals.
++                    unsafe {
++                        aes_decrypt_portable(got.as_ptr(), back.as_mut_ptr(), &dk);
++                    }
++                    reference::decrypt_block(&mut want_dec, &dk.rd_key, dk.rounds as usize);
++                    assert_eq!(back, want_dec, "decrypt bits={bits} key={key:02x?}");
++                    assert_eq!(back, pt, "round trip bits={bits} key={key:02x?}");
++                }
++            }
++        }
++    }
+ }
+diff --git a/src/digest/tables.rs b/src/digest/tables.rs
+index 49f67035d..3f782186e 100644
+--- a/src/digest/tables.rs
++++ b/src/digest/tables.rs
+@@ -487,6 +487,11 @@ pub(crate) static WP_RC: [u64; 10] = [
+ ];
+ 
+ /// AES's S-box — `crypto/aes/aes_core.c`'s `Te4`.
++///
++/// Test-only: the portable AES replaced every production lookup with a
++/// constant-pattern circuit; this table is retained only as the differential
++/// reference, so it is absent from non-test builds.
++#[cfg(test)]
+ pub(crate) static AES_SBOX: [u8; 256] = [
+     0x63, 0x7c, 0x77, 0x7b, 0xf2, 0x6b, 0x6f, 0xc5, 0x30, 0x01, 0x67, 0x2b, 0xfe, 0xd7, 0xab, 0x76,
+     0xca, 0x82, 0xc9, 0x7d, 0xfa, 0x59, 0x47, 0xf0, 0xad, 0xd4, 0xa2, 0xaf, 0x9c, 0xa4, 0x72, 0xc0,
+@@ -506,6 +511,9 @@ pub(crate) static AES_SBOX: [u8; 256] = [
+     0x8c, 0xa1, 0x89, 0x0d, 0xbf, 0xe6, 0x42, 0x68, 0x41, 0x99, 0x2d, 0x0f, 0xb0, 0x54, 0xbb, 0x16,
+ ];
+ /// AES's inverse S-box — `crypto/aes/aes_core.c`'s `Td4`.
++///
++/// Test-only, as the forward table above.
++#[cfg(test)]
+ pub(crate) static AES_INV_SBOX: [u8; 256] = [
+     0x52, 0x09, 0x6a, 0xd5, 0x30, 0x36, 0xa5, 0x38, 0xbf, 0x40, 0xa3, 0x9e, 0x81, 0xf3, 0xd7, 0xfb,
+     0x7c, 0xe3, 0x39, 0x82, 0x9b, 0x2f, 0xff, 0x87, 0x34, 0x8e, 0x43, 0x44, 0xc4, 0xde, 0xe9, 0xcb,
+diff --git a/src/modes/gcm.rs b/src/modes/gcm.rs
+index b709d491a..5d9165785 100644
+--- a/src/modes/gcm.rs
++++ b/src/modes/gcm.rs
+@@ -156,7 +156,37 @@ pub(crate) fn gf_mul(x: u128, y: u128) -> u128 {
+ 
+ /// SP 800-38D Algorithm 1 in the bit-by-bit form: the portable fallback for CPUs without
+ /// `pclmulqdq`.
++///
++/// Both operands are treated as secret-associated, including the accumulated `Xi` in the
++/// caller. The selection of `v` and the conditional reduction are performed by all-zero /
++/// all-one masks derived arithmetically, so the loop has a fixed 128 iterations and no
++/// branch or memory address depends on either operand. This is a constant-pattern
++/// construction, not a claim of constant time.
++///
++/// Kept out of line so the emitted fallback remains an auditable symbol rather than
++/// being folded into its caller.
++#[inline(never)]
+ fn gf_mul_portable(x: u128, y: u128) -> u128 {
++    let mut z: u128 = 0;
++    let mut v = y;
++    let mut i = 0u32;
++    while i < 128 {
++        let bit = (x >> (127 - i)) & 1;
++        z ^= v & 0u128.wrapping_sub(bit);
++        let lsb = v & 1;
++        v >>= 1;
++        v ^= R & 0u128.wrapping_sub(lsb);
++        i += 1;
++    }
++    z
++}
++
++/// Test-only negative control for the emitted-code audit: the pre-conversion branchy
++/// transcription. It must remain a symbol so the disassembly instrument can be shown
++/// to fire on it; it is never compiled outside `cfg(test)`.
++#[cfg(test)]
++#[inline(never)]
++fn negative_control_branchy_mul(x: u128, y: u128) -> u128 {
+     let mut z: u128 = 0;
+     let mut v = y;
+     let mut i = 0u32;
+@@ -335,6 +365,103 @@ fn ossl_gcm_ghash_4bit(xi: &mut u128, h: u128, data: &[u8]) {
+     }
+ }
+ 
++/// The largest aggregation width the independent-multiplication GHASH evaluates.
++const GHASH_MAX_WIDTH: usize = 8;
++
++/// `H^1 ..= H^max`, computed once per GCM call from `H`.
++///
++/// These values are secret-derived (every power is a function of the GHASH key), so they
++/// live only in this struct and are never placed in a table indexed by ciphertext, counter
++/// or any other data. The only selector is `width`, which is a public loop bound; see the
++/// constant-time note on [`ghash_group`].
++struct GhashPowers {
++    p: [u128; GHASH_MAX_WIDTH + 1],
++    max: usize,
++}
++
++impl GhashPowers {
++    /// Derive `H^2 ..= H^max` from `H` with `max - 1` field multiplies.
++    fn compute(h: u128, max: usize) -> GhashPowers {
++        let mut p = [0u128; GHASH_MAX_WIDTH + 1];
++        p[1] = h;
++        let mut i = 2usize;
++        while i <= max {
++            p[i] = gf_mul(p[i - 1], h);
++            i += 1;
++        }
++        GhashPowers { p, max }
++    }
++}
++
++/// `Y' = (Y ^ X_1)·H^w ^ X_2·H^(w-1) ^ … ^ X_w·H` over `width` complete blocks.
++///
++/// This is the independent-multiplication form: the `w` field products of one group share
++/// no operand, so their carry-less multiplies are arithmetic-independent and can overlap in
++/// the pipeline. The terms are combined with XOR, which is addition in the field.
++///
++/// Constant-time: `width` is public, and `p[width]`/`p[width - j]` are selected by the loop
++/// index, never by a ciphertext byte. No branch depends on a block or on a key power.
++fn ghash_group(xi: u128, p: &GhashPowers, data: &[u8], width: usize) -> u128 {
++    debug_assert!(width >= 2 && width <= p.max && data.len() == width * 16);
++    let mut block = [0u8; 16];
++    block.copy_from_slice(&data[..16]);
++    let mut acc = gf_mul(xi ^ u128::from_be_bytes(block), p.p[width]);
++    let mut j = 1usize;
++    while j < width {
++        block.copy_from_slice(&data[j * 16..j * 16 + 16]);
++        acc ^= gf_mul(u128::from_be_bytes(block), p.p[width - j]);
++        j += 1;
++    }
++    acc
++}
++
++/// The aggregation width for one call.
++///
++/// The two regimes are genuinely different. A 64-byte message is four blocks: a wide group
++/// cannot repay the one-off cost of deriving `H^2..H^w`, so the small regime stays narrow.
++/// At 16 KiB the one-off derivation is thousands of blocks' worth of amortised ILP. The
++/// exact crossover is measured, not assumed; see the PFP-62 evidence.
++fn bulk_width(len: usize) -> usize {
++    if let Some(w) = width_override() {
++        return w;
++    }
++    if len <= 128 {
++        2
++    } else {
++        GHASH_MAX_WIDTH
++    }
++}
++
++/// `OPENSSL_RS_GCM_WIDTH` — a measurement-only selector over correctness-equivalent
++/// aggregations (2..=8). It reads public process environment once; no secret reaches it.
++fn width_override() -> Option<usize> {
++    use std::sync::OnceLock;
++
++    static WIDTH: OnceLock<Option<usize>> = OnceLock::new();
++    *WIDTH.get_or_init(|| {
++        std::env::var("OPENSSL_RS_GCM_WIDTH")
++            .ok()
++            .and_then(|s| s.parse::<usize>().ok())
++            .map(|w| w.clamp(2, GHASH_MAX_WIDTH))
++    })
++}
++
++/// Whether the message-body GHASH is aggregated.
++///
++/// Aggregation is an ILP property of the `pclmulqdq` multiply, so it is enabled exactly when
++/// that arm is: clearing the CPUID bit restores the original serial loop, which remains the
++/// differential reference.
++fn batching_enabled() -> bool {
++    #[cfg(target_arch = "x86_64")]
++    {
++        pclmul_available()
++    }
++    #[cfg(not(target_arch = "x86_64"))]
++    {
++        false
++    }
++}
++
+ /// # Safety
+ /// `ctx` must be a live context from [`CRYPTO_gcm128_new`] or an equivalent zeroed
+ /// `GcmCtx`, and `key`/`block` as the block function's own contract requires.
+@@ -611,6 +738,25 @@ pub unsafe extern "C" fn CRYPTO_gcm128_aad(ctx: *mut GcmCtx, aad: *const u8, len
+ /// # Safety
+ /// `ctx` is live and `in`/`out` as the caller's contract requires for `len` bytes.
+ unsafe fn crypt(ctx: *mut GcmCtx, input: *const u8, out: *mut u8, len: usize, dec: bool) -> c_int {
++    // SAFETY: the caller's contract.
++    unsafe { crypt_width(ctx, input, out, len, dec, None) }
++}
++
++/// [`crypt`] with an explicit aggregation width, for the differential tests.
++///
++/// `forced_width == Some(1)` selects the original serial loop; production always passes
++/// `None` and lets [`bulk_width`] choose from the message length.
++///
++/// # Safety
++/// As [`crypt`].
++unsafe fn crypt_width(
++    ctx: *mut GcmCtx,
++    input: *const u8,
++    out: *mut u8,
++    len: usize,
++    dec: bool,
++    forced_width: Option<usize>,
++) -> c_int {
+     // SAFETY: the caller's contract.
+     unsafe {
+         let mlen = (*ctx).msg_len.wrapping_add(len as u64);
+@@ -635,8 +781,61 @@ unsafe fn crypt(ctx: *mut GcmCtx, input: *const u8, out: *mut u8, len: usize, de
+         };
+         let mut i = 0usize;
+ 
++        // The powers are derived once per call, from the (secret) GHASH key. A width below
++        // two means the serial loop, which needs none of them.
++        let width = forced_width.unwrap_or_else(|| bulk_width(len));
++        let powers = if width >= 2 && batching_enabled() {
++            Some(GhashPowers::compute((*ctx).h_val(), width))
++        } else {
++            None
++        };
++
+         while i < len {
+             if n == 0 {
++                if let Some(p) = powers.as_ref() {
++                    let remaining_blocks = (len - i) / 16;
++                    if remaining_blocks >= 2 {
++                        let w = std::cmp::min(remaining_blocks, p.max);
++                        if w >= 2 {
++                            // One group: build `w` counter blocks, produce the `w`
++                            // keystream blocks, then hash the `w` ciphertext blocks with
++                            // the independent-multiplication form.
++                            let mut ks = [0u8; GHASH_MAX_WIDTH * 16];
++                            let mut cbuf = [0u8; GHASH_MAX_WIDTH * 16];
++                            let mut counter = (*ctx).yi;
++                            let mut k = 0usize;
++                            while k < w {
++                                counter[12..16].copy_from_slice(&ctr.to_be_bytes());
++                                block(counter.as_ptr(), ks.as_mut_ptr().add(k * 16), (*ctx).key);
++                                ctr = ctr.wrapping_add(1);
++                                k += 1;
++                            }
++                            let bytes = w * 16;
++                            // Read every input byte before writing any output byte, so an
++                            // in-place call is well defined.
++                            let mut k = 0usize;
++                            while k < bytes {
++                                let c = if dec {
++                                    *input.add(i + k)
++                                } else {
++                                    *input.add(i + k) ^ ks[k]
++                                };
++                                cbuf[k] = c;
++                                k += 1;
++                            }
++                            let mut k = 0usize;
++                            while k < bytes {
++                                *out.add(i + k) = if dec { cbuf[k] ^ ks[k] } else { cbuf[k] };
++                                k += 1;
++                            }
++                            store_counter(ctx, ctr);
++                            let xi = (*ctx).xi_val();
++                            (*ctx).set_xi(ghash_group(xi, p, &cbuf[..bytes], w));
++                            i += bytes;
++                            continue;
++                        }
++                    }
++                }
+                 block((*ctx).yi.as_ptr(), (*ctx).eki.as_mut_ptr(), (*ctx).key);
+                 ctr = ctr.wrapping_add(1);
+                 store_counter(ctx, ctr);
+@@ -1114,4 +1313,321 @@ mod tests {
+             assert_ne!(open(&ct, &aad, &bad_tag), 0);
+         }
+     }
++
++    // ------------------------------------------------------------------------------------
++    // PFP-62 — multi-block GHASH aggregation
++    // ------------------------------------------------------------------------------------
++
++    /// Seal with an explicit aggregation width. `width == 1` is the original serial loop.
++    ///
++    /// # Safety
++    /// Live locals and a live schedule; every slice pointer is valid for its length.
++    unsafe fn seal_width(
++        key: &[u8],
++        iv: &[u8],
++        aad: &[u8],
++        pt: &[u8],
++        width: usize,
++    ) -> (Vec<u8>, [u8; 16]) {
++        // SAFETY: the caller's contract.
++        unsafe {
++            let bits = (key.len() * 8) as c_int;
++            let k = schedule(key, bits);
++            let ctx = CRYPTO_gcm128_new((&k as *const AesKey).cast_mut().cast(), aes_block);
++            CRYPTO_gcm128_setiv(ctx, iv.as_ptr(), iv.len());
++            assert_eq!(CRYPTO_gcm128_aad(ctx, aad.as_ptr(), aad.len()), 0);
++            let mut ct = vec![0u8; pt.len().max(1)];
++            assert_eq!(
++                crypt_width(
++                    ctx,
++                    pt.as_ptr(),
++                    ct.as_mut_ptr(),
++                    pt.len(),
++                    false,
++                    Some(width)
++                ),
++                0
++            );
++            ct.truncate(pt.len());
++            let mut tag = [0u8; 16];
++            CRYPTO_gcm128_tag(ctx, tag.as_mut_ptr(), 16);
++            CRYPTO_gcm128_release(ctx);
++            (ct, tag)
++        }
++    }
++
++    fn pattern(n: usize, seed: u8) -> Vec<u8> {
++        (0..n)
++            .map(|i| {
++                (i as u8)
++                    .wrapping_mul(37)
++                    .wrapping_add(seed ^ (i >> 8) as u8)
++            })
++            .collect()
++    }
++
++    /// Every aggregation width produces exactly the serial reference's ciphertext and tag,
++    /// over the required lengths *and* the awkward ones (partial final blocks). The serial
++    /// (`width == 1`) arm is the pre-change loop, retained as the in-crate reference.
++    #[test]
++    fn gcm_all_widths_match_serial_reference() {
++        let key128 = [0x11u8; 16];
++        let key256 = [0x22u8; 32];
++        let iv12 = [0x33u8; 12];
++        let iv_odd = pattern(13, 0x5a);
++        let sizes = [
++            (0usize, 0usize),
++            (0, 16),
++            (16, 0),
++            (64, 16),
++            (16384, 16),
++            (1, 0),
++            (15, 1),
++            (17, 3),
++            (31, 7),
++            (33, 15),
++            (63, 17),
++            (65, 31),
++            (95, 0),
++            (127, 33),
++            (129, 16),
++            (255, 64),
++            (1000, 129),
++        ];
++        for key in [&key128[..], &key256[..]] {
++            for &iv in &[&iv12[..], &iv_odd[..]] {
++                for &(ptlen, aadlen) in &sizes {
++                    let pt = pattern(ptlen, 1);
++                    let aad = pattern(aadlen, 2);
++                    // SAFETY: live locals; the helper establishes each context.
++                    let (ct_ref, tag_ref) = unsafe { seal_width(key, iv, &aad, &pt, 1) };
++                    for width in 2..=GHASH_MAX_WIDTH {
++                        // SAFETY: as above.
++                        let (ct, tag) = unsafe { seal_width(key, iv, &aad, &pt, width) };
++                        assert_eq!(
++                            ct,
++                            ct_ref,
++                            "ct keylen={} ivlen={} pt={ptlen} aad={aadlen} width={width}",
++                            key.len(),
++                            iv.len()
++                        );
++                        assert_eq!(
++                            tag,
++                            tag_ref,
++                            "tag keylen={} ivlen={} pt={ptlen} aad={aadlen} width={width}",
++                            key.len(),
++                            iv.len()
++                        );
++                    }
++                }
++            }
++        }
++    }
++
++    /// NIST GCM cases 1 and 2 at every width, against the published values.
++    #[test]
++    fn gcm_nist_case_1_and_2_at_every_width() {
++        let key = [0u8; 16];
++        let iv = [0u8; 12];
++        for width in 1..=GHASH_MAX_WIDTH {
++            // SAFETY: live locals.
++            let (ct, tag) = unsafe { seal_width(&key, &iv, &[], &[], width) };
++            assert!(ct.is_empty(), "case 1 width={width}");
++            assert_eq!(
++                hex_of(&tag),
++                "58e2fccefa7e3061367f1d57a4e7455a",
++                "case 1 width={width}"
++            );
++            // SAFETY: live locals.
++            let (ct, tag) = unsafe { seal_width(&key, &iv, &[], &[0u8; 16], width) };
++            assert_eq!(
++                hex_of(&ct),
++                "0388dace60b6a392f328c2b971b2fe78",
++                "case 2 width={width}"
++            );
++            assert_eq!(
++                hex_of(&tag),
++                "ab6e47d42cec13bdf53a67b21257bddf",
++                "case 2 width={width}"
++            );
++        }
++    }
++
++    /// In-place and split-call sealing agree with the one-call seal at every width, and a
++    /// one-bit tamper of ciphertext, AAD or tag is rejected at every width.
++    #[test]
++    fn gcm_width_split_inplace_and_tamper() {
++        let key = [0x42u8; 16];
++        let iv = [0x24u8; 12];
++        let aad = [0x11u8; 16];
++        let pt = pattern(100, 9);
++        for width in 1..=GHASH_MAX_WIDTH {
++            // SAFETY: live locals; every pointer is valid for its length.
++            unsafe {
++                let k = schedule(&key, 128);
++                let (ct_ref, tag_ref) = seal_width(&key, &iv, &aad, &pt, width);
++
++                // In-place: output aliases input exactly.
++                let mut buf = pt.clone();
++                let ctx = CRYPTO_gcm128_new((&k as *const AesKey).cast_mut().cast(), aes_block);
++                CRYPTO_gcm128_setiv(ctx, iv.as_ptr(), iv.len());
++                assert_eq!(CRYPTO_gcm128_aad(ctx, aad.as_ptr(), aad.len()), 0);
++                assert_eq!(
++                    crypt_width(
++                        ctx,
++                        buf.as_ptr(),
++                        buf.as_mut_ptr(),
++                        buf.len(),
++                        false,
++                        Some(width)
++                    ),
++                    0
++                );
++                let mut tag = [0u8; 16];
++                CRYPTO_gcm128_tag(ctx, tag.as_mut_ptr(), 16);
++                CRYPTO_gcm128_release(ctx);
++                assert_eq!(buf, ct_ref, "in-place width={width}");
++                assert_eq!(tag, tag_ref, "in-place tag width={width}");
++
++                // Split across call boundaries that cut mid-block and on block edges.
++                let cuts = [7usize, 16, 33, 44];
++                let mut ct_split = vec![0u8; pt.len()];
++                let ctx = CRYPTO_gcm128_new((&k as *const AesKey).cast_mut().cast(), aes_block);
++                CRYPTO_gcm128_setiv(ctx, iv.as_ptr(), iv.len());
++                assert_eq!(CRYPTO_gcm128_aad(ctx, aad.as_ptr(), aad.len()), 0);
++                let mut off = 0usize;
++                for &cut in &cuts {
++                    if cut <= off {
++                        continue;
++                    }
++                    assert_eq!(
++                        crypt_width(
++                            ctx,
++                            pt.as_ptr().add(off),
++                            ct_split.as_mut_ptr().add(off),
++                            cut - off,
++                            false,
++                            Some(width)
++                        ),
++                        0
++                    );
++                    off = cut;
++                }
++                assert_eq!(
++                    crypt_width(
++                        ctx,
++                        pt.as_ptr().add(off),
++                        ct_split.as_mut_ptr().add(off),
++                        pt.len() - off,
++                        false,
++                        Some(width)
++                    ),
++                    0
++                );
++                let mut tag_split = [0u8; 16];
++                CRYPTO_gcm128_tag(ctx, tag_split.as_mut_ptr(), 16);
++                CRYPTO_gcm128_release(ctx);
++                assert_eq!(ct_split, ct_ref, "split width={width}");
++                assert_eq!(tag_split, tag_ref, "split tag width={width}");
++
++                // Tamper arms.
++                let open = |c: &[u8], a: &[u8], t: &[u8]| -> c_int {
++                    let ctx = CRYPTO_gcm128_new((&k as *const AesKey).cast_mut().cast(), aes_block);
++                    CRYPTO_gcm128_setiv(ctx, iv.as_ptr(), iv.len());
++                    assert_eq!(CRYPTO_gcm128_aad(ctx, a.as_ptr(), a.len()), 0);
++                    let mut p = vec![0u8; c.len().max(1)];
++                    assert_eq!(
++                        crypt_width(ctx, c.as_ptr(), p.as_mut_ptr(), c.len(), true, Some(width)),
++                        0
++                    );
++                    let r = CRYPTO_gcm128_finish(ctx, t.as_ptr(), t.len());
++                    CRYPTO_gcm128_release(ctx);
++                    r
++                };
++                assert_eq!(open(&ct_ref, &aad, &tag_ref), 0, "accept width={width}");
++                let mut bad_ct = ct_ref.clone();
++                bad_ct[5] ^= 1;
++                assert_ne!(open(&bad_ct, &aad, &tag_ref), 0, "bad ct width={width}");
++                let mut bad_aad = aad;
++                bad_aad[3] ^= 1;
++                assert_ne!(
++                    open(&ct_ref, &bad_aad, &tag_ref),
++                    0,
++                    "bad aad width={width}"
++                );
++                let mut bad_tag = tag_ref;
++                bad_tag[15] ^= 1;
++                assert_ne!(open(&ct_ref, &aad, &bad_tag), 0, "bad tag width={width}");
++            }
++        }
++    }
++
++    /// The group form is the same function as the serial chain over random operands.
++    #[test]
++    fn ghash_group_matches_serial_chain() {
++        let mut seed = 0x1234_5678_9abc_def0u64;
++        let mut next = || {
++            seed = seed
++                .wrapping_mul(6364136223846793005)
++                .wrapping_add(1442695040888963407);
++            seed
++        };
++        for _ in 0..64 {
++            let h = ((next() as u128) << 64) | next() as u128;
++            let h = if h == 0 { 1 } else { h };
++            let mut data = vec![0u8; GHASH_MAX_WIDTH * 16];
++            for b in &mut data {
++                *b = next() as u8;
++            }
++            for width in 2..=GHASH_MAX_WIDTH {
++                let p = GhashPowers::compute(h, width);
++                let xi = ((next() as u128) << 64) | next() as u128;
++                let mut serial = xi;
++                for j in 0..width {
++                    let mut block = [0u8; 16];
++                    block.copy_from_slice(&data[j * 16..j * 16 + 16]);
++                    serial = gf_mul(serial ^ u128::from_be_bytes(block), h);
++                }
++                let got = ghash_group(xi, &p, &data[..width * 16], width);
++                assert_eq!(got, serial, "width={width}");
++            }
++        }
++    }
++
++    /// The mask-based portable multiply is the same function as the pre-conversion
++    /// branchy transcription, and agrees with the `pclmulqdq` arm when present.
++    #[test]
++    fn portable_ghash_multiply_matches_reference() {
++        let branchy = super::negative_control_branchy_mul;
++
++        let mut seed = 0x0bad_c0de_dead_beefu64;
++        let mut next = || {
++            seed = seed
++                .wrapping_mul(6364136223846793005)
++                .wrapping_add(1442695040888963407);
++            ((seed as u128) << 64) | seed as u128
++        };
++        let mut cases = vec![
++            (0u128, 0u128),
++            (0, u128::MAX),
++            (u128::MAX, 0),
++            (u128::MAX, u128::MAX),
++            (1, 1),
++            (R, 1),
++            (1, R),
++        ];
++        for _ in 0..256 {
++            cases.push((next(), next()));
++        }
++        for (x, y) in cases {
++            let want = branchy(x, y);
++            assert_eq!(gf_mul_portable(x, y), want, "x={x:032x} y={y:032x}");
++            #[cfg(target_arch = "x86_64")]
++            if pclmul_available() {
++                // SAFETY: `pclmul_available` establishes the target feature.
++                let clmul = unsafe { gf_mul_clmul(x, y) };
++                assert_eq!(gf_mul_portable(x, y), clmul, "clmul x={x:032x} y={y:032x}");
++            }
++        }
++    }
+ }

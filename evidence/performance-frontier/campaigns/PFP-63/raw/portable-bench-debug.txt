@@ -1,0 +1,18 @@
+    Finished `test` profile [unoptimized] target(s) in 0.01s
+     Running unittests src/lib.rs (target/debug/deps/openssl_rs-bcfdf4d0f51f39b5)
+
+running 1 test
+test aes::research::pfp63_benchmarks ... S-box arms, ns per 16 bytes (unoptimised test profile):
+  table      113.2
+  bytewise   11458.4
+  composite  3084.9
+  bitsliced  1725.6
+Block throughput, MB/s (unoptimised test profile, 16-byte state):
+  AES-128: enc table 3.7 / circuit 0.8; dec table 0.9 / circuit 0.8
+  AES-192: enc table 3.1 / circuit 0.7; dec table 0.7 / circuit 0.7
+  AES-256: enc table 2.7 / circuit 0.6; dec table 0.6 / circuit 0.6
+Selected arm: bitsliced Boolean field-exponentiation circuit (table 113.2 ns/16B, composite 3084.9, bytewise 11458.4, bitsliced 1725.6).
+ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 2613 filtered out; finished in 4.25s
+

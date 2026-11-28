@@ -156,7 +156,37 @@ pub(crate) fn gf_mul(x: u128, y: u128) -> u128 {
 
 /// SP 800-38D Algorithm 1 in the bit-by-bit form: the portable fallback for CPUs without
 /// `pclmulqdq`.
+///
+/// Both operands are treated as secret-associated, including the accumulated `Xi` in the
+/// caller. The selection of `v` and the conditional reduction are performed by all-zero /
+/// all-one masks derived arithmetically, so the loop has a fixed 128 iterations and no
+/// branch or memory address depends on either operand. This is a constant-pattern
+/// construction, not a claim of constant time.
+///
+/// Kept out of line so the emitted fallback remains an auditable symbol rather than
+/// being folded into its caller.
+#[inline(never)]
 fn gf_mul_portable(x: u128, y: u128) -> u128 {
+    let mut z: u128 = 0;
+    let mut v = y;
+    let mut i = 0u32;
+    while i < 128 {
+        let bit = (x >> (127 - i)) & 1;
+        z ^= v & 0u128.wrapping_sub(bit);
+        let lsb = v & 1;
+        v >>= 1;
+        v ^= R & 0u128.wrapping_sub(lsb);
+        i += 1;
+    }
+    z
+}
+
+/// Test-only negative control for the emitted-code audit: the pre-conversion branchy
+/// transcription. It must remain a symbol so the disassembly instrument can be shown
+/// to fire on it; it is never compiled outside `cfg(test)`.
+#[cfg(test)]
+#[inline(never)]
+fn negative_control_branchy_mul(x: u128, y: u128) -> u128 {
     let mut z: u128 = 0;
     let mut v = y;
     let mut i = 0u32;
@@ -332,6 +362,103 @@ fn ossl_gcm_ghash_4bit(xi: &mut u128, h: u128, data: &[u8]) {
         block.copy_from_slice(&data[i..i + 16]);
         ossl_gcm_gmult_4bit(xi, h, &block);
         i += 16;
+    }
+}
+
+/// The largest aggregation width the independent-multiplication GHASH evaluates.
+const GHASH_MAX_WIDTH: usize = 8;
+
+/// `H^1 ..= H^max`, computed once per GCM call from `H`.
+///
+/// These values are secret-derived (every power is a function of the GHASH key), so they
+/// live only in this struct and are never placed in a table indexed by ciphertext, counter
+/// or any other data. The only selector is `width`, which is a public loop bound; see the
+/// constant-time note on [`ghash_group`].
+struct GhashPowers {
+    p: [u128; GHASH_MAX_WIDTH + 1],
+    max: usize,
+}
+
+impl GhashPowers {
+    /// Derive `H^2 ..= H^max` from `H` with `max - 1` field multiplies.
+    fn compute(h: u128, max: usize) -> GhashPowers {
+        let mut p = [0u128; GHASH_MAX_WIDTH + 1];
+        p[1] = h;
+        let mut i = 2usize;
+        while i <= max {
+            p[i] = gf_mul(p[i - 1], h);
+            i += 1;
+        }
+        GhashPowers { p, max }
+    }
+}
+
+/// `Y' = (Y ^ X_1)·H^w ^ X_2·H^(w-1) ^ … ^ X_w·H` over `width` complete blocks.
+///
+/// This is the independent-multiplication form: the `w` field products of one group share
+/// no operand, so their carry-less multiplies are arithmetic-independent and can overlap in
+/// the pipeline. The terms are combined with XOR, which is addition in the field.
+///
+/// Constant-time: `width` is public, and `p[width]`/`p[width - j]` are selected by the loop
+/// index, never by a ciphertext byte. No branch depends on a block or on a key power.
+fn ghash_group(xi: u128, p: &GhashPowers, data: &[u8], width: usize) -> u128 {
+    debug_assert!(width >= 2 && width <= p.max && data.len() == width * 16);
+    let mut block = [0u8; 16];
+    block.copy_from_slice(&data[..16]);
+    let mut acc = gf_mul(xi ^ u128::from_be_bytes(block), p.p[width]);
+    let mut j = 1usize;
+    while j < width {
+        block.copy_from_slice(&data[j * 16..j * 16 + 16]);
+        acc ^= gf_mul(u128::from_be_bytes(block), p.p[width - j]);
+        j += 1;
+    }
+    acc
+}
+
+/// The aggregation width for one call.
+///
+/// The two regimes are genuinely different. A 64-byte message is four blocks: a wide group
+/// cannot repay the one-off cost of deriving `H^2..H^w`, so the small regime stays narrow.
+/// At 16 KiB the one-off derivation is thousands of blocks' worth of amortised ILP. The
+/// exact crossover is measured, not assumed; see the PFP-62 evidence.
+fn bulk_width(len: usize) -> usize {
+    if let Some(w) = width_override() {
+        return w;
+    }
+    if len <= 128 {
+        2
+    } else {
+        GHASH_MAX_WIDTH
+    }
+}
+
+/// `OPENSSL_RS_GCM_WIDTH` — a measurement-only selector over correctness-equivalent
+/// aggregations (2..=8). It reads public process environment once; no secret reaches it.
+fn width_override() -> Option<usize> {
+    use std::sync::OnceLock;
+
+    static WIDTH: OnceLock<Option<usize>> = OnceLock::new();
+    *WIDTH.get_or_init(|| {
+        std::env::var("OPENSSL_RS_GCM_WIDTH")
+            .ok()
+            .and_then(|s| s.parse::<usize>().ok())
+            .map(|w| w.clamp(2, GHASH_MAX_WIDTH))
+    })
+}
+
+/// Whether the message-body GHASH is aggregated.
+///
+/// Aggregation is an ILP property of the `pclmulqdq` multiply, so it is enabled exactly when
+/// that arm is: clearing the CPUID bit restores the original serial loop, which remains the
+/// differential reference.
+fn batching_enabled() -> bool {
+    #[cfg(target_arch = "x86_64")]
+    {
+        pclmul_available()
+    }
+    #[cfg(not(target_arch = "x86_64"))]
+    {
+        false
     }
 }
 
@@ -612,6 +739,25 @@ pub unsafe extern "C" fn CRYPTO_gcm128_aad(ctx: *mut GcmCtx, aad: *const u8, len
 /// `ctx` is live and `in`/`out` as the caller's contract requires for `len` bytes.
 unsafe fn crypt(ctx: *mut GcmCtx, input: *const u8, out: *mut u8, len: usize, dec: bool) -> c_int {
     // SAFETY: the caller's contract.
+    unsafe { crypt_width(ctx, input, out, len, dec, None) }
+}
+
+/// [`crypt`] with an explicit aggregation width, for the differential tests.
+///
+/// `forced_width == Some(1)` selects the original serial loop; production always passes
+/// `None` and lets [`bulk_width`] choose from the message length.
+///
+/// # Safety
+/// As [`crypt`].
+unsafe fn crypt_width(
+    ctx: *mut GcmCtx,
+    input: *const u8,
+    out: *mut u8,
+    len: usize,
+    dec: bool,
+    forced_width: Option<usize>,
+) -> c_int {
+    // SAFETY: the caller's contract.
     unsafe {
         let mlen = (*ctx).msg_len.wrapping_add(len as u64);
         if mlen > (1u64 << 36) - 32 || mlen < len as u64 {
@@ -635,8 +781,61 @@ unsafe fn crypt(ctx: *mut GcmCtx, input: *const u8, out: *mut u8, len: usize, de
         };
         let mut i = 0usize;
 
+        // The powers are derived once per call, from the (secret) GHASH key. A width below
+        // two means the serial loop, which needs none of them.
+        let width = forced_width.unwrap_or_else(|| bulk_width(len));
+        let powers = if width >= 2 && batching_enabled() {
+            Some(GhashPowers::compute((*ctx).h_val(), width))
+        } else {
+            None
+        };
+
         while i < len {
             if n == 0 {
+                if let Some(p) = powers.as_ref() {
+                    let remaining_blocks = (len - i) / 16;
+                    if remaining_blocks >= 2 {
+                        let w = std::cmp::min(remaining_blocks, p.max);
+                        if w >= 2 {
+                            // One group: build `w` counter blocks, produce the `w`
+                            // keystream blocks, then hash the `w` ciphertext blocks with
+                            // the independent-multiplication form.
+                            let mut ks = [0u8; GHASH_MAX_WIDTH * 16];
+                            let mut cbuf = [0u8; GHASH_MAX_WIDTH * 16];
+                            let mut counter = (*ctx).yi;
+                            let mut k = 0usize;
+                            while k < w {
+                                counter[12..16].copy_from_slice(&ctr.to_be_bytes());
+                                block(counter.as_ptr(), ks.as_mut_ptr().add(k * 16), (*ctx).key);
+                                ctr = ctr.wrapping_add(1);
+                                k += 1;
+                            }
+                            let bytes = w * 16;
+                            // Read every input byte before writing any output byte, so an
+                            // in-place call is well defined.
+                            let mut k = 0usize;
+                            while k < bytes {
+                                let c = if dec {
+                                    *input.add(i + k)
+                                } else {
+                                    *input.add(i + k) ^ ks[k]
+                                };
+                                cbuf[k] = c;
+                                k += 1;
+                            }
+                            let mut k = 0usize;
+                            while k < bytes {
+                                *out.add(i + k) = if dec { cbuf[k] ^ ks[k] } else { cbuf[k] };
+                                k += 1;
+                            }
+                            store_counter(ctx, ctr);
+                            let xi = (*ctx).xi_val();
+                            (*ctx).set_xi(ghash_group(xi, p, &cbuf[..bytes], w));
+                            i += bytes;
+                            continue;
+                        }
+                    }
+                }
                 block((*ctx).yi.as_ptr(), (*ctx).eki.as_mut_ptr(), (*ctx).key);
                 ctr = ctr.wrapping_add(1);
                 store_counter(ctx, ctr);
@@ -1112,6 +1311,323 @@ mod tests {
             let mut bad_tag = tag;
             bad_tag[15] ^= 1;
             assert_ne!(open(&ct, &aad, &bad_tag), 0);
+        }
+    }
+
+    // ------------------------------------------------------------------------------------
+    // PFP-62 — multi-block GHASH aggregation
+    // ------------------------------------------------------------------------------------
+
+    /// Seal with an explicit aggregation width. `width == 1` is the original serial loop.
+    ///
+    /// # Safety
+    /// Live locals and a live schedule; every slice pointer is valid for its length.
+    unsafe fn seal_width(
+        key: &[u8],
+        iv: &[u8],
+        aad: &[u8],
+        pt: &[u8],
+        width: usize,
+    ) -> (Vec<u8>, [u8; 16]) {
+        // SAFETY: the caller's contract.
+        unsafe {
+            let bits = (key.len() * 8) as c_int;
+            let k = schedule(key, bits);
+            let ctx = CRYPTO_gcm128_new((&k as *const AesKey).cast_mut().cast(), aes_block);
+            CRYPTO_gcm128_setiv(ctx, iv.as_ptr(), iv.len());
+            assert_eq!(CRYPTO_gcm128_aad(ctx, aad.as_ptr(), aad.len()), 0);
+            let mut ct = vec![0u8; pt.len().max(1)];
+            assert_eq!(
+                crypt_width(
+                    ctx,
+                    pt.as_ptr(),
+                    ct.as_mut_ptr(),
+                    pt.len(),
+                    false,
+                    Some(width)
+                ),
+                0
+            );
+            ct.truncate(pt.len());
+            let mut tag = [0u8; 16];
+            CRYPTO_gcm128_tag(ctx, tag.as_mut_ptr(), 16);
+            CRYPTO_gcm128_release(ctx);
+            (ct, tag)
+        }
+    }
+
+    fn pattern(n: usize, seed: u8) -> Vec<u8> {
+        (0..n)
+            .map(|i| {
+                (i as u8)
+                    .wrapping_mul(37)
+                    .wrapping_add(seed ^ (i >> 8) as u8)
+            })
+            .collect()
+    }
+
+    /// Every aggregation width produces exactly the serial reference's ciphertext and tag,
+    /// over the required lengths *and* the awkward ones (partial final blocks). The serial
+    /// (`width == 1`) arm is the pre-change loop, retained as the in-crate reference.
+    #[test]
+    fn gcm_all_widths_match_serial_reference() {
+        let key128 = [0x11u8; 16];
+        let key256 = [0x22u8; 32];
+        let iv12 = [0x33u8; 12];
+        let iv_odd = pattern(13, 0x5a);
+        let sizes = [
+            (0usize, 0usize),
+            (0, 16),
+            (16, 0),
+            (64, 16),
+            (16384, 16),
+            (1, 0),
+            (15, 1),
+            (17, 3),
+            (31, 7),
+            (33, 15),
+            (63, 17),
+            (65, 31),
+            (95, 0),
+            (127, 33),
+            (129, 16),
+            (255, 64),
+            (1000, 129),
+        ];
+        for key in [&key128[..], &key256[..]] {
+            for &iv in &[&iv12[..], &iv_odd[..]] {
+                for &(ptlen, aadlen) in &sizes {
+                    let pt = pattern(ptlen, 1);
+                    let aad = pattern(aadlen, 2);
+                    // SAFETY: live locals; the helper establishes each context.
+                    let (ct_ref, tag_ref) = unsafe { seal_width(key, iv, &aad, &pt, 1) };
+                    for width in 2..=GHASH_MAX_WIDTH {
+                        // SAFETY: as above.
+                        let (ct, tag) = unsafe { seal_width(key, iv, &aad, &pt, width) };
+                        assert_eq!(
+                            ct,
+                            ct_ref,
+                            "ct keylen={} ivlen={} pt={ptlen} aad={aadlen} width={width}",
+                            key.len(),
+                            iv.len()
+                        );
+                        assert_eq!(
+                            tag,
+                            tag_ref,
+                            "tag keylen={} ivlen={} pt={ptlen} aad={aadlen} width={width}",
+                            key.len(),
+                            iv.len()
+                        );
+                    }
+                }
+            }
+        }
+    }
+
+    /// NIST GCM cases 1 and 2 at every width, against the published values.
+    #[test]
+    fn gcm_nist_case_1_and_2_at_every_width() {
+        let key = [0u8; 16];
+        let iv = [0u8; 12];
+        for width in 1..=GHASH_MAX_WIDTH {
+            // SAFETY: live locals.
+            let (ct, tag) = unsafe { seal_width(&key, &iv, &[], &[], width) };
+            assert!(ct.is_empty(), "case 1 width={width}");
+            assert_eq!(
+                hex_of(&tag),
+                "58e2fccefa7e3061367f1d57a4e7455a",
+                "case 1 width={width}"
+            );
+            // SAFETY: live locals.
+            let (ct, tag) = unsafe { seal_width(&key, &iv, &[], &[0u8; 16], width) };
+            assert_eq!(
+                hex_of(&ct),
+                "0388dace60b6a392f328c2b971b2fe78",
+                "case 2 width={width}"
+            );
+            assert_eq!(
+                hex_of(&tag),
+                "ab6e47d42cec13bdf53a67b21257bddf",
+                "case 2 width={width}"
+            );
+        }
+    }
+
+    /// In-place and split-call sealing agree with the one-call seal at every width, and a
+    /// one-bit tamper of ciphertext, AAD or tag is rejected at every width.
+    #[test]
+    fn gcm_width_split_inplace_and_tamper() {
+        let key = [0x42u8; 16];
+        let iv = [0x24u8; 12];
+        let aad = [0x11u8; 16];
+        let pt = pattern(100, 9);
+        for width in 1..=GHASH_MAX_WIDTH {
+            // SAFETY: live locals; every pointer is valid for its length.
+            unsafe {
+                let k = schedule(&key, 128);
+                let (ct_ref, tag_ref) = seal_width(&key, &iv, &aad, &pt, width);
+
+                // In-place: output aliases input exactly.
+                let mut buf = pt.clone();
+                let ctx = CRYPTO_gcm128_new((&k as *const AesKey).cast_mut().cast(), aes_block);
+                CRYPTO_gcm128_setiv(ctx, iv.as_ptr(), iv.len());
+                assert_eq!(CRYPTO_gcm128_aad(ctx, aad.as_ptr(), aad.len()), 0);
+                assert_eq!(
+                    crypt_width(
+                        ctx,
+                        buf.as_ptr(),
+                        buf.as_mut_ptr(),
+                        buf.len(),
+                        false,
+                        Some(width)
+                    ),
+                    0
+                );
+                let mut tag = [0u8; 16];
+                CRYPTO_gcm128_tag(ctx, tag.as_mut_ptr(), 16);
+                CRYPTO_gcm128_release(ctx);
+                assert_eq!(buf, ct_ref, "in-place width={width}");
+                assert_eq!(tag, tag_ref, "in-place tag width={width}");
+
+                // Split across call boundaries that cut mid-block and on block edges.
+                let cuts = [7usize, 16, 33, 44];
+                let mut ct_split = vec![0u8; pt.len()];
+                let ctx = CRYPTO_gcm128_new((&k as *const AesKey).cast_mut().cast(), aes_block);
+                CRYPTO_gcm128_setiv(ctx, iv.as_ptr(), iv.len());
+                assert_eq!(CRYPTO_gcm128_aad(ctx, aad.as_ptr(), aad.len()), 0);
+                let mut off = 0usize;
+                for &cut in &cuts {
+                    if cut <= off {
+                        continue;
+                    }
+                    assert_eq!(
+                        crypt_width(
+                            ctx,
+                            pt.as_ptr().add(off),
+                            ct_split.as_mut_ptr().add(off),
+                            cut - off,
+                            false,
+                            Some(width)
+                        ),
+                        0
+                    );
+                    off = cut;
+                }
+                assert_eq!(
+                    crypt_width(
+                        ctx,
+                        pt.as_ptr().add(off),
+                        ct_split.as_mut_ptr().add(off),
+                        pt.len() - off,
+                        false,
+                        Some(width)
+                    ),
+                    0
+                );
+                let mut tag_split = [0u8; 16];
+                CRYPTO_gcm128_tag(ctx, tag_split.as_mut_ptr(), 16);
+                CRYPTO_gcm128_release(ctx);
+                assert_eq!(ct_split, ct_ref, "split width={width}");
+                assert_eq!(tag_split, tag_ref, "split tag width={width}");
+
+                // Tamper arms.
+                let open = |c: &[u8], a: &[u8], t: &[u8]| -> c_int {
+                    let ctx = CRYPTO_gcm128_new((&k as *const AesKey).cast_mut().cast(), aes_block);
+                    CRYPTO_gcm128_setiv(ctx, iv.as_ptr(), iv.len());
+                    assert_eq!(CRYPTO_gcm128_aad(ctx, a.as_ptr(), a.len()), 0);
+                    let mut p = vec![0u8; c.len().max(1)];
+                    assert_eq!(
+                        crypt_width(ctx, c.as_ptr(), p.as_mut_ptr(), c.len(), true, Some(width)),
+                        0
+                    );
+                    let r = CRYPTO_gcm128_finish(ctx, t.as_ptr(), t.len());
+                    CRYPTO_gcm128_release(ctx);
+                    r
+                };
+                assert_eq!(open(&ct_ref, &aad, &tag_ref), 0, "accept width={width}");
+                let mut bad_ct = ct_ref.clone();
+                bad_ct[5] ^= 1;
+                assert_ne!(open(&bad_ct, &aad, &tag_ref), 0, "bad ct width={width}");
+                let mut bad_aad = aad;
+                bad_aad[3] ^= 1;
+                assert_ne!(
+                    open(&ct_ref, &bad_aad, &tag_ref),
+                    0,
+                    "bad aad width={width}"
+                );
+                let mut bad_tag = tag_ref;
+                bad_tag[15] ^= 1;
+                assert_ne!(open(&ct_ref, &aad, &bad_tag), 0, "bad tag width={width}");
+            }
+        }
+    }
+
+    /// The group form is the same function as the serial chain over random operands.
+    #[test]
+    fn ghash_group_matches_serial_chain() {
+        let mut seed = 0x1234_5678_9abc_def0u64;
+        let mut next = || {
+            seed = seed
+                .wrapping_mul(6364136223846793005)
+                .wrapping_add(1442695040888963407);
+            seed
+        };
+        for _ in 0..64 {
+            let h = ((next() as u128) << 64) | next() as u128;
+            let h = if h == 0 { 1 } else { h };
+            let mut data = vec![0u8; GHASH_MAX_WIDTH * 16];
+            for b in &mut data {
+                *b = next() as u8;
+            }
+            for width in 2..=GHASH_MAX_WIDTH {
+                let p = GhashPowers::compute(h, width);
+                let xi = ((next() as u128) << 64) | next() as u128;
+                let mut serial = xi;
+                for j in 0..width {
+                    let mut block = [0u8; 16];
+                    block.copy_from_slice(&data[j * 16..j * 16 + 16]);
+                    serial = gf_mul(serial ^ u128::from_be_bytes(block), h);
+                }
+                let got = ghash_group(xi, &p, &data[..width * 16], width);
+                assert_eq!(got, serial, "width={width}");
+            }
+        }
+    }
+
+    /// The mask-based portable multiply is the same function as the pre-conversion
+    /// branchy transcription, and agrees with the `pclmulqdq` arm when present.
+    #[test]
+    fn portable_ghash_multiply_matches_reference() {
+        let branchy = super::negative_control_branchy_mul;
+
+        let mut seed = 0x0bad_c0de_dead_beefu64;
+        let mut next = || {
+            seed = seed
+                .wrapping_mul(6364136223846793005)
+                .wrapping_add(1442695040888963407);
+            ((seed as u128) << 64) | seed as u128
+        };
+        let mut cases = vec![
+            (0u128, 0u128),
+            (0, u128::MAX),
+            (u128::MAX, 0),
+            (u128::MAX, u128::MAX),
+            (1, 1),
+            (R, 1),
+            (1, R),
+        ];
+        for _ in 0..256 {
+            cases.push((next(), next()));
+        }
+        for (x, y) in cases {
+            let want = branchy(x, y);
+            assert_eq!(gf_mul_portable(x, y), want, "x={x:032x} y={y:032x}");
+            #[cfg(target_arch = "x86_64")]
+            if pclmul_available() {
+                // SAFETY: `pclmul_available` establishes the target feature.
+                let clmul = unsafe { gf_mul_clmul(x, y) };
+                assert_eq!(gf_mul_portable(x, y), clmul, "clmul x={x:032x} y={y:032x}");
+            }
         }
     }
 }
