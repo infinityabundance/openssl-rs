@@ -27,6 +27,14 @@ table (`forensics/performance/KERNELS.json`), the same table
   refused above `SOURCE_REVIEWED`;
 * a claim that cites a kernel across a different target, profile or artefact.
 
+An artefact subject that is not committed may declare how it is obtained.
+`release-asset` downloads into a cache outside the repository, re-hashes the
+bytes and validates them; `reproduce` verifies the recipe digest but does not
+run a build, recording `KV_SUBJECT_REPRODUCIBLE_NOT_RETRIEVED`; `unavailable`
+records `KV_SUBJECT_UNAVAILABLE_DECLARED` together with why the bytes are gone.
+The latter two are declared non-passes, never validations. A subject with no
+declared kind and no bytes remains the hard `KV_SUBJECT_NOT_RETRIEVABLE`.
+
 A kernel with no court or no audit is accepted as `NO_PROOF` when the claim
 asserts no assurance dimension. That is a recorded absence, not a pass.
 
@@ -64,8 +72,11 @@ import argparse
 import hashlib
 import json
 import math
+import os
 import re
 import sys
+import urllib.error
+import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable
@@ -174,6 +185,15 @@ KV_AUDIT_RECORD_LEGACY_SHAPE = "KV_AUDIT_RECORD_LEGACY_SHAPE"
 KV_AUDIT_RECORD_AGGREGATE_MISMATCH = "KV_AUDIT_RECORD_AGGREGATE_MISMATCH"
 KV_SECRET_DEPENDENCE_UNMEASURED = "KV_SECRET_DEPENDENCE_UNMEASURED"
 KV_SECRET_DEPENDENCE_UNKNOWN_STATE = "KV_SECRET_DEPENDENCE_UNKNOWN_STATE"
+KV_SUBJECT_UNAVAILABLE_DECLARED = "KV_SUBJECT_UNAVAILABLE_DECLARED"
+KV_SUBJECT_REPRODUCIBLE_NOT_RETRIEVED = "KV_SUBJECT_REPRODUCIBLE_NOT_RETRIEVED"
+
+# A declared non-pass is an outcome the register states honestly, not a pass: a
+# consumer must print and count it, never fold it into a green result.
+DECLARED_SUBJECT_CODES = frozenset(
+    {KV_SUBJECT_UNAVAILABLE_DECLARED, KV_SUBJECT_REPRODUCIBLE_NOT_RETRIEVED}
+)
+RETRIEVAL_KINDS = ("release-asset", "reproduce", "unavailable")
 
 CODES = (
     KV_JSON_MALFORMED,
@@ -212,6 +232,8 @@ CODES = (
     KV_AUDIT_RECORD_AGGREGATE_MISMATCH,
     KV_SECRET_DEPENDENCE_UNMEASURED,
     KV_SECRET_DEPENDENCE_UNKNOWN_STATE,
+    KV_SUBJECT_UNAVAILABLE_DECLARED,
+    KV_SUBJECT_REPRODUCIBLE_NOT_RETRIEVED,
 )
 
 RULES: dict[str, str] = {
@@ -302,6 +324,14 @@ RULES: dict[str, str] = {
     KV_SECRET_DEPENDENCE_UNKNOWN_STATE: (
         "a secret-dependence property is not one of the four recorded states"
     ),
+    KV_SUBJECT_UNAVAILABLE_DECLARED: (
+        "the artefact's bytes are declared unavailable; the audit stays inventory-only "
+        "and this is not a validation of the subject"
+    ),
+    KV_SUBJECT_REPRODUCIBLE_NOT_RETRIEVED: (
+        "the artefact is declared reproducible from a verified recipe but was not "
+        "retrieved; this is a declared non-pass, not a validation"
+    ),
 }
 
 NO_INHERITANCE_RULE = (
@@ -384,6 +414,36 @@ def _subject_path(root: Path, value: Any) -> Path | None:
         return None
     path = Path(value)
     return path if path.is_absolute() else root / path
+
+
+def _subject_cache_dir() -> Path:
+    """Where a retrieved subject is written: never inside the repository."""
+    override = os.environ.get("OPENSSL_RS_AUDIT_SUBJECT_CACHE")
+    if _text(override):
+        return Path(override)
+    temporary = os.environ.get("TMPDIR") or "/tmp"
+    return Path(temporary) / "openssl-rs-audit-subjects"
+
+
+def _retrieve_release_asset(url: str, expected: str) -> tuple[Path | None, str | None]:
+    """Fetch ``url`` into the cache; return the path whose bytes were hashed.
+
+    A cached file is re-hashed before it is accepted, never trusted because of
+    its name.  A failed fetch is returned as a detail string so the caller can
+    record a typed refusal instead of raising across a pure checker's surface.
+    """
+    cache = _subject_cache_dir()
+    cached = cache / expected
+    if cached.is_file() and _hash_file(cached) == expected:
+        return cached, None
+    try:
+        cache.mkdir(parents=True, exist_ok=True)
+        with urllib.request.urlopen(url, timeout=60) as response:
+            data = response.read()
+        cached.write_bytes(data)
+    except (urllib.error.URLError, OSError, ValueError) as exc:
+        return None, f"{url}: {exc}"
+    return cached, None
 
 
 def _add(problems: list[Problem], code: str, pointer: str, detail: str) -> None:
@@ -982,8 +1042,8 @@ def _check_assurance(
                     "the subject digest is not the cited evidence digest",
                 )
             # The audited binaries are deliberately not committed (PFP-86).  An
-            # artefact entry must therefore name how the subject is reproduced
-            # or retrieved, together with the digest that retrieval must yield.
+            # artefact entry must therefore name how the subject is retrieved or
+            # reproduced, together with the digest that retrieval must yield.
             retrieval = artefact_subject.get("retrieval")
             if not isinstance(retrieval, dict):
                 _add(
@@ -992,24 +1052,17 @@ def _check_assurance(
                     f"{where}/subject/artefact/retrieval",
                     "an uncommitted subject needs a retrieval or reproduction clause",
                 )
-            else:
-                mechanism = retrieval.get("mechanism")
-                expected = retrieval.get("expected_sha256")
+                continue
+            expected = retrieval.get("expected_sha256")
+            if not _sha(expected) or expected != declared:
+                _add(
+                    problems,
+                    KV_ASSURANCE_INCOMPLETE,
+                    f"{where}/subject/artefact/retrieval/expected_sha256",
+                    "the retrieval clause must name the subject's full digest",
+                )
+            if retrieval.get("evidence_path") is not None:
                 clause_path = _subject_path(root, retrieval.get("evidence_path"))
-                if not _text(mechanism):
-                    _add(
-                        problems,
-                        KV_ASSURANCE_INCOMPLETE,
-                        f"{where}/subject/artefact/retrieval/mechanism",
-                        "the retrieval or reproduction mechanism is missing",
-                    )
-                if not _sha(expected) or expected != declared:
-                    _add(
-                        problems,
-                        KV_ASSURANCE_INCOMPLETE,
-                        f"{where}/subject/artefact/retrieval/expected_sha256",
-                        "the retrieval clause must name the subject's full digest",
-                    )
                 if clause_path is None or not clause_path.is_file():
                     _add(
                         problems,
@@ -1017,27 +1070,155 @@ def _check_assurance(
                         f"{where}/subject/artefact/retrieval/evidence_path",
                         "the retrieval clause names no existing evidence file",
                     )
-            if not subject_path.is_file():
-                # Presence is not assumed.  A digest without the bytes is not a
-                # measurement, so a clean checkout records a refusal rather than
-                # passing the entry on its declared hash.
-                _add(
-                    problems,
-                    KV_SUBJECT_NOT_RETRIEVABLE,
-                    f"{where}/subject/artefact/path",
-                    f"{artefact_subject.get('path')!r} is absent and was not "
-                    "retrieved; the declared digest cannot be recomputed",
-                )
-            else:
-                actual = _hash_file(subject_path)
-                if actual != declared:
+            kind = retrieval.get("kind")
+            if kind is None:
+                # Legacy clause: validate the named path when present, otherwise
+                # refuse hard.  A missing kind is never a declared non-pass.
+                if not _text(retrieval.get("mechanism")):
+                    _add(
+                        problems,
+                        KV_ASSURANCE_INCOMPLETE,
+                        f"{where}/subject/artefact/retrieval/mechanism",
+                        "the retrieval or reproduction mechanism is missing",
+                    )
+                if not subject_path.is_file():
+                    # Presence is not assumed.  A digest without the bytes is not
+                    # a measurement, so a clean checkout records a refusal rather
+                    # than passing the entry on its declared hash.
+                    _add(
+                        problems,
+                        KV_SUBJECT_NOT_RETRIEVABLE,
+                        f"{where}/subject/artefact/path",
+                        f"{artefact_subject.get('path')!r} is absent and was not "
+                        "retrieved; the declared digest cannot be recomputed",
+                    )
+                else:
+                    actual = _hash_file(subject_path)
+                    if actual != declared:
+                        _add(
+                            problems,
+                            KV_ARTEFACT_SUBJECT_MISMATCH,
+                            f"{where}/subject/artefact/path",
+                            f"{artefact_subject.get('path')!r} hashes to {actual!r}, "
+                            f"not the declared {declared!r}",
+                        )
+            elif kind == "release-asset":
+                url = retrieval.get("url")
+                if not _text(url):
+                    _add(
+                        problems,
+                        KV_ASSURANCE_INCOMPLETE,
+                        f"{where}/subject/artefact/retrieval/url",
+                        "a release-asset retrieval must name the asset url",
+                    )
+                else:
+                    retrieved, error = _retrieve_release_asset(url, declared)
+                    if retrieved is None:
+                        _add(
+                            problems,
+                            KV_SUBJECT_NOT_RETRIEVABLE,
+                            f"{where}/subject/artefact/retrieval/url",
+                            f"the subject could not be downloaded: {error}",
+                        )
+                    else:
+                        actual = _hash_file(retrieved)
+                        if actual != declared:
+                            _add(
+                                problems,
+                                KV_ARTEFACT_SUBJECT_MISMATCH,
+                                f"{where}/subject/artefact/retrieval/url",
+                                f"the retrieved asset hashes to {actual!r}, not the "
+                                f"declared {declared!r}",
+                            )
+            elif kind == "reproduce":
+                recipe = retrieval.get("recipe")
+                recipe_sha = retrieval.get("recipe_sha256")
+                recipe_path = _subject_path(root, recipe)
+                if not _text(recipe):
+                    _add(
+                        problems,
+                        KV_ASSURANCE_INCOMPLETE,
+                        f"{where}/subject/artefact/retrieval/recipe",
+                        "a reproduce retrieval must name the recipe",
+                    )
+                elif recipe_path is None or not recipe_path.is_file():
+                    _add(
+                        problems,
+                        KV_SUBJECT_NOT_RETRIEVABLE,
+                        f"{where}/subject/artefact/retrieval/recipe",
+                        f"{recipe!r} does not name an existing recipe",
+                    )
+                elif not _sha(recipe_sha):
+                    _add(
+                        problems,
+                        KV_ASSURANCE_INCOMPLETE,
+                        f"{where}/subject/artefact/retrieval/recipe_sha256",
+                        "the recipe must carry its full SHA-256",
+                    )
+                elif _hash_file(recipe_path) != recipe_sha:
                     _add(
                         problems,
                         KV_ARTEFACT_SUBJECT_MISMATCH,
-                        f"{where}/subject/artefact/path",
-                        f"{artefact_subject.get('path')!r} hashes to {actual!r}, not the "
-                        f"declared {declared!r}",
+                        f"{where}/subject/artefact/retrieval/recipe_sha256",
+                        f"{recipe!r} does not hash to the declared recipe digest",
                     )
+                else:
+                    # The recipe is verified, but this checker does not execute a
+                    # build: the subject remains unretrieved and the class is
+                    # never counted as validated.
+                    _add(
+                        problems,
+                        KV_SUBJECT_REPRODUCIBLE_NOT_RETRIEVED,
+                        f"{where}/subject/artefact/retrieval/kind",
+                        "ARTEFACT_AUDITED (subject reproducible, not retrieved): "
+                        f"recipe {recipe!r} verified; the subject itself was not "
+                        "retrieved, so this entry is a declared non-pass",
+                    )
+            elif kind == "unavailable":
+                why = retrieval.get("why")
+                recipe = retrieval.get("recipe")
+                recipe_path = _subject_path(root, recipe)
+                well_formed = True
+                if not _text(why):
+                    well_formed = False
+                    _add(
+                        problems,
+                        KV_ASSURANCE_INCOMPLETE,
+                        f"{where}/subject/artefact/retrieval/why",
+                        "an unavailable declaration must state why the bytes are gone",
+                    )
+                if not _text(recipe):
+                    well_formed = False
+                    _add(
+                        problems,
+                        KV_ASSURANCE_INCOMPLETE,
+                        f"{where}/subject/artefact/retrieval/recipe",
+                        "an unavailable declaration must name the reproduction recipe",
+                    )
+                elif recipe_path is None or not recipe_path.is_file():
+                    well_formed = False
+                    _add(
+                        problems,
+                        KV_ASSURANCE_INCOMPLETE,
+                        f"{where}/subject/artefact/retrieval/recipe",
+                        f"{recipe!r} does not name an existing recipe",
+                    )
+                if well_formed:
+                    _add(
+                        problems,
+                        KV_SUBJECT_UNAVAILABLE_DECLARED,
+                        f"{where}/subject/artefact/retrieval/kind",
+                        "the subject bytes are declared unavailable; the audit is "
+                        "inventory-only and this is not a validation",
+                    )
+            else:
+                _add(
+                    problems,
+                    KV_ASSURANCE_INCOMPLETE,
+                    f"{where}/subject/artefact/retrieval/kind",
+                    f"{kind!r} is not one of the declared retrieval kinds "
+                    f"{RETRIEVAL_KINDS}",
+                )
         if assurance_class == "ARTEFACT_AUDITED":
             audit = evidence.get("audit")
             if not isinstance(audit, dict):
@@ -1577,6 +1758,51 @@ def check_root(root: Path = REPO_ROOT) -> list[Problem]:
     return check_document(document, doc_text=doc_text, root=root)
 
 
+def artefact_subject_summary(root: Path = REPO_ROOT) -> dict[str, int]:
+    """Count how every ``ARTEFACT_AUDITED`` entry's subject resolved.
+
+    A declared non-pass owns a column of its own and is never added to
+    ``VALIDATED``.  An entry carrying any other defect is counted in none of
+    them: its refusal is already a hard failure elsewhere.
+    """
+    counts = {
+        "VALIDATED": 0,
+        "REPRODUCIBLE_NOT_RETRIEVED": 0,
+        "UNAVAILABLE_DECLARED": 0,
+    }
+    register = root / "forensics" / "performance" / "KERNELS.json"
+    try:
+        document = load_document(register)
+    except Refusal:
+        return counts
+    problems = check_document(document, root=root)
+    kernels = document.get("kernels")
+    if not isinstance(kernels, list):
+        return counts
+    for kernel_index, kernel in enumerate(kernels):
+        if not isinstance(kernel, dict):
+            continue
+        entries = kernel.get("assurance")
+        if not isinstance(entries, list):
+            continue
+        for entry_index, entry in enumerate(entries):
+            if not isinstance(entry, dict) or entry.get("class") != "ARTEFACT_AUDITED":
+                continue
+            where = f"/kernels/{kernel_index}/assurance/{entry_index}"
+            here = [
+                problem
+                for problem in problems
+                if problem.pointer == where or problem.pointer.startswith(where + "/")
+            ]
+            if any(p.code == KV_SUBJECT_UNAVAILABLE_DECLARED for p in here):
+                counts["UNAVAILABLE_DECLARED"] += 1
+            elif any(p.code == KV_SUBJECT_REPRODUCIBLE_NOT_RETRIEVED for p in here):
+                counts["REPRODUCIBLE_NOT_RETRIEVED"] += 1
+            elif not here:
+                counts["VALIDATED"] += 1
+    return counts
+
+
 # ---------------------------------------------------------------------------
 # Self-test controls
 # ---------------------------------------------------------------------------
@@ -2030,6 +2256,32 @@ def _controls() -> list[tuple[str, dict, str | None]]:
                 )
             ),
             KV_SUBJECT_NOT_RETRIEVABLE,
+        ),
+        (
+            KV_SUBJECT_REPRODUCIBLE_NOT_RETRIEVED,
+            _mutate(
+                lambda d: d["kernels"][0]["assurance"][0]["subject"]["artefact"][
+                    "retrieval"
+                ].update(
+                    kind="reproduce",
+                    recipe="forensics/tools/kernel_verification.py",
+                    recipe_sha256=_A,
+                )
+            ),
+            KV_SUBJECT_REPRODUCIBLE_NOT_RETRIEVED,
+        ),
+        (
+            KV_SUBJECT_UNAVAILABLE_DECLARED,
+            _mutate(
+                lambda d: d["kernels"][0]["assurance"][0]["subject"]["artefact"][
+                    "retrieval"
+                ].update(
+                    kind="unavailable",
+                    why="the bytes were never committed and were subsequently deleted",
+                    recipe="forensics/tools/kernel_verification.py",
+                )
+            ),
+            KV_SUBJECT_UNAVAILABLE_DECLARED,
         ),
         (
             KV_AUDIT_RECORD_UNREADABLE,

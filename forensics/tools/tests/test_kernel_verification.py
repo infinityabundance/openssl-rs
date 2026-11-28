@@ -17,9 +17,11 @@ from __future__ import annotations
 
 import copy
 import contextlib
+import hashlib
 import importlib.util
 import io
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -46,14 +48,18 @@ def codes(document: dict, doc_text: str | None = None) -> list[str]:
 
 class CommittedRegister(unittest.TestCase):
     # On a clean checkout the audited DSOs are absent by design.  The register
-    # must fail closed with SUBJECT_NOT_RETRIEVABLE, never pass on a declared
-    # digest alone (PFP-86).
-    RETRIEVAL_ONLY = {kv.KV_SUBJECT_NOT_RETRIEVABLE}
+    # must fail closed, never pass on a declared digest alone (PFP-86).  A
+    # declared unavailable subject is a non-pass too, but a typed one.
+    RETRIEVAL_ONLY = {
+        kv.KV_SUBJECT_NOT_RETRIEVABLE,
+        kv.KV_SUBJECT_UNAVAILABLE_DECLARED,
+        kv.KV_SUBJECT_REPRODUCIBLE_NOT_RETRIEVED,
+    }
 
     def test_the_committed_register_is_accepted_or_refused_as_unretrievable(self) -> None:
         codes_found = {problem.code for problem in kv.check_document(load())}
         self.assertTrue(
-            codes_found == set() or codes_found == self.RETRIEVAL_ONLY,
+            codes_found == set() or codes_found <= self.RETRIEVAL_ONLY,
             sorted(codes_found),
         )
 
@@ -67,7 +73,11 @@ class CommittedRegister(unittest.TestCase):
         if result.returncode == 0:
             self.assertIn("1 register(s) accepted, 0 refused", result.stdout)
         else:
-            self.assertIn(kv.KV_SUBJECT_NOT_RETRIEVABLE, result.stdout)
+            self.assertTrue(
+                kv.KV_SUBJECT_NOT_RETRIEVABLE in result.stdout
+                or kv.KV_SUBJECT_UNAVAILABLE_DECLARED in result.stdout,
+                result.stdout,
+            )
             self.assertNotIn("KV_AUDIT_RECORD_LEGACY_SHAPE", result.stdout)
 
     def test_every_kernel_names_the_hardware_absent_arms(self) -> None:
@@ -105,10 +115,14 @@ class CommittedRegister(unittest.TestCase):
         claims = {claim["id"]: claim for claim in document["claims"]}
         preset = claims["PFP-8-PRESET-e3ef3d84-DIFFERENTIAL-ONLY"]
         self.assertEqual(preset["assurance"], [])
-        # Only the unretrievable-subject refusal is allowed on a clean checkout.
+        # Only a subject-availability refusal is allowed on a clean checkout.
         self.assertLessEqual(
             {problem.code for problem in kv.check_document(document)},
-            {kv.KV_SUBJECT_NOT_RETRIEVABLE},
+            {
+                kv.KV_SUBJECT_NOT_RETRIEVABLE,
+                kv.KV_SUBJECT_UNAVAILABLE_DECLARED,
+                kv.KV_SUBJECT_REPRODUCIBLE_NOT_RETRIEVED,
+            },
         )
         mutated = copy.deepcopy(document)
         for claim in mutated["claims"]:
@@ -445,6 +459,126 @@ class AssuranceDefects(unittest.TestCase):
         self.assertIn(kv.KV_ASSURANCE_INCOMPLETE, codes(document))
 
 
+class RetrievalMechanisms(unittest.TestCase):
+    """PFP-90: retrieval kinds are typed, and only retrieval validates bytes."""
+
+    def setUp(self) -> None:
+        self.cache = tempfile.TemporaryDirectory()
+        self.addCleanup(self.cache.cleanup)
+        self.source_dir = tempfile.TemporaryDirectory()
+        self.addCleanup(self.source_dir.cleanup)
+        self._old_cache = os.environ.get("OPENSSL_RS_AUDIT_SUBJECT_CACHE")
+        os.environ["OPENSSL_RS_AUDIT_SUBJECT_CACHE"] = self.cache.name
+        self.addCleanup(self._restore_cache)
+
+    def _restore_cache(self) -> None:
+        if self._old_cache is None:
+            os.environ.pop("OPENSSL_RS_AUDIT_SUBJECT_CACHE", None)
+        else:
+            os.environ["OPENSSL_RS_AUDIT_SUBJECT_CACHE"] = self._old_cache
+
+    def fixture(self) -> dict:
+        return copy.deepcopy(kv._valid_document())
+
+    def retrieval(self, document: dict) -> dict:
+        return document["kernels"][0]["assurance"][0]["subject"]["artefact"][
+            "retrieval"
+        ]
+
+    def artifact(self, document: dict) -> dict:
+        return document["kernels"][0]["assurance"][0]["subject"]["artefact"]
+
+    def test_a_release_asset_is_fetched_and_hashed(self) -> None:
+        data = b"the audited subject bytes"
+        digest = hashlib.sha256(data).hexdigest()
+        source = Path(self.source_dir.name) / "asset.bin"
+        source.write_bytes(data)
+        document = self.fixture()
+        self.artifact(document)["sha256"] = digest
+        self.retrieval(document).update(
+            kind="release-asset", url=source.as_uri(), expected_sha256=digest
+        )
+        found = codes(document)
+        self.assertNotIn(kv.KV_SUBJECT_NOT_RETRIEVABLE, found)
+        self.assertNotIn(kv.KV_ARTEFACT_SUBJECT_MISMATCH, found)
+
+    def test_a_release_asset_with_the_wrong_digest_is_refused(self) -> None:
+        data = b"not the audited bytes"
+        source = Path(self.source_dir.name) / "asset.bin"
+        source.write_bytes(data)
+        document = self.fixture()
+        declared = "b" * 64
+        self.artifact(document)["sha256"] = declared
+        self.retrieval(document).update(
+            kind="release-asset", url=source.as_uri(), expected_sha256=declared
+        )
+        found = codes(document)
+        self.assertIn(kv.KV_ARTEFACT_SUBJECT_MISMATCH, found)
+        self.assertNotIn(kv.KV_SUBJECT_NOT_RETRIEVABLE, found)
+
+    def test_a_failed_release_asset_download_is_refused(self) -> None:
+        document = self.fixture()
+        missing = Path(self.source_dir.name) / "missing.bin"
+        self.retrieval(document).update(
+            kind="release-asset",
+            url=missing.as_uri(),
+            expected_sha256=self.artifact(document)["sha256"],
+        )
+        self.assertIn(kv.KV_SUBJECT_NOT_RETRIEVABLE, codes(document))
+
+    def test_an_unavailable_declaration_without_why_is_refused(self) -> None:
+        document = self.fixture()
+        self.retrieval(document).update(
+            kind="unavailable", recipe="forensics/tools/kernel_verification.py"
+        )
+        self.retrieval(document).pop("why", None)
+        found = codes(document)
+        self.assertIn(kv.KV_ASSURANCE_INCOMPLETE, found)
+        self.assertNotIn(kv.KV_SUBJECT_UNAVAILABLE_DECLARED, found)
+
+    def test_an_unavailable_declaration_is_a_declared_non_pass(self) -> None:
+        document = self.fixture()
+        self.retrieval(document).update(
+            kind="unavailable",
+            why="the bytes were deleted",
+            recipe="forensics/tools/kernel_verification.py",
+        )
+        found = codes(document)
+        self.assertIn(kv.KV_SUBJECT_UNAVAILABLE_DECLARED, found)
+        self.assertIn(kv.KV_SUBJECT_UNAVAILABLE_DECLARED, kv.DECLARED_SUBJECT_CODES)
+
+    def test_no_kind_still_emits_the_hard_refusal(self) -> None:
+        document = self.fixture()
+        self.artifact(document)["path"] = "docs/not-retrieved.so"
+        self.assertNotIn("kind", self.retrieval(document))
+        found = codes(document)
+        self.assertIn(kv.KV_SUBJECT_NOT_RETRIEVABLE, found)
+        self.assertNotIn(kv.KV_SUBJECT_UNAVAILABLE_DECLARED, found)
+
+    def test_a_reproduce_recipe_is_verified_but_never_executed(self) -> None:
+        recipe = Path(kv.__file__)
+        document = self.fixture()
+        self.retrieval(document).update(
+            kind="reproduce",
+            recipe=str(recipe),
+            recipe_sha256=hashlib.sha256(recipe.read_bytes()).hexdigest(),
+        )
+        found = codes(document)
+        self.assertIn(kv.KV_SUBJECT_REPRODUCIBLE_NOT_RETRIEVED, found)
+        self.assertNotIn(kv.KV_ARTEFACT_SUBJECT_MISMATCH, found)
+
+    def test_a_reproduce_recipe_with_the_wrong_digest_is_refused(self) -> None:
+        document = self.fixture()
+        self.retrieval(document).update(
+            kind="reproduce",
+            recipe="forensics/tools/kernel_verification.py",
+            recipe_sha256="b" * 64,
+        )
+        found = codes(document)
+        self.assertIn(kv.KV_ARTEFACT_SUBJECT_MISMATCH, found)
+        self.assertNotIn(kv.KV_SUBJECT_REPRODUCIBLE_NOT_RETRIEVED, found)
+
+
 class GateWiring(unittest.TestCase):
     """PFP-49 defect 7: the checker must run where the gate runs."""
 
@@ -501,6 +635,53 @@ class GateWiring(unittest.TestCase):
             module.kernel_verification.check_root = original
         self.assertEqual(code, 1)
         self.assertIn(kv.KV_PROOF_UNBOUND, buffer.getvalue())
+
+    def test_the_summary_counts_the_committed_unavailable_declaration(self) -> None:
+        summary = kv.artefact_subject_summary(REPO_ROOT)
+        self.assertEqual(summary["VALIDATED"], 0)
+        self.assertEqual(summary["REPRODUCIBLE_NOT_RETRIEVED"], 0)
+        self.assertEqual(summary["UNAVAILABLE_DECLARED"], 5)
+
+    def test_docs_consistency_refuses_a_summary_that_omits_a_declared_non_pass(
+        self,
+    ) -> None:
+        spec = importlib.util.spec_from_file_location(
+            "docs_consistency_summary_under_test", TOOLS / "docs_consistency.py"
+        )
+        module = importlib.util.module_from_spec(spec)
+        assert spec.loader is not None
+        sys.modules[spec.name] = module
+        spec.loader.exec_module(module)
+        original = module.kernel_verification.artefact_subject_summary
+        module.kernel_verification.artefact_subject_summary = lambda _root: {
+            "VALIDATED": 0,
+            "REPRODUCIBLE_NOT_RETRIEVED": 0,
+            "UNAVAILABLE_DECLARED": 0,
+        }
+        try:
+            buffer = io.StringIO()
+            with contextlib.redirect_stdout(buffer):
+                code = module.main([])
+        finally:
+            module.kernel_verification.artefact_subject_summary = original
+        self.assertEqual(code, 1)
+        self.assertIn("declared non-pass must be reported", buffer.getvalue())
+
+    def test_docs_consistency_prints_the_declared_summary(self) -> None:
+        spec = importlib.util.spec_from_file_location(
+            "docs_consistency_summary_printed_under_test", TOOLS / "docs_consistency.py"
+        )
+        module = importlib.util.module_from_spec(spec)
+        assert spec.loader is not None
+        sys.modules[spec.name] = module
+        spec.loader.exec_module(module)
+        buffer = io.StringIO()
+        with contextlib.redirect_stdout(buffer):
+            module.main([])
+        text = buffer.getvalue()
+        self.assertIn("[docs-consistency] artefact-audited subjects:", text)
+        self.assertIn("5 UNAVAILABLE_DECLARED", text)
+        self.assertIn("DECLARED:", text)
 
 
 class Determinism(unittest.TestCase):

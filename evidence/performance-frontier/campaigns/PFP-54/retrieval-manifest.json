@@ -1,0 +1,17 @@
+{
+  "schema": "openssl-rs/pfp/retrieval-manifest/1",
+  "campaign": "PFP-54",
+  "subject_availability": "UNAVAILABLE_DECLARED",
+  "subject_sha256": "a535454753d8857e4c385689ea431b5a47a9686322e6f52b203971188a49359f",
+  "debug_sha256": "cd64dd590a597116f8475f6db0c81cc94602d74d540d4b45b4b1bae1a0b7ed9b",
+  "build_input_sha256": "1c64ad2475da052007c6657356157cfca92f55495a5448161ccd667fbedc13f8",
+  "build_input_path": "evidence/performance-frontier/campaigns/PFP-54/raw/build-inputs.txt",
+  "build_input_source_commit": "f536fd63913073bab76f839d41e89617da4fa74c",
+  "build_input_note": "build_input_sha256 is the SHA-256 of raw/build-inputs.txt, which records source_commit f536fd63913073bab76f839d41e89617da4fa74c (tree 4fef3b02666120f261bc00c43e2e6e04c50cd013) and the toolchain and flags of the one release compilation.",
+  "audit_report_sha256": "bd0a2c1198764c5a58d0e9236376dd34ee59a43748d6190c493d04c9b0d7f6b8",
+  "audit_report_path": "evidence/performance-frontier/campaigns/PFP-54/raw/audit-a5354547.md",
+  "reproduction_recipe_sha256": "c12c51a2a4a6a7335144ea296870ff0357a88d89780323adb4da3c548eacf61b",
+  "reproduction_recipe_path": "evidence/performance-frontier/campaigns/PFP-54/build.sh",
+  "why": "The 39 MB of PFP-54 build outputs (libcrypto.so.3, libcrypto.so.3.debug and the rest of raw/artefacts) were deliberately not committed; that directory was subsequently deleted and is not present in any venue. The audit report and audit record remain committed at their recorded digests, so the instruction inventory is checkable, but the shipped DSO and detached DWARF bytes cannot be re-hashed. The subject is therefore declared unavailable, not validated: the five ARTEFACT_AUDITED entries are inventory-only and carry no secret-dependence claim.",
+  "consequence": "A consumer must treat PFP-54 as an instruction inventory at the shipped digest. It may rebuild with build.sh at f536fd63913073bab76f839d41e89617da4fa74c and compare the digests, but this manifest does not assert that anyone did so."
+}

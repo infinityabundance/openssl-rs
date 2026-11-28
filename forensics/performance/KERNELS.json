@@ -486,7 +486,7 @@
     },
     {
      "class": "ARTEFACT_AUDITED",
-     "scope": "PFP-54 f536fd639130 / DSO a535454753d88: the branch audit resolves 31/31 targets and covers mont_mul_sos_into, mont_mul_fallible (mont_mul_sos_into 18 jcc / 0 cmov / 10 setcc; mont_mul_fallible 31 jcc / 0 cmov / 10 setcc). Mechanised secret dependence covers 1 of 31 targets (key::decap); the carriers listed here are NOT_ASSESSED for jcc, setcc, cmov and memory address, so this entry does not record a zero for them. A binary branch audit is not a constant-time proof; the historical ['SOURCE_REVIEWED', 'SOURCE_REVIEWED'] entries remain as the evidence they record.",
+     "scope": "instruction inventory at the shipped digest; secret-dependence NOT_ASSESSED: PFP-54 f536fd639130 / DSO a535454753d88: the branch audit resolves 31/31 targets and covers mont_mul_sos_into, mont_mul_fallible (mont_mul_sos_into 18 jcc / 0 cmov / 10 setcc; mont_mul_fallible 31 jcc / 0 cmov / 10 setcc). Mechanised secret dependence covers 1 of 31 targets (key::decap); the carriers listed here are NOT_ASSESSED for jcc, setcc, cmov and memory address, so this entry does not record a zero for them. A binary branch audit is not a constant-time proof; the historical ['SOURCE_REVIEWED', 'SOURCE_REVIEWED'] entries remain as the evidence they record.",
      "evidence": 2,
      "subject": {
       "source": "staging f536fd63913073bab76f839d41e89617da4fa74c, tree 4fef3b02666120f261bc00c43e2e6e04c50cd013; one release compilation; detached DWARF companion sha256 cd64dd590a597116f8475f6db0c81cc94602d74d540d4b45b4b1bae1a0b7ed9b",
@@ -496,7 +496,10 @@
        "retrieval": {
         "mechanism": "rebuild from source f536fd63 with evidence/performance-frontier/campaigns/PFP-54/build.sh (CARGO_PROFILE_RELEASE_DEBUG=1) and confirm the four digests in ARTEFACTS-NOT-COMMITTED.md",
         "expected_sha256": "a535454753d8857e4c385689ea431b5a47a9686322e6f52b203971188a49359f",
-        "evidence_path": "evidence/performance-frontier/campaigns/PFP-54/ARTEFACTS-NOT-COMMITTED.md"
+        "evidence_path": "evidence/performance-frontier/campaigns/PFP-54/ARTEFACTS-NOT-COMMITTED.md",
+        "kind": "unavailable",
+        "why": "the 39 MB of PFP-54 build outputs (libcrypto.so.3, libcrypto.so.3.debug and the rest of raw/artefacts) were deliberately not committed; that directory was subsequently deleted and is not present in any venue. The audit report raw/audit-a5354547.md and the record raw/audit-record.json remain committed at their recorded digests, so the instruction inventory is checkable, but the shipped DSO digest cannot be recomputed from bytes that no longer exist.",
+        "recipe": "evidence/performance-frontier/campaigns/PFP-54/build.sh"
        }
       }
      },
@@ -709,7 +712,7 @@
     },
     {
      "class": "ARTEFACT_AUDITED",
-     "scope": "PFP-54 f536fd639130 / DSO a535454753d88: the branch audit resolves 31/31 targets and covers run_mont_ladder, mod_exp_core_consttime_from_parts, mod_inverse_consttime (run_mont_ladder 97 jcc / 3 cmov / 18 setcc; mod_exp_core_consttime_from_parts 27 jcc / 2 cmov / 0 setcc; mod_inverse_consttime 217 jcc / 3 cmov / 24 setcc). Mechanised secret dependence covers 1 of 31 targets (key::decap); the carriers listed here are NOT_ASSESSED for jcc, setcc, cmov and memory address, so this entry does not record a zero for them. A binary branch audit is not a constant-time proof; the historical ['SOURCE_REVIEWED', 'SOURCE_REVIEWED'] entries remain as the evidence they record.",
+     "scope": "instruction inventory at the shipped digest; secret-dependence NOT_ASSESSED: PFP-54 f536fd639130 / DSO a535454753d88: the branch audit resolves 31/31 targets and covers run_mont_ladder, mod_exp_core_consttime_from_parts, mod_inverse_consttime (run_mont_ladder 97 jcc / 3 cmov / 18 setcc; mod_exp_core_consttime_from_parts 27 jcc / 2 cmov / 0 setcc; mod_inverse_consttime 217 jcc / 3 cmov / 24 setcc). Mechanised secret dependence covers 1 of 31 targets (key::decap); the carriers listed here are NOT_ASSESSED for jcc, setcc, cmov and memory address, so this entry does not record a zero for them. A binary branch audit is not a constant-time proof; the historical ['SOURCE_REVIEWED', 'SOURCE_REVIEWED'] entries remain as the evidence they record.",
      "evidence": 2,
      "subject": {
       "source": "staging f536fd63913073bab76f839d41e89617da4fa74c, tree 4fef3b02666120f261bc00c43e2e6e04c50cd013; one release compilation; detached DWARF companion sha256 cd64dd590a597116f8475f6db0c81cc94602d74d540d4b45b4b1bae1a0b7ed9b",
@@ -719,7 +722,10 @@
        "retrieval": {
         "mechanism": "rebuild from source f536fd63 with evidence/performance-frontier/campaigns/PFP-54/build.sh (CARGO_PROFILE_RELEASE_DEBUG=1) and confirm the four digests in ARTEFACTS-NOT-COMMITTED.md",
         "expected_sha256": "a535454753d8857e4c385689ea431b5a47a9686322e6f52b203971188a49359f",
-        "evidence_path": "evidence/performance-frontier/campaigns/PFP-54/ARTEFACTS-NOT-COMMITTED.md"
+        "evidence_path": "evidence/performance-frontier/campaigns/PFP-54/ARTEFACTS-NOT-COMMITTED.md",
+        "kind": "unavailable",
+        "why": "the 39 MB of PFP-54 build outputs (libcrypto.so.3, libcrypto.so.3.debug and the rest of raw/artefacts) were deliberately not committed; that directory was subsequently deleted and is not present in any venue. The audit report raw/audit-a5354547.md and the record raw/audit-record.json remain committed at their recorded digests, so the instruction inventory is checkable, but the shipped DSO digest cannot be recomputed from bytes that no longer exist.",
+        "recipe": "evidence/performance-frontier/campaigns/PFP-54/build.sh"
        }
       }
      },
@@ -838,7 +844,7 @@
     },
     {
      "class": "ARTEFACT_AUDITED",
-     "scope": "PFP-54 f536fd639130 / DSO a535454753d88: the branch audit resolves 31/31 targets and covers p256::mont_reduce_into, p256::wide_mul_x86 (p256::mont_reduce_into 2 jcc / 0 cmov / 2 setcc; p256::wide_mul_x86 0 jcc / 0 cmov / 9 setcc). Mechanised secret dependence covers 1 of 31 targets (key::decap); the carriers listed here are NOT_ASSESSED for jcc, setcc, cmov and memory address, so this entry does not record a zero for them. A binary branch audit is not a constant-time proof; the historical ['SOURCE_REVIEWED'] entries remain as the evidence they record.",
+     "scope": "instruction inventory at the shipped digest; secret-dependence NOT_ASSESSED: PFP-54 f536fd639130 / DSO a535454753d88: the branch audit resolves 31/31 targets and covers p256::mont_reduce_into, p256::wide_mul_x86 (p256::mont_reduce_into 2 jcc / 0 cmov / 2 setcc; p256::wide_mul_x86 0 jcc / 0 cmov / 9 setcc). Mechanised secret dependence covers 1 of 31 targets (key::decap); the carriers listed here are NOT_ASSESSED for jcc, setcc, cmov and memory address, so this entry does not record a zero for them. A binary branch audit is not a constant-time proof; the historical ['SOURCE_REVIEWED'] entries remain as the evidence they record.",
      "evidence": 1,
      "subject": {
       "source": "staging f536fd63913073bab76f839d41e89617da4fa74c, tree 4fef3b02666120f261bc00c43e2e6e04c50cd013; one release compilation; detached DWARF companion sha256 cd64dd590a597116f8475f6db0c81cc94602d74d540d4b45b4b1bae1a0b7ed9b",
@@ -848,7 +854,10 @@
        "retrieval": {
         "mechanism": "rebuild from source f536fd63 with evidence/performance-frontier/campaigns/PFP-54/build.sh (CARGO_PROFILE_RELEASE_DEBUG=1) and confirm the four digests in ARTEFACTS-NOT-COMMITTED.md",
         "expected_sha256": "a535454753d8857e4c385689ea431b5a47a9686322e6f52b203971188a49359f",
-        "evidence_path": "evidence/performance-frontier/campaigns/PFP-54/ARTEFACTS-NOT-COMMITTED.md"
+        "evidence_path": "evidence/performance-frontier/campaigns/PFP-54/ARTEFACTS-NOT-COMMITTED.md",
+        "kind": "unavailable",
+        "why": "the 39 MB of PFP-54 build outputs (libcrypto.so.3, libcrypto.so.3.debug and the rest of raw/artefacts) were deliberately not committed; that directory was subsequently deleted and is not present in any venue. The audit report raw/audit-a5354547.md and the record raw/audit-record.json remain committed at their recorded digests, so the instruction inventory is checkable, but the shipped DSO digest cannot be recomputed from bytes that no longer exist.",
+        "recipe": "evidence/performance-frontier/campaigns/PFP-54/build.sh"
        }
       }
      },
@@ -1085,7 +1094,7 @@
     },
     {
      "class": "ARTEFACT_AUDITED",
-     "scope": "PFP-54 f536fd639130 / DSO a535454753d88: the branch audit resolves 31/31 targets and covers mod_inverse_consttime (mod_inverse_consttime 217 jcc / 3 cmov / 24 setcc). Mechanised secret dependence covers 1 of 31 targets (key::decap); the carriers listed here are NOT_ASSESSED for jcc, setcc, cmov and memory address, so this entry does not record a zero for them. A binary branch audit is not a constant-time proof; the historical ['SOURCE_REVIEWED'] entries remain as the evidence they record.",
+     "scope": "instruction inventory at the shipped digest; secret-dependence NOT_ASSESSED: PFP-54 f536fd639130 / DSO a535454753d88: the branch audit resolves 31/31 targets and covers mod_inverse_consttime (mod_inverse_consttime 217 jcc / 3 cmov / 24 setcc). Mechanised secret dependence covers 1 of 31 targets (key::decap); the carriers listed here are NOT_ASSESSED for jcc, setcc, cmov and memory address, so this entry does not record a zero for them. A binary branch audit is not a constant-time proof; the historical ['SOURCE_REVIEWED'] entries remain as the evidence they record.",
      "evidence": 1,
      "subject": {
       "source": "staging f536fd63913073bab76f839d41e89617da4fa74c, tree 4fef3b02666120f261bc00c43e2e6e04c50cd013; one release compilation; detached DWARF companion sha256 cd64dd590a597116f8475f6db0c81cc94602d74d540d4b45b4b1bae1a0b7ed9b",
@@ -1095,7 +1104,10 @@
        "retrieval": {
         "mechanism": "rebuild from source f536fd63 with evidence/performance-frontier/campaigns/PFP-54/build.sh (CARGO_PROFILE_RELEASE_DEBUG=1) and confirm the four digests in ARTEFACTS-NOT-COMMITTED.md",
         "expected_sha256": "a535454753d8857e4c385689ea431b5a47a9686322e6f52b203971188a49359f",
-        "evidence_path": "evidence/performance-frontier/campaigns/PFP-54/ARTEFACTS-NOT-COMMITTED.md"
+        "evidence_path": "evidence/performance-frontier/campaigns/PFP-54/ARTEFACTS-NOT-COMMITTED.md",
+        "kind": "unavailable",
+        "why": "the 39 MB of PFP-54 build outputs (libcrypto.so.3, libcrypto.so.3.debug and the rest of raw/artefacts) were deliberately not committed; that directory was subsequently deleted and is not present in any venue. The audit report raw/audit-a5354547.md and the record raw/audit-record.json remain committed at their recorded digests, so the instruction inventory is checkable, but the shipped DSO digest cannot be recomputed from bytes that no longer exist.",
+        "recipe": "evidence/performance-frontier/campaigns/PFP-54/build.sh"
        }
       }
      },
@@ -1250,7 +1262,7 @@
     },
     {
      "class": "ARTEFACT_AUDITED",
-     "scope": "PFP-54 f536fd639130 / DSO a535454753d88: the branch audit resolves 31/31 targets and covers ossl_dh_compute_key, run_mont_ladder, mont_mul_sos_into, mont_mul_fallible (ossl_dh_compute_key 37 jcc / 1 cmov / 0 setcc; run_mont_ladder 97 jcc / 3 cmov / 18 setcc; mont_mul_sos_into 18 jcc / 0 cmov / 10 setcc; mont_mul_fallible 31 jcc / 0 cmov / 10 setcc). Mechanised secret dependence covers 1 of 31 targets (key::decap); the carriers listed here are NOT_ASSESSED for jcc, setcc, cmov and memory address, so this entry does not record a zero for them. A binary branch audit is not a constant-time proof; the historical ['SOURCE_TAINT_TESTED', 'SOURCE_REVIEWED'] entries remain as the evidence they record.",
+     "scope": "instruction inventory at the shipped digest; secret-dependence NOT_ASSESSED: PFP-54 f536fd639130 / DSO a535454753d88: the branch audit resolves 31/31 targets and covers ossl_dh_compute_key, run_mont_ladder, mont_mul_sos_into, mont_mul_fallible (ossl_dh_compute_key 37 jcc / 1 cmov / 0 setcc; run_mont_ladder 97 jcc / 3 cmov / 18 setcc; mont_mul_sos_into 18 jcc / 0 cmov / 10 setcc; mont_mul_fallible 31 jcc / 0 cmov / 10 setcc). Mechanised secret dependence covers 1 of 31 targets (key::decap); the carriers listed here are NOT_ASSESSED for jcc, setcc, cmov and memory address, so this entry does not record a zero for them. A binary branch audit is not a constant-time proof; the historical ['SOURCE_TAINT_TESTED', 'SOURCE_REVIEWED'] entries remain as the evidence they record.",
      "evidence": 2,
      "subject": {
       "source": "staging f536fd63913073bab76f839d41e89617da4fa74c, tree 4fef3b02666120f261bc00c43e2e6e04c50cd013; one release compilation; detached DWARF companion sha256 cd64dd590a597116f8475f6db0c81cc94602d74d540d4b45b4b1bae1a0b7ed9b",
@@ -1260,7 +1272,10 @@
        "retrieval": {
         "mechanism": "rebuild from source f536fd63 with evidence/performance-frontier/campaigns/PFP-54/build.sh (CARGO_PROFILE_RELEASE_DEBUG=1) and confirm the four digests in ARTEFACTS-NOT-COMMITTED.md",
         "expected_sha256": "a535454753d8857e4c385689ea431b5a47a9686322e6f52b203971188a49359f",
-        "evidence_path": "evidence/performance-frontier/campaigns/PFP-54/ARTEFACTS-NOT-COMMITTED.md"
+        "evidence_path": "evidence/performance-frontier/campaigns/PFP-54/ARTEFACTS-NOT-COMMITTED.md",
+        "kind": "unavailable",
+        "why": "the 39 MB of PFP-54 build outputs (libcrypto.so.3, libcrypto.so.3.debug and the rest of raw/artefacts) were deliberately not committed; that directory was subsequently deleted and is not present in any venue. The audit report raw/audit-a5354547.md and the record raw/audit-record.json remain committed at their recorded digests, so the instruction inventory is checkable, but the shipped DSO digest cannot be recomputed from bytes that no longer exist.",
+        "recipe": "evidence/performance-frontier/campaigns/PFP-54/build.sh"
        }
       }
      },

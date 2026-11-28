@@ -572,11 +572,54 @@ def main(argv: list[str]) -> int:
               "and with the README lifecycle; a contradiction is a refusal, not "
               "a stale document.")
 
+    kernel_found = kernel_verification.check_root(REPO_ROOT)
+    declared_kernel = [
+        problem
+        for problem in kernel_found
+        if problem.code in kernel_verification.DECLARED_SUBJECT_CODES
+    ]
     kernel_problems = [
         f"forensics/performance/KERNELS.json: {problem.code} {problem.pointer}: "
         f"{problem.detail}"
-        for problem in kernel_verification.check_root(REPO_ROOT)
+        for problem in kernel_found
+        if problem.code not in kernel_verification.DECLARED_SUBJECT_CODES
     ]
+    # A declared non-pass is reported and counted, never folded into the green
+    # result: an artefact whose bytes are gone is inventory-only evidence, not a
+    # validated measurement.
+    if declared_kernel:
+        print(
+            f"[docs-consistency] DECLARED: {len(declared_kernel)} kernel artefact-"
+            "subject non-pass(es); these are not passes"
+        )
+        for problem in declared_kernel:
+            print(f"  DECLARED: {problem.code} {problem.pointer}: {problem.detail}")
+    summary = kernel_verification.artefact_subject_summary(REPO_ROOT)
+    print(
+        "[docs-consistency] artefact-audited subjects: "
+        f"{summary['VALIDATED']} VALIDATED, "
+        f"{summary['REPRODUCIBLE_NOT_RETRIEVED']} REPRODUCIBLE_NOT_RETRIEVED, "
+        f"{summary['UNAVAILABLE_DECLARED']} UNAVAILABLE_DECLARED"
+    )
+    # The summary must name every declared non-pass the checker found.  A
+    # mismatch means a declaration could have escaped the count and been read as
+    # green, so it is a refusal rather than a cosmetic difference.
+    declared_counts = {
+        kernel_verification.KV_SUBJECT_UNAVAILABLE_DECLARED: summary[
+            "UNAVAILABLE_DECLARED"
+        ],
+        kernel_verification.KV_SUBJECT_REPRODUCIBLE_NOT_RETRIEVED: summary[
+            "REPRODUCIBLE_NOT_RETRIEVED"
+        ],
+    }
+    for code, counted in declared_counts.items():
+        found = sum(1 for problem in declared_kernel if problem.code == code)
+        if found != counted:
+            kernel_problems.append(
+                f"forensics/performance/KERNELS.json: the {code} summary reports "
+                f"{counted}, but the checker found {found}; a declared non-pass must "
+                "be reported, never omitted from the green result"
+            )
     if kernel_problems:
         print(f"[docs-consistency] FAIL: {len(kernel_problems)} kernel-register problem(s)")
         for line in kernel_problems:
