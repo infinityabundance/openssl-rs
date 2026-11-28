@@ -161,6 +161,39 @@ found the contract is refused (``comparison-accumulation-missing``) rather than
 trivially satisfied.  This is a within-function may-taint analysis: it does not
 model memory, implicit flow through a previous conditional transfer, or
 interprocedural effects, and it is a review aid, not a constant-time proof.
+
+## Detached-DWARF inlined extents (``dwarf_inline``)
+
+A release optimiser can inline a target so completely that no out-of-line symbol
+survives (PFP-54's `arith::mont_mul_sos_into`).  When the shipped DSO is
+stripped, the DWARF can still be held as a separate companion file bound to the
+shipped bytes by the GNU build-id.  A target may declare:
+
+    {"family": ..., "symbol": "mont_mul_sos_into",
+     "dwarf_inline": {"caller": "mont_mul_fallible",
+                      "check": "<the source-level fact>"}}
+
+and the invocation supplies ``--debug-file <companion>``.  The resolver refuses
+unless the DSO and companion carry the same build-id note; locates the target's
+abstract ``DW_TAG_subprogram`` by its exact v0 identifier; enumerates every
+``DW_TAG_inlined_subroutine`` that refers to it; requires them all to be
+attributed to one concrete caller; requires that caller to be the declared one
+and to have the same address extent in the shipped symbol table as the DWARF
+records; and audits every address range in each instance's ``DW_AT_ranges``
+list.  A range that is empty, overlapping, or outside the caller, or an instance
+with no range, is refused as a partial extent.  Named refusals:
+``dwarf-debug-file-missing``, ``dwarf-inline-missing``,
+``dwarf-inline-partial``, ``dwarf-inline-overlap``, ``dwarf-inline-outside-caller``,
+``dwarf-inline-multiple-callers``, ``dwarf-inline-caller-mismatch``,
+``dwarf-inline-caller-unverified``.
+
+What this does **not** cover: a target inlined into more than one caller (it is
+refused, not partially audited), a body the compiler duplicated under more than
+one abstract origin, a partially inlined body whose out-of-line remainder is
+audited separately, and any artefact other than the one named by the DSO digest
+and build-id.  The producer strings that bind a mapping to a compiler are read
+from the DSO when present and otherwise from the build-id-bound companion; the
+binding is the equal build-id, not the file name.
 """
 
 from __future__ import annotations
@@ -171,6 +204,7 @@ import json
 import os
 import re
 import shutil
+import struct
 import subprocess
 import sys
 from dataclasses import dataclass
@@ -206,6 +240,20 @@ class LlvmSuffix:
 
 
 @dataclass(frozen=True)
+class DwarfInline:
+    """A target whose only body is inlined, resolved through detached DWARF.
+
+    `caller` is the one concrete function the extent must be attributed to; the
+    audit re-establishes that attribution, the caller's shipped extent and every
+    recorded address range from the companion file and the DSO.  `check` records
+    the source-level fact, not a check the audit executes.
+    """
+
+    caller: str
+    check: str
+
+
+@dataclass(frozen=True)
 class ComparisonContract:
     """A target-level claim about the comparison result's control dependence."""
 
@@ -222,6 +270,7 @@ class Target:
     inlining: Inlining | None = None
     llvm_suffix: LlvmSuffix | None = None
     comparison_contract: ComparisonContract | None = None
+    dwarf_inline: DwarfInline | None = None
 
 
 # (family, module, short symbol name, optional inline resolution).  The short
@@ -561,8 +610,358 @@ def _identifier_is(symbol: str, identifier: str) -> bool:
     return m is not None and int(m.group(1)) == len(identifier)
 
 
+# --- detached DWARF: ELF facts and the inlined-extent resolver -------------
+#
+# The shipped DSO is debug-stripped; the DWARF lives in a companion file bound
+# to it by build-id.  These helpers read only facts that the companion records
+# (section table, build-id note, DW_TAG_inlined_subroutine address ranges), and
+# every one is cross-checked against the shipped DSO's symbol table before an
+# extent is admitted.
+
+DIE_HEADER_RE = re.compile(
+    r"^\s*<(\d+)><([0-9a-f]+)>:\s+Abbrev Number:\s+\d+"
+    r"(?:\s+\((DW_TAG_[A-Za-z0-9_]+)\))?")
+ATTR_LINE_RE = re.compile(r"^\s*<([0-9a-f]+)>\s+(DW_AT_[A-Za-z0-9_]+)\s*:\s*(.*?)\s*$")
+RANGES_ROW_RE = re.compile(r"^\s*([0-9a-f]+)\s+([0-9a-f]+)\s+([0-9a-f]+)\s*$")
+RANGES_END_RE = re.compile(r"^\s*([0-9a-f]+)\s+<End of list>\s*$")
+
+
+@dataclass
+class DwarfDie:
+    offset: int
+    depth: int
+    tag: str | None
+    attrs: dict[str, str]
+    parent: int | None
+
+
+@dataclass
+class DwarfContext:
+    path: str
+    build_id: str
+    info: list[DwarfDie]
+    ranges: dict[int, list[tuple[int, int]]]
+
+
+def _attr_string(value: str | None) -> str | None:
+    """The string readelf printed, stripping any `(indirect string, ...):` prefix."""
+    if value is None:
+        return None
+    m = re.match(r"^\([^)]*\):\s*(.*)$", value)
+    return (m.group(1) if m else value).strip() or None
+
+
+def _attr_int(value: str | None) -> int | None:
+    if value is None:
+        return None
+    m = re.match(r"^(?:0x[0-9a-fA-F]+|\d+)", value.strip())
+    return int(m.group(0), 0) if m else None
+
+
+def _attr_ref(value: str | None) -> int | None:
+    if value is None:
+        return None
+    m = re.match(r"^<(0x[0-9a-fA-F]+)>", value.strip())
+    return int(m.group(1), 16) if m else None
+
+
+def parse_debug_info(text: str) -> list[DwarfDie]:
+    """Parse `readelf --debug-dump=info` into DIEs with parent links by depth."""
+    dies: list[DwarfDie] = []
+    last_at_depth: dict[int, int] = {}
+    for line in text.splitlines():
+        header = DIE_HEADER_RE.match(line)
+        if header:
+            depth = int(header.group(1))
+            parent = last_at_depth.get(depth - 1)
+            for key in [k for k in last_at_depth if k > depth]:
+                del last_at_depth[key]
+            last_at_depth[depth] = len(dies)
+            dies.append(DwarfDie(int(header.group(2), 16), depth,
+                                 header.group(3), {}, parent))
+            continue
+        attr = ATTR_LINE_RE.match(line)
+        if attr and dies:
+            dies[-1].attrs[attr.group(2)] = attr.group(3).strip()
+    return dies
+
+
+def parse_debug_ranges(text: str) -> dict[int, list[tuple[int, int]]]:
+    """Parse `readelf --debug-dump=Ranges` into offset -> [(begin, end), ...].
+
+    Handles the base-address selection entry (`begin` all-ones) and the
+    end-of-list marker; an entry `0 0` terminates a list.  readelf prints the
+    offsets list's own offset in the first column, which is the value
+    `DW_AT_ranges` names.
+    """
+    lists: dict[int, list[tuple[int, int]]] = {}
+    current: int | None = None
+    base = 0
+    for line in text.splitlines():
+        end = RANGES_END_RE.match(line)
+        if end:
+            lists.setdefault(int(end.group(1), 16), [])
+            current = None
+            base = 0
+            continue
+        row = RANGES_ROW_RE.match(line)
+        if not row:
+            continue
+        offset = int(row.group(1), 16)
+        begin = int(row.group(2), 16)
+        finish = int(row.group(3), 16)
+        if offset != current:
+            current = offset
+            base = 0
+            lists.setdefault(offset, [])
+        if begin == 0xFFFFFFFFFFFFFFFF:
+            base = finish
+            continue
+        if begin == 0 and finish == 0:
+            continue
+        lists[offset].append((begin + base, finish + base))
+    return lists
+
+
+def _section_table(data: bytes):
+    """ELF64 little-endian section table as name -> (type, addr, offset, size)."""
+    if len(data) < 64 or data[4] != 2 or data[5] != 1:
+        return None
+    (shoff,) = struct.unpack_from("<Q", data, 0x28)
+    shentsize, shnum, shstrndx = struct.unpack_from("<HHH", data, 0x3A)
+    if shoff == 0 or shentsize < 64 or shnum == 0 or shstrndx >= shnum:
+        return None
+
+    def header(index: int):
+        off = shoff + index * shentsize
+        if off + 64 > len(data):
+            return None
+        name, sh_type = struct.unpack_from("<II", data, off)
+        _flags, addr, offset, size = struct.unpack_from("<QQQQ", data, off + 8)
+        return name, sh_type, addr, offset, size
+
+    str_header = header(shstrndx)
+    if str_header is None:
+        return None
+    _sn, _st, _sa, str_off, str_size = str_header
+    shstr = data[str_off:str_off + str_size]
+    table = {}
+    for i in range(shnum):
+        h = header(i)
+        if h is None:
+            return None
+        name_off, sh_type, addr, offset, size = h
+        if name_off >= len(shstr):
+            continue
+        nul = shstr.find(b"\x00", name_off)
+        name = shstr[name_off:nul if nul >= 0 else len(shstr)].decode("latin-1")
+        table[name] = (sh_type, addr, offset, size)
+    return table
+
+
+def text_section_sha256(data: bytes) -> str | None:
+    """SHA-256 of the shipped `.text` bytes, or None if no PROGBITS `.text`."""
+    sections = _section_table(data)
+    if not sections or ".text" not in sections:
+        return None
+    sh_type, _addr, offset, size = sections[".text"]
+    if sh_type == 8:  # SHT_NOBITS: no bytes to hash
+        return None
+    return hashlib.sha256(data[offset:offset + size]).hexdigest()
+
+
+def read_build_id(path: str, timeout: float) -> str | None:
+    out = run(["readelf", "-n", path], timeout, f"readelf -n {path}")
+    m = re.search(r"Build ID:\s*([0-9a-fA-F]+)", out)
+    return m.group(1).lower() if m else None
+
+
+def _producer_present(producer: str, data: bytes,
+                      debug_data: bytes | None) -> str | None:
+    """Where the recorded compiler producer string is found in the audited pair.
+
+    A stripped DSO keeps no crate DWARF, so the producer string (a `.debug_str`
+    entry) is absent from it.  It is still a fact about the shipped bytes when
+    it is read from the debug companion, because that companion's build-id was
+    verified equal to the DSO's before this is consulted.
+    """
+    needle = producer.encode()
+    if needle in data:
+        return "dso"
+    if debug_data is not None and needle in debug_data:
+        return "debug-file"
+    return None
+
+
+def _inline_ranges(instance: DwarfDie,
+                   dwarf: DwarfContext) -> list[tuple[int, int]] | None:
+    """The address ranges a single inlined instance records, or None."""
+    ranges_off = _attr_int(instance.attrs.get("DW_AT_ranges"))
+    if ranges_off is not None:
+        return dwarf.ranges.get(ranges_off)
+    low = _attr_int(instance.attrs.get("DW_AT_low_pc"))
+    high = _attr_int(instance.attrs.get("DW_AT_high_pc"))
+    if low is not None and high is not None:
+        return [(low, low + high if high < low else high)]
+    return None
+
+
+def _caller_matches(declared: str, name: str | None,
+                    linkage: str | None) -> bool:
+    if declared in (name, linkage):
+        return True
+    return bool((linkage and _identifier_is(linkage, declared))
+                or (name and _identifier_is(name, declared)))
+
+
+def verify_dwarf_inline(dso: str, target: Target, symtab, timeout: float,
+                        dwarf: DwarfContext):
+    """Resolve a fully inlined target through its detached DWARF extent.
+
+    Returns ``(extent, witness, failure)``.  The resolver refuses when the target
+    has no abstract subprogram, no inlined instance, more than one concrete
+    caller, a caller other than the declared one, a range list that is empty,
+    overlapping or outside the caller, or a caller extent the shipped symbol
+    table does not reproduce.  It audits every range the compiler attributed, so
+    the admitted extent is the whole body the debug information records.
+    """
+    rule = target.dwarf_inline
+    if rule is None:
+        raise Refusal(EXIT_USAGE, "verify_dwarf_inline called without a witness")
+    abstracts = set()
+    for die in dwarf.info:
+        if die.tag != "DW_TAG_subprogram":
+            continue
+        linkage = _attr_string(die.attrs.get("DW_AT_linkage_name"))
+        name = _attr_string(die.attrs.get("DW_AT_name"))
+        if (linkage and _identifier_is(linkage, target.symbol)) or name == target.symbol:
+            abstracts.add(die.offset)
+    if not abstracts:
+        return None, None, {
+            "failure": "dwarf-inline-missing",
+            "detail": f"no abstract subprogram named {target.symbol!r} in the debug file",
+        }
+    instances = [die for die in dwarf.info
+                 if die.tag == "DW_TAG_inlined_subroutine"
+                 and _attr_ref(die.attrs.get("DW_AT_abstract_origin")) in abstracts]
+    if not instances:
+        return None, None, {
+            "failure": "dwarf-inline-missing",
+            "detail": (f"no DW_TAG_inlined_subroutine refers to {target.symbol!r} "
+                       f"(abstract DIE(s) {[hex(a) for a in sorted(abstracts)]})"),
+        }
+    callers: dict[str, DwarfDie] = {}
+    raw_ranges: list[tuple[int, int]] = []
+    for instance in instances:
+        ancestor = instance.parent
+        caller = None
+        while ancestor is not None:
+            die = dwarf.info[ancestor]
+            if (die.tag == "DW_TAG_subprogram"
+                    and _attr_int(die.attrs.get("DW_AT_low_pc")) is not None):
+                caller = die
+                break
+            ancestor = die.parent
+        if caller is None:
+            return None, None, {
+                "failure": "dwarf-inline-caller-unverified",
+                "detail": (f"inlined instance at DIE 0x{instance.offset:x} has no "
+                           "concrete enclosing subprogram"),
+            }
+        linkage = _attr_string(caller.attrs.get("DW_AT_linkage_name"))
+        name = _attr_string(caller.attrs.get("DW_AT_name"))
+        callers[linkage or name or f"0x{caller.offset:x}"] = caller
+        ranges = _inline_ranges(instance, dwarf)
+        if ranges is None:
+            return None, None, {
+                "failure": "dwarf-inline-partial",
+                "detail": (f"inlined instance at DIE 0x{instance.offset:x} has no "
+                           "address range (neither DW_AT_ranges nor low/high pc)"),
+            }
+        raw_ranges.extend(ranges)
+    if len(callers) > 1:
+        return None, None, {
+            "failure": "dwarf-inline-multiple-callers",
+            "candidates": sorted(callers),
+        }
+    caller_die = next(iter(callers.values()))
+    caller_name = _attr_string(caller_die.attrs.get("DW_AT_name"))
+    caller_linkage = _attr_string(caller_die.attrs.get("DW_AT_linkage_name"))
+    if not _caller_matches(rule.caller, caller_name, caller_linkage):
+        return None, None, {
+            "failure": "dwarf-inline-caller-mismatch",
+            "detail": (f"extent is attributed to {caller_linkage or caller_name!r}, "
+                       f"not the declared caller {rule.caller!r}"),
+        }
+    low = _attr_int(caller_die.attrs.get("DW_AT_low_pc"))
+    high = _attr_int(caller_die.attrs.get("DW_AT_high_pc"))
+    if low is None or high is None:
+        return None, None, {
+            "failure": "dwarf-inline-caller-unverified",
+            "detail": "concrete caller records no low/high pc",
+        }
+    caller_high = low + high if high < low else high
+    symbols = find_exact(symtab, rule.caller)
+    if len(symbols) != 1:
+        return None, None, {
+            "failure": "dwarf-inline-caller-unverified",
+            "detail": (f"caller {rule.caller!r} is "
+                       + ("not a defined symbol" if not symbols else "ambiguous")
+                       + " in the shipped DSO"),
+        }
+    caddr, csize, csym = symbols[0]
+    if caddr != low or csize != caller_high - low:
+        return None, None, {
+            "failure": "dwarf-inline-caller-unverified",
+            "detail": (f"DWARF caller extent 0x{low:x}+0x{caller_high - low:x} is not "
+                       f"the shipped symbol {csym} at 0x{caddr:x}+0x{csize:x}"),
+        }
+    raw_ranges.sort()
+    clean: list[tuple[int, int]] = []
+    previous_end = None
+    for begin, end in raw_ranges:
+        if begin >= end:
+            return None, None, {
+                "failure": "dwarf-inline-partial",
+                "detail": f"empty range 0x{begin:x}..0x{end:x}",
+            }
+        if previous_end is not None and begin < previous_end:
+            return None, None, {
+                "failure": "dwarf-inline-overlap",
+                "detail": f"range 0x{begin:x}..0x{end:x} overlaps at 0x{previous_end:x}",
+            }
+        clean.append((begin, end))
+        previous_end = end
+    if not clean:
+        return None, None, {
+            "failure": "dwarf-inline-partial",
+            "detail": "the inlined instance records no non-empty range",
+        }
+    for begin, end in clean:
+        if begin < low or end > caller_high:
+            return None, None, {
+                "failure": "dwarf-inline-outside-caller",
+                "detail": (f"range 0x{begin:x}..0x{end:x} is outside the caller "
+                           f"extent 0x{low:x}..0x{caller_high:x}"),
+            }
+    witness = {
+        "caller": csym,
+        "caller_addr": caddr,
+        "caller_size": csize,
+        "ranges": [[begin, end] for begin, end in clean],
+        "bytes": sum(end - begin for begin, end in clean),
+        "instances": len(instances),
+        "abstract_offsets": sorted(abstracts),
+        "debug_file": dwarf.path,
+        "build_id": dwarf.build_id,
+        "check": rule.check,
+    }
+    return ({"ranges": clean, "caller_symbol": csym, "caller_addr": caddr,
+             "caller_size": csize}, witness, None)
+
+
 def verify_inline_mapping(dso: str, target: Target, symtab, timeout: float,
-                          data: bytes):
+                          data: bytes, debug_data: bytes | None = None):
     """Re-establish a declared `resolves_to` mapping from the artefact.
 
     Returns ``(carrier, witness, failure)``.  On success `carrier` is the
@@ -602,11 +1001,15 @@ def verify_inline_mapping(dso: str, target: Target, symtab, timeout: float,
         return None, None, {
             "failure": "zero-size", "symbol": sym, "addr": addr,
         }
-    # (2) the recorded producer string must be a property of this artefact.
-    if rule.producer.encode() not in data:
+    # (2) the recorded producer string must be a property of this artefact.  A
+    # stripped DSO carries no crate DWARF, so the string may come from the
+    # build-id-bound debug companion; the caller verified that binding.
+    producer_source = _producer_present(rule.producer, data, debug_data)
+    if producer_source is None:
         return None, None, {
             "failure": "inline-producer-absent",
-            "detail": f"producer string not in the DSO: {rule.producer!r}",
+            "detail": ("producer string not in the DSO or its build-id-bound "
+                       f"debug companion: {rule.producer!r}"),
         }
     # (3) the recorded caller must exist, disassemble completely, and contain a
     # direct call to the carrier's entry: the intended call path reaches it.
@@ -677,17 +1080,19 @@ def verify_inline_mapping(dso: str, target: Target, symtab, timeout: float,
         "constant": constant.text,
         "carrier": sym,
         "producer": rule.producer,
+        "producer_source": producer_source,
         "check": rule.check,
     }
     return carrier, witness, None
 
 
 LLVM_SUFFIX_KEYS = {"caller", "producer", "check"}
+DEBUG_INLINE_KEYS = {"caller", "check"}
 CONTRACT_KEYS = {"kind", "check"}
 
 
 def verify_llvm_suffix(dso: str, target: Target, symtab, timeout: float,
-                       data: bytes):
+                       data: bytes, debug_data: bytes | None = None):
     """Re-establish a declared LLVM-suffixed local copy from the artefact.
 
     The name is matched by its whole structural form and never by a prefix or a
@@ -739,10 +1144,12 @@ def verify_llvm_suffix(dso: str, target: Target, symtab, timeout: float,
             "failure": "llvm-copy-ambiguous",
             "detail": f"start address 0x{addr:x} also named by {aliases[:3]}",
         }
-    if rule.producer.encode() not in data:
+    producer_source = _producer_present(rule.producer, data, debug_data)
+    if producer_source is None:
         return None, None, {
             "failure": "llvm-producer-absent",
-            "detail": f"producer string not in the DSO: {rule.producer!r}",
+            "detail": ("producer string not in the DSO or its build-id-bound "
+                       f"debug companion: {rule.producer!r}"),
         }
     callers = find_exact(symtab, rule.caller)
     if len(callers) != 1:
@@ -783,6 +1190,7 @@ def verify_llvm_suffix(dso: str, target: Target, symtab, timeout: float,
         "caller": csym, "caller_addr": caddr,
         "call_addrs": sites,
         "producer": rule.producer,
+        "producer_source": producer_source,
         "check": rule.check,
     }
     return (addr, size, sym), witness, None
@@ -1154,68 +1562,108 @@ def run_comparison_contract(insns: list[Insn], target: Target):
 
 
 def audit(dso: str, target: Target, symtab, timeout: float,
-          data: bytes) -> tuple[str, dict, list[dict]]:
+          data: bytes, debug_data: bytes | None = None,
+          dwarf: "DwarfContext | None" = None) -> tuple[str, dict, list[dict]]:
     family = target.family
     label = (target.symbol if target.module is None
              else f"{target.module}::{target.symbol}")
     inline_used = False
     llvm_used = False
+    dwarf_used = False
     witness = None
+    extent = None
     matches = find_symbols(symtab, target.symbol, target.module)
     if not matches:
         if target.llvm_suffix is not None:
             carrier, witness, failure = verify_llvm_suffix(
-                dso, target, symtab, timeout, data)
+                dso, target, symtab, timeout, data, debug_data)
             if failure is not None:
                 failure.update({"short": label})
                 return family, failure, []
             matches = [carrier]
             llvm_used = True
+        elif target.dwarf_inline is not None:
+            if dwarf is None:
+                return family, {
+                    "failure": "dwarf-debug-file-missing", "short": label,
+                    "detail": ("no --debug-file: a fully inlined target needs the "
+                               "detached DWARF that names its extent"),
+                }, []
+            extent, witness, failure = verify_dwarf_inline(
+                dso, target, symtab, timeout, dwarf)
+            if failure is not None:
+                failure.update({"short": label})
+                return family, failure, []
+            dwarf_used = True
         elif target.resolves_to is None:
             return family, {"failure": "missing", "short": label}, []
         else:
             carrier, witness, failure = verify_inline_mapping(
-                dso, target, symtab, timeout, data)
+                dso, target, symtab, timeout, data, debug_data)
             if failure is not None:
                 failure.update({"short": label,
                                 "resolves_to": target.resolves_to})
                 return family, failure, []
             matches = [carrier]
             inline_used = True
-    if len(matches) > 1:
-        return family, {"failure": "ambiguous", "short": label,
-                        "candidates": [s for _, _, s in matches]}, []
-    addr, size, sym = matches[0]
-    if size == 0:
-        # A zero-size symbol has no declared extent.  Inventing one (the audit
-        # used to assume 16 bytes) would report an instruction stream for an
-        # arbitrary window and count it as resolved.
-        return family, {"failure": "zero-size", "short": label,
-                        "symbol": sym, "addr": addr}, []
-    try:
-        insns = disassemble(dso, addr, addr + size, timeout)
-    except Refusal as exc:
-        reason = "timeout" if "timeout" in exc.message else "tool-failure"
-        return family, {"failure": reason, "short": label,
-                        "symbol": sym, "addr": addr, "size": size,
-                        "detail": exc.message}, []
-    problem = disassembly_problem(insns, addr, size)
-    if problem:
-        reason = problem.split(":", 1)[0]
-        return family, {"failure": reason, "short": label,
-                        "symbol": sym, "addr": addr, "size": size,
-                        "detail": problem}, []
+    if extent is None:
+        if len(matches) > 1:
+            return family, {"failure": "ambiguous", "short": label,
+                            "candidates": [s for _, _, s in matches]}, []
+        addr, size, sym = matches[0]
+        if size == 0:
+            # A zero-size symbol has no declared extent.  Inventing one (the
+            # audit used to assume 16 bytes) would report an instruction stream
+            # for an arbitrary window and count it as resolved.
+            return family, {"failure": "zero-size", "short": label,
+                            "symbol": sym, "addr": addr}, []
+        ranges = [(addr, addr + size)]
+    else:
+        ranges = list(extent["ranges"])
+        sym = extent["caller_symbol"]
+        addr = ranges[0][0]
+        size = sum(end - begin for begin, end in ranges)
+    insns: list[Insn] = []
+    for begin, end in ranges:
+        try:
+            part = disassemble(dso, begin, end, timeout)
+        except Refusal as exc:
+            reason = "timeout" if "timeout" in exc.message else "tool-failure"
+            return family, {"failure": reason, "short": label,
+                            "symbol": sym, "addr": begin, "size": end - begin,
+                            "detail": exc.message}, []
+        problem = disassembly_problem(part, begin, end - begin)
+        if problem:
+            # A DWARF-attributed range that does not decode completely is a
+            # partial extent, named as such rather than as a generic failure.
+            reason = "dwarf-inline-partial" if dwarf_used else problem.split(":", 1)[0]
+            return family, {"failure": reason, "short": label,
+                            "symbol": sym, "addr": begin, "size": end - begin,
+                            "detail": problem}, []
+        insns.extend(part)
+
+    def range_start(where: int) -> int:
+        for begin, end in ranges:
+            if begin <= where < end:
+                return begin
+        return ranges[0][0]
+
     rows: list[dict] = []
     counts = {
         "symbol": sym, "addr": addr, "size": size, "insns": len(insns),
+        "ranges": [[begin, end] for begin, end in ranges],
         "jcc": 0, "div": 0, "cmov": 0, "setcc": 0, "jo": 0, "loop": 0,
         "calls": 0, "cpuid": 0, "dispatch_calls": [], "div_rows": [],
+        "cmov_rows": [], "setcc_rows": [],
         "missing": False, "failure": None,
         "intended": label, "declared_inline": target.resolves_to is not None,
         "resolves_to": target.resolves_to,
         "inline_used": inline_used, "inline_witness": witness,
         "llvm_used": llvm_used, "llvm_witness": witness if llvm_used else None,
         "declared_llvm": target.llvm_suffix is not None,
+        "dwarf_used": dwarf_used,
+        "dwarf_witness": witness if dwarf_used else None,
+        "declared_dwarf": target.dwarf_inline is not None,
         "contract": None,
     }
     for i, insn in enumerate(insns):
@@ -1226,9 +1674,20 @@ def audit(dso: str, target: Target, symtab, timeout: float,
             counts["div_rows"].append((insn.addr, insn.text))
         if insn.mnem.startswith("cmov"):
             counts["cmov"] += 1
+            # Operand/address class only; secret-dependence is NOT established
+            # here (see the contract section for the one mechanised taint check).
+            if not has_mem(insn.ops):
+                kind, addr_kind = "register", "fixed"
+            else:
+                base = re.search(r"\((%[a-z0-9]+)", insn.ops)
+                kind = "memory"
+                addr_kind = ("fixed" if base and base.group(1) in {"%rsp", "%rbp", "%rip"}
+                             else "register-based")
+            counts["cmov_rows"].append((insn.addr, insn.text, kind, addr_kind))
         if insn.mnem.startswith("set"):
             # `setcc` family; x86 has no arithmetic mnemonic beginning with `set`.
             counts["setcc"] += 1
+            counts["setcc_rows"].append((insn.addr, insn.text))
         if insn.mnem in {"jo", "jno"}:
             counts["jo"] += 1
         if insn.mnem in {"loop", "loope", "loopne"}:
@@ -1250,7 +1709,8 @@ def audit(dso: str, target: Target, symtab, timeout: float,
         tgt = target_of(insn)
         direction = "?" if tgt is None else ("back" if tgt < insn.addr else "fwd")
         rows.append({
-            "family": family, "addr": insn.addr, "off": insn.addr - addr,
+            "family": family, "addr": insn.addr,
+            "off": insn.addr - range_start(insn.addr),
             "jcc": insn.mnem, "src": src,
             "setter": "?" if setter is None else f"0x{setter.addr:x}: {setter.text}",
             "guarded": guarded, "target": "?" if tgt is None else f"0x{tgt:x}",
@@ -1310,6 +1770,19 @@ def _load_llvm_suffix(index: int, value) -> LlvmSuffix:
                       check=value["check"])
 
 
+def _load_debug_inline(index: int, value) -> DwarfInline:
+    if not isinstance(value, dict) or set(value) != DEBUG_INLINE_KEYS:
+        raise Refusal(EXIT_USAGE,
+                      f"targets inventory entry {index}: 'dwarf_inline' must have "
+                      f"exactly the keys {sorted(DEBUG_INLINE_KEYS)}")
+    for key in sorted(DEBUG_INLINE_KEYS):
+        if not isinstance(value[key], str) or not value[key].strip():
+            raise Refusal(EXIT_USAGE,
+                          f"targets inventory entry {index}: 'dwarf_inline.{key}' "
+                          "must be a non-empty string")
+    return DwarfInline(caller=value["caller"], check=value["check"])
+
+
 def _load_contract(index: int, value) -> ComparisonContract:
     if not isinstance(value, dict) or set(value) != CONTRACT_KEYS:
         raise Refusal(EXIT_USAGE,
@@ -1345,7 +1818,8 @@ def load_targets(path: str | None) -> list[Target]:
             keys | extra
             for keys in base_keys + inline_keys + bare_mapping
             for extra in (set(), {"llvm_suffix"}, {"comparison_contract"},
-                          {"llvm_suffix", "comparison_contract"}))
+                          {"llvm_suffix", "comparison_contract"},
+                          {"dwarf_inline"}, {"dwarf_inline", "comparison_contract"}))
         targets = []
         for index, entry in enumerate(document):
             if not isinstance(entry, dict) or set(entry) not in allowed:
@@ -1377,11 +1851,20 @@ def load_targets(path: str | None) -> list[Target]:
                 raise Refusal(EXIT_USAGE,
                               f"targets inventory entry {index}: 'llvm_suffix' and "
                               "'resolves_to' are mutually exclusive")
+            dwarf_inline = None
+            if "dwarf_inline" in entry:
+                dwarf_inline = _load_debug_inline(index, entry["dwarf_inline"])
+            if dwarf_inline is not None and (resolves_to is not None
+                                             or llvm_suffix is not None):
+                raise Refusal(EXIT_USAGE,
+                              f"targets inventory entry {index}: 'dwarf_inline' is "
+                              "mutually exclusive with 'resolves_to' and "
+                              "'llvm_suffix'")
             contract = None
             if "comparison_contract" in entry:
                 contract = _load_contract(index, entry["comparison_contract"])
             targets.append(Target(family, module, symbol, resolves_to, inlining,
-                                  llvm_suffix, contract))
+                                  llvm_suffix, contract, dwarf_inline))
     if not targets:
         raise Refusal(EXIT_USAGE, "the expected-target inventory is empty")
     seen: set[tuple[str | None, str]] = set()
@@ -1392,6 +1875,14 @@ def load_targets(path: str | None) -> list[Target]:
             raise Refusal(EXIT_USAGE, f"duplicate target symbol in inventory: {label}")
         seen.add((target.module, target.symbol))
     return targets
+
+
+def extent_offset(counts: dict, where: int) -> int:
+    """Offset of an address inside the target's audited extent (range-relative)."""
+    for begin, end in counts.get("ranges") or []:
+        if begin <= where < end:
+            return where - begin
+    return where - counts["addr"]
 
 
 def report_failure(family: str, counts: dict) -> None:
@@ -1428,6 +1919,10 @@ def main(argv: list[str] | None = None) -> int:
                     help="refuse (exit 3) unless the DSO has this SHA-256")
     ap.add_argument("--timeout", type=float, default=120.0,
                     help="per-tool timeout in seconds (default 120)")
+    ap.add_argument("--debug-file", default=None,
+                    help="detached DWARF companion (e.g. from objcopy "
+                         "--only-keep-debug); required for a 'dwarf_inline' "
+                         "target and bound to the DSO by build-id")
     args = ap.parse_args(argv)
 
     try:
@@ -1453,7 +1948,43 @@ def main(argv: list[str] | None = None) -> int:
         symtab = symbol_table(args.dso, args.timeout)
         objdump_version = run([objdump_bin(), "--version"], args.timeout,
                               "objdump --version").splitlines()[0]
-        results = [audit(args.dso, target, symtab, args.timeout, data)
+        needs_dwarf = any(t.dwarf_inline is not None for t in targets)
+        debug_data = None
+        dwarf = None
+        dso_build_id = None
+        debug_build_id = None
+        if args.debug_file is not None:
+            debug_data = read_dso(args.debug_file)
+            dso_build_id = read_build_id(args.dso, args.timeout)
+            debug_build_id = read_build_id(args.debug_file, args.timeout)
+            if dso_build_id is None or debug_build_id is None:
+                raise Refusal(
+                    EXIT_IDENTITY,
+                    "build-id-missing: a detached-DWARF audit requires a GNU "
+                    "build-id note in both the DSO and the debug file",
+                )
+            if dso_build_id != debug_build_id:
+                raise Refusal(
+                    EXIT_IDENTITY,
+                    f"debug-identity-mismatch: DSO build-id {dso_build_id} != "
+                    f"debug file build-id {debug_build_id}; the DWARF does not "
+                    "describe the bytes that would be audited",
+                )
+            if needs_dwarf:
+                info_text = run(["readelf", "--debug-dump=info", args.debug_file],
+                                args.timeout, "readelf --debug-dump=info")
+                ranges_text = run(["readelf", "--debug-dump=Ranges", args.debug_file],
+                                  args.timeout, "readelf --debug-dump=Ranges")
+                dwarf = DwarfContext(args.debug_file, debug_build_id,
+                                     parse_debug_info(info_text),
+                                     parse_debug_ranges(ranges_text))
+        elif needs_dwarf:
+            raise Refusal(
+                EXIT_USAGE,
+                "a target declares 'dwarf_inline' but no --debug-file was given",
+            )
+        results = [audit(args.dso, target, symtab, args.timeout, data,
+                         debug_data, dwarf)
                    for target in targets]
         cpuid = None
         if not args.no_cpuid_scan:
@@ -1466,6 +1997,10 @@ def main(argv: list[str] | None = None) -> int:
     print()
     print(f"- DSO: `{args.dso}`")
     print(f"- SHA-256: `{digest}`")
+    print(f"- `.text` SHA-256: `{text_section_sha256(data) or 'unavailable'}`")
+    if args.debug_file is not None:
+        print(f"- debug file: `{args.debug_file}`")
+        print(f"- build-id: `{dso_build_id}` (DSO and debug file, identical)")
     print(f"- objdump: `{objdump_version}`")
     print("- Secret-dependence is NOT established here. A conditional jump is")
     print("  listed because the compiler emitted it in the named function; the")
@@ -1578,6 +2113,32 @@ def main(argv: list[str] | None = None) -> int:
             print()
             print(f"- **{fam}** recorded check: {c['llvm_witness']['check']}")
 
+    dwarf_mapped = [(fam, c) for fam, c, _ in results
+                    if not c.get("failure") and c.get("dwarf_used")]
+    if dwarf_mapped:
+        print()
+        print("## Detached-DWARF inlined extents")
+        print()
+        print("A target with no out-of-line symbol is resolved through its "
+              "`DW_TAG_inlined_subroutine` address ranges in a companion DWARF "
+              "file whose build-id is equal to the audited DSO's. Every range "
+              "the compiler attributed is disassembled; the caller's extent is "
+              "cross-checked against the shipped symbol table. The mapping does "
+              "not cover a function inlined into more than one caller, a body "
+              "split across compilation units in a way the DWARF does not name, "
+              "or any artefact other than this one (see the module docstring).")
+        print()
+        print("| target | caller | ranges | bytes | build-id | debug file |")
+        print("|---|---|---|---:|---|---|")
+        for fam, c in dwarf_mapped:
+            w = c["dwarf_witness"]
+            spans = ", ".join(f"0x{b:x}..0x{e:x}" for b, e in w["ranges"])
+            print(f"| `{c['intended']}` | `{w['caller']}` | {spans} | "
+                  f"{w['bytes']} | `{w['build_id']}` | `{w['debug_file']}` |")
+        for fam, c in dwarf_mapped:
+            print()
+            print(f"- **{fam}** recorded check: {c['dwarf_witness']['check']}")
+
     contracts = [(fam, c) for fam, c, _ in results
                  if c.get("contract") is not None]
     if contracts:
@@ -1615,7 +2176,7 @@ def main(argv: list[str] | None = None) -> int:
     for fam, c, _ in results:
         for addr, text in c.get("div_rows", []):
             any_div = True
-            print(f"- **{fam}** `+0x{addr - c['addr']:x}` (0x{addr:x}): `{text}`")
+            print(f"- **{fam}** `+0x{extent_offset(c, addr):x}` (0x{addr:x}): `{text}`")
     if not any_div:
         print("- none in any audited range.")
 
@@ -1626,9 +2187,28 @@ def main(argv: list[str] | None = None) -> int:
     for fam, c, _ in results:
         for addr, name in c.get("dispatch_calls", []):
             any_dispatch = True
-            print(f"- **{fam}** `+0x{addr - c['addr']:x}` -> `{name}`")
+            print(f"- **{fam}** `+0x{extent_offset(c, addr):x}` -> `{name}`")
     if not any_dispatch:
         print("- none.")
+
+    print()
+    print("## cmov / setcc operand classes")
+    print()
+    print("Operand and address class only. `fixed` means a register or a "
+          "stack/rip-based address; `register-based` means a memory operand "
+          "addressed through an arbitrary register. Neither is a taint result.")
+    print()
+    print("| function | cmov | register | memory | fixed | register-based | setcc |")
+    print("|---|---:|---:|---:|---:|---:|---:|")
+    for fam, c, _ in results:
+        if c.get("failure") or not (c.get("cmov") or c.get("setcc")):
+            continue
+        rows_c = c.get("cmov_rows") or []
+        reg = sum(1 for _, _, k, _ in rows_c if k == "register")
+        mem = sum(1 for _, _, k, _ in rows_c if k == "memory")
+        fixed = sum(1 for _, _, _, a in rows_c if a == "fixed")
+        other = sum(1 for _, _, _, a in rows_c if a == "register-based")
+        print(f"| {fam} | {c['cmov']} | {reg} | {mem} | {fixed} | {other} | {c['setcc']} |")
 
     if cpuid is not None:
         n, addrs = cpuid
@@ -1637,7 +2217,7 @@ def main(argv: list[str] | None = None) -> int:
             if c.get("failure"):
                 continue
             for a in addrs:
-                if c["addr"] <= a < c["addr"] + c["size"]:
+                if any(b <= a < e for b, e in c.get("ranges") or []):
                     in_range.append((fam, a))
         print()
         print("## Whole-DSO cpuid scan")
@@ -1679,9 +2259,11 @@ def main(argv: list[str] | None = None) -> int:
                    if mapped else "")
     llvm_note = (f"; {len(llvm_mapped)} resolved through a verified "
                  "LLVM-suffix witness" if llvm_mapped else "")
+    dwarf_note = (f"; {len(dwarf_mapped)} resolved through a detached-DWARF "
+                  "inlined extent" if dwarf_mapped else "")
     print(
         f"binary_branch_audit: {len(targets)} expected targets resolved uniquely "
-        f"with complete disassembly{mapped_note}{llvm_note}; "
+        f"with complete disassembly{mapped_note}{llvm_note}{dwarf_note}; "
         f"candidate sha256={digest}",
         file=sys.stderr,
     )

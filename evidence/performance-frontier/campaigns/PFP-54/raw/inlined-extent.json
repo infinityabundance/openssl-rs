@@ -1,0 +1,93 @@
+{
+ "campaign": "PFP-54",
+ "symbol": "mont_mul_sos_into",
+ "caller": {
+  "die_offset": "0x7c16cf",
+  "name": "mont_mul_fallible",
+  "linkage_name": "_RNvNtNtCsdvWjcJp1SsP_10openssl_rs2bn5arith17mont_mul_fallible",
+  "low_pc": "0x1664a0",
+  "high_pc": "0x717",
+  "extent": [
+   "0x1664a0",
+   "0x166bb7"
+  ],
+  "shipped_symbol": {
+   "symbol": "_RNvNtNtCsdvWjcJp1SsP_10openssl_rs2bn5arith17mont_mul_fallible",
+   "addr": "0x1664a0",
+   "size": "0x717"
+  }
+ },
+ "abstract_subprogram": {
+  "die_offset": "0x7c169b",
+  "linkage_name": "_RNvNtNtCsdvWjcJp1SsP_10openssl_rs2bn5arith17mont_mul_sos_into",
+  "name": "mont_mul_sos_into",
+  "decl_file": 56,
+  "decl_line": 1916,
+  "inline": 1
+ },
+ "instances": [
+  {
+   "die_offset": "0x7c18c0",
+   "abstract_origin": "0x7c169b",
+   "call_file": 56,
+   "call_line": 2275,
+   "ranges_offset": "0x22db90",
+   "ranges": [
+    [
+     "0x16657b",
+     "0x166592"
+    ],
+    [
+     "0x166753",
+     "0x166852"
+    ],
+    [
+     "0x1668c0",
+     "0x166aca"
+    ],
+    [
+     "0x166b2d",
+     "0x166b76"
+    ]
+   ]
+  }
+ ],
+ "audited_extent": {
+  "ranges": [
+   [
+    "0x16657b",
+    "0x166592"
+   ],
+   [
+    "0x166753",
+    "0x166852"
+   ],
+   [
+    "0x1668c0",
+    "0x166aca"
+   ],
+   [
+    "0x166b2d",
+    "0x166b76"
+   ]
+  ],
+  "bytes": 873
+ },
+ "checks": {
+  "abstract_subprogram_is_unique": true,
+  "every_inlined_instance_enumerated": true,
+  "single_concrete_caller": true,
+  "caller_extent_matches_shipped_symbol": true,
+  "every_recorded_range_is_audited": true,
+  "every_range_non_empty": true,
+  "every_range_inside_the_caller": true
+ },
+ "all_pass": true,
+ "whole_body_claim": "The detached DWARF names one abstract subprogram and one inlined instance attributed to one concrete caller. The instance records 4 address ranges; the audit disassembles every one of them, each lies inside the caller, and the caller's DWARF extent equals the shipped symbol's extent. That is the whole extent the compiler recorded for this body, and no more.",
+ "limits": [
+  "a target inlined into more than one caller is refused, not partially audited",
+  "a body duplicated under more than one abstract origin is not covered",
+  "a partially inlined body's out-of-line remainder is audited separately, not here",
+  "only this DSO digest and this target are covered"
+ ]
+}

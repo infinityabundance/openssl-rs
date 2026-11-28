@@ -1,136 +1,138 @@
 {
-  "schema": "openssl-rs/pfp/audit-coverage/1",
-  "campaign": "PFP-34",
-  "sources": [
-    {
-      "path": "evidence/performance-frontier/campaigns/PFP-29/CHECKPOINT.md",
-      "section": "3. Coverage by path (the per-path table)",
-      "sha256": "174f10b11eb7343bf1a5ef35ee653508d9e498fc332f6e2cc60f56e912578594"
-    },
-    {
-      "path": "evidence/performance-frontier/campaigns/PFP-31/targets-pfp31.json",
-      "sha256": "3a7f569736053267fb55e20b290158608c96d9fe8ce35d382c969cce5eef86c6"
-    }
-  ],
-  "note": "The PFP-29 per-path table names nine populations. Eight are secret-bearing; ecdsa-verify is public-only and is listed under public_only, not required. The PFP-31 inventory supplies the targets that reach each path; PFP-31 closed the two PFP-29 named gaps (key::decap, arith::scalar_ntt). A path listed here with no target in the audit record is refused as uncovered; absence of coverage is never cleanliness.",
-  "paths": [
-    {
-      "path": "ecdsa-sign",
-      "secret": "nonce k, then kinv and d",
-      "targets": [
-        "ossl_ec_scalar_mul_ladder",
-        "ossl_ec_GFp_simple_ladder_step",
-        "mod_inverse_consttime",
-        "run_mont_ladder",
-        "mont_mul_sos_into",
-        "mont_mul_fallible",
-        "p256::mont_reduce_into",
-        "p256::wide_mul_x86"
-      ]
-    },
-    {
-      "path": "ecdsa-sign-default",
-      "secret": "d (library-generated nonce is not reachable; reported with d only)",
-      "targets": [
-        "ossl_ec_scalar_mul_ladder",
-        "ossl_ec_GFp_simple_ladder_step",
-        "mod_inverse_consttime",
-        "run_mont_ladder",
-        "mont_mul_sos_into",
-        "mont_mul_fallible",
-        "p256::mont_reduce_into",
-        "p256::wide_mul_x86"
-      ]
-    },
-    {
-      "path": "ecdh",
-      "secret": "d",
-      "targets": [
-        "ossl_ec_scalar_mul_ladder",
-        "ossl_ec_GFp_simple_ladder_step",
-        "mod_inverse_consttime",
-        "run_mont_ladder",
-        "mont_mul_sos_into",
-        "mont_mul_fallible",
-        "p256::mont_reduce_into",
-        "p256::wide_mul_x86"
-      ]
-    },
-    {
-      "path": "rsa-crt",
-      "secret": "d, p, q, dmp1, dmq1, iqmp",
-      "targets": [
-        "rsa_ossl_mod_exp",
-        "mod_exp_core_consttime_from_parts",
-        "run_mont_ladder",
-        "mont_mul_sos_into",
-        "mont_mul_fallible"
-      ]
-    },
-    {
-      "path": "rsa-nocrt",
-      "secret": "d",
-      "targets": [
-        "rsa_ossl_mod_exp",
-        "mod_exp_core_consttime_from_parts",
-        "run_mont_ladder",
-        "mont_mul_sos_into",
-        "mont_mul_fallible"
-      ]
-    },
-    {
-      "path": "rsa-crt-pkcs1",
-      "secret": "d, p, q, dmp1, dmq1, iqmp (PKCS#1 v1.5 padding check included)",
-      "targets": [
-        "rsa_ossl_mod_exp",
-        "mod_exp_core_consttime_from_parts",
-        "run_mont_ladder",
-        "mont_mul_sos_into",
-        "mont_mul_fallible"
-      ]
-    },
-    {
-      "path": "dh",
-      "secret": "private exponent (ffdhe2048)",
-      "targets": [
-        "ossl_dh_compute_key",
-        "mod_exp_core_consttime_from_parts",
-        "run_mont_ladder",
-        "mont_mul_sos_into",
-        "mont_mul_fallible"
-      ]
-    },
-    {
-      "path": "mlkem-decaps",
-      "secret": "64-byte private-key seed at the EVP_PKEY_fromdata boundary",
-      "targets": [
-        "ossl_ml_kem_decap",
-        "decrypt_cpa",
-        "encrypt_cpa",
-        "scalar_inverse_ntt",
-        "inner_product",
-        "matrix_mult_transpose_add",
-        "matrix_expand",
-        "vector_decode_12",
-        "vector_encode",
-        "cbd_2",
-        "cbd_3",
-        "gencbd_vector_ntt",
-        "hash_h",
-        "hash_g",
-        "hash_h_pubkey",
-        "kdf",
-        "prf",
-        "key::decap",
-        "arith::scalar_ntt"
-      ]
-    }
-  ],
-  "public_only": [
-    {
-      "path": "ecdsa-verify",
-      "reason": "ECDSA_do_verify takes a public key, a published signature and a public digest; PFP-29 runs it defined as a behavioural control and claims no taint result for it. It is not a secret-bearing path and is not required to have a target.",
-      "audited_anyway": ["ossl_ec_wNAF_mul"]
-    }
-  ]
+ "schema": "openssl-rs/pfp/audit-coverage/1",
+ "campaign": "PFP-34",
+ "sources": [
+  {
+   "path": "evidence/performance-frontier/campaigns/PFP-29/CHECKPOINT.md",
+   "section": "3. Coverage by path (the per-path table)",
+   "sha256": "174f10b11eb7343bf1a5ef35ee653508d9e498fc332f6e2cc60f56e912578594"
+  },
+  {
+   "path": "evidence/performance-frontier/campaigns/PFP-54/targets-pfp54.json",
+   "sha256": "91bdba3ac3e5b66d6ef90888c2fc5e714bdfbac5dfe923624fe680fc077316bb"
+  }
+ ],
+ "note": "The PFP-29 per-path table names nine populations. Eight are secret-bearing; ecdsa-verify is public-only and is listed under public_only, not required. The targets that reach each path come from the PFP-54 inventory, which is PFP-31's 31 targets plus one witness: arith::mont_mul_sos_into declares a detached-DWARF inlined extent (it has no out-of-line symbol). A path listed here with no target in the audit record is refused as uncovered; absence of coverage is never cleanliness.",
+ "paths": [
+  {
+   "path": "ecdsa-sign",
+   "secret": "nonce k, then kinv and d",
+   "targets": [
+    "ossl_ec_scalar_mul_ladder",
+    "ossl_ec_GFp_simple_ladder_step",
+    "mod_inverse_consttime",
+    "run_mont_ladder",
+    "mont_mul_sos_into",
+    "mont_mul_fallible",
+    "p256::mont_reduce_into",
+    "p256::wide_mul_x86"
+   ]
+  },
+  {
+   "path": "ecdsa-sign-default",
+   "secret": "d (library-generated nonce is not reachable; reported with d only)",
+   "targets": [
+    "ossl_ec_scalar_mul_ladder",
+    "ossl_ec_GFp_simple_ladder_step",
+    "mod_inverse_consttime",
+    "run_mont_ladder",
+    "mont_mul_sos_into",
+    "mont_mul_fallible",
+    "p256::mont_reduce_into",
+    "p256::wide_mul_x86"
+   ]
+  },
+  {
+   "path": "ecdh",
+   "secret": "d",
+   "targets": [
+    "ossl_ec_scalar_mul_ladder",
+    "ossl_ec_GFp_simple_ladder_step",
+    "mod_inverse_consttime",
+    "run_mont_ladder",
+    "mont_mul_sos_into",
+    "mont_mul_fallible",
+    "p256::mont_reduce_into",
+    "p256::wide_mul_x86"
+   ]
+  },
+  {
+   "path": "rsa-crt",
+   "secret": "d, p, q, dmp1, dmq1, iqmp",
+   "targets": [
+    "rsa_ossl_mod_exp",
+    "mod_exp_core_consttime_from_parts",
+    "run_mont_ladder",
+    "mont_mul_sos_into",
+    "mont_mul_fallible"
+   ]
+  },
+  {
+   "path": "rsa-nocrt",
+   "secret": "d",
+   "targets": [
+    "rsa_ossl_mod_exp",
+    "mod_exp_core_consttime_from_parts",
+    "run_mont_ladder",
+    "mont_mul_sos_into",
+    "mont_mul_fallible"
+   ]
+  },
+  {
+   "path": "rsa-crt-pkcs1",
+   "secret": "d, p, q, dmp1, dmq1, iqmp (PKCS#1 v1.5 padding check included)",
+   "targets": [
+    "rsa_ossl_mod_exp",
+    "mod_exp_core_consttime_from_parts",
+    "run_mont_ladder",
+    "mont_mul_sos_into",
+    "mont_mul_fallible"
+   ]
+  },
+  {
+   "path": "dh",
+   "secret": "private exponent (ffdhe2048)",
+   "targets": [
+    "ossl_dh_compute_key",
+    "mod_exp_core_consttime_from_parts",
+    "run_mont_ladder",
+    "mont_mul_sos_into",
+    "mont_mul_fallible"
+   ]
+  },
+  {
+   "path": "mlkem-decaps",
+   "secret": "64-byte private-key seed at the EVP_PKEY_fromdata boundary",
+   "targets": [
+    "ossl_ml_kem_decap",
+    "decrypt_cpa",
+    "encrypt_cpa",
+    "scalar_inverse_ntt",
+    "inner_product",
+    "matrix_mult_transpose_add",
+    "matrix_expand",
+    "vector_decode_12",
+    "vector_encode",
+    "cbd_2",
+    "cbd_3",
+    "gencbd_vector_ntt",
+    "hash_h",
+    "hash_g",
+    "hash_h_pubkey",
+    "kdf",
+    "prf",
+    "key::decap",
+    "arith::scalar_ntt"
+   ]
+  }
+ ],
+ "public_only": [
+  {
+   "path": "ecdsa-verify",
+   "reason": "ECDSA_do_verify takes a public key, a published signature and a public digest; PFP-29 runs it defined as a behavioural control and claims no taint result for it. It is not a secret-bearing path and is not required to have a target.",
+   "audited_anyway": [
+    "ossl_ec_wNAF_mul"
+   ]
+  }
+ ]
 }

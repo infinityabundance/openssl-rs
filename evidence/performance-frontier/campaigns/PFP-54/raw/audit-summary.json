@@ -1,0 +1,38 @@
+{
+ "totals": {
+  "jcc": 1134,
+  "div": 6,
+  "cmov": 81,
+  "setcc": 179,
+  "jo": 12,
+  "loop": 0
+ },
+ "cmov_setcc_table": {
+  "cmov": 81,
+  "reg": 81,
+  "mem": 0,
+  "fixed": 81,
+  "regbased": 0,
+  "setcc": 179,
+  "rows": 24
+ },
+ "divisions": [
+  "- **Montgomery ladder carrier (ladder multiplies inlined here)** `+0xd7a` (0x5930ea): `divq 0x98(%rsp)`",
+  "- **Montgomery ladder carrier (ladder multiplies inlined here)** `+0xd88` (0x5930f8): `divl 0x98(%rsp)`",
+  "- **EC wNAF multiply (verification / public-scalar core)** `+0x6f9` (0x48c929): `div %rcx`",
+  "- **EC wNAF multiply (verification / public-scalar core)** `+0xab0` (0x48cce0): `div %rsi`",
+  "- **EC wNAF multiply (verification / public-scalar core)** `+0xabf` (0x48ccef): `div %ecx`",
+  "- **EC wNAF multiply (verification / public-scalar core)** `+0x124d` (0x48d47d): `div %esi`"
+ ],
+ "decap_contract": {
+  "secret_derived_jcc": 0,
+  "undetermined": 0,
+  "reader_classes": {
+   "jcc:public-bound": 15,
+   "setcc:secret-derived": 1,
+   "cmov:public-bound": 1
+  }
+ },
+ "any_secret_derived_transfer_or_address": false,
+ "stop": false
+}

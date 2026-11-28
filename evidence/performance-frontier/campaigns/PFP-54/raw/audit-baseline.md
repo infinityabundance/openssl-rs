@@ -1,0 +1,1187 @@
+# Binary branch audit — review aid, not a proof
+
+- DSO: `evidence/performance-frontier/campaigns/PFP-54/raw/artefacts/libcrypto.so.3`
+- SHA-256: `a535454753d8857e4c385689ea431b5a47a9686322e6f52b203971188a49359f`
+- objdump: `GNU objdump (GNU Binutils for Debian) 2.40`
+- Secret-dependence is NOT established here. A conditional jump is
+  listed because the compiler emitted it in the named function; the
+  reviewer maps each condition to the Rust source's secret
+  classification. BINSEC `-checkct` (T16) can establish control-flow
+  and memory-address dependence on a declared secret split; it does
+  not model microarchitectural timing.
+
+## Per-function summary
+
+| function | symbol @ offset | bytes | insns | jcc | div/idiv | cmov | setcc | jo/jno | loop | calls | cpuid |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Montgomery multiply (SOS kernel; the schedule LADDER_SCHEDULE selects) | **missing** (`arith::mont_mul_sos_into`) | | | | | | | | | | |
+| Montgomery ladder carrier (ladder multiplies inlined here) | `_RNvNtNtCsdvWjcJp1SsP_10openssl_rs2bn5arith15run_mont_ladder` @ 0x592370 | 5470 | 1144 | 97 | 2 | 3 | 18 | 5 | 0 | 66 | 0 |
+| Montgomery multiply (allocating wrapper) | `_RNvNtNtCsdvWjcJp1SsP_10openssl_rs2bn5arith17mont_mul_fallible` @ 0x1664a0 | 1815 | 432 | 31 | 0 | 0 | 10 | 0 | 0 | 16 | 0 |
+| Constant-time ladder core | **inline-producer-absent** (`mod_exp_core_consttime_from_parts`: producer string not in the DSO: 'clang LLVM (rustc version 1.98.1 (48a229cea 2026-09-01))') | | | | | | | | | | |
+| Constant-time inversion | `_RNvNtNtCsdvWjcJp1SsP_10openssl_rs2bn5limbs21mod_inverse_consttime` @ 0x1cae00 | 11101 | 2380 | 217 | 0 | 3 | 24 | 0 | 0 | 84 | 0 |
+| ECDSA scalar ladder (driver) | `_RNvNtNtCsdvWjcJp1SsP_10openssl_rs2ec4mult25ossl_ec_scalar_mul_ladder` @ 0x48de30 | 3190 | 772 | 120 | 0 | 3 | 7 | 1 | 0 | 80 | 0 |
+| EC ladder step (secret core) | `_RNvNtNtCsdvWjcJp1SsP_10openssl_rs2ec4smpl30ossl_ec_GFp_simple_ladder_step` @ 0x4c8e40 | 1609 | 424 | 61 | 0 | 0 | 0 | 0 | 0 | 45 | 0 |
+| RSA CRT arms | `_RNvNtNtCsdvWjcJp1SsP_10openssl_rs3rsa4ossl16rsa_ossl_mod_exp` @ 0x264460 | 4517 | 1103 | 155 | 0 | 0 | 8 | 0 | 0 | 123 | 0 |
+| P-256 Montgomery reduction | `_RNvNtNtCsdvWjcJp1SsP_10openssl_rs2ec4p25616mont_reduce_into` @ 0x25fc60 | 1086 | 296 | 2 | 0 | 0 | 2 | 0 | 0 | 0 | 0 |
+| P-256 x86-64 multiply | `_RNvNtNtCsdvWjcJp1SsP_10openssl_rs2ec4p25612wide_mul_x86` @ 0x25fa50 | 396 | 112 | 0 | 0 | 0 | 9 | 0 | 0 | 0 | 0 |
+| DH key agreement (driver) | `_RNvNtNtCsdvWjcJp1SsP_10openssl_rs2dh3key19ossl_dh_compute_key` @ 0x598010 | 1304 | 299 | 37 | 0 | 1 | 0 | 1 | 0 | 32 | 0 |
+| EC wNAF multiply (verification / public-scalar core) | `_RNvNtNtCsdvWjcJp1SsP_10openssl_rs2ec4mult16ossl_ec_wNAF_mul` @ 0x48c230 | 6316 | 1372 | 153 | 4 | 29 | 3 | 2 | 0 | 98 | 0 |
+| ML-KEM decapsulation (provider driver) | `_RNvNtNtCsdvWjcJp1SsP_10openssl_rs6ml_kem3key17ossl_ml_kem_decap` @ 0x1f5c80 | 977 | 203 | 14 | 0 | 1 | 0 | 0 | 0 | 13 | 0 |
+| ML-KEM K-PKE decrypt | `_RNvNtNtCsdvWjcJp1SsP_10openssl_rs6ml_kem5arith11decrypt_cpa` @ 0x2bd0f0 | 2864 | 683 | 37 | 0 | 0 | 6 | 0 | 0 | 10 | 0 |
+| ML-KEM K-PKE encrypt (re-encryption / implicit reject) | `_RNvNtNtCsdvWjcJp1SsP_10openssl_rs6ml_kem5arith11encrypt_cpa` @ 0x2bdc20 | 8042 | 1696 | 40 | 0 | 6 | 48 | 2 | 0 | 16 | 0 |
+| ML-KEM inverse NTT | `_RNvNtNtCsdvWjcJp1SsP_10openssl_rs6ml_kem5arith18scalar_inverse_ntt` @ 0x2c0ac0 | 1366 | 295 | 12 | 0 | 13 | 0 | 0 | 0 | 4 | 0 |
+| ML-KEM inner product | `_RNvNtNtCsdvWjcJp1SsP_10openssl_rs6ml_kem5arith13inner_product` @ 0x2bfd00 | 2209 | 455 | 11 | 0 | 2 | 12 | 1 | 0 | 1 | 0 |
+| ML-KEM matrix transpose-multiply-add | `_RNvNtNtCsdvWjcJp1SsP_10openssl_rs6ml_kem5arith25matrix_mult_transpose_add` @ 0x2c1020 | 2439 | 513 | 10 | 0 | 3 | 12 | 0 | 0 | 0 | 0 |
+| ML-KEM matrix expansion (public) | `_RNvNtNtCsdvWjcJp1SsP_10openssl_rs6ml_kem5arith13matrix_expand` @ 0x2c05b0 | 584 | 134 | 16 | 0 | 0 | 0 | 0 | 0 | 6 | 0 |
+| ML-KEM vector decode 12-bit | `_RNvNtNtCsdvWjcJp1SsP_10openssl_rs6ml_kem5arith16vector_decode_12` @ 0x2c08f0 | 136 | 35 | 5 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| ML-KEM vector encode | `_RNvNtNtCsdvWjcJp1SsP_10openssl_rs6ml_kem5arith13vector_encode` @ 0x2c0800 | 237 | 71 | 10 | 0 | 0 | 0 | 0 | 0 | 5 | 0 |
+| ML-KEM CBD sampling eta=2 | `_RNvNtNtCsdvWjcJp1SsP_10openssl_rs6ml_kem5arith5cbd_2` @ 0x2c1af0 | 477 | 108 | 4 | 0 | 0 | 0 | 0 | 0 | 1 | 0 |
+| ML-KEM CBD sampling eta=3 | `_RNvNtNtCsdvWjcJp1SsP_10openssl_rs6ml_kem5arith5cbd_3` @ 0x2c1cd0 | 1102 | 255 | 4 | 0 | 0 | 0 | 0 | 0 | 1 | 0 |
+| ML-KEM CBD vector sampling then NTT | `_RNvNtNtCsdvWjcJp1SsP_10openssl_rs6ml_kem5arith17gencbd_vector_ntt` @ 0x2c0980 | 312 | 83 | 3 | 0 | 0 | 1 | 0 | 0 | 2 | 0 |
+| ML-KEM hash H | `_RNvNtNtCsdvWjcJp1SsP_10openssl_rs6ml_kem5arith6hash_h` @ 0x2c21e0 | 180 | 59 | 5 | 0 | 0 | 2 | 0 | 0 | 5 | 0 |
+| ML-KEM hash G | `_RNvNtNtCsdvWjcJp1SsP_10openssl_rs6ml_kem5arith6hash_g` @ 0x2c2120 | 180 | 59 | 5 | 0 | 0 | 2 | 0 | 0 | 5 | 0 |
+| ML-KEM public-key hash | `_RNvNtNtCsdvWjcJp1SsP_10openssl_rs6ml_kem5arith13hash_h_pubkey` @ 0x2bfb90 | 358 | 104 | 7 | 0 | 0 | 2 | 0 | 0 | 6 | 0 |
+| ML-KEM KDF | `_RNvNtNtCsdvWjcJp1SsP_10openssl_rs6ml_kem5arith3kdf` @ 0x2c19b0 | 128 | 46 | 3 | 0 | 0 | 0 | 0 | 0 | 4 | 0 |
+| ML-KEM PRF | `_RNvNtNtCsdvWjcJp1SsP_10openssl_rs6ml_kem5arith3prf` @ 0x2c1a30 | 177 | 60 | 5 | 0 | 0 | 2 | 0 | 0 | 5 | 0 |
+| ML-KEM decapsulation carrier (implicit-rejection comparison + select) | `_RNvNtNtCsdvWjcJp1SsP_10openssl_rs6ml_kem3key5decap` @ 0x1f7fd0 | 1570 | 340 | 15 | 0 | 1 | 1 | 0 | 0 | 9 | 0 |
+| ML-KEM forward NTT (used by re-encryption on secret-derived data) | **llvm-producer-absent** (`arith::scalar_ntt`: producer string not in the DSO: 'clang LLVM (rustc version 1.98.1 (48a229cea 2026-09-01))') | | | | | | | | | | |
+
+## Coverage
+
+- expected targets: 31
+- resolved uniquely and disassembled: 28
+- failed: 3
+  - Montgomery multiply (SOS kernel; the schedule LADDER_SCHEDULE selects) (`arith::mont_mul_sos_into`): missing
+  - Constant-time ladder core (`mod_exp_core_consttime_from_parts`): inline-producer-absent detail: producer string not in the DSO: 'clang LLVM (rustc version 1.98.1 (48a229cea 2026-09-01))'
+  - ML-KEM forward NTT (used by re-encryption on secret-derived data) (`arith::scalar_ntt`): llvm-producer-absent detail: producer string not in the DSO: 'clang LLVM (rustc version 1.98.1 (48a229cea 2026-09-01))'
+
+## Comparison-result branch contract
+
+Register taint is seeded on the XOR/OR comparison accumulation and propagated over the basic-block CFG. `public-bound` means no tracked comparison register reaches the condition, not that the branch is harmless. Memory and implicit flow are not modelled.
+
+### ML-KEM decapsulation carrier (implicit-rejection comparison + select)
+
+- accumulated registers: `xmm0`, `xmm1`
+- accumulation loop 0x1f82b0..0x1f82de: `xmm0`, `xmm1`
+
+| kind | addr | instruction | condition source | class |
+|---|---|---|---|---|
+| jcc | `0x1f8070` | `je 1f8176 <_RNvNtNtCsdvWjcJp1SsP_10openssl_rs6ml_kem3key5decap+0x1a6>` | `0x1f806e: test %eax,%eax` | **public-bound** |
+| jcc | `0x1f8089` | `je 1f8176 <_RNvNtNtCsdvWjcJp1SsP_10openssl_rs6ml_kem3key5decap+0x1a6>` | `0x1f8087: test %eax,%eax` | **public-bound** |
+| jcc | `0x1f80a0` | `je 1f8176 <_RNvNtNtCsdvWjcJp1SsP_10openssl_rs6ml_kem3key5decap+0x1a6>` | `0x1f809e: test %eax,%eax` | **public-bound** |
+| jcc | `0x1f80bb` | `je 1f8176 <_RNvNtNtCsdvWjcJp1SsP_10openssl_rs6ml_kem3key5decap+0x1a6>` | `0x1f80b9: test %eax,%eax` | **public-bound** |
+| jcc | `0x1f8125` | `je 1f8252 <_RNvNtNtCsdvWjcJp1SsP_10openssl_rs6ml_kem3key5decap+0x282>` | `0x1f811b: test %eax,%eax` | **public-bound** |
+| jcc | `0x1f8148` | `je 1f8252 <_RNvNtNtCsdvWjcJp1SsP_10openssl_rs6ml_kem3key5decap+0x282>` | `0x1f8146: test %eax,%eax` | **public-bound** |
+| jcc | `0x1f8155` | `je 1f8274 <_RNvNtNtCsdvWjcJp1SsP_10openssl_rs6ml_kem3key5decap+0x2a4>` | `0x1f8152: test %rax,%rax` | **public-bound** |
+| jcc | `0x1f815f` | `jae 1f8283 <_RNvNtNtCsdvWjcJp1SsP_10openssl_rs6ml_kem3key5decap+0x2b3>` | `0x1f815b: cmp $0x4,%rax` | **public-bound** |
+| jcc | `0x1f8287` | `jae 1f829a <_RNvNtNtCsdvWjcJp1SsP_10openssl_rs6ml_kem3key5decap+0x2ca>` | `0x1f8283: cmp $0x20,%rax` | **public-bound** |
+| jcc | `0x1f82de` | `jne 1f82b0 <_RNvNtNtCsdvWjcJp1SsP_10openssl_rs6ml_kem3key5decap+0x2e0>` | `0x1f82db: cmp %rdx,%rcx` | **public-bound** |
+| jcc | `0x1f831f` | `je 1f8392 <_RNvNtNtCsdvWjcJp1SsP_10openssl_rs6ml_kem3key5decap+0x3c2>` | `0x1f8314: cmp %rcx,%rax` | **public-bound** |
+| jcc | `0x1f8323` | `je 1f837e <_RNvNtNtCsdvWjcJp1SsP_10openssl_rs6ml_kem3key5decap+0x3ae>` | `0x1f8321: test $0x1c,%al` | **public-bound** |
+| jcc | `0x1f8356` | `jne 1f8340 <_RNvNtNtCsdvWjcJp1SsP_10openssl_rs6ml_kem3key5decap+0x370>` | `0x1f8353: cmp %rsi,%rcx` | **public-bound** |
+| jcc | `0x1f8390` | `jne 1f837e <_RNvNtNtCsdvWjcJp1SsP_10openssl_rs6ml_kem3key5decap+0x3ae>` | `0x1f838d: cmp %rcx,%rax` | **public-bound** |
+| setcc | `0x1f8396` | `setne %al` | `0x1f8394: test %dl,%dl` | **secret-derived** |
+| cmov | `0x1f83b7` | `cmovne %rcx,%rdx` | `0x1f83aa: cmpl $0x0,0xa0(%rsp)` | **public-bound** |
+| jcc | `0x1f8407` | `jne 1f83d0 <_RNvNtNtCsdvWjcJp1SsP_10openssl_rs6ml_kem3key5decap+0x400>` | `0x1f8403: cmp $0x20,%rcx` | **public-bound** |
+
+- secret-derived conditional jumps: 0
+- undetermined conditions: 0
+
+## Divisions
+
+- **Montgomery ladder carrier (ladder multiplies inlined here)** `+0xd7a` (0x5930ea): `divq 0x98(%rsp)`
+- **Montgomery ladder carrier (ladder multiplies inlined here)** `+0xd88` (0x5930f8): `divl 0x98(%rsp)`
+- **EC wNAF multiply (verification / public-scalar core)** `+0x6f9` (0x48c929): `div %rcx`
+- **EC wNAF multiply (verification / public-scalar core)** `+0xab0` (0x48cce0): `div %rsi`
+- **EC wNAF multiply (verification / public-scalar core)** `+0xabf` (0x48ccef): `div %ecx`
+- **EC wNAF multiply (verification / public-scalar core)** `+0x124d` (0x48d47d): `div %esi`
+
+## Dispatch-looking direct calls in the audited ranges
+
+- none.
+
+## Conditional jumps, per branch
+
+`src` is the nearest preceding flag-setting instruction's operand class (mem = the flags were computed against a memory operand); `guarded` is what the fall-through window touches before the next transfer. Neither is a secret-taint result.
+
+| function | offset | jcc | src | setter | guarded | target | dir |
+|---|---:|---|---|---|---|---:|---|
+| Montgomery ladder carrier (ladder multiplies inlined here) | +0x2b | jne | reg/arith | `0x592397: shr $0x3a,%rax` | memory | 0x592656 | fwd |
+| Montgomery ladder carrier (ladder multiplies inlined here) | +0x7f | jbe | reg/arith | `0x5923ec: cmp %rbx,%rdx` | call+memory | 0x5924db | fwd |
+| Montgomery ladder carrier (ladder multiplies inlined here) | +0xa6 | je | reg/arith | `0x592412: cmp $0xffffffffffffffff,%r15` | memory | 0x592656 | fwd |
+| Montgomery ladder carrier (ladder multiplies inlined here) | +0xc6 | jne | reg/arith | `0x59242b: test %rbx,%rbx` | memory | 0x5927b4 | fwd |
+| Montgomery ladder carrier (ladder multiplies inlined here) | +0x108 | jne | reg/arith | `0x592471: or %al,%cl` | memory | 0x5924b9 | fwd |
+| Montgomery ladder carrier (ladder multiplies inlined here) | +0x147 | jne | reg/arith | `0x5924b4: cmp %rax,%rsi` | arithmetic/control | 0x592480 | back |
+| Montgomery ladder carrier (ladder multiplies inlined here) | +0x14c | je | reg/arith | `0x5924b9: test %r15,%r15` | memory | 0x5924cc | fwd |
+| Montgomery ladder carrier (ladder multiplies inlined here) | +0x17c | jne | reg/arith | `0x5924e9: test %rbx,%rbx` | memory | 0x59261b | fwd |
+| Montgomery ladder carrier (ladder multiplies inlined here) | +0x1bc | jne | reg/arith | `0x592528: cmp $0xffffffffffffffff,%r12` | memory | 0x59259e | fwd |
+| Montgomery ladder carrier (ladder multiplies inlined here) | +0x1c9 | je | reg/arith | `0x592536: test %rbx,%rbx` | memory | 0x59265e | fwd |
+| Montgomery ladder carrier (ladder multiplies inlined here) | +0x216 | jne | reg/arith | `0x592583: cmp %rax,%rbx` | memory | 0x592550 | back |
+| Montgomery ladder carrier (ladder multiplies inlined here) | +0x24b | jne | reg/arith | `0x5925b8: test %rbx,%rbx` | call+memory | 0x5926ff | fwd |
+| Montgomery ladder carrier (ladder multiplies inlined here) | +0x273 | je | mem | `0x5925de: cmpb $0x0,0x48(%rsp)` | memory | 0x592f97 | fwd |
+| Montgomery ladder carrier (ladder multiplies inlined here) | +0x28d | je | reg/arith | `0x5925fa: test %rbx,%rbx` | memory | 0x59273b | fwd |
+| Montgomery ladder carrier (ladder multiplies inlined here) | +0x2e0 | je | mem | `0x59264b: cmpb $0x0,0x48(%rsp)` | memory | 0x59286e | fwd |
+| Montgomery ladder carrier (ladder multiplies inlined here) | +0x312 | jne | reg/arith | `0x592680: or %cl,%dl` | memory | 0x5926c4 | fwd |
+| Montgomery ladder carrier (ladder multiplies inlined here) | +0x34e | jne | reg/arith | `0x5926bb: cmp %rdx,%rax` | memory | 0x592690 | back |
+| Montgomery ladder carrier (ladder multiplies inlined here) | +0x357 | je | reg/arith | `0x5926c4: test %rsi,%rsi` | memory | 0x5926ed | fwd |
+| Montgomery ladder carrier (ladder multiplies inlined here) | +0x3b9 | je | mem | `0x592724: cmpb $0x0,0x48(%rsp)` | memory | 0x5928f3 | fwd |
+| Montgomery ladder carrier (ladder multiplies inlined here) | +0x3eb | jne | reg/arith | `0x592759: or %al,%cl` | memory | 0x592798 | fwd |
+| Montgomery ladder carrier (ladder multiplies inlined here) | +0x426 | jne | reg/arith | `0x592793: cmp %rax,%rsi` | arithmetic/control | 0x592760 | back |
+| Montgomery ladder carrier (ladder multiplies inlined here) | +0x42b | je | reg/arith | `0x592798: test %r12,%r12` | memory | 0x592536 | back |
+| Montgomery ladder carrier (ladder multiplies inlined here) | +0x46e | je | mem | `0x5927d9: cmpb $0x0,0x48(%rsp)` | memory | 0x5928b3 | fwd |
+| Montgomery ladder carrier (ladder multiplies inlined here) | +0x4a5 | jne | reg/arith | `0x59280e: or %al,%cl` | memory | 0x592852 | fwd |
+| Montgomery ladder carrier (ladder multiplies inlined here) | +0x4e0 | jne | reg/arith | `0x59284d: cmp %rax,%rsi` | arithmetic/control | 0x592819 | back |
+| Montgomery ladder carrier (ladder multiplies inlined here) | +0x4e5 | je | reg/arith | `0x592852: test %r15,%r15` | memory | 0x59265e | back |
+| Montgomery ladder carrier (ladder multiplies inlined here) | +0x50a | je | reg/arith | `0x592876: cmp $0x1,%rbx` | memory | 0x592897 | fwd |
+| Montgomery ladder carrier (ladder multiplies inlined here) | +0x54f | je | reg/arith | `0x5928bb: cmp $0x1,%rbx` | memory | 0x5928dc | fwd |
+| Montgomery ladder carrier (ladder multiplies inlined here) | +0x596 | je | reg/arith | `0x592902: cmp $0x1,%rbx` | memory | 0x59292a | fwd |
+| Montgomery ladder carrier (ladder multiplies inlined here) | +0x5e6 | je | mem | `0x592951: cmpb $0x0,0x48(%rsp)` | memory | 0x59296e | fwd |
+| Montgomery ladder carrier (ladder multiplies inlined here) | +0x621 | je | reg/arith | `0x59298d: cmp $0x1,%rbx` | memory | 0x5929b6 | fwd |
+| Montgomery ladder carrier (ladder multiplies inlined here) | +0x677 | je | mem | `0x5929e2: cmpb $0x0,0x48(%rsp)` | memory | 0x592a4e | fwd |
+| Montgomery ladder carrier (ladder multiplies inlined here) | +0x6c2 | jne | reg/arith | `0x592a2f: cmp %rax,%rsi` | memory | 0x592a04 | back |
+| Montgomery ladder carrier (ladder multiplies inlined here) | +0x72e | je | mem | `0x592a99: cmpb $0x0,0x48(%rsp)` | memory | 0x592ba7 | fwd |
+| Montgomery ladder carrier (ladder multiplies inlined here) | +0x797 | jne | reg/arith | `0x592b04: cmp %rax,%rcx` | memory | 0x592ad0 | back |
+| Montgomery ladder carrier (ladder multiplies inlined here) | +0x7cf | jne | reg/arith | `0x592b3d: or %al,%cl` | memory | 0x592b78 | fwd |
+| Montgomery ladder carrier (ladder multiplies inlined here) | +0x806 | jne | reg/arith | `0x592b73: cmp %rax,%rsi` | arithmetic/control | 0x592b48 | back |
+| Montgomery ladder carrier (ladder multiplies inlined here) | +0x80b | je | reg/arith | `0x592b78: test %rbp,%rbp` | memory | 0x592b8d | fwd |
+| Montgomery ladder carrier (ladder multiplies inlined here) | +0x82c | jne | mem | `0x592b8d: cmpb $0x0,0x78(%rsp)` | arithmetic/control | 0x5925fa | back |
+| Montgomery ladder carrier (ladder multiplies inlined here) | +0x845 | je | reg/arith | `0x592bb1: cmp $0x1,%rbx` | memory | 0x592bda | fwd |
+| Montgomery ladder carrier (ladder multiplies inlined here) | +0x896 | je | mem | `0x592c01: cmpb $0x0,0x48(%rsp)` | memory | 0x592c32 | fwd |
+| Montgomery ladder carrier (ladder multiplies inlined here) | +0x8d3 | je | reg/arith | `0x592c3f: cmp $0x1,%rbx` | memory | 0x592c6b | fwd |
+| Montgomery ladder carrier (ladder multiplies inlined here) | +0x916 | ja | mem | `0x592c81: cmpl $0x3f,0x40(%rsp)` | memory | 0x592ec6 | fwd |
+| Montgomery ladder carrier (ladder multiplies inlined here) | +0x93c | je | reg/arith | `0x592caa: test %esi,%esi` | memory | 0x592ec6 | fwd |
+| Montgomery ladder carrier (ladder multiplies inlined here) | +0x94d | jo | reg/arith | `0x592cba: mul %rbx` | call+memory | 0x592ec6 | fwd |
+| Montgomery ladder carrier (ladder multiplies inlined here) | +0x97a | je | reg/arith | `0x592ce6: cmp $0xffffffffffffffff,%rax` | call+memory | 0x592ec6 | fwd |
+| Montgomery ladder carrier (ladder multiplies inlined here) | +0x9be | je | reg/arith | `0x592d2a: cmp $0xffffffffffffffff,%rax` | memory | 0x592fdb | fwd |
+| Montgomery ladder carrier (ladder multiplies inlined here) | +0x9d6 | ja | mem | `0x592d3e: cmp 0x80(%rsp),%rbx` | memory | 0x5936a4 | fwd |
+| Montgomery ladder carrier (ladder multiplies inlined here) | +0x9f0 | ja | reg/arith | `0x592d5d: cmp %rax,%rbx` | memory | 0x5936bd | fwd |
+| Montgomery ladder carrier (ladder multiplies inlined here) | +0xa3b | ja | mem | `0x592da3: cmp 0x80(%rsp),%rbp` | memory | 0x5936e6 | fwd |
+| Montgomery ladder carrier (ladder multiplies inlined here) | +0xa46 | jne | mem | `0x592db1: cmp 0x38(%rsp),%rbx` | memory | 0x593700 | fwd |
+| Montgomery ladder carrier (ladder multiplies inlined here) | +0xab4 | jb | reg/arith | `0x592e20: sub $0x1,%rbp` | memory | 0x592fe3 | fwd |
+| Montgomery ladder carrier (ladder multiplies inlined here) | +0xac2 | jo | reg/arith | `0x592e2f: mul %rbx` | memory | 0x593750 | fwd |
+| Montgomery ladder carrier (ladder multiplies inlined here) | +0xad6 | jb | reg/arith | `0x592e43: sub %rax,%rcx` | memory | 0x5934f4 | fwd |
+| Montgomery ladder carrier (ladder multiplies inlined here) | +0xae7 | jo | reg/arith | `0x592e54: mul %rbx` | arithmetic/control | 0x593741 | fwd |
+| Montgomery ladder carrier (ladder multiplies inlined here) | +0xaf3 | jb | reg/arith | `0x592e60: sub %rax,%rsi` | arithmetic/control | 0x593521 | fwd |
+| Montgomery ladder carrier (ladder multiplies inlined here) | +0xafc | ja | reg/arith | `0x592e69: cmp %rcx,%rbx` | memory | 0x59352b | fwd |
+| Montgomery ladder carrier (ladder multiplies inlined here) | +0xb48 | jne | reg/arith | `0x592eb6: test %al,%al` | arithmetic/control | 0x592e20 | back |
+| Montgomery ladder carrier (ladder multiplies inlined here) | +0xba9 | jae | reg/arith | `0x592f15: cmp $0x7,%rcx` | arithmetic/control | 0x592f1f | fwd |
+| Montgomery ladder carrier (ladder multiplies inlined here) | +0xbf0 | jne | reg/arith | `0x592f5d: cmp %rcx,%rdx` | arithmetic/control | 0x592f32 | back |
+| Montgomery ladder carrier (ladder multiplies inlined here) | +0xbf5 | je | reg/arith | `0x592f62: test %rax,%rax` | memory | 0x592f7a | fwd |
+| Montgomery ladder carrier (ladder multiplies inlined here) | +0xc08 | jne | reg/arith | `0x592f75: cmp %rdx,%rax` | memory | 0x592f6e | back |
+| Montgomery ladder carrier (ladder multiplies inlined here) | +0xc8d | jb | reg/arith | `0x592ffa: cmp %rax,%rbp` | memory | 0x592ebe | back |
+| Montgomery ladder carrier (ladder multiplies inlined here) | +0xc9b | jne | mem | `0x593003: cmp %rbx,0xb0(%rsp)` | memory | 0x593711 | fwd |
+| Montgomery ladder carrier (ladder multiplies inlined here) | +0xcc4 | jae | mem | `0x59302c: cmp 0x98(%rsp),%rbp` | memory | 0x5930dc | fwd |
+| Montgomery ladder carrier (ladder multiplies inlined here) | +0xd20 | je | reg/arith | `0x59308e: test %al,%al` | call+memory | 0x593586 | fwd |
+| Montgomery ladder carrier (ladder multiplies inlined here) | +0xd73 | je | reg/arith | `0x5930df: shr $0x20,%rax` | division | 0x5930f4 | fwd |
+| Montgomery ladder carrier (ladder multiplies inlined here) | +0xe73 | jo | mem | `0x5931db: mulq 0x98(%rsp)` | memory | 0x593586 | fwd |
+| Montgomery ladder carrier (ladder multiplies inlined here) | +0xea1 | je | mem | `0x593209: cmp %rcx,0x98(%rsp)` | arithmetic/control | 0x593255 | fwd |
+| Montgomery ladder carrier (ladder multiplies inlined here) | +0xea9 | jb | reg/arith | `0x593216: add %rax,%rsi` | memory | 0x593586 | fwd |
+| Montgomery ladder carrier (ladder multiplies inlined here) | +0xeb7 | jae | mem | `0x59321f: cmp 0xf8(%rsp),%rsi` | memory | 0x5931f9 | back |
+| Montgomery ladder carrier (ladder multiplies inlined here) | +0xec8 | jae | mem | `0x593230: cmp 0xf0(%rsp),%rdi` | memory | 0x59376f | fwd |
+| Montgomery ladder carrier (ladder multiplies inlined here) | +0xf66 | je | reg/arith | `0x5932d4: test %al,%al` | memory | 0x593586 | fwd |
+| Montgomery ladder carrier (ladder multiplies inlined here) | +0xf97 | jne | mem | `0x5932ff: decq 0xd8(%rsp)` | memory | 0x59327e | back |
+| Montgomery ladder carrier (ladder multiplies inlined here) | +0xfa6 | je | mem | `0x59330d: cmpq $0x0,0xe8(%rsp)` | memory | 0x59332d | fwd |
+| Montgomery ladder carrier (ladder multiplies inlined here) | +0xfe7 | je | mem | `0x59334f: cmp 0xe0(%rsp),%rcx` | arithmetic/control | 0x593470 | fwd |
+| Montgomery ladder carrier (ladder multiplies inlined here) | +0xff3 | jo | reg/arith | `0x593360: mul %rbx` | arithmetic/control | 0x593795 | fwd |
+| Montgomery ladder carrier (ladder multiplies inlined here) | +0xfff | jb | reg/arith | `0x59336c: add %rbx,%rsi` | memory | 0x5937a4 | fwd |
+| Montgomery ladder carrier (ladder multiplies inlined here) | +0x100d | ja | mem | `0x593375: cmp 0x80(%rsp),%rsi` | memory | 0x593687 | fwd |
+| Montgomery ladder carrier (ladder multiplies inlined here) | +0x1019 | je | mem | `0x593383: cmpq $0x0,0x38(%rsp)` | memory | 0x59333e | back |
+| Montgomery ladder carrier (ladder multiplies inlined here) | +0x1023 | jne | mem | `0x59338b: cmp %rcx,0x90(%rsp)` | memory | 0x59333e | back |
+| Montgomery ladder carrier (ladder multiplies inlined here) | +0x1034 | je | reg/arith | `0x5933a2: test $0x1,%al` | arithmetic/control | 0x5933aa | fwd |
+| Montgomery ladder carrier (ladder multiplies inlined here) | +0x1070 | jne | mem | `0x5933d8: cmp %rax,0xb0(%rsp)` | memory | 0x5933ac | back |
+| Montgomery ladder carrier (ladder multiplies inlined here) | +0x1082 | je | mem | `0x5933ed: cmp %rax,0x38(%rsp)` | memory | 0x59333e | back |
+| Montgomery ladder carrier (ladder multiplies inlined here) | +0x1094 | je | mem | `0x5933fb: cmpq $0x0,0x100(%rsp)` | memory | 0x593426 | fwd |
+| Montgomery ladder carrier (ladder multiplies inlined here) | +0x10b4 | jne | reg/arith | `0x593421: dec %rsi` | memory | 0x593411 | back |
+| Montgomery ladder carrier (ladder multiplies inlined here) | +0x10bf | ja | reg/arith | `0x59342b: cmp $0xfffffffffffffffc,%rdx` | memory | 0x59333e | back |
+| Montgomery ladder carrier (ladder multiplies inlined here) | +0x10f9 | jne | mem | `0x593464: cmp %rax,0x38(%rsp)` | arithmetic/control | 0x593435 | back |
+| Montgomery ladder carrier (ladder multiplies inlined here) | +0x1148 | je | reg/arith | `0x5934b6: test %al,%al` | memory | 0x593577 | fwd |
+| Montgomery ladder carrier (ladder multiplies inlined here) | +0x1179 | jne | mem | `0x5934e0: cmpq $0x0,0xc0(%rsp)` | arithmetic/control | 0x5931c8 | back |
+| Montgomery ladder carrier (ladder multiplies inlined here) | +0x123e | jne | reg/arith | `0x5935ac: or %al,%cl` | memory | 0x5935e7 | fwd |
+| Montgomery ladder carrier (ladder multiplies inlined here) | +0x1275 | jne | reg/arith | `0x5935e2: cmp %rax,%rsi` | memory | 0x5935b7 | back |
+| Montgomery ladder carrier (ladder multiplies inlined here) | +0x1280 | je | mem | `0x5935e7: cmpq $0x0,0xc8(%rsp)` | memory | 0x593602 | fwd |
+| Montgomery ladder carrier (ladder multiplies inlined here) | +0x12ba | jne | reg/arith | `0x593628: or %al,%cl` | memory | 0x593663 | fwd |
+| Montgomery ladder carrier (ladder multiplies inlined here) | +0x12f1 | jne | reg/arith | `0x59365e: cmp %rax,%rsi` | memory | 0x593633 | back |
+| Montgomery ladder carrier (ladder multiplies inlined here) | +0x12fc | je | mem | `0x593663: cmpq $0x0,0xd0(%rsp)` | memory | 0x592ec9 | back |
+| Montgomery ladder carrier (ladder multiplies inlined here) | +0x148b | jne | reg/arith | `0x5937f8: test %rbx,%rbx` | call+memory | 0x59382b | fwd |
+| Montgomery multiply (allocating wrapper) | +0x42 | jne | reg/arith | `0x1664df: test %rbx,%rbx` | call+memory | 0x16652a | fwd |
+| Montgomery multiply (allocating wrapper) | +0x6e | je | mem | `0x166509: cmpb $0x0,0x30(%rsp)` | memory | 0x166566 | fwd |
+| Montgomery multiply (allocating wrapper) | +0x7f | jne | reg/arith | `0x16651c: test %rbx,%rbx` | arithmetic/control | 0x166650 | fwd |
+| Montgomery multiply (allocating wrapper) | +0xaf | je | mem | `0x16654a: cmpb $0x0,0x30(%rsp)` | memory | 0x166682 | fwd |
+| Montgomery multiply (allocating wrapper) | +0xce | jne | reg/arith | `0x16656b: test %rbx,%rbx` | memory | 0x1666b7 | fwd |
+| Montgomery multiply (allocating wrapper) | +0xe4 | jne | reg/arith | `0x166581: or %rbp,%r14` | memory | 0x1665f3 | fwd |
+| Montgomery multiply (allocating wrapper) | +0x13e | jne | reg/arith | `0x1665db: cmp %rax,%r14` | memory | 0x1665b0 | back |
+| Montgomery multiply (allocating wrapper) | +0x19e | jne | reg/arith | `0x16663b: cmp %rax,%rsi` | memory | 0x166610 | back |
+| Montgomery multiply (allocating wrapper) | +0x1ae | je | reg/arith | `0x16664b: test %rbx,%rbx` | arithmetic/control | 0x166673 | fwd |
+| Montgomery multiply (allocating wrapper) | +0x1ee | je | reg/arith | `0x16668a: cmp $0x1,%rbx` | memory | 0x1666ab | fwd |
+| Montgomery multiply (allocating wrapper) | +0x267 | je | mem | `0x166702: cmpb $0x0,0x30(%rsp)` | memory | 0x16671a | fwd |
+| Montgomery multiply (allocating wrapper) | +0x288 | je | reg/arith | `0x166724: cmp $0x1,%rbx` | memory | 0x16674c | fwd |
+| Montgomery multiply (allocating wrapper) | +0x2bc | jne | reg/arith | `0x166759: or %rbp,%r14` | memory | 0x166852 | fwd |
+| Montgomery multiply (allocating wrapper) | +0x33d | je | reg/arith | `0x1667da: cmp %rbx,%r15` | memory | 0x1668b2 | fwd |
+| Montgomery multiply (allocating wrapper) | +0x353 | je | reg/arith | `0x1667f0: test %rax,%rax` | memory | 0x1667a7 | back |
+| Montgomery multiply (allocating wrapper) | +0x3a2 | jne | reg/arith | `0x16683f: cmp %r8,%rbp` | arithmetic/control | 0x166800 | back |
+| Montgomery multiply (allocating wrapper) | +0x3a7 | jne | reg/arith | `0x166844: test $0x1,%bl` | arithmetic/control | 0x1667a7 | back |
+| Montgomery multiply (allocating wrapper) | +0x3fb | jne | reg/arith | `0x166898: cmp %rax,%rsi` | memory | 0x16686d | back |
+| Montgomery multiply (allocating wrapper) | +0x47a | je | reg/arith | `0x166912: cmp %rbx,%rax` | memory | 0x1669ba | fwd |
+| Montgomery multiply (allocating wrapper) | +0x488 | je | reg/arith | `0x166925: cmp %rax,%r11` | memory | 0x166b53 | fwd |
+| Montgomery multiply (allocating wrapper) | +0x4b3 | je | reg/arith | `0x166950: cmp %rdi,%r15` | memory | 0x166b2d | fwd |
+| Montgomery multiply (allocating wrapper) | +0x4dd | jne | reg/arith | `0x16697a: cmp %rdi,%rbx` | memory | 0x166950 | back |
+| Montgomery multiply (allocating wrapper) | +0x4eb | je | mem | `0x166986: cmp 0x60(%rsp),%r11` | memory | 0x1668f3 | back |
+| Montgomery multiply (allocating wrapper) | +0x513 | jne | reg/arith | `0x1669b0: cmp %rax,%r13` | arithmetic/control | 0x1669a0 | back |
+| Montgomery multiply (allocating wrapper) | +0x52f | je | reg/arith | `0x1669cc: test %rax,%rax` | memory | 0x166a28 | fwd |
+| Montgomery multiply (allocating wrapper) | +0x57f | jne | reg/arith | `0x166a1c: cmp %rdx,%rbp` | arithmetic/control | 0x1669e7 | back |
+| Montgomery multiply (allocating wrapper) | +0x584 | jne | reg/arith | `0x166a21: test $0x1,%bl` | arithmetic/control | 0x166a36 | fwd |
+| Montgomery multiply (allocating wrapper) | +0x5ee | ja | reg/arith | `0x166a8b: cmp %r12,%rdi` | arithmetic/control | 0x166b60 | fwd |
+| Montgomery multiply (allocating wrapper) | +0x5f7 | je | reg/arith | `0x166a94: cmp %r8,%rbx` | memory | 0x166b69 | fwd |
+| Montgomery multiply (allocating wrapper) | +0x628 | jne | reg/arith | `0x166ac4: add $0xfffffffffffffff8,%r10` | memory | 0x166a87 | back |
+| Montgomery multiply (allocating wrapper) | +0x673 | jne | reg/arith | `0x166b10: cmp %rax,%rsi` | memory | 0x166adc | back |
+| Constant-time inversion | +0x17 | je | reg/arith | `0x1cae14: test %r8,%r8` | memory | 0x1cae65 | fwd |
+| Constant-time inversion | +0x1f | je | mem | `0x1cae1c: testb $0x1,(%rcx)` | arithmetic/control | 0x1cae65 | fwd |
+| Constant-time inversion | +0x32 | jne | reg/arith | `0x1cae2e: shr $0x39,%rax` | call+memory | 0x1cae65 | fwd |
+| Constant-time inversion | +0x63 | je | mem | `0x1cae5e: cmpb $0x0,0x10(%rsp)` | memory | 0x1cae82 | fwd |
+| Constant-time inversion | +0x8e | je | reg/arith | `0x1cae8a: cmp $0x1,%rbx` | memory | 0x1caeab | fwd |
+| Constant-time inversion | +0xea | je | mem | `0x1caee5: cmpb $0x0,0x10(%rsp)` | memory | 0x1caf4e | fwd |
+| Constant-time inversion | +0x136 | jne | reg/arith | `0x1caf33: cmp %rax,%rbx` | memory | 0x1caf00 | back |
+| Constant-time inversion | +0x15a | je | reg/arith | `0x1caf56: cmp $0x1,%rbx` | memory | 0x1caf77 | fwd |
+| Constant-time inversion | +0x1c0 | je | mem | `0x1cafbb: cmpb $0x0,0x10(%rsp)` | memory | 0x1cb017 | fwd |
+| Constant-time inversion | +0x202 | jne | reg/arith | `0x1cafff: cmp %rax,%rsi` | memory | 0x1cafcc | back |
+| Constant-time inversion | +0x22c | je | mem | `0x1cb01f: cmpq $0x1,(%rsp)` | memory | 0x1cb057 | fwd |
+| Constant-time inversion | +0x28b | je | mem | `0x1cb086: cmpb $0x0,0x10(%rsp)` | memory | 0x1cb116 | fwd |
+| Constant-time inversion | +0x2b5 | jne | reg/arith | `0x1cb0b3: or %cl,%dl` | memory | 0x1cb0f5 | fwd |
+| Constant-time inversion | +0x2ef | jne | reg/arith | `0x1cb0ec: cmp %rax,%rsi` | memory | 0x1cb0c1 | back |
+| Constant-time inversion | +0x2f8 | je | reg/arith | `0x1cb0f5: test %rax,%rax` | memory | 0x1cafc2 | back |
+| Constant-time inversion | +0x328 | je | mem | `0x1cb123: cmpq $0x1,(%rsp)` | memory | 0x1cb152 | fwd |
+| Constant-time inversion | +0x37e | je | mem | `0x1cb179: cmpb $0x0,0x10(%rsp)` | memory | 0x1cb215 | fwd |
+| Constant-time inversion | +0x3b1 | jne | reg/arith | `0x1cb1af: or %cl,%al` | memory | 0x1cb1ed | fwd |
+| Constant-time inversion | +0x3eb | jne | reg/arith | `0x1cb1e8: cmp %rax,%rsi` | memory | 0x1cb1bd | back |
+| Constant-time inversion | +0x3f2 | je | mem | `0x1cb1ed: cmpq $0x0,(%rsp)` | memory | 0x1cb207 | fwd |
+| Constant-time inversion | +0x421 | je | reg/arith | `0x1cb21d: cmp $0x1,%rbx` | memory | 0x1cb241 | fwd |
+| Constant-time inversion | +0x46d | je | mem | `0x1cb268: cmpb $0x0,0x10(%rsp)` | memory | 0x1cb27d | fwd |
+| Constant-time inversion | +0x48b | je | reg/arith | `0x1cb287: cmp $0x1,%rbx` | memory | 0x1cb2af | fwd |
+| Constant-time inversion | +0x4dd | je | reg/arith | `0x1cb2d9: cmp $0xffffffffffffffff,%rax` | call+memory | 0x1cb856 | fwd |
+| Constant-time inversion | +0x524 | je | reg/arith | `0x1cb320: cmp $0xffffffffffffffff,%rax` | call+memory | 0x1cb864 | fwd |
+| Constant-time inversion | +0x56b | je | reg/arith | `0x1cb367: cmp $0xffffffffffffffff,%rax` | call+memory | 0x1cd0b0 | fwd |
+| Constant-time inversion | +0x5b2 | je | reg/arith | `0x1cb3ae: cmp $0xffffffffffffffff,%rax` | call+memory | 0x1cd0be | fwd |
+| Constant-time inversion | +0x5fa | je | reg/arith | `0x1cb3f6: cmp $0xffffffffffffffff,%rax` | call+memory | 0x1cd0cc | fwd |
+| Constant-time inversion | +0x642 | je | reg/arith | `0x1cb43e: cmp $0xffffffffffffffff,%rax` | call+memory | 0x1cd0da | fwd |
+| Constant-time inversion | +0x68a | je | reg/arith | `0x1cb486: cmp $0xffffffffffffffff,%rax` | call+memory | 0x1cd0e8 | fwd |
+| Constant-time inversion | +0x6cf | je | reg/arith | `0x1cb4cb: cmp $0xffffffffffffffff,%rax` | call+memory | 0x1cd0f6 | fwd |
+| Constant-time inversion | +0x714 | je | reg/arith | `0x1cb510: cmp $0xffffffffffffffff,%rax` | call+memory | 0x1cd104 | fwd |
+| Constant-time inversion | +0x759 | je | reg/arith | `0x1cb555: cmp $0xffffffffffffffff,%rax` | call+memory | 0x1cd3b5 | fwd |
+| Constant-time inversion | +0x79f | je | reg/arith | `0x1cb59b: cmp $0xffffffffffffffff,%rax` | memory | 0x1cd3c0 | fwd |
+| Constant-time inversion | +0xb14 | je | mem | `0x1cb8fc: cmp 0x2b0(%rsp),%rdx` | memory | 0x1cd112 | fwd |
+| Constant-time inversion | +0xbcf | je | mem | `0x1cb9c6: cmpq $0x0,0x148(%rsp)` | memory | 0x1cba28 | fwd |
+| Constant-time inversion | +0xc0e | je | reg/arith | `0x1cba0a: add $0xfffffffffffffff8,%rax` | arithmetic/control | 0x1cba2a | fwd |
+| Constant-time inversion | +0xc13 | jae | reg/arith | `0x1cba10: cmp %rbx,%rcx` | memory | 0x1cba1c | fwd |
+| Constant-time inversion | +0xc21 | jb | reg/arith | `0x1cba1e: cmp %rbx,%rcx` | arithmetic/control | 0x1cb9df | back |
+| Constant-time inversion | +0xc33 | je | mem | `0x1cba2a: cmpq $0x0,0x140(%rsp)` | memory | 0x1cba8f | fwd |
+| Constant-time inversion | +0xc71 | je | reg/arith | `0x1cba6d: add $0xfffffffffffffff8,%rax` | arithmetic/control | 0x1cba8f | fwd |
+| Constant-time inversion | +0xc76 | jae | reg/arith | `0x1cba73: cmp %rbx,%rcx` | memory | 0x1cba83 | fwd |
+| Constant-time inversion | +0xc88 | jb | reg/arith | `0x1cba85: cmp %rbx,%rcx` | arithmetic/control | 0x1cba44 | back |
+| Constant-time inversion | +0xcdf | je | mem | `0x1cbad6: cmpq $0x0,0x130(%rsp)` | memory | 0x1cbbce | fwd |
+| Constant-time inversion | +0xcee | je | mem | `0x1cbae5: cmpq $0x0,0x270(%rsp)` | memory | 0x1cbb98 | fwd |
+| Constant-time inversion | +0xd47 | je | reg/arith | `0x1cbb43: add $0xfffffffffffffffe,%r8` | memory | 0x1cbb87 | fwd |
+| Constant-time inversion | +0xd58 | jae | reg/arith | `0x1cbb55: cmp %rbx,%rdi` | memory | 0x1cbb65 | fwd |
+| Constant-time inversion | +0xd81 | jb | reg/arith | `0x1cbb7e: cmp %rbx,%rcx` | arithmetic/control | 0x1cbb1a | back |
+| Constant-time inversion | +0xd8f | je | mem | `0x1cbb87: testb $0x1,0x250(%rsp)` | memory | 0x1cbbce | fwd |
+| Constant-time inversion | +0xdbb | jae | reg/arith | `0x1cbbb8: cmp %rbx,%rdi` | memory | 0x1cbbc4 | fwd |
+| Constant-time inversion | +0xdd7 | je | mem | `0x1cbbce: cmpq $0x0,0x150(%rsp)` | memory | 0x1cbce1 | fwd |
+| Constant-time inversion | +0xde6 | je | mem | `0x1cbbdd: cmpq $0x0,0x268(%rsp)` | memory | 0x1cbc9f | fwd |
+| Constant-time inversion | +0xe43 | je | reg/arith | `0x1cbc3f: add $0xfffffffffffffffe,%r8` | memory | 0x1cbc8e | fwd |
+| Constant-time inversion | +0xe5a | jae | mem | `0x1cbc52: cmp 0x148(%rsp),%rdi` | memory | 0x1cbc67 | fwd |
+| Constant-time inversion | +0xe88 | jb | mem | `0x1cbc80: cmp 0x148(%rsp),%rcx` | arithmetic/control | 0x1cbc16 | back |
+| Constant-time inversion | +0xe96 | je | mem | `0x1cbc8e: testb $0x1,0x248(%rsp)` | memory | 0x1cbce1 | fwd |
+| Constant-time inversion | +0xec7 | jae | mem | `0x1cbcbf: cmp 0x148(%rsp),%rdi` | memory | 0x1cbcd7 | fwd |
+| Constant-time inversion | +0xf60 | je | reg/arith | `0x1cbd5c: add $0xfffffffffffffff8,%rax` | arithmetic/control | 0x1cbda4 | fwd |
+| Constant-time inversion | +0xf65 | jae | reg/arith | `0x1cbd62: cmp %rbx,%rcx` | memory | 0x1cbd6e | fwd |
+| Constant-time inversion | +0xf78 | jae | mem | `0x1cbd70: cmp 0x130(%rsp),%rcx` | memory | 0x1cbd88 | fwd |
+| Constant-time inversion | +0xf9e | jb | mem | `0x1cbd96: cmp 0x150(%rsp),%rcx` | arithmetic/control | 0x1cbd3b | back |
+| Constant-time inversion | +0xfad | je | mem | `0x1cbda4: cmpq $0x0,0x130(%rsp)` | memory | 0x1cbea5 | fwd |
+| Constant-time inversion | +0xfbc | je | mem | `0x1cbdb3: cmpq $0x0,0x270(%rsp)` | memory | 0x1cbe6b | fwd |
+| Constant-time inversion | +0x101a | je | reg/arith | `0x1cbe16: add $0xfffffffffffffffe,%r8` | memory | 0x1cbe5a | fwd |
+| Constant-time inversion | +0x102b | jae | reg/arith | `0x1cbe28: cmp %rbx,%rdi` | memory | 0x1cbe38 | fwd |
+| Constant-time inversion | +0x1054 | jb | reg/arith | `0x1cbe51: cmp %rbx,%rcx` | arithmetic/control | 0x1cbded | back |
+| Constant-time inversion | +0x1062 | je | mem | `0x1cbe5a: testb $0x1,0x250(%rsp)` | memory | 0x1cbea5 | fwd |
+| Constant-time inversion | +0x108e | jae | reg/arith | `0x1cbe8b: cmp %rbx,%rdi` | memory | 0x1cbe9b | fwd |
+| Constant-time inversion | +0x10ae | je | mem | `0x1cbea5: cmpq $0x0,0x150(%rsp)` | memory | 0x1cbfb8 | fwd |
+| Constant-time inversion | +0x10bd | je | mem | `0x1cbeb4: cmpq $0x0,0x268(%rsp)` | memory | 0x1cbf76 | fwd |
+| Constant-time inversion | +0x111a | je | reg/arith | `0x1cbf16: add $0xfffffffffffffffe,%r8` | memory | 0x1cbf65 | fwd |
+| Constant-time inversion | +0x1131 | jae | mem | `0x1cbf29: cmp 0x140(%rsp),%rdi` | memory | 0x1cbf3e | fwd |
+| Constant-time inversion | +0x115f | jb | mem | `0x1cbf57: cmp 0x140(%rsp),%rcx` | arithmetic/control | 0x1cbeed | back |
+| Constant-time inversion | +0x116d | je | mem | `0x1cbf65: testb $0x1,0x248(%rsp)` | memory | 0x1cbfb8 | fwd |
+| Constant-time inversion | +0x119e | jae | mem | `0x1cbf96: cmp 0x140(%rsp),%rdi` | memory | 0x1cbfae | fwd |
+| Constant-time inversion | +0x121f | je | reg/arith | `0x1cc01b: add $0xfffffffffffffff8,%rax` | arithmetic/control | 0x1cc067 | fwd |
+| Constant-time inversion | +0x1224 | jae | reg/arith | `0x1cc021: cmp %rbx,%rcx` | memory | 0x1cc031 | fwd |
+| Constant-time inversion | +0x123b | jae | mem | `0x1cc033: cmp 0x130(%rsp),%rcx` | memory | 0x1cc04b | fwd |
+| Constant-time inversion | +0x1261 | jb | mem | `0x1cc059: cmp 0x150(%rsp),%rcx` | arithmetic/control | 0x1cbffa | back |
+| Constant-time inversion | +0x1270 | je | mem | `0x1cc067: cmpq $0x0,0x80(%rsp)` | memory | 0x1cc07f | fwd |
+| Constant-time inversion | +0x1297 | je | mem | `0x1cc08e: cmpq $0x0,0x118(%rsp)` | memory | 0x1cc1af | fwd |
+| Constant-time inversion | +0x12a6 | je | mem | `0x1cc09d: cmpq $0x0,0x198(%rsp)` | memory | 0x1cc173 | fwd |
+| Constant-time inversion | +0x1307 | je | reg/arith | `0x1cc103: add $0xfffffffffffffffe,%r8` | memory | 0x1cc15f | fwd |
+| Constant-time inversion | +0x1321 | jae | mem | `0x1cc119: cmp 0x80(%rsp),%rdi` | memory | 0x1cc131 | fwd |
+| Constant-time inversion | +0x1355 | jb | mem | `0x1cc14d: cmp 0x80(%rsp),%rcx` | arithmetic/control | 0x1cc0d4 | back |
+| Constant-time inversion | +0x1367 | je | mem | `0x1cc15f: testb $0x1,0x180(%rsp)` | memory | 0x1cc1af | fwd |
+| Constant-time inversion | +0x1398 | jae | mem | `0x1cc190: cmp 0x80(%rsp),%rdi` | memory | 0x1cc1a5 | fwd |
+| Constant-time inversion | +0x13b8 | je | mem | `0x1cc1af: cmpq $0x0,0x188(%rsp)` | memory | 0x1cc213 | fwd |
+| Constant-time inversion | +0x13ef | je | reg/arith | `0x1cc1eb: add $0xfffffffffffffff8,%rax` | memory | 0x1cc213 | fwd |
+| Constant-time inversion | +0x13f9 | jae | mem | `0x1cc1f1: cmp 0x80(%rsp),%rcx` | memory | 0x1cc206 | fwd |
+| Constant-time inversion | +0x140c | jb | mem | `0x1cc208: cmp (%rsp),%rcx` | arithmetic/control | 0x1cc1c8 | back |
+| Constant-time inversion | +0x141f | ja | mem | `0x1cc21b: cmp %rax,(%rsp)` | arithmetic/control | 0x1cd569 | fwd |
+| Constant-time inversion | +0x1425 | jae | unknown | `?` | memory | 0x1cd623 | fwd |
+| Constant-time inversion | +0x1431 | je | mem | `0x1cc22b: cmpq $0x0,0x28(%rsp)` | memory | 0x1cc300 | fwd |
+| Constant-time inversion | +0x144c | jne | mem | `0x1cc244: testb $0x8,0xa0(%rsp)` | memory | 0x1cc26f | fwd |
+| Constant-time inversion | +0x145a | jae | mem | `0x1cc256: cmp (%rsp),%rax` | memory | 0x1cc279 | fwd |
+| Constant-time inversion | +0x149a | je | mem | `0x1cc291: cmpq $0x0,0xa0(%rsp)` | memory | 0x1cc300 | fwd |
+| Constant-time inversion | +0x14c8 | je | mem | `0x1cc2c3: cmp 0x30(%rsp),%rax` | memory | 0x1cc300 | fwd |
+| Constant-time inversion | +0x14d5 | jae | mem | `0x1cc2d1: cmp (%rsp),%rdi` | memory | 0x1cc2e2 | fwd |
+| Constant-time inversion | +0x14fa | jb | mem | `0x1cc2f6: cmp (%rsp),%rcx` | arithmetic/control | 0x1cc2a9 | back |
+| Constant-time inversion | +0x1509 | je | mem | `0x1cc300: cmpq $0x0,0x118(%rsp)` | memory | 0x1cc3cf | fwd |
+| Constant-time inversion | +0x1518 | je | mem | `0x1cc30f: cmpq $0x0,0x198(%rsp)` | memory | 0x1cc3a3 | fwd |
+| Constant-time inversion | +0x1553 | je | mem | `0x1cc34b: cmp 0x1b0(%rsp),%rdx` | memory | 0x1cc38f | fwd |
+| Constant-time inversion | +0x1560 | jae | mem | `0x1cc35b: cmp 0x28(%rsp),%rdx` | memory | 0x1cc36d | fwd |
+| Constant-time inversion | +0x1589 | jb | mem | `0x1cc384: cmp 0x28(%rsp),%rdx` | arithmetic/control | 0x1cc327 | back |
+| Constant-time inversion | +0x1597 | je | mem | `0x1cc38f: testb $0x1,0x180(%rsp)` | arithmetic/control | 0x1cc3cf | fwd |
+| Constant-time inversion | +0x15af | jae | mem | `0x1cc3aa: cmp 0x28(%rsp),%rax` | memory | 0x1cc3bc | fwd |
+| Constant-time inversion | +0x15d5 | je | mem | `0x1cc3cf: cmpq $0x0,0x28(%rsp)` | memory | 0x1cc43e | fwd |
+| Constant-time inversion | +0x1611 | je | reg/arith | `0x1cc40d: add $0xfffffffffffffff8,%rax` | memory | 0x1cc439 | fwd |
+| Constant-time inversion | +0x161b | jae | mem | `0x1cc413: cmp 0x80(%rsp),%rcx` | memory | 0x1cc428 | fwd |
+| Constant-time inversion | +0x1632 | jb | mem | `0x1cc42a: cmp 0x88(%rsp),%rcx` | arithmetic/control | 0x1cc3e5 | back |
+| Constant-time inversion | +0x1646 | je | mem | `0x1cc440: cmpq $0x0,0x68(%rsp)` | memory | 0x1cc4b7 | fwd |
+| Constant-time inversion | +0x1688 | je | reg/arith | `0x1cc484: add $0xfffffffffffffff8,%rax` | memory | 0x1cc4a7 | fwd |
+| Constant-time inversion | +0x168e | jae | mem | `0x1cc48a: cmp (%rsp),%rcx` | memory | 0x1cc499 | fwd |
+| Constant-time inversion | +0x16a0 | jb | mem | `0x1cc49b: cmp 0x28(%rsp),%rcx` | arithmetic/control | 0x1cc457 | back |
+| Constant-time inversion | +0x16cf | je | mem | `0x1cc4c6: cmpq $0x0,0x110(%rsp)` | memory | 0x1cc5dc | fwd |
+| Constant-time inversion | +0x16de | je | mem | `0x1cc4d5: cmpq $0x0,0x190(%rsp)` | memory | 0x1cc5a0 | fwd |
+| Constant-time inversion | +0x173e | je | reg/arith | `0x1cc53a: add $0xfffffffffffffffe,%r8` | memory | 0x1cc58c | fwd |
+| Constant-time inversion | +0x1755 | jae | mem | `0x1cc550: cmp 0x68(%rsp),%rdi` | memory | 0x1cc565 | fwd |
+| Constant-time inversion | +0x1786 | jb | mem | `0x1cc581: cmp 0x68(%rsp),%rcx` | arithmetic/control | 0x1cc50b | back |
+| Constant-time inversion | +0x1794 | je | mem | `0x1cc58c: testb $0x1,0x178(%rsp)` | memory | 0x1cc5dc | fwd |
+| Constant-time inversion | +0x17c2 | jae | mem | `0x1cc5bd: cmp 0x68(%rsp),%rdi` | memory | 0x1cc5d2 | fwd |
+| Constant-time inversion | +0x1811 | je | reg/arith | `0x1cc60d: add $0xfffffffffffffff8,%rax` | memory | 0x1cc635 | fwd |
+| Constant-time inversion | +0x1818 | jae | mem | `0x1cc613: cmp 0x68(%rsp),%rcx` | memory | 0x1cc628 | fwd |
+| Constant-time inversion | +0x182e | jb | mem | `0x1cc62a: cmp (%rsp),%rcx` | arithmetic/control | 0x1cc5ea | back |
+| Constant-time inversion | +0x183b | je | mem | `0x1cc635: cmpq $0x0,0x28(%rsp)` | memory | 0x1cc70a | fwd |
+| Constant-time inversion | +0x1856 | jne | mem | `0x1cc64e: testb $0x8,0xa0(%rsp)` | memory | 0x1cc679 | fwd |
+| Constant-time inversion | +0x1864 | jae | mem | `0x1cc660: cmp (%rsp),%rax` | memory | 0x1cc683 | fwd |
+| Constant-time inversion | +0x18a4 | je | mem | `0x1cc69b: cmpq $0x0,0xa0(%rsp)` | memory | 0x1cc70a | fwd |
+| Constant-time inversion | +0x18d2 | je | mem | `0x1cc6cd: cmp 0x30(%rsp),%rax` | memory | 0x1cc70a | fwd |
+| Constant-time inversion | +0x18df | jae | mem | `0x1cc6db: cmp (%rsp),%rdi` | memory | 0x1cc6ec | fwd |
+| Constant-time inversion | +0x1904 | jb | mem | `0x1cc700: cmp (%rsp),%rcx` | arithmetic/control | 0x1cc6b3 | back |
+| Constant-time inversion | +0x1913 | je | mem | `0x1cc70a: cmpq $0x0,0x110(%rsp)` | memory | 0x1cc7d9 | fwd |
+| Constant-time inversion | +0x1922 | je | mem | `0x1cc719: cmpq $0x0,0x190(%rsp)` | memory | 0x1cc7ad | fwd |
+| Constant-time inversion | +0x195d | je | mem | `0x1cc755: cmp 0x1a8(%rsp),%rdx` | memory | 0x1cc799 | fwd |
+| Constant-time inversion | +0x196a | jae | mem | `0x1cc765: cmp 0x28(%rsp),%rdx` | memory | 0x1cc777 | fwd |
+| Constant-time inversion | +0x1993 | jb | mem | `0x1cc78e: cmp 0x28(%rsp),%rdx` | arithmetic/control | 0x1cc731 | back |
+| Constant-time inversion | +0x19a1 | je | mem | `0x1cc799: testb $0x1,0x178(%rsp)` | arithmetic/control | 0x1cc7d9 | fwd |
+| Constant-time inversion | +0x19b9 | jae | mem | `0x1cc7b4: cmp 0x28(%rsp),%rax` | memory | 0x1cc7c6 | fwd |
+| Constant-time inversion | +0x1a04 | je | mem | `0x1cc7fb: cmpq $0x0,0x1f8(%rsp)` | memory | 0x1cc892 | fwd |
+| Constant-time inversion | +0x1a53 | je | reg/arith | `0x1cc84f: add $0xfffffffffffffff8,%rax` | memory | 0x1cc892 | fwd |
+| Constant-time inversion | +0x1a5d | jae | mem | `0x1cc855: cmp 0x80(%rsp),%rcx` | memory | 0x1cc86a | fwd |
+| Constant-time inversion | +0x1a74 | jae | mem | `0x1cc86c: cmp 0x118(%rsp),%rcx` | memory | 0x1cc881 | fwd |
+| Constant-time inversion | +0x1a8c | jb | mem | `0x1cc884: cmp 0x110(%rsp),%rcx` | arithmetic/control | 0x1cc81e | back |
+| Constant-time inversion | +0x1a9b | je | mem | `0x1cc892: cmpq $0x0,0x88(%rsp)` | memory | 0x1cc8aa | fwd |
+| Constant-time inversion | +0x1ac2 | je | mem | `0x1cc8b9: cmpq $0x0,0x118(%rsp)` | memory | 0x1cc9da | fwd |
+| Constant-time inversion | +0x1ad1 | je | mem | `0x1cc8c8: cmpq $0x0,0x198(%rsp)` | memory | 0x1cc99e | fwd |
+| Constant-time inversion | +0x1b32 | je | reg/arith | `0x1cc92e: add $0xfffffffffffffffe,%r8` | memory | 0x1cc98a | fwd |
+| Constant-time inversion | +0x1b4c | jae | mem | `0x1cc944: cmp 0x88(%rsp),%rdi` | memory | 0x1cc95c | fwd |
+| Constant-time inversion | +0x1b80 | jb | mem | `0x1cc978: cmp 0x88(%rsp),%rcx` | arithmetic/control | 0x1cc8ff | back |
+| Constant-time inversion | +0x1b92 | je | mem | `0x1cc98a: testb $0x1,0x180(%rsp)` | memory | 0x1cc9da | fwd |
+| Constant-time inversion | +0x1bc3 | jae | mem | `0x1cc9bb: cmp 0x88(%rsp),%rdi` | memory | 0x1cc9d0 | fwd |
+| Constant-time inversion | +0x1c0f | je | reg/arith | `0x1cca0b: add $0xfffffffffffffff8,%rax` | memory | 0x1cca33 | fwd |
+| Constant-time inversion | +0x1c19 | jae | mem | `0x1cca11: cmp 0x88(%rsp),%rcx` | memory | 0x1cca26 | fwd |
+| Constant-time inversion | +0x1c2c | jb | mem | `0x1cca28: cmp (%rsp),%rcx` | arithmetic/control | 0x1cc9e8 | back |
+| Constant-time inversion | +0x1c39 | je | mem | `0x1cca33: cmpq $0x0,0x28(%rsp)` | memory | 0x1ccb08 | fwd |
+| Constant-time inversion | +0x1c54 | jne | mem | `0x1cca4c: testb $0x8,0xa0(%rsp)` | memory | 0x1cca77 | fwd |
+| Constant-time inversion | +0x1c62 | jae | mem | `0x1cca5e: cmp (%rsp),%rax` | memory | 0x1cca81 | fwd |
+| Constant-time inversion | +0x1ca2 | je | mem | `0x1cca99: cmpq $0x0,0xa0(%rsp)` | memory | 0x1ccb08 | fwd |
+| Constant-time inversion | +0x1cd0 | je | mem | `0x1ccacb: cmp 0x30(%rsp),%rax` | memory | 0x1ccb08 | fwd |
+| Constant-time inversion | +0x1cdd | jae | mem | `0x1ccad9: cmp (%rsp),%rdi` | memory | 0x1ccaea | fwd |
+| Constant-time inversion | +0x1d02 | jb | mem | `0x1ccafe: cmp (%rsp),%rcx` | arithmetic/control | 0x1ccab1 | back |
+| Constant-time inversion | +0x1d11 | je | mem | `0x1ccb08: cmpq $0x0,0x118(%rsp)` | memory | 0x1ccbd7 | fwd |
+| Constant-time inversion | +0x1d20 | je | mem | `0x1ccb17: cmpq $0x0,0x198(%rsp)` | memory | 0x1ccbab | fwd |
+| Constant-time inversion | +0x1d5b | je | mem | `0x1ccb53: cmp 0x1b0(%rsp),%rdx` | memory | 0x1ccb97 | fwd |
+| Constant-time inversion | +0x1d68 | jae | mem | `0x1ccb63: cmp 0x28(%rsp),%rdx` | memory | 0x1ccb75 | fwd |
+| Constant-time inversion | +0x1d91 | jb | mem | `0x1ccb8c: cmp 0x28(%rsp),%rdx` | arithmetic/control | 0x1ccb2f | back |
+| Constant-time inversion | +0x1d9f | je | mem | `0x1ccb97: testb $0x1,0x180(%rsp)` | arithmetic/control | 0x1ccbd7 | fwd |
+| Constant-time inversion | +0x1db7 | jae | mem | `0x1ccbb2: cmp 0x28(%rsp),%rax` | memory | 0x1ccbc4 | fwd |
+| Constant-time inversion | +0x1ddd | je | mem | `0x1ccbd7: cmpq $0x0,0x28(%rsp)` | memory | 0x1ccc46 | fwd |
+| Constant-time inversion | +0x1e19 | je | reg/arith | `0x1ccc15: add $0xfffffffffffffff8,%rax` | memory | 0x1ccc41 | fwd |
+| Constant-time inversion | +0x1e23 | jae | mem | `0x1ccc1b: cmp 0x88(%rsp),%rcx` | memory | 0x1ccc30 | fwd |
+| Constant-time inversion | +0x1e3a | jb | mem | `0x1ccc32: cmp 0x80(%rsp),%rcx` | arithmetic/control | 0x1ccbed | back |
+| Constant-time inversion | +0x1e4e | je | mem | `0x1ccc48: cmpq $0x0,0x68(%rsp)` | memory | 0x1cccbf | fwd |
+| Constant-time inversion | +0x1e90 | je | reg/arith | `0x1ccc8c: add $0xfffffffffffffff8,%rax` | memory | 0x1cccaf | fwd |
+| Constant-time inversion | +0x1e96 | jae | mem | `0x1ccc92: cmp (%rsp),%rcx` | memory | 0x1ccca1 | fwd |
+| Constant-time inversion | +0x1ea8 | jb | mem | `0x1ccca3: cmp 0x28(%rsp),%rcx` | arithmetic/control | 0x1ccc5f | back |
+| Constant-time inversion | +0x1ed7 | je | mem | `0x1cccce: cmpq $0x0,0x110(%rsp)` | memory | 0x1ccde4 | fwd |
+| Constant-time inversion | +0x1ee6 | je | mem | `0x1cccdd: cmpq $0x0,0x190(%rsp)` | memory | 0x1ccda8 | fwd |
+| Constant-time inversion | +0x1f46 | je | reg/arith | `0x1ccd42: add $0xfffffffffffffffe,%r8` | memory | 0x1ccd94 | fwd |
+| Constant-time inversion | +0x1f5d | jae | mem | `0x1ccd58: cmp 0x68(%rsp),%rdi` | memory | 0x1ccd6d | fwd |
+| Constant-time inversion | +0x1f8e | jb | mem | `0x1ccd89: cmp 0x68(%rsp),%rcx` | arithmetic/control | 0x1ccd13 | back |
+| Constant-time inversion | +0x1f9c | je | mem | `0x1ccd94: testb $0x1,0x178(%rsp)` | memory | 0x1ccde4 | fwd |
+| Constant-time inversion | +0x1fca | jae | mem | `0x1ccdc5: cmp 0x68(%rsp),%rdi` | memory | 0x1ccdda | fwd |
+| Constant-time inversion | +0x2019 | je | reg/arith | `0x1cce15: add $0xfffffffffffffff8,%rax` | memory | 0x1cce3d | fwd |
+| Constant-time inversion | +0x2020 | jae | mem | `0x1cce1b: cmp 0x68(%rsp),%rcx` | memory | 0x1cce30 | fwd |
+| Constant-time inversion | +0x2036 | jb | mem | `0x1cce32: cmp (%rsp),%rcx` | arithmetic/control | 0x1ccdf2 | back |
+| Constant-time inversion | +0x2043 | je | mem | `0x1cce3d: cmpq $0x0,0x28(%rsp)` | memory | 0x1ccf12 | fwd |
+| Constant-time inversion | +0x205e | jne | mem | `0x1cce56: testb $0x8,0xa0(%rsp)` | memory | 0x1cce81 | fwd |
+| Constant-time inversion | +0x206c | jae | mem | `0x1cce68: cmp (%rsp),%rax` | memory | 0x1cce8b | fwd |
+| Constant-time inversion | +0x20ac | je | mem | `0x1ccea3: cmpq $0x0,0xa0(%rsp)` | memory | 0x1ccf12 | fwd |
+| Constant-time inversion | +0x20da | je | mem | `0x1cced5: cmp 0x30(%rsp),%rax` | memory | 0x1ccf12 | fwd |
+| Constant-time inversion | +0x20e7 | jae | mem | `0x1ccee3: cmp (%rsp),%rdi` | memory | 0x1ccef4 | fwd |
+| Constant-time inversion | +0x210c | jb | mem | `0x1ccf08: cmp (%rsp),%rcx` | arithmetic/control | 0x1ccebb | back |
+| Constant-time inversion | +0x211b | je | mem | `0x1ccf12: cmpq $0x0,0x110(%rsp)` | memory | 0x1ccfe1 | fwd |
+| Constant-time inversion | +0x212a | je | mem | `0x1ccf21: cmpq $0x0,0x190(%rsp)` | memory | 0x1ccfb5 | fwd |
+| Constant-time inversion | +0x2165 | je | mem | `0x1ccf5d: cmp 0x1a8(%rsp),%rdx` | memory | 0x1ccfa1 | fwd |
+| Constant-time inversion | +0x2172 | jae | mem | `0x1ccf6d: cmp 0x28(%rsp),%rdx` | memory | 0x1ccf7f | fwd |
+| Constant-time inversion | +0x219b | jb | mem | `0x1ccf96: cmp 0x28(%rsp),%rdx` | arithmetic/control | 0x1ccf39 | back |
+| Constant-time inversion | +0x21a9 | je | mem | `0x1ccfa1: testb $0x1,0x178(%rsp)` | arithmetic/control | 0x1ccfe1 | fwd |
+| Constant-time inversion | +0x21c1 | jae | mem | `0x1ccfbc: cmp 0x28(%rsp),%rax` | memory | 0x1ccfce | fwd |
+| Constant-time inversion | +0x2226 | je | reg/arith | `0x1cd023: test %rax,%rax` | memory | 0x1cb872 | back |
+| Constant-time inversion | +0x226d | je | reg/arith | `0x1cd069: add $0xfffffffffffffff8,%rax` | memory | 0x1cb872 | back |
+| Constant-time inversion | +0x227b | jae | mem | `0x1cd073: cmp 0x88(%rsp),%rcx` | memory | 0x1cd088 | fwd |
+| Constant-time inversion | +0x2292 | jae | mem | `0x1cd08a: cmp 0x118(%rsp),%rcx` | memory | 0x1cd09f | fwd |
+| Constant-time inversion | +0x22aa | jb | mem | `0x1cd0a2: cmp 0x110(%rsp),%rcx` | arithmetic/control | 0x1cd038 | back |
+| Constant-time inversion | +0x231d | je | reg/arith | `0x1cd119: cmp $0x1,%rbx` | memory | 0x1cd1ad | fwd |
+| Constant-time inversion | +0x2337 | jb | reg/arith | `0x1cd133: cmp $0x18,%rdx` | memory | 0x1cd19c | fwd |
+| Constant-time inversion | +0x2383 | jne | reg/arith | `0x1cd180: cmp %rcx,%rdx` | arithmetic/control | 0x1cd166 | back |
+| Constant-time inversion | +0x239a | je | reg/arith | `0x1cd197: cmp %rdx,%rsi` | memory | 0x1cd1ad | fwd |
+| Constant-time inversion | +0x23ab | jne | mem | `0x1cd1a3: cmp 0x2b8(%rsp),%rax` | memory | 0x1cd19c | back |
+| Constant-time inversion | +0x2414 | je | reg/arith | `0x1cd210: cmp $0xffffffffffffffff,%rax` | memory | 0x1cd3cb | fwd |
+| Constant-time inversion | +0x2431 | jne | mem | `0x1cd229: cmp 0x138(%rsp),%rdi` | memory | 0x1cd609 | fwd |
+| Constant-time inversion | +0x257f | je | reg/arith | `0x1cd37c: test %r12,%r12` | memory | 0x1cd547 | fwd |
+| Constant-time inversion | +0x2592 | je | mem | `0x1cd38d: cmpq $0x0,(%rsp)` | memory | 0x1cae6d | back |
+| Constant-time inversion | +0x2732 | jne | reg/arith | `0x1cd52f: cmp %rax,%rsi` | memory | 0x1cd503 | back |
+| Constant-time inversion | +0x2981 | je | mem | `0x1cd77c: cmpq $0x0,(%rsp)` | memory | 0x1cd7e3 | fwd |
+| ECDSA scalar ladder (driver) | +0x23 | je | reg/arith | `0x48de50: test %rcx,%rcx` | memory | 0x48dec3 | fwd |
+| ECDSA scalar ladder (driver) | +0x33 | je | reg/arith | `0x48de60: test %rax,%rax` | memory | 0x48deb7 | fwd |
+| ECDSA scalar ladder (driver) | +0x3f | jne | mem | `0x48de6c: cmp (%r15),%rcx` | memory | 0x48debe | fwd |
+| ECDSA scalar ladder (driver) | +0x46 | je | reg/arith | `0x48de74: test %ecx,%ecx` | memory | 0x48de84 | fwd |
+| ECDSA scalar ladder (driver) | +0x4e | je | reg/arith | `0x48de7c: test %edx,%edx` | arithmetic/control | 0x48de84 | fwd |
+| ECDSA scalar ladder (driver) | +0x52 | jne | reg/arith | `0x48de80: cmp %edx,%ecx` | call | 0x48debe | fwd |
+| ECDSA scalar ladder (driver) | +0x5e | je | reg/arith | `0x48de8c: test %eax,%eax` | memory | 0x48dec3 | fwd |
+| ECDSA scalar ladder (driver) | +0x6b | je | reg/arith | `0x48de98: test %rax,%rax` | memory | 0x48dff1 | fwd |
+| ECDSA scalar ladder (driver) | +0x75 | je | mem | `0x48dea1: cmp 0x0(%r13),%rcx` | memory | 0x48e23c | fwd |
+| ECDSA scalar ladder (driver) | +0xa1 | je | reg/arith | `0x48dece: test %rcx,%rcx` | memory | 0x48dfcf | fwd |
+| ECDSA scalar ladder (driver) | +0xc3 | je | reg/arith | `0x48def0: cmp %rdx,%rcx` | memory | 0x48dfcf | fwd |
+| ECDSA scalar ladder (driver) | +0xd2 | je | mem | `0x48def9: cmpq $0x0,(%rax,%rdx,1)` | memory | 0x48def0 | back |
+| ECDSA scalar ladder (driver) | +0xe2 | je | reg/arith | `0x48df0f: test %rcx,%rcx` | memory | 0x48dfcf | fwd |
+| ECDSA scalar ladder (driver) | +0x103 | je | reg/arith | `0x48df30: cmp %rdx,%rcx` | memory | 0x48dfcf | fwd |
+| ECDSA scalar ladder (driver) | +0x112 | je | mem | `0x48df39: cmpq $0x0,(%rax,%rdx,1)` | memory | 0x48df30 | back |
+| ECDSA scalar ladder (driver) | +0x120 | je | reg/arith | `0x48df4d: test %rbp,%rbp` | memory | 0x48dfe8 | fwd |
+| ECDSA scalar ladder (driver) | +0x12f | je | mem | `0x48df5a: cmpq $0x0,0x50(%rax)` | memory | 0x48dfff | fwd |
+| ECDSA scalar ladder (driver) | +0x14f | je | reg/arith | `0x48df7c: test %rax,%rax` | memory | 0x48dfca | fwd |
+| ECDSA scalar ladder (driver) | +0x169 | je | reg/arith | `0x48df96: test %rax,%rax` | call | 0x48dfa4 | fwd |
+| ECDSA scalar ladder (driver) | +0x172 | jne | reg/arith | `0x48dfa0: test %eax,%eax` | call+memory | 0x48e017 | fwd |
+| ECDSA scalar ladder (driver) | +0x1e1 | je | reg/arith | `0x48e00e: test %rbp,%rbp` | memory | 0x48e153 | fwd |
+| ECDSA scalar ladder (driver) | +0x1f0 | je | mem | `0x48e01b: cmpq $0x0,0x50(%rax)` | memory | 0x48e14a | fwd |
+| ECDSA scalar ladder (driver) | +0x215 | je | reg/arith | `0x48e042: test %rax,%rax` | memory | 0x48e187 | fwd |
+| ECDSA scalar ladder (driver) | +0x233 | je | reg/arith | `0x48e060: test %rax,%rax` | call | 0x48e161 | fwd |
+| ECDSA scalar ladder (driver) | +0x240 | je | reg/arith | `0x48e06e: test %eax,%eax` | memory | 0x48e161 | fwd |
+| ECDSA scalar ladder (driver) | +0x253 | je | reg/arith | `0x48e080: test %r14,%r14` | arithmetic/control | 0x48e255 | fwd |
+| ECDSA scalar ladder (driver) | +0x25c | je | reg/arith | `0x48e089: test %r15,%r15` | memory | 0x48e263 | fwd |
+| ECDSA scalar ladder (driver) | +0x26f | je | reg/arith | `0x48e09c: test %rcx,%rcx` | memory | 0x48e0d6 | fwd |
+| ECDSA scalar ladder (driver) | +0x278 | je | reg/arith | `0x48e0a5: test %rax,%rax` | memory | 0x48e0d6 | fwd |
+| ECDSA scalar ladder (driver) | +0x284 | jne | mem | `0x48e0b1: cmp (%r15),%rcx` | memory | 0x48e0d6 | fwd |
+| ECDSA scalar ladder (driver) | +0x28c | je | reg/arith | `0x48e0ba: test %ecx,%ecx` | memory | 0x48e39b | fwd |
+| ECDSA scalar ladder (driver) | +0x298 | je | reg/arith | `0x48e0c6: test %edx,%edx` | arithmetic/control | 0x48e39b | fwd |
+| ECDSA scalar ladder (driver) | +0x2a0 | je | reg/arith | `0x48e0ce: cmp %ecx,%edx` | call | 0x48e39b | fwd |
+| ECDSA scalar ladder (driver) | +0x30f | jne | reg/arith | `0x48e13a: test %rbx,%rbx` | arithmetic/control | 0x48e215 | fwd |
+| ECDSA scalar ladder (driver) | +0x37e | jne | reg/arith | `0x48e1ab: test %bpl,%bpl` | call+memory | 0x48e1d8 | fwd |
+| ECDSA scalar ladder (driver) | +0x3b0 | jne | reg/arith | `0x48e1d8: test %r15b,%r15b` | call+memory | 0x48e20a | fwd |
+| ECDSA scalar ladder (driver) | +0x3df | je | reg/arith | `0x48e20c: test %rbx,%rbx` | memory | 0x48dfd6 | back |
+| ECDSA scalar ladder (driver) | +0x3ec | je | reg/arith | `0x48e219: test %rcx,%rcx` | memory | 0x48dfd6 | back |
+| ECDSA scalar ladder (driver) | +0x442 | je | reg/arith | `0x48e270: test %eax,%eax` | memory | 0x48e377 | fwd |
+| ECDSA scalar ladder (driver) | +0x44f | je | reg/arith | `0x48e27c: test %rax,%rax` | memory | 0x48e285 | fwd |
+| ECDSA scalar ladder (driver) | +0x45c | je | reg/arith | `0x48e289: test %rax,%rax` | memory | 0x48e292 | fwd |
+| ECDSA scalar ladder (driver) | +0x469 | je | reg/arith | `0x48e296: test %rax,%rax` | memory | 0x48e29f | fwd |
+| ECDSA scalar ladder (driver) | +0x476 | je | reg/arith | `0x48e2a3: test %rax,%rax` | memory | 0x48e2ac | fwd |
+| ECDSA scalar ladder (driver) | +0x483 | je | reg/arith | `0x48e2b0: test %rax,%rax` | memory | 0x48e2b9 | fwd |
+| ECDSA scalar ladder (driver) | +0x490 | je | reg/arith | `0x48e2bd: test %rax,%rax` | memory | 0x48e2c6 | fwd |
+| ECDSA scalar ladder (driver) | +0x4a2 | je | reg/arith | `0x48e2cf: test %rax,%rax` | memory | 0x48e2d8 | fwd |
+| ECDSA scalar ladder (driver) | +0x4b4 | je | reg/arith | `0x48e2e1: test %rax,%rax` | memory | 0x48e2ea | fwd |
+| ECDSA scalar ladder (driver) | +0x4c6 | je | reg/arith | `0x48e2f3: test %rax,%rax` | call+memory | 0x48e2fc | fwd |
+| ECDSA scalar ladder (driver) | +0x4f7 | je | reg/arith | `0x48e324: test %rax,%rax` | memory | 0x48e383 | fwd |
+| ECDSA scalar ladder (driver) | +0x514 | je | reg/arith | `0x48e342: test %eax,%eax` | memory | 0x48e38f | fwd |
+| ECDSA scalar ladder (driver) | +0x526 | je | reg/arith | `0x48e353: test %r15,%r15` | memory | 0x48e3b9 | fwd |
+| ECDSA scalar ladder (driver) | +0x537 | je | reg/arith | `0x48e35c: test $0xffffffff80000000,%rax` | memory | 0x48e3cc | fwd |
+| ECDSA scalar ladder (driver) | +0x56e | je | reg/arith | `0x48e39b: cmp %r15,%r14` | call | 0x48e278 | back |
+| ECDSA scalar ladder (driver) | +0x57e | jne | reg/arith | `0x48e3ac: test %eax,%eax` | arithmetic/control | 0x48e278 | back |
+| ECDSA scalar ladder (driver) | +0x5a9 | jne | reg/arith | `0x48e3d7: test $0x1,%al` | memory | 0x48ea1a | fwd |
+| ECDSA scalar ladder (driver) | +0x5b6 | js | reg/arith | `0x48e3e4: test %eax,%eax` | memory | 0x48e412 | fwd |
+| ECDSA scalar ladder (driver) | +0x5c2 | jae | mem | `0x48e3ef: cmp %rsi,(%rdi)` | call+memory | 0x48e41c | fwd |
+| ECDSA scalar ladder (driver) | +0x5db | jne | reg/arith | `0x48e404: test %al,%cl` | arithmetic/control | 0x48e425 | fwd |
+| ECDSA scalar ladder (driver) | +0x5e5 | jne | reg/arith | `0x48e412: test %r15,%r15` | arithmetic/control | 0x48e43a | fwd |
+| ECDSA scalar ladder (driver) | +0x5ef | je | reg/arith | `0x48e41c: test %r15,%r15` | memory | 0x48e507 | fwd |
+| ECDSA scalar ladder (driver) | +0x5f8 | jae | mem | `0x48e425: cmp %rsi,(%r15)` | call | 0x48e43a | fwd |
+| ECDSA scalar ladder (driver) | +0x604 | je | reg/arith | `0x48e432: test %al,%al` | memory | 0x48e507 | fwd |
+| ECDSA scalar ladder (driver) | +0x61e | je | reg/arith | `0x48e44b: test %rax,%rax` | memory | 0x48e513 | fwd |
+| ECDSA scalar ladder (driver) | +0x636 | jg | mem | `0x48e462: cmp 0x24(%rsp),%eax` | memory | 0x48e46f | fwd |
+| ECDSA scalar ladder (driver) | +0x63d | je | mem | `0x48e468: cmpl $0x0,0x18(%r15)` | memory | 0x48e48b | fwd |
+| ECDSA scalar ladder (driver) | +0x655 | je | reg/arith | `0x48e483: test %eax,%eax` | memory | 0x48e51f | fwd |
+| ECDSA scalar ladder (driver) | +0x673 | je | reg/arith | `0x48e4a1: test %eax,%eax` | memory | 0x48e52b | fwd |
+| ECDSA scalar ladder (driver) | +0x692 | je | reg/arith | `0x48e4c0: test %eax,%eax` | memory | 0x48e6fe | fwd |
+| ECDSA scalar ladder (driver) | +0x6a6 | js | mem | `0x48e4d1: cmpl $0x0,0x24(%rsp)` | memory | 0x48e537 | fwd |
+| ECDSA scalar ladder (driver) | +0x6b8 | jae | mem | `0x48e4e4: cmp 0x10(%rcx),%rax` | memory | 0x48e537 | fwd |
+| ECDSA scalar ladder (driver) | +0x725 | je | reg/arith | `0x48e552: test %rax,%rax` | memory | 0x48e56f | fwd |
+| ECDSA scalar ladder (driver) | +0x752 | je | reg/arith | `0x48e57f: test %rdi,%rdi` | memory | 0x48e864 | fwd |
+| ECDSA scalar ladder (driver) | +0x760 | jae | mem | `0x48e58d: cmp %r15,(%rdi)` | call | 0x48e5a2 | fwd |
+| ECDSA scalar ladder (driver) | +0x76c | je | reg/arith | `0x48e59a: test %al,%al` | memory | 0x48e864 | fwd |
+| ECDSA scalar ladder (driver) | +0x77e | je | reg/arith | `0x48e5ab: test %rdi,%rdi` | memory | 0x48e864 | fwd |
+| ECDSA scalar ladder (driver) | +0x787 | jae | mem | `0x48e5b4: cmp %r15,(%rdi)` | call | 0x48e5c9 | fwd |
+| ECDSA scalar ladder (driver) | +0x793 | je | reg/arith | `0x48e5c1: test %al,%al` | memory | 0x48e864 | fwd |
+| ECDSA scalar ladder (driver) | +0x7a5 | je | reg/arith | `0x48e5d2: test %rdi,%rdi` | memory | 0x48e864 | fwd |
+| ECDSA scalar ladder (driver) | +0x7ae | jae | mem | `0x48e5db: cmp %r15,(%rdi)` | call | 0x48e5f0 | fwd |
+| ECDSA scalar ladder (driver) | +0x7ba | je | reg/arith | `0x48e5e8: test %al,%al` | memory | 0x48e864 | fwd |
+| ECDSA scalar ladder (driver) | +0x7c7 | je | reg/arith | `0x48e5f4: test %rdi,%rdi` | memory | 0x48e864 | fwd |
+| ECDSA scalar ladder (driver) | +0x7d0 | jae | mem | `0x48e5fd: cmp %r15,(%rdi)` | call | 0x48e612 | fwd |
+| ECDSA scalar ladder (driver) | +0x7dc | je | reg/arith | `0x48e60a: test %al,%al` | memory | 0x48e864 | fwd |
+| ECDSA scalar ladder (driver) | +0x7e9 | je | reg/arith | `0x48e616: test %rdi,%rdi` | memory | 0x48e864 | fwd |
+| ECDSA scalar ladder (driver) | +0x7f2 | jae | mem | `0x48e61f: cmp %r15,(%rdi)` | call | 0x48e634 | fwd |
+| ECDSA scalar ladder (driver) | +0x7fe | je | reg/arith | `0x48e62c: test %al,%al` | memory | 0x48e864 | fwd |
+| ECDSA scalar ladder (driver) | +0x80b | je | reg/arith | `0x48e638: test %rdi,%rdi` | memory | 0x48e864 | fwd |
+| ECDSA scalar ladder (driver) | +0x814 | jae | mem | `0x48e641: cmp %r15,(%rdi)` | call | 0x48e656 | fwd |
+| ECDSA scalar ladder (driver) | +0x820 | je | reg/arith | `0x48e64e: test %al,%al` | memory | 0x48e864 | fwd |
+| ECDSA scalar ladder (driver) | +0x832 | je | reg/arith | `0x48e65f: test %rdi,%rdi` | memory | 0x48e864 | fwd |
+| ECDSA scalar ladder (driver) | +0x83b | jae | mem | `0x48e668: cmp %r15,(%rdi)` | call | 0x48e67d | fwd |
+| ECDSA scalar ladder (driver) | +0x847 | je | reg/arith | `0x48e675: test %al,%al` | memory | 0x48e864 | fwd |
+| ECDSA scalar ladder (driver) | +0x859 | je | reg/arith | `0x48e686: test %rdi,%rdi` | memory | 0x48e864 | fwd |
+| ECDSA scalar ladder (driver) | +0x862 | jae | mem | `0x48e68f: cmp %r15,(%rdi)` | call | 0x48e6a4 | fwd |
+| ECDSA scalar ladder (driver) | +0x86e | je | reg/arith | `0x48e69c: test %al,%al` | memory | 0x48e864 | fwd |
+| ECDSA scalar ladder (driver) | +0x880 | je | reg/arith | `0x48e6ad: test %rdi,%rdi` | memory | 0x48e864 | fwd |
+| ECDSA scalar ladder (driver) | +0x88e | jae | mem | `0x48e6b6: cmp %r15,(%rdi)` | call | 0x48e6d0 | fwd |
+| ECDSA scalar ladder (driver) | +0x89a | je | reg/arith | `0x48e6c8: test %al,%al` | memory | 0x48e0e2 | back |
+| ECDSA scalar ladder (driver) | +0x8a5 | je | mem | `0x48e6d0: cmpl $0x0,0x28(%r14)` | call+memory | 0x48e830 | fwd |
+| ECDSA scalar ladder (driver) | +0x8b9 | je | reg/arith | `0x48e6e7: test %al,%al` | memory | 0x48e70a | fwd |
+| ECDSA scalar ladder (driver) | +0x8e8 | jne | reg/arith | `0x48e714: cmp $0x4,%rdx` | memory | 0x48e75e | fwd |
+| ECDSA scalar ladder (driver) | +0x922 | jne | reg/arith | `0x48e74e: cmp $0x1,%dil` | call | 0x48e760 | fwd |
+| ECDSA scalar ladder (driver) | +0x935 | je | reg/arith | `0x48e763: test %cl,%cl` | arithmetic/control | 0x48e7d3 | fwd |
+| ECDSA scalar ladder (driver) | +0x93a | jne | reg/arith | `0x48e767: test %sil,%sil` | memory | 0x48e7d3 | fwd |
+| ECDSA scalar ladder (driver) | +0x980 | je | mem | `0x48e7aa: cmpq $0xffffffffffffffff,0x58(%rsp)` | memory | 0x48e8a0 | fwd |
+| ECDSA scalar ladder (driver) | +0x9c9 | je | reg/arith | `0x48e7f7: test %eax,%eax` | arithmetic/control | 0x48e86e | fwd |
+| ECDSA scalar ladder (driver) | +0x9d2 | jg | reg/arith | `0x48e7ff: cmp $0x1,%eax` | arithmetic/control | 0x48e87a | fwd |
+| ECDSA scalar ladder (driver) | +0x9d6 | jne | reg/arith | `0x48e804: test %eax,%eax` | call+memory | 0x48e8b1 | fwd |
+| ECDSA scalar ladder (driver) | +0xa15 | je | reg/arith | `0x48e842: test %rax,%rax` | call+memory | 0x48e864 | fwd |
+| ECDSA scalar ladder (driver) | +0xa29 | jne | reg/arith | `0x48e857: test %eax,%eax` | arithmetic/control | 0x48e6db | back |
+| ECDSA scalar ladder (driver) | +0xa4d | jne | reg/arith | `0x48e87a: cmp $0x2,%eax` | call+memory | 0x48e8e4 | fwd |
+| ECDSA scalar ladder (driver) | +0xaa2 | jne | reg/arith | `0x48e8d0: test %eax,%eax` | memory | 0x48e9b5 | fwd |
+| ECDSA scalar ladder (driver) | +0xab8 | jo | mem | `0x48e8e4: decl 0x24(%rsp)` | arithmetic/control | 0x48ea29 | fwd |
+| ECDSA scalar ladder (driver) | +0xabe | js | unknown | `?` | memory | 0x48e99a | fwd |
+| ECDSA scalar ladder (driver) | +0xae8 | jae | mem | `0x48e914: cmp 0x10(%rcx),%rax` | memory | 0x48e932 | fwd |
+| ECDSA scalar ladder (driver) | +0xb20 | je | mem | `0x48e947: cmpq $0xffffffffffffffff,0x230(%rsp)` | call+memory | 0x48e96c | fwd |
+| ECDSA scalar ladder (driver) | +0xb56 | je | reg/arith | `0x48e984: test %eax,%eax` | memory | 0x48e9f9 | fwd |
+| ECDSA scalar ladder (driver) | +0xb62 | jg | reg/arith | `0x48e98b: test %r15,%r15` | arithmetic/control | 0x48e905 | back |
+| ECDSA scalar ladder (driver) | +0xb93 | je | reg/arith | `0x48e9c0: test %rax,%rax` | call+memory | 0x48e9de | fwd |
+| ECDSA scalar ladder (driver) | +0xbac | je | reg/arith | `0x48e9da: test %eax,%eax` | call+memory | 0x48e9f2 | fwd |
+| EC ladder step (secret core) | +0x7a | je | reg/arith | `0x4c8eb7: test %rax,%rax` | memory | 0x4c9455 | fwd |
+| EC ladder step (secret core) | +0x95 | je | reg/arith | `0x4c8ed2: test %rbp,%rbp` | memory | 0x4c9455 | fwd |
+| EC ladder step (secret core) | +0xa5 | je | reg/arith | `0x4c8ee2: test %rax,%rax` | call+memory | 0x4c9455 | fwd |
+| EC ladder step (secret core) | +0xc6 | je | reg/arith | `0x4c8f04: test %eax,%eax` | call+memory | 0x4c9453 | fwd |
+| EC ladder step (secret core) | +0xe4 | je | reg/arith | `0x4c8f22: test %eax,%eax` | call+memory | 0x4c9453 | fwd |
+| EC ladder step (secret core) | +0x102 | je | reg/arith | `0x4c8f40: test %eax,%eax` | call+memory | 0x4c9453 | fwd |
+| EC ladder step (secret core) | +0x120 | je | reg/arith | `0x4c8f5e: test %eax,%eax` | call+memory | 0x4c9453 | fwd |
+| EC ladder step (secret core) | +0x146 | je | reg/arith | `0x4c8f84: test %eax,%eax` | memory | 0x4c9453 | fwd |
+| EC ladder step (secret core) | +0x166 | je | reg/arith | `0x4c8fa4: test %eax,%eax` | arithmetic/control | 0x4c9453 | fwd |
+| EC ladder step (secret core) | +0x16f | je | reg/arith | `0x4c8fac: test %r15,%r15` | memory | 0x4c8fd2 | fwd |
+| EC ladder step (secret core) | +0x186 | jne | reg/arith | `0x4c8fbe: test %rdx,%rdx` | arithmetic/control | 0x4c8ff4 | fwd |
+| EC ladder step (secret core) | +0x1b2 | je | reg/arith | `0x4c8fea: test %rdx,%rdx` | memory | 0x4c9000 | fwd |
+| EC ladder step (secret core) | +0x1c7 | jb | reg/arith | `0x4c9003: sub $0x1,%r9` | memory | 0x4c9027 | fwd |
+| EC ladder step (secret core) | +0x1ce | je | mem | `0x4c9009: cmpq $0x0,(%rax,%r9,8)` | arithmetic/control | 0x4c9000 | back |
+| EC ladder step (secret core) | +0x1e5 | jne | mem | `0x4c9020: cmpq $0x0,(%rcx,%r8,8)` | arithmetic/control | 0x4c9030 | fwd |
+| EC ladder step (secret core) | +0x1ee | jae | reg/arith | `0x4c902a: sub $0x1,%r8` | arithmetic/control | 0x4c9020 | back |
+| EC ladder step (secret core) | +0x1f3 | jne | reg/arith | `0x4c9030: cmp %r9,%rdi` | memory | 0x4c9050 | fwd |
+| EC ladder step (secret core) | +0x204 | jb | reg/arith | `0x4c9040: sub $0x1,%rdi` | memory | 0x4c9052 | fwd |
+| EC ladder step (secret core) | +0x20e | je | mem | `0x4c904a: cmp %r8,(%rax,%rdi,8)` | arithmetic/control | 0x4c9040 | back |
+| EC ladder step (secret core) | +0x210 | jb | unknown | `?` | memory | 0x4c906d | fwd |
+| EC ladder step (secret core) | +0x227 | je | reg/arith | `0x4c9065: test %eax,%eax` | memory | 0x4c9453 | fwd |
+| EC ladder step (secret core) | +0x246 | je | reg/arith | `0x4c907f: test %eax,%eax` | arithmetic/control | 0x4c9455 | fwd |
+| EC ladder step (secret core) | +0x24f | je | reg/arith | `0x4c908c: test %r15,%r15` | memory | 0x4c909b | fwd |
+| EC ladder step (secret core) | +0x277 | jb | reg/arith | `0x4c90b3: sub $0x1,%rdi` | memory | 0x4c90d7 | fwd |
+| EC ladder step (secret core) | +0x27e | je | mem | `0x4c90b9: cmpq $0x0,(%rcx,%rdi,8)` | arithmetic/control | 0x4c90b0 | back |
+| EC ladder step (secret core) | +0x295 | jne | mem | `0x4c90d0: cmpq $0x0,(%rax,%rsi,8)` | arithmetic/control | 0x4c90e0 | fwd |
+| EC ladder step (secret core) | +0x29e | jae | reg/arith | `0x4c90da: sub $0x1,%rsi` | arithmetic/control | 0x4c90d0 | back |
+| EC ladder step (secret core) | +0x2a3 | jne | reg/arith | `0x4c90e0: cmp %rdi,%rdx` | arithmetic/control | 0x4c90f5 | fwd |
+| EC ladder step (secret core) | +0x2a9 | jb | reg/arith | `0x4c90e5: sub $0x1,%rdx` | memory | 0x4c90f7 | fwd |
+| EC ladder step (secret core) | +0x2b3 | je | mem | `0x4c90ef: cmp %rsi,(%rcx,%rdx,8)` | arithmetic/control | 0x4c90e5 | back |
+| EC ladder step (secret core) | +0x2b5 | jb | unknown | `?` | memory | 0x4c910e | fwd |
+| EC ladder step (secret core) | +0x2c8 | je | reg/arith | `0x4c9106: test %eax,%eax` | call+memory | 0x4c9453 | fwd |
+| EC ladder step (secret core) | +0x2e5 | je | reg/arith | `0x4c9123: test %eax,%eax` | memory | 0x4c9455 | fwd |
+| EC ladder step (secret core) | +0x2ff | je | reg/arith | `0x4c913d: test %eax,%eax` | memory | 0x4c9453 | fwd |
+| EC ladder step (secret core) | +0x322 | je | reg/arith | `0x4c9160: test %eax,%eax` | call+memory | 0x4c9453 | fwd |
+| EC ladder step (secret core) | +0x33d | je | reg/arith | `0x4c917b: test %eax,%eax` | memory | 0x4c9453 | fwd |
+| EC ladder step (secret core) | +0x357 | je | reg/arith | `0x4c9195: test %eax,%eax` | memory | 0x4c9453 | fwd |
+| EC ladder step (secret core) | +0x379 | je | reg/arith | `0x4c91b7: test %eax,%eax` | memory | 0x4c9453 | fwd |
+| EC ladder step (secret core) | +0x393 | je | reg/arith | `0x4c91d1: test %eax,%eax` | call+memory | 0x4c9453 | fwd |
+| EC ladder step (secret core) | +0x3b6 | je | reg/arith | `0x4c91f4: test %eax,%eax` | memory | 0x4c9453 | fwd |
+| EC ladder step (secret core) | +0x3d8 | je | reg/arith | `0x4c9216: test %eax,%eax` | memory | 0x4c9453 | fwd |
+| EC ladder step (secret core) | +0x3fa | je | reg/arith | `0x4c9238: test %eax,%eax` | call+memory | 0x4c9453 | fwd |
+| EC ladder step (secret core) | +0x41c | je | reg/arith | `0x4c925a: test %eax,%eax` | call+memory | 0x4c9453 | fwd |
+| EC ladder step (secret core) | +0x436 | je | reg/arith | `0x4c9274: test %eax,%eax` | call+memory | 0x4c9453 | fwd |
+| EC ladder step (secret core) | +0x452 | je | reg/arith | `0x4c9290: test %eax,%eax` | memory | 0x4c9453 | fwd |
+| EC ladder step (secret core) | +0x476 | je | reg/arith | `0x4c92b4: test %eax,%eax` | memory | 0x4c9453 | fwd |
+| EC ladder step (secret core) | +0x490 | je | reg/arith | `0x4c92ce: test %eax,%eax` | memory | 0x4c9453 | fwd |
+| EC ladder step (secret core) | +0x4af | je | reg/arith | `0x4c92ed: test %eax,%eax` | memory | 0x4c9453 | fwd |
+| EC ladder step (secret core) | +0x4ce | je | reg/arith | `0x4c930c: test %eax,%eax` | memory | 0x4c9453 | fwd |
+| EC ladder step (secret core) | +0x4ed | je | reg/arith | `0x4c932b: test %eax,%eax` | memory | 0x4c9453 | fwd |
+| EC ladder step (secret core) | +0x507 | je | reg/arith | `0x4c9345: test %eax,%eax` | call+memory | 0x4c9453 | fwd |
+| EC ladder step (secret core) | +0x526 | je | reg/arith | `0x4c9364: test %eax,%eax` | call+memory | 0x4c9453 | fwd |
+| EC ladder step (secret core) | +0x543 | je | reg/arith | `0x4c9381: test %eax,%eax` | memory | 0x4c9453 | fwd |
+| EC ladder step (secret core) | +0x568 | je | reg/arith | `0x4c93a6: test %eax,%eax` | memory | 0x4c9453 | fwd |
+| EC ladder step (secret core) | +0x587 | je | reg/arith | `0x4c93c5: test %eax,%eax` | memory | 0x4c9453 | fwd |
+| EC ladder step (secret core) | +0x5a3 | je | reg/arith | `0x4c93e1: test %eax,%eax` | call+memory | 0x4c9453 | fwd |
+| EC ladder step (secret core) | +0x5bc | je | reg/arith | `0x4c93fa: test %eax,%eax` | call+memory | 0x4c9453 | fwd |
+| EC ladder step (secret core) | +0x5d5 | je | reg/arith | `0x4c9413: test %eax,%eax` | memory | 0x4c9453 | fwd |
+| EC ladder step (secret core) | +0x5f0 | je | reg/arith | `0x4c9429: test %eax,%eax` | memory | 0x4c9455 | fwd |
+| EC ladder step (secret core) | +0x618 | je | reg/arith | `0x4c9455: test %rbx,%rbx` | memory | 0x4c9478 | fwd |
+| EC ladder step (secret core) | +0x621 | je | reg/arith | `0x4c945e: test %rax,%rax` | memory | 0x4c9478 | fwd |
+| RSA CRT arms | +0x4e | je | reg/arith | `0x2644ab: test %rax,%rax` | memory | 0x264f18 | fwd |
+| RSA CRT arms | +0x69 | jne | mem | `0x2644c5: cmpl $0x1,0x10(%rbp)` | memory | 0x2644ed | fwd |
+| RSA CRT arms | +0x78 | je | reg/arith | `0x2644d5: test %rax,%rax` | memory | 0x264f1b | fwd |
+| RSA CRT arms | +0x87 | jb | reg/arith | `0x2644e4: cmp $0xfffffffd,%eax` | memory | 0x264f1b | fwd |
+| RSA CRT arms | +0x9c | jne | mem | `0x2644f5: testb $0x4,0xa4(%rbp)` | memory | 0x264515 | fwd |
+| RSA CRT arms | +0xa5 | jne | mem | `0x2644fe: testb $0x2,0xa4(%rbp)` | arithmetic/control | 0x264576 | fwd |
+| RSA CRT arms | +0xaa | jne | reg/arith | `0x264507: test %r13b,%r13b` | arithmetic/control | 0x264650 | fwd |
+| RSA CRT arms | +0xbe | je | reg/arith | `0x26451b: test %rax,%rax` | memory | 0x264f18 | fwd |
+| RSA CRT arms | +0xec | jne | reg/arith | `0x264549: test %rax,%rax` | arithmetic/control | 0x264a60 | fwd |
+| RSA CRT arms | +0xf5 | je | reg/arith | `0x264552: test %r15,%r15` | memory | 0x264560 | fwd |
+| RSA CRT arms | +0x10d | je | reg/arith | `0x26456a: test %rax,%rax` | arithmetic/control | 0x2645d8 | fwd |
+| RSA CRT arms | +0x136 | jne | reg/arith | `0x264593: test %r15,%r15` | arithmetic/control | 0x264630 | fwd |
+| RSA CRT arms | +0x13f | je | reg/arith | `0x26459c: test %r14,%r14` | memory | 0x2645aa | fwd |
+| RSA CRT arms | +0x154 | jne | reg/arith | `0x2645b1: test %r15,%r15` | memory | 0x264622 | fwd |
+| RSA CRT arms | +0x16d | je | reg/arith | `0x2645cb: test %eax,%eax` | memory | 0x264616 | fwd |
+| RSA CRT arms | +0x196 | je | reg/arith | `0x2645f4: test %eax,%eax` | memory | 0x264a37 | fwd |
+| RSA CRT arms | +0x1c5 | je | reg/arith | `0x264622: test %r14,%r14` | memory | 0x264630 | fwd |
+| RSA CRT arms | +0x1e1 | je | reg/arith | `0x264636: or %r13b,%al` | arithmetic/control | 0x264862 | fwd |
+| RSA CRT arms | +0x1ea | je | reg/arith | `0x264647: test %r15,%r15` | memory | 0x264f18 | fwd |
+| RSA CRT arms | +0x1f9 | je | reg/arith | `0x264656: test %rax,%rax` | memory | 0x264f18 | fwd |
+| RSA CRT arms | +0x23b | je | reg/arith | `0x264699: test %eax,%eax` | memory | 0x2653d3 | fwd |
+| RSA CRT arms | +0x24a | je | reg/arith | `0x2646a7: test %rax,%rax` | memory | 0x2653d3 | fwd |
+| RSA CRT arms | +0x270 | je | reg/arith | `0x2646cd: test %rax,%rax` | call+memory | 0x2653c0 | fwd |
+| RSA CRT arms | +0x298 | je | reg/arith | `0x2646f6: test %eax,%eax` | call+memory | 0x2653c0 | fwd |
+| RSA CRT arms | +0x2ed | je | mem | `0x264744: test %al,0x38(%rsp)` | memory | 0x2647c3 | fwd |
+| RSA CRT arms | +0x2f8 | je | reg/arith | `0x264755: test %rax,%rax` | memory | 0x264f18 | fwd |
+| RSA CRT arms | +0x31e | je | reg/arith | `0x26477b: test %rax,%rax` | call+memory | 0x264e12 | fwd |
+| RSA CRT arms | +0x35d | je | reg/arith | `0x2647b5: test %ebp,%ebp` | arithmetic/control | 0x264f1b | fwd |
+| RSA CRT arms | +0x367 | jle | reg/arith | `0x2647c5: test %ebx,%ebx` | memory | 0x264c7e | fwd |
+| RSA CRT arms | +0x380 | jne | reg/arith | `0x2647d7: test %r15b,%r15b` | call+memory | 0x264c88 | fwd |
+| RSA CRT arms | +0x3a6 | je | reg/arith | `0x2647fe: test %r13,%r13` | arithmetic/control | 0x2653bb | fwd |
+| RSA CRT arms | +0x3af | je | reg/arith | `0x26480c: test %rax,%rax` | memory | 0x2653bb | fwd |
+| RSA CRT arms | +0x3c1 | je | reg/arith | `0x26481e: test %rax,%rax` | memory | 0x2653bb | fwd |
+| RSA CRT arms | +0x3e0 | je | reg/arith | `0x26482e: test %rcx,%rcx` | memory | 0x264e1f | fwd |
+| RSA CRT arms | +0x3f0 | je | mem | `0x264846: cmpq $0x0,0x10(%rcx)` | memory | 0x264e29 | fwd |
+| RSA CRT arms | +0x429 | je | reg/arith | `0x264887: test %eax,%eax` | memory | 0x264f1b | fwd |
+| RSA CRT arms | +0x447 | je | reg/arith | `0x2648a5: test %eax,%eax` | memory | 0x264f1b | fwd |
+| RSA CRT arms | +0x471 | je | reg/arith | `0x2648cf: test %eax,%eax` | memory | 0x264f1b | fwd |
+| RSA CRT arms | +0x48f | je | reg/arith | `0x2648ed: test %eax,%eax` | memory | 0x264f1b | fwd |
+| RSA CRT arms | +0x4c8 | je | reg/arith | `0x264926: test %eax,%eax` | memory | 0x264f1b | fwd |
+| RSA CRT arms | +0x4ea | je | reg/arith | `0x264948: test %eax,%eax` | memory | 0x264f1b | fwd |
+| RSA CRT arms | +0x503 | je | reg/arith | `0x264961: test %eax,%eax` | memory | 0x264f1b | fwd |
+| RSA CRT arms | +0x516 | je | reg/arith | `0x264969: test %rbx,%rbx` | memory | 0x2649b4 | fwd |
+| RSA CRT arms | +0x51c | je | mem | `0x264978: cmpl $0x0,0x18(%rbx)` | memory | 0x2649b4 | fwd |
+| RSA CRT arms | +0x530 | je | reg/arith | `0x26498e: test %eax,%eax` | memory | 0x264f1b | fwd |
+| RSA CRT arms | +0x53a | je | mem | `0x264996: cmpl $0x0,0x18(%rbx)` | memory | 0x2649b4 | fwd |
+| RSA CRT arms | +0x54e | je | reg/arith | `0x2649ac: test %eax,%eax` | memory | 0x264f1b | fwd |
+| RSA CRT arms | +0x56c | je | reg/arith | `0x2649ca: test %eax,%eax` | memory | 0x264f1b | fwd |
+| RSA CRT arms | +0x58e | je | reg/arith | `0x2649ec: test %eax,%eax` | memory | 0x264f1b | fwd |
+| RSA CRT arms | +0x5b0 | je | reg/arith | `0x264a09: test %eax,%eax` | memory | 0x264f1b | fwd |
+| RSA CRT arms | +0x5ea | je | reg/arith | `0x264a47: test %r15,%r15` | memory | 0x264a55 | fwd |
+| RSA CRT arms | +0x5fa | jne | reg/arith | `0x264a55: test %bl,%bl` | memory | 0x264b08 | fwd |
+| RSA CRT arms | +0x625 | jne | reg/arith | `0x264a82: test %rax,%rax` | arithmetic/control | 0x264b10 | fwd |
+| RSA CRT arms | +0x62e | je | reg/arith | `0x264a8b: test %r15,%r15` | memory | 0x264a99 | fwd |
+| RSA CRT arms | +0x646 | je | reg/arith | `0x264aa3: test %rax,%rax` | arithmetic/control | 0x264aac | fwd |
+| RSA CRT arms | +0x66a | je | reg/arith | `0x264ac8: test %eax,%eax` | memory | 0x264ae3 | fwd |
+| RSA CRT arms | +0x696 | je | reg/arith | `0x264af3: test %r15,%r15` | memory | 0x264b01 | fwd |
+| RSA CRT arms | +0x6a6 | je | reg/arith | `0x264b01: test %bl,%bl` | arithmetic/control | 0x264b10 | fwd |
+| RSA CRT arms | +0x6c1 | je | reg/arith | `0x264b1a: test %ebx,%ebx` | memory | 0x264c0b | fwd |
+| RSA CRT arms | +0x6eb | jne | reg/arith | `0x264b49: test %bl,%bl` | arithmetic/control | 0x264c71 | fwd |
+| RSA CRT arms | +0x6f7 | je | reg/arith | `0x264b54: cmp %r14,%r13` | memory | 0x264c0b | fwd |
+| RSA CRT arms | +0x72b | jne | reg/arith | `0x264b88: test %rax,%rax` | arithmetic/control | 0x264b51 | back |
+| RSA CRT arms | +0x730 | je | reg/arith | `0x264b8d: test %r15,%r15` | memory | 0x264b9b | fwd |
+| RSA CRT arms | +0x742 | je | reg/arith | `0x264b9f: test %rax,%rax` | arithmetic/control | 0x264bad | fwd |
+| RSA CRT arms | +0x749 | jne | reg/arith | `0x264ba6: test %r15,%r15` | arithmetic/control | 0x264b40 | back |
+| RSA CRT arms | +0x764 | je | reg/arith | `0x264bc2: test %eax,%eax` | memory | 0x264be8 | fwd |
+| RSA CRT arms | +0x77d | jne | reg/arith | `0x264bda: test %r15,%r15` | arithmetic/control | 0x264b40 | back |
+| RSA CRT arms | +0x7a0 | jne | reg/arith | `0x264bfd: test %r15,%r15` | arithmetic/control | 0x264b40 | back |
+| RSA CRT arms | +0x7bb | jne | reg/arith | `0x264c19: test %ebx,%ebx` | memory | 0x264c64 | fwd |
+| RSA CRT arms | +0x7d4 | jne | mem | `0x264c25: cmp 0x67a714(%rip),%rax        # 8df340 <BN_mod_exp_mont@@OPENSSL_3.0.0+0x365a70>` | call+memory | 0x2644fe | back |
+| RSA CRT arms | +0x830 | je | reg/arith | `0x264c8d: test %al,%r14b` | memory | 0x264f0f | fwd |
+| RSA CRT arms | +0x865 | je | reg/arith | `0x264cc3: test %eax,%eax` | arithmetic/control | 0x264f1b | fwd |
+| RSA CRT arms | +0x86e | je | reg/arith | `0x264ccb: test %rbx,%rbx` | memory | 0x264cee | fwd |
+| RSA CRT arms | +0x874 | je | mem | `0x264cd0: cmpl $0x0,0x18(%rbx)` | memory | 0x264cee | fwd |
+| RSA CRT arms | +0x888 | je | reg/arith | `0x264ce6: test %eax,%eax` | memory | 0x264f1b | fwd |
+| RSA CRT arms | +0x8a5 | je | reg/arith | `0x264d03: test %eax,%eax` | memory | 0x264f1b | fwd |
+| RSA CRT arms | +0x8b4 | je | reg/arith | `0x264d11: test %rax,%rax` | memory | 0x264f1b | fwd |
+| RSA CRT arms | +0x8ff | je | reg/arith | `0x264d5d: test %ebp,%ebp` | memory | 0x264f1b | fwd |
+| RSA CRT arms | +0x90d | je | reg/arith | `0x264d65: test %rbx,%rbx` | memory | 0x264d8d | fwd |
+| RSA CRT arms | +0x913 | je | mem | `0x264d6f: cmpl $0x0,0x18(%rbx)` | memory | 0x264d8d | fwd |
+| RSA CRT arms | +0x927 | je | reg/arith | `0x264d85: test %eax,%eax` | memory | 0x264f1b | fwd |
+| RSA CRT arms | +0x947 | je | reg/arith | `0x264da5: test %eax,%eax` | memory | 0x264f1b | fwd |
+| RSA CRT arms | +0x960 | je | reg/arith | `0x264dbe: test %eax,%eax` | memory | 0x264f1b | fwd |
+| RSA CRT arms | +0x96b | jle | mem | `0x264dc6: cmpl $0x0,0x28(%rsp)` | memory | 0x26511c | fwd |
+| RSA CRT arms | +0x97f | je | reg/arith | `0x264ddc: test %rax,%rax` | memory | 0x264f1b | fwd |
+| RSA CRT arms | +0x995 | je | reg/arith | `0x264df2: test %rax,%rax` | memory | 0x265029 | fwd |
+| RSA CRT arms | +0x9a0 | je | mem | `0x264dfb: cmpq $0x0,0x10(%rax)` | memory | 0x265029 | fwd |
+| RSA CRT arms | +0xa0f | je | reg/arith | `0x264e6d: test %eax,%eax` | memory | 0x2653bb | fwd |
+| RSA CRT arms | +0xa25 | je | reg/arith | `0x264e82: test %rax,%rax` | call+memory | 0x2653bb | fwd |
+| RSA CRT arms | +0xa48 | je | reg/arith | `0x264ea6: test %eax,%eax` | memory | 0x2653bb | fwd |
+| RSA CRT arms | +0xa53 | jne | mem | `0x264eae: cmpl $0x1,0x28(%rsp)` | call+memory | 0x264f54 | fwd |
+| RSA CRT arms | +0xaa9 | jne | reg/arith | `0x264f06: test %al,%r14b` | arithmetic/control | 0x264c96 | back |
+| RSA CRT arms | +0xab2 | je | reg/arith | `0x264f0f: test %r15b,%r15b` | arithmetic/control | 0x26511c | fwd |
+| RSA CRT arms | +0xabe | je | reg/arith | `0x264f1b: test %r12,%r12` | memory | 0x264f42 | fwd |
+| RSA CRT arms | +0xac8 | je | reg/arith | `0x264f25: test %rax,%rax` | memory | 0x264f42 | fwd |
+| RSA CRT arms | +0xb00 | je | reg/arith | `0x264f5d: test %rax,%rax` | memory | 0x2653bb | fwd |
+| RSA CRT arms | +0xb1a | je | reg/arith | `0x264f77: test %rax,%rax` | memory | 0x264f8d | fwd |
+| RSA CRT arms | +0xb21 | jb | mem | `0x264f7c: cmpq $0x2,0x10(%rax)` | memory | 0x264f8d | fwd |
+| RSA CRT arms | +0xb6c | je | reg/arith | `0x264fca: test %eax,%eax` | memory | 0x2653bb | fwd |
+| RSA CRT arms | +0xb82 | je | reg/arith | `0x264fdf: test %rax,%rax` | call+memory | 0x2653bb | fwd |
+| RSA CRT arms | +0xba5 | je | reg/arith | `0x265003: test %eax,%eax` | memory | 0x2653bb | fwd |
+| RSA CRT arms | +0xbb0 | jne | mem | `0x26500b: cmpl $0x2,0x28(%rsp)` | memory | 0x2652d3 | fwd |
+| RSA CRT arms | +0xbe3 | je | reg/arith | `0x265041: test %eax,%eax` | memory | 0x2653d3 | fwd |
+| RSA CRT arms | +0xc00 | je | reg/arith | `0x26505e: test %eax,%eax` | memory | 0x2653d3 | fwd |
+| RSA CRT arms | +0xc37 | je | reg/arith | `0x265095: test %eax,%eax` | memory | 0x2653d3 | fwd |
+| RSA CRT arms | +0xc43 | je | mem | `0x26509d: cmpq $0x0,0x8(%rsp)` | memory | 0x2650c9 | fwd |
+| RSA CRT arms | +0xc4e | je | mem | `0x2650aa: cmpl $0x0,0x18(%rax)` | memory | 0x2650c9 | fwd |
+| RSA CRT arms | +0xc63 | je | reg/arith | `0x2650c1: test %eax,%eax` | memory | 0x2653d3 | fwd |
+| RSA CRT arms | +0xc80 | je | reg/arith | `0x2650de: test %eax,%eax` | memory | 0x2653d3 | fwd |
+| RSA CRT arms | +0xc9b | je | reg/arith | `0x2650f9: test %eax,%eax` | memory | 0x2653d3 | fwd |
+| RSA CRT arms | +0xca6 | jne | mem | `0x265101: cmpl $0x1,0x28(%rsp)` | memory | 0x2653eb | fwd |
+| RSA CRT arms | +0xcc3 | je | reg/arith | `0x265120: test %rdx,%rdx` | memory | 0x2652b2 | fwd |
+| RSA CRT arms | +0xcd0 | je | reg/arith | `0x26512d: test %rcx,%rcx` | memory | 0x2652b2 | fwd |
+| RSA CRT arms | +0xce5 | je | mem | `0x26513e: cmp 0x67a1fb(%rip),%rax        # 8df340 <BN_mod_exp_mont@@OPENSSL_3.0.0+0x365a70>` | memory | 0x265168 | fwd |
+| RSA CRT arms | +0xcf4 | je | reg/arith | `0x265147: test %rax,%rax` | call+memory | 0x264f18 | back |
+| RSA CRT arms | +0xd27 | je | reg/arith | `0x265185: test %eax,%eax` | memory | 0x264f1b | back |
+| RSA CRT arms | +0xd42 | je | reg/arith | `0x2651a0: test %eax,%eax` | memory | 0x264f1b | back |
+| RSA CRT arms | +0xd63 | je | reg/arith | `0x2651c0: cmp %rdx,%rcx` | memory | 0x2652b2 | fwd |
+| RSA CRT arms | +0xd72 | je | mem | `0x2651c9: cmpq $0x0,(%rax,%rdx,1)` | memory | 0x2651c0 | back |
+| RSA CRT arms | +0xd96 | je | reg/arith | `0x2651f4: test %eax,%eax` | memory | 0x2652bd | fwd |
+| RSA CRT arms | +0xda5 | je | mem | `0x265201: cmpl $0x0,0x18(%rax)` | memory | 0x265224 | fwd |
+| RSA CRT arms | +0xdbe | je | reg/arith | `0x26521c: test %eax,%eax` | memory | 0x264f1b | back |
+| RSA CRT arms | +0xdda | je | reg/arith | `0x265237: cmp %rdx,%rcx` | memory | 0x2652c5 | fwd |
+| RSA CRT arms | +0xde9 | je | mem | `0x265240: cmpq $0x0,(%rax,%rdx,1)` | memory | 0x265237 | back |
+| RSA CRT arms | +0xdf9 | je | reg/arith | `0x265256: test %rax,%rax` | memory | 0x26530c | fwd |
+| RSA CRT arms | +0xe1e | je | reg/arith | `0x26527b: test %rax,%rax` | call+memory | 0x2653e3 | fwd |
+| RSA CRT arms | +0xe84 | je | reg/arith | `0x2652e1: test %rax,%rax` | memory | 0x2653bb | fwd |
+| RSA CRT arms | +0xe99 | je | reg/arith | `0x2652f6: test %rax,%rax` | memory | 0x265317 | fwd |
+| RSA CRT arms | +0xea0 | jb | mem | `0x2652fb: cmpq $0x3,0x10(%rax)` | memory | 0x265317 | fwd |
+| RSA CRT arms | +0xef6 | je | reg/arith | `0x265354: test %eax,%eax` | memory | 0x2653bb | fwd |
+| RSA CRT arms | +0xf08 | je | reg/arith | `0x265365: test %rax,%rax` | call+memory | 0x2653bb | fwd |
+| RSA CRT arms | +0xf27 | je | reg/arith | `0x265385: test %eax,%eax` | memory | 0x2653bb | fwd |
+| RSA CRT arms | +0xf33 | je | mem | `0x265389: cmpl $0x3,0x28(%rsp)` | memory | 0x264ecb | back |
+| RSA CRT arms | +0xf9d | je | reg/arith | `0x2653fa: test %rax,%rax` | memory | 0x265410 | fwd |
+| RSA CRT arms | +0xfa4 | jb | mem | `0x2653ff: cmpq $0x2,0x10(%rax)` | memory | 0x265410 | fwd |
+| RSA CRT arms | +0xfca | je | reg/arith | `0x265428: test %eax,%eax` | memory | 0x2653d3 | back |
+| RSA CRT arms | +0xfe3 | je | reg/arith | `0x265441: test %eax,%eax` | memory | 0x2653d3 | back |
+| RSA CRT arms | +0x1016 | je | reg/arith | `0x265474: test %eax,%eax` | memory | 0x2653d3 | back |
+| RSA CRT arms | +0x1022 | je | mem | `0x26547c: cmpq $0x0,0x8(%rsp)` | memory | 0x2654a8 | fwd |
+| RSA CRT arms | +0x102d | je | mem | `0x265489: cmpl $0x0,0x18(%rax)` | memory | 0x2654a8 | fwd |
+| RSA CRT arms | +0x1042 | je | reg/arith | `0x2654a0: test %eax,%eax` | memory | 0x2653d3 | back |
+| RSA CRT arms | +0x105f | je | reg/arith | `0x2654bd: test %eax,%eax` | memory | 0x2653d3 | back |
+| RSA CRT arms | +0x107a | je | reg/arith | `0x2654d8: test %eax,%eax` | memory | 0x2653d3 | back |
+| RSA CRT arms | +0x1085 | je | mem | `0x2654e0: cmpl $0x2,0x28(%rsp)` | memory | 0x26510c | back |
+| RSA CRT arms | +0x109d | je | reg/arith | `0x2654fa: test %rax,%rax` | memory | 0x265510 | fwd |
+| RSA CRT arms | +0x10a4 | jb | mem | `0x2654ff: cmpq $0x3,0x10(%rax)` | memory | 0x265510 | fwd |
+| RSA CRT arms | +0x10ca | je | reg/arith | `0x265528: test %eax,%eax` | memory | 0x2653d3 | back |
+| RSA CRT arms | +0x10e7 | je | reg/arith | `0x265545: test %eax,%eax` | memory | 0x2653d3 | back |
+| RSA CRT arms | +0x111e | je | reg/arith | `0x26557c: test %eax,%eax` | memory | 0x2653d3 | back |
+| RSA CRT arms | +0x112a | je | mem | `0x265584: cmpq $0x0,0x8(%rsp)` | memory | 0x2655b0 | fwd |
+| RSA CRT arms | +0x1135 | je | mem | `0x265591: cmpl $0x0,0x18(%rax)` | memory | 0x2655b0 | fwd |
+| RSA CRT arms | +0x114a | je | reg/arith | `0x2655a8: test %eax,%eax` | memory | 0x2653d3 | back |
+| RSA CRT arms | +0x1167 | je | reg/arith | `0x2655c5: test %eax,%eax` | memory | 0x2653d3 | back |
+| RSA CRT arms | +0x1182 | je | reg/arith | `0x2655e0: test %eax,%eax` | memory | 0x2653d3 | back |
+| RSA CRT arms | +0x118d | je | mem | `0x2655e8: cmpl $0x3,0x28(%rsp)` | memory | 0x26510c | back |
+| P-256 Montgomery reduction | +0x2ed | je | reg/arith | `0x25ff4a: test %r8,%r8` | memory | 0x26007b | fwd |
+| P-256 Montgomery reduction | +0x415 | jne | reg/arith | `0x260072: dec %r8` | memory | 0x25ff60 | back |
+| DH key agreement (driver) | +0x26 | jle | reg/arith | `0x598031: cmp $0x2710,%eax` | memory | 0x598041 | fwd |
+| DH key agreement (driver) | +0x39 | je | reg/arith | `0x598046: test %rdi,%rdi` | memory | 0x59806b | fwd |
+| DH key agreement (driver) | +0x46 | jle | reg/arith | `0x598051: cmp $0x2710,%eax` | call+memory | 0x59806b | fwd |
+| DH key agreement (driver) | +0x6b | jge | reg/arith | `0x598076: cmp $0x200,%eax` | call+memory | 0x59809c | fwd |
+| DH key agreement (driver) | +0xbb | jne | mem | `0x5980c6: cmpl $0x1,0x30(%rsp)` | arithmetic/control | 0x5980d4 | fwd |
+| DH key agreement (driver) | +0xe2 | je | reg/arith | `0x5980ef: test %rax,%rax` | memory | 0x598172 | fwd |
+| DH key agreement (driver) | +0x13f | je | reg/arith | `0x59814c: test %rax,%rax` | memory | 0x5982cd | fwd |
+| DH key agreement (driver) | +0x14e | je | mem | `0x598158: cmpq $0x0,0x78(%r12)` | memory | 0x59818f | fwd |
+| DH key agreement (driver) | +0x159 | jne | mem | `0x598160: testb $0x1,0x80(%r12)` | arithmetic/control | 0x5981c1 | fwd |
+| DH key agreement (driver) | +0x191 | je | reg/arith | `0x59819e: test %rdx,%rdx` | memory | 0x5982ba | fwd |
+| DH key agreement (driver) | +0x1a4 | jae | reg/arith | `0x5981b0: cmp $0x8,%rdx` | arithmetic/control | 0x598249 | fwd |
+| DH key agreement (driver) | +0x1c9 | je | reg/arith | `0x5981d6: test %rdx,%rdx` | memory | 0x5981f2 | fwd |
+| DH key agreement (driver) | +0x1d3 | je | reg/arith | `0x5981e0: test %rax,%rax` | memory | 0x59833b | fwd |
+| DH key agreement (driver) | +0x1ea | je | reg/arith | `0x5981f2: test %rbp,%rbp` | memory | 0x598205 | fwd |
+| DH key agreement (driver) | +0x200 | jne | reg/arith | `0x59820d: test %rdx,%rdx` | memory | 0x59830c | fwd |
+| DH key agreement (driver) | +0x221 | je | reg/arith | `0x59822f: test %eax,%eax` | memory | 0x5982ff | fwd |
+| DH key agreement (driver) | +0x28d | jne | reg/arith | `0x59829a: cmp %rsi,%rdx` | arithmetic/control | 0x59824f | back |
+| DH key agreement (driver) | +0x292 | je | reg/arith | `0x59829f: test %rax,%rax` | memory | 0x5982ba | fwd |
+| DH key agreement (driver) | +0x2a8 | jne | reg/arith | `0x5982b5: cmp %rdx,%rax` | memory | 0x5982aa | back |
+| DH key agreement (driver) | +0x2c8 | je | reg/arith | `0x5982d0: test %rax,%rax` | memory | 0x5982ef | fwd |
+| DH key agreement (driver) | +0x2ff | je | reg/arith | `0x59830c: test %rbp,%rbp` | memory | 0x598324 | fwd |
+| DH key agreement (driver) | +0x31c | je | reg/arith | `0x598329: test %rax,%rax` | memory | 0x598332 | fwd |
+| DH key agreement (driver) | +0x325 | je | reg/arith | `0x598332: test %rdx,%rdx` | memory | 0x5984fc | fwd |
+| DH key agreement (driver) | +0x33b | je | reg/arith | `0x598348: test %rax,%rax` | memory | 0x59842c | fwd |
+| DH key agreement (driver) | +0x348 | je | reg/arith | `0x598355: test %rax,%rax` | call+memory | 0x59842c | fwd |
+| DH key agreement (driver) | +0x36e | je | reg/arith | `0x59837c: test %eax,%eax` | memory | 0x598417 | fwd |
+| DH key agreement (driver) | +0x391 | je | reg/arith | `0x59839e: test %rax,%rax` | memory | 0x598427 | fwd |
+| DH key agreement (driver) | +0x3a7 | je | reg/arith | `0x5983b5: test %eax,%eax` | memory | 0x598420 | fwd |
+| DH key agreement (driver) | +0x3bd | jle | reg/arith | `0x5983cb: test %eax,%eax` | memory | 0x598420 | fwd |
+| DH key agreement (driver) | +0x3d6 | je | reg/arith | `0x5983dd: test %eax,%eax` | memory | 0x598427 | fwd |
+| DH key agreement (driver) | +0x3e6 | jo | reg/arith | `0x5983f3: add $0x7,%eax` | memory | 0x598513 | fwd |
+| DH key agreement (driver) | +0x422 | je | reg/arith | `0x59842f: test %rdx,%rdx` | memory | 0x5984bc | fwd |
+| DH key agreement (driver) | +0x435 | jae | reg/arith | `0x598441: cmp $0x8,%rdx` | arithmetic/control | 0x59844b | fwd |
+| DH key agreement (driver) | +0x48f | jne | reg/arith | `0x59849c: cmp %rsi,%rdx` | arithmetic/control | 0x598451 | back |
+| DH key agreement (driver) | +0x494 | je | reg/arith | `0x5984a1: test %rax,%rax` | memory | 0x5984bc | fwd |
+| DH key agreement (driver) | +0x4aa | jne | reg/arith | `0x5984b7: cmp %rdx,%rax` | memory | 0x5984ac | back |
+| DH key agreement (driver) | +0x4ca | je | reg/arith | `0x5984d2: test %rax,%rax` | memory | 0x5984f1 | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0x39 | je | reg/arith | `0x48c266: test %rax,%rax` | memory | 0x48c4bb | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0x53 | je | reg/arith | `0x48c280: cmp %rsi,%rdx` | memory | 0x48c4bb | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0x62 | je | mem | `0x48c289: cmpq $0x0,(%rcx,%rsi,1)` | memory | 0x48c280 | back |
+| EC wNAF multiply (verification / public-scalar core) | +0x6b | je | reg/arith | `0x48c298: test %rdx,%rdx` | memory | 0x48c4bb | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0x83 | je | reg/arith | `0x48c2b0: cmp %rsi,%rdx` | memory | 0x48c4bb | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0x92 | je | mem | `0x48c2b9: cmpq $0x0,(%rcx,%rsi,1)` | arithmetic/control | 0x48c2b0 | back |
+| EC wNAF multiply (verification / public-scalar core) | +0x97 | je | reg/arith | `0x48c2c4: cmp %rax,%r15` | arithmetic/control | 0x48c485 | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0xab | je | reg/arith | `0x48c2d9: test %dl,%cl` | memory | 0x48c485 | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0xb9 | je | reg/arith | `0x48c2e6: test %r13,%r13` | call | 0x48c46b | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0xc9 | je | reg/arith | `0x48c2f7: test %al,%al` | memory | 0x48c46b | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0xd4 | jne | mem | `0x48c2ff: cmpl $0x0,0x18(%r15)` | memory | 0x48c46b | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0xe2 | ja | reg/arith | `0x48c30e: cmp $0x4,%rdx` | memory | 0x48c46b | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0x232 | je | reg/arith | `0x48c460: test %al,%al` | call | 0x48d503 | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0x25f | jne | reg/arith | `0x48c48c: or %r15,%rcx` | memory | 0x48c4bb | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0x26c | je | reg/arith | `0x48c499: cmp %rax,%rdx` | call+memory | 0x48c573 | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0x28e | je | reg/arith | `0x48c4bb: test %r15,%r15` | memory | 0x48c573 | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0x2a3 | je | reg/arith | `0x48c4d0: test %rcx,%rcx` | memory | 0x48c5a1 | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0x2c2 | je | reg/arith | `0x48c4ea: test %rax,%rax` | memory | 0x48c602 | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0x2cd | je | mem | `0x48c4f8: cmpq $0x0,0x10(%rax)` | memory | 0x48c602 | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0x2e5 | je | reg/arith | `0x48c512: test %rax,%rax` | memory | 0x48c5b4 | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0x2fd | jne | mem | `0x48c52a: cmp (%rdx),%rcx` | memory | 0x48c5bb | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0x315 | je | reg/arith | `0x48c543: test %esi,%esi` | memory | 0x48c5e5 | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0x32a | je | reg/arith | `0x48c557: test %r8d,%r8d` | arithmetic/control | 0x48c561 | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0x32f | jne | reg/arith | `0x48c55c: cmp %r8d,%esi` | memory | 0x48c5bb | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0x334 | jne | mem | `0x48c561: cmp (%rdx),%rcx` | memory | 0x48c5bb | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0x33b | je | reg/arith | `0x48c569: test %ecx,%ecx` | arithmetic/control | 0x48c5ea | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0x33f | jne | reg/arith | `0x48c56d: cmp %ecx,%esi` | arithmetic/control | 0x48c5bb | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0x3b8 | jne | mem | `0x48c5e5: cmp (%rdx),%rcx` | call+memory | 0x48c5bb | back |
+| EC wNAF multiply (verification / public-scalar core) | +0x3cc | je | reg/arith | `0x48c5fa: test %eax,%eax` | memory | 0x48ccaa | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0x418 | jb | reg/arith | `0x48c645: add %r13,%r15` | call+memory | 0x48d980 | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0x470 | je | reg/arith | `0x48c69c: cmp $0xffffffffffffffff,%r15` | call+memory | 0x48d989 | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0x4b3 | je | reg/arith | `0x48c6e0: test %r13,%r13` | memory | 0x48c934 | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0x4cc | je | mem | `0x48c6f1: cmpq $0x0,0x18(%rsp)` | arithmetic/control | 0x48c998 | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0x4d5 | je | reg/arith | `0x48c702: test %r14,%r14` | arithmetic/control | 0x48c998 | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0x4de | je | reg/arith | `0x48c70b: test %r12,%r12` | memory | 0x48c998 | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0x4f1 | jb | mem | `0x48c71c: add 0x68(%rsp),%rax` | memory | 0x48d9a8 | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0x50e | je | unknown | `?` | memory | 0x48ca90 | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0x54a | jae | mem | `0x48c775: cmp 0x68(%rsp),%rbx` | memory | 0x48c780 | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0x560 | ja | reg/arith | `0x48c78b: cmp $0x7cf,%eax` | arithmetic/control | 0x48c7c0 | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0x56c | ja | reg/arith | `0x48c797: cmp $0x31f,%eax` | arithmetic/control | 0x48c7c0 | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0x578 | ja | reg/arith | `0x48c7a3: cmp $0x12b,%eax` | arithmetic/control | 0x48c7c0 | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0x582 | ja | reg/arith | `0x48c7af: cmp $0x45,%eax` | memory | 0x48c7c0 | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0x5a6 | jb | reg/arith | `0x48c7d3: add %rax,%r15` | memory | 0x48d9c0 | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0x5c4 | jae | mem | `0x48c7ef: cmp 0x68(%rsp),%rbx` | call+memory | 0x48c7ff | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0x5ef | je | reg/arith | `0x48c81c: test %rax,%rax` | memory | 0x48cabf | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0x61d | jne | reg/arith | `0x48c840: dec %r13` | memory | 0x48c770 | back |
+| EC wNAF multiply (verification / public-scalar core) | +0x633 | je | reg/arith | `0x48c85b: test %rbx,%rbx` | memory | 0x48cab2 | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0x649 | je | reg/arith | `0x48c86e: test %rax,%rax` | memory | 0x48cb8e | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0x660 | je | mem | `0x48c88b: cmpb $0x0,0x60(%rsp)` | call+memory | 0x48cbc3 | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0x695 | je | reg/arith | `0x48c8ba: test %rax,%rax` | memory | 0x48cba8 | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0x6b2 | jbe | mem | `0x48c8d8: cmp 0x78(%rsp),%rsi` | arithmetic/control | 0x48cc69 | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0x6be | jo | reg/arith | `0x48c8eb: mul %rcx` | memory | 0x48da0b | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0x6d5 | jae | reg/arith | `0x48c8fd: cmp %rax,%rsi` | arithmetic/control | 0x48cd49 | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0x6de | je | reg/arith | `0x48c90b: test %rcx,%rcx` | arithmetic/control | 0x48da1d | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0x6ee | je | reg/arith | `0x48c91a: shr $0x20,%rax` | division | 0x48cceb | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0x711 | je | reg/arith | `0x48c939: test %rdi,%rdi` | call+memory | 0x48c966 | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0x739 | je | reg/arith | `0x48c966: test %rbx,%rbx` | memory | 0x48ca5a | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0x770 | je | reg/arith | `0x48c99d: test %rdi,%rdi` | call+memory | 0x48c9c5 | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0x798 | je | reg/arith | `0x48c9c5: test %r14,%r14` | call+memory | 0x48c9f0 | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0x7c7 | je | reg/arith | `0x48c9f4: test %rdi,%rdi` | memory | 0x48ca34 | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0x802 | jne | reg/arith | `0x48ca2f: test %rdi,%rdi` | call+memory | 0x48ca10 | back |
+| EC wNAF multiply (verification / public-scalar core) | +0x82f | je | reg/arith | `0x48ca5c: test %r12,%r12` | call+memory | 0x48d1d3 | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0x87c | jne | reg/arith | `0x48caa4: test %rbx,%rbx` | memory | 0x48c869 | back |
+| EC wNAF multiply (verification / public-scalar core) | +0x8e3 | je | reg/arith | `0x48cb10: test %rdi,%rdi` | call+memory | 0x48cb54 | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0x922 | jne | reg/arith | `0x48cb4f: test %rdi,%rdi` | call+memory | 0x48cb30 | back |
+| EC wNAF multiply (verification / public-scalar core) | +0x966 | jne | mem | `0x48cb8e: cmpb $0x0,0xb0(%rsp)` | call+memory | 0x48ce77 | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0x9f2 | je | reg/arith | `0x48cc1f: test %rdi,%rdi` | call+memory | 0x48d0a4 | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0xa32 | jne | reg/arith | `0x48cc5f: test %rdi,%rdi` | arithmetic/control | 0x48cc40 | back |
+| EC wNAF multiply (verification / public-scalar core) | +0xa42 | je | reg/arith | `0x48cc6e: cmp $0xffffffffffffffff,%rcx` | memory | 0x48da14 | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0xa8f | je | reg/arith | `0x48ccbc: test %rbx,%rbx` | arithmetic/control | 0x48da26 | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0xaa5 | je | reg/arith | `0x48ccd1: shr $0x20,%rdx` | division | 0x48d47b | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0xad5 | jbe | mem | `0x48cd01: cmp 0x10(%rax),%r12` | call+memory | 0x48cd3e | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0xb13 | jb | mem | `0x48cd3e: add 0x68(%rsp),%r12` | memory | 0x48da62 | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0xb21 | jae | reg/arith | `0x48cd4e: cmp %r12,%rbx` | memory | 0x48ce45 | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0xb51 | jae | mem | `0x48cd77: cmp 0x48(%rsp),%rbx` | memory | 0x48cda1 | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0xb5f | jb | reg/arith | `0x48cd8c: sub %rcx,%rsi` | memory | 0x48d6d3 | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0xba6 | je | reg/arith | `0x48cdd3: test %rax,%rax` | memory | 0x48d3f9 | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0xbc5 | je | mem | `0x48cdf1: cmpq $0x0,(%rdi)` | memory | 0x48d43f | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0xc0f | jne | reg/arith | `0x48ce37: cmp %rbx,%r12` | call+memory | 0x48cd77 | back |
+| EC wNAF multiply (verification / public-scalar core) | +0xc4b | je | reg/arith | `0x48ce77: cmp $0xffffffffffffffff,%r15` | memory | 0x48d9b1 | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0xc6f | je | reg/arith | `0x48ce9c: test %rax,%rax` | memory | 0x48d00c | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0xc98 | je | reg/arith | `0x48cec5: test %rcx,%rcx` | memory | 0x48cfd3 | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0xca4 | je | mem | `0x48cece: cmpq $0x0,0x50(%rsp)` | memory | 0x48d0ea | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0xcdd | je | reg/arith | `0x48cf0a: test %rcx,%rcx` | arithmetic/control | 0x48d9df | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0xcea | ja | reg/arith | `0x48cf16: cmp $0x40,%rcx` | arithmetic/control | 0x48d9fb | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0xcfb | jne | reg/arith | `0x48cf28: test %rax,%rax` | memory | 0x48cfba | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0xd0e | je | mem | `0x48cf39: cmpq $0x0,0x50(%rax)` | memory | 0x48d199 | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0xd2e | je | reg/arith | `0x48cf5b: test %rax,%rax` | memory | 0x48d140 | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0xd50 | je | reg/arith | `0x48cf7d: test %rax,%rax` | call | 0x48d11a | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0xd5d | je | reg/arith | `0x48cf8b: test %eax,%eax` | memory | 0x48d11a | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0xd7f | jne | reg/arith | `0x48cfa7: test %rcx,%rcx` | arithmetic/control | 0x48cf16 | back |
+| EC wNAF multiply (verification / public-scalar core) | +0xd9d | jne | reg/arith | `0x48cfc5: cmp %rcx,%rbx` | memory | 0x48cefc | back |
+| EC wNAF multiply (verification / public-scalar core) | +0xdaf | je | reg/arith | `0x48cfdc: cmp %rax,%r12` | call+memory | 0x48d151 | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0xe30 | je | reg/arith | `0x48d05d: test %rdi,%rdi` | call+memory | 0x48d0a4 | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0xe72 | jne | reg/arith | `0x48d09f: test %rdi,%rdi` | call+memory | 0x48d080 | back |
+| EC wNAF multiply (verification / public-scalar core) | +0xece | je | reg/arith | `0x48d0fb: test %rax,%rax` | arithmetic/control | 0x48d9d3 | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0xed8 | jae | reg/arith | `0x48d104: cmp $0x41,%rax` | memory | 0x48d9ec | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0xf2f | je | reg/arith | `0x48d15c: test %rax,%rax` | memory | 0x48d358 | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0xf43 | je | mem | `0x48d16a: cmpq $0x0,0x90(%rsp)` | memory | 0x48d36c | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0xfc4 | je | mem | `0x48d1e7: cmp 0x90(%rsp),%r12` | memory | 0x48d36c | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0xfd7 | jae | mem | `0x48d202: cmp 0x68(%rsp),%r12` | memory | 0x48d217 | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0xff7 | je | reg/arith | `0x48d225: test %eax,%eax` | memory | 0x48d3d5 | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0x1007 | jbe | mem | `0x48d232: cmpq $0x1,(%rax,%r12,8)` | memory | 0x48d1e4 | back |
+| EC wNAF multiply (verification / public-scalar core) | +0x1027 | je | reg/arith | `0x48d255: test %eax,%eax` | memory | 0x48d3bc | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0x1039 | je | reg/arith | `0x48d266: test %rcx,%rcx` | arithmetic/control | 0x48d9df | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0x1048 | ja | reg/arith | `0x48d274: cmp $0x40,%rcx` | arithmetic/control | 0x48d9fb | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0x1059 | jne | reg/arith | `0x48d286: test %rax,%rax` | memory | 0x48d1e4 | back |
+| EC wNAF multiply (verification / public-scalar core) | +0x1071 | je | reg/arith | `0x48d29e: test %rax,%rax` | memory | 0x48d72a | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0x1083 | jne | mem | `0x48d2b0: cmp (%rsi),%r9` | memory | 0x48d3b0 | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0x1098 | je | reg/arith | `0x48d2c6: test %edi,%edi` | memory | 0x48d318 | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0x10a1 | je | reg/arith | `0x48d2ce: test %r8d,%r8d` | arithmetic/control | 0x48d2dc | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0x10a6 | jne | reg/arith | `0x48d2d3: cmp %r8d,%edi` | memory | 0x48d3b0 | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0x10af | jne | mem | `0x48d2dc: cmp (%rdx),%r9` | memory | 0x48d3b0 | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0x10bc | je | reg/arith | `0x48d2e9: test %r8d,%r8d` | arithmetic/control | 0x48d2f7 | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0x10c1 | jne | reg/arith | `0x48d2ee: cmp %r8d,%edi` | memory | 0x48d3b0 | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0x10cf | jne | mem | `0x48d2fc: cmp (%rcx),%r9` | memory | 0x48d3b0 | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0x10dc | je | reg/arith | `0x48d309: test %r8d,%r8d` | arithmetic/control | 0x48d32f | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0x10e1 | je | reg/arith | `0x48d30e: cmp %r8d,%edi` | arithmetic/control | 0x48d32f | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0x10eb | jne | mem | `0x48d318: cmp (%rdx),%r9` | memory | 0x48d3b0 | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0x10f9 | jne | mem | `0x48d326: cmp (%rcx),%r9` | call+memory | 0x48d3b0 | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0x110c | je | reg/arith | `0x48d33a: test %eax,%eax` | memory | 0x48d3bc | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0x111d | jne | reg/arith | `0x48d34a: test %rcx,%rcx` | arithmetic/control | 0x48d274 | back |
+| EC wNAF multiply (verification / public-scalar core) | +0x114e | je | reg/arith | `0x48d37b: test %rax,%rax` | call+memory | 0x48d3d5 | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0x115e | je | reg/arith | `0x48d38c: test %eax,%eax` | memory | 0x48d3d5 | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0x1170 | jbe | reg/arith | `0x48d395: cmp $0x7fffffff,%rax` | memory | 0x48d736 | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0x125a | je | reg/arith | `0x48d486: cmp $0xffffffffffffffff,%rdi` | memory | 0x48da35 | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0x1279 | jb | reg/arith | `0x48d4a5: sub $0x1,%rcx` | arithmetic/control | 0x48da41 | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0x1283 | jae | reg/arith | `0x48d4af: cmp $0x41,%rdx` | memory | 0x48da4a | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0x129c | jo | reg/arith | `0x48d4c9: mul %rdx` | memory | 0x48da53 | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0x12ab | jne | mem | `0x48d4d7: cmp %rax,0x28(%rcx)` | memory | 0x48d4f7 | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0x1383 | jne | reg/arith | `0x48d5b1: test %eax,%eax` | call+memory | 0x48d992 | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0x13f1 | je | reg/arith | `0x48d61f: test %al,%al` | call+memory | 0x48d696 | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0x140b | je | reg/arith | `0x48d639: test %al,%al` | call+memory | 0x48d696 | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0x1425 | je | reg/arith | `0x48d653: test %al,%al` | call+memory | 0x48d696 | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0x1509 | je | reg/arith | `0x48d736: test %rax,%rax` | memory | 0x48da6e | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0x1537 | jle | mem | `0x48d750: cmpl $0x1,0x90(%rsp)` | arithmetic/control | 0x48d8fa | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0x1543 | jne | reg/arith | `0x48d770: test %r12d,%r12d` | memory | 0x48d794 | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0x155e | je | reg/arith | `0x48d78c: test %eax,%eax` | memory | 0x48d3a6 | back |
+| EC wNAF multiply (verification / public-scalar core) | +0x157e | je | mem | `0x48d7a0: cmpq $0x0,0x98(%rsp)` | arithmetic/control | 0x48d750 | back |
+| EC wNAF multiply (verification / public-scalar core) | +0x15a9 | je | reg/arith | `0x48d7d2: test %eax,%eax` | memory | 0x48d8e1 | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0x15ba | je | mem | `0x48d7e2: cmp %r14,0x98(%rsp)` | memory | 0x48d750 | back |
+| EC wNAF multiply (verification / public-scalar core) | +0x15c9 | jbe | mem | `0x48d7f5: cmp %r15,(%rax,%r14,8)` | memory | 0x48d7df | back |
+| EC wNAF multiply (verification / public-scalar core) | +0x15db | je | reg/arith | `0x48d809: test %ebx,%ebx` | memory | 0x48d7df | back |
+| EC wNAF multiply (verification / public-scalar core) | +0x15e6 | je | mem | `0x48d812: cmp %eax,0x68(%rsp)` | arithmetic/control | 0x48d848 | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0x15eb | jne | reg/arith | `0x48d818: test %r12d,%r12d` | memory | 0x48d839 | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0x1603 | je | reg/arith | `0x48d831: test %eax,%eax` | memory | 0x48d8cd | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0x1632 | je | reg/arith | `0x48d85f: test %r12d,%r12d` | memory | 0x48d7b8 | back |
+| EC wNAF multiply (verification / public-scalar core) | +0x1648 | je | reg/arith | `0x48d876: test %eax,%eax` | memory | 0x48d8cd | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0x1664 | je | reg/arith | `0x48d88c: test %rax,%rax` | call+memory | 0x48d7df | back |
+| EC wNAF multiply (verification / public-scalar core) | +0x1677 | jne | reg/arith | `0x48d8a5: test %eax,%eax` | call+memory | 0x48d7df | back |
+| EC wNAF multiply (verification / public-scalar core) | +0x16cd | je | reg/arith | `0x48d8fa: test %r12d,%r12d` | memory | 0x48d911 | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0x16e6 | je | mem | `0x48d911: cmpl $0x0,0x68(%rsp)` | memory | 0x48d930 | fwd |
+| EC wNAF multiply (verification / public-scalar core) | +0x16fe | je | reg/arith | `0x48d92c: test %eax,%eax` | call+memory | 0x48d95d | fwd |
+| ML-KEM decapsulation (provider driver) | +0x27 | je | mem | `0x1f5ca2: cmpq $0x0,0x50(%rcx)` | memory | 0x1f5e1f | fwd |
+| ML-KEM decapsulation (provider driver) | +0x36 | je | reg/arith | `0x1f5cb3: test %rsi,%rsi` | memory | 0x1f5e09 | fwd |
+| ML-KEM decapsulation (provider driver) | +0x40 | jne | mem | `0x1f5cbc: cmp 0x28(%r15),%rdx` | memory | 0x1f5e09 | fwd |
+| ML-KEM decapsulation (provider driver) | +0x6c | je | reg/arith | `0x1f5ce9: test %rax,%rax` | memory | 0x1f5e09 | fwd |
+| ML-KEM decapsulation (provider driver) | +0x7e | je | reg/arith | `0x1f5cf9: cmp $0x5ae,%eax` | arithmetic/control | 0x1f5f29 | fwd |
+| ML-KEM decapsulation (provider driver) | +0x89 | je | reg/arith | `0x1f5d04: cmp $0x5af,%eax` | arithmetic/control | 0x1f5e33 | fwd |
+| ML-KEM decapsulation (provider driver) | +0x96 | jne | reg/arith | `0x1f5d11: cmp $0x5b0,%eax` | call+memory | 0x1f6014 | fwd |
+| ML-KEM decapsulation (provider driver) | +0x143 | jne | reg/arith | `0x1f5dbc: cmp $0x1000,%r15` | memory | 0x1f5d70 | back |
+| ML-KEM decapsulation (provider driver) | +0x182 | jne | reg/arith | `0x1f5dfc: cmp $0x627,%rax` | arithmetic/control | 0x1f5dd0 | back |
+| ML-KEM decapsulation (provider driver) | +0x25a | jne | reg/arith | `0x1f5ed4: cmp $0xc07,%rax` | memory | 0x1f5e90 | back |
+| ML-KEM decapsulation (provider driver) | +0x2a2 | jne | reg/arith | `0x1f5f1c: cmp $0x447,%rax` | arithmetic/control | 0x1f5ef0 | back |
+| ML-KEM decapsulation (provider driver) | +0x353 | jne | reg/arith | `0x1f5fcc: cmp $0x800,%r15` | memory | 0x1f5f80 | back |
+| ML-KEM decapsulation (provider driver) | +0x392 | jne | reg/arith | `0x1f600c: cmp $0x307,%rax` | arithmetic/control | 0x1f5fe0 | back |
+| ML-KEM decapsulation (provider driver) | +0x397 | jne | reg/arith | `0x1f6014: test $0x7,%bl` | memory | 0x1f5e1f | back |
+| ML-KEM K-PKE decrypt | +0x65 | js | reg/arith | `0x2bd152: test %r14,%r14` | memory | 0x2bdb1b | fwd |
+| ML-KEM K-PKE decrypt | +0x70 | jle | reg/arith | `0x2bd15e: test %ebp,%ebp` | arithmetic/control | 0x2bd375 | fwd |
+| ML-KEM K-PKE decrypt | +0x84 | ja | reg/arith | `0x2bd170: cmp $0xf,%r14d` | memory | 0x2bdb0e | fwd |
+| ML-KEM K-PKE decrypt | +0x9f | jae | reg/arith | `0x2bd187: cmp $0x20,%eax` | memory | 0x2bdb28 | fwd |
+| ML-KEM K-PKE decrypt | +0x140 | jae | reg/arith | `0x2bd229: cmp $0x100,%rdx` | arithmetic/control | 0x2bd2cb | fwd |
+| ML-KEM K-PKE decrypt | +0x148 | jne | reg/arith | `0x2bd236: test %ecx,%ecx` | memory | 0x2bd246 | fwd |
+| ML-KEM K-PKE decrypt | +0x169 | je | reg/arith | `0x2bd256: test %bl,%r11b` | memory | 0x2bd280 | fwd |
+| ML-KEM K-PKE decrypt | +0x18b | jb | reg/arith | `0x2bd274: cmp $0x100,%rdx` | arithmetic/control | 0x2bd236 | back |
+| ML-KEM K-PKE decrypt | +0x196 | jb | reg/arith | `0x2bd283: sub %eax,%r10d` | arithmetic/control | 0x2bd210 | back |
+| ML-KEM K-PKE decrypt | +0x19d | jb | reg/arith | `0x2bd28b: sub %eax,%ecx` | arithmetic/control | 0x2bdc13 | fwd |
+| ML-KEM K-PKE decrypt | +0x1a6 | ja | reg/arith | `0x2bd293: cmp $0xf,%ecx` | memory | 0x2bdc06 | fwd |
+| ML-KEM K-PKE decrypt | +0x1d5 | jb | reg/arith | `0x2bd2be: cmp $0x100,%rdx` | memory | 0x2bd236 | back |
+| ML-KEM K-PKE decrypt | +0x24e | jne | reg/arith | `0x2bd338: cmp $0x100,%rax` | call | 0x2bd2d0 | back |
+| ML-KEM K-PKE decrypt | +0x27f | jg | reg/arith | `0x2bd36c: dec %r13d` | memory | 0x2bd1f0 | back |
+| ML-KEM K-PKE decrypt | +0x28e | ja | reg/arith | `0x2bd37a: cmp $0xf,%r15d` | memory | 0x2bdb0e | fwd |
+| ML-KEM K-PKE decrypt | +0x2ef | jbe | reg/arith | `0x2bd3d8: cmp $0xff,%rsi` | arithmetic/control | 0x2bd412 | fwd |
+| ML-KEM K-PKE decrypt | +0x320 | ja | reg/arith | `0x2bd409: cmp $0xff,%rsi` | arithmetic/control | 0x2bd472 | fwd |
+| ML-KEM K-PKE decrypt | +0x324 | jne | reg/arith | `0x2bd412: test %ecx,%ecx` | memory | 0x2bd422 | fwd |
+| ML-KEM K-PKE decrypt | +0x345 | jne | reg/arith | `0x2bd432: test %bl,%r11b` | arithmetic/control | 0x2bd3f0 | back |
+| ML-KEM K-PKE decrypt | +0x34d | jb | reg/arith | `0x2bd43a: sub %eax,%r10d` | arithmetic/control | 0x2bd3c0 | back |
+| ML-KEM K-PKE decrypt | +0x354 | jb | reg/arith | `0x2bd442: sub %eax,%ecx` | arithmetic/control | 0x2bdc13 | fwd |
+| ML-KEM K-PKE decrypt | +0x35d | jae | reg/arith | `0x2bd44a: cmp $0x10,%ecx` | memory | 0x2bdc06 | fwd |
+| ML-KEM K-PKE decrypt | +0x389 | ja | reg/arith | `0x2bd476: cmp $0x1f,%eax` | memory | 0x2bdbf9 | fwd |
+| ML-KEM K-PKE decrypt | +0x43e | jne | reg/arith | `0x2bd528: cmp $0x100,%rax` | call+memory | 0x2bd4c0 | back |
+| ML-KEM K-PKE decrypt | +0x4fc | jne | reg/arith | `0x2bd5e6: cmp $0x100,%rax` | memory | 0x2bd570 | back |
+| ML-KEM K-PKE decrypt | +0x614 | jne | reg/arith | `0x2bd6fe: cmp $0x100,%rax` | memory | 0x2bd630 | back |
+| ML-KEM K-PKE decrypt | +0x96b | jne | reg/arith | `0x2bda57: cmp $0x20,%rcx` | memory | 0x2bd760 | back |
+| ML-KEM K-PKE decrypt | +0x9b2 | jne | reg/arith | `0x2bda9c: cmp $0x200,%rax` | memory | 0x2bda70 | back |
+| ML-KEM K-PKE decrypt | +0xa0a | jne | reg/arith | `0x2bdaf4: cmp $0x200,%rax` | arithmetic/control | 0x2bdab0 | back |
+| ML-KEM K-PKE decrypt | +0xa66 | ja | reg/arith | `0x2bdb4f: cmp $0xff,%rdx` | arithmetic/control | 0x2bdbf9 | fwd |
+| ML-KEM K-PKE decrypt | +0xa6e | jne | reg/arith | `0x2bdb5c: test %ecx,%ecx` | memory | 0x2bdb6c | fwd |
+| ML-KEM K-PKE decrypt | +0xa90 | je | reg/arith | `0x2bdb7d: test %r11b,%r10b` | memory | 0x2bdbb0 | fwd |
+| ML-KEM K-PKE decrypt | +0xab5 | jbe | reg/arith | `0x2bdb9e: cmp $0xff,%rdx` | arithmetic/control | 0x2bdb5c | back |
+| ML-KEM K-PKE decrypt | +0xac6 | jb | reg/arith | `0x2bdbb3: sub %eax,%r9d` | arithmetic/control | 0x2bdb37 | back |
+| ML-KEM K-PKE decrypt | +0xad1 | jb | reg/arith | `0x2bdbbf: sub %eax,%ecx` | arithmetic/control | 0x2bdc13 | fwd |
+| ML-KEM K-PKE decrypt | +0xad6 | jae | reg/arith | `0x2bdbc3: cmp $0x10,%ecx` | memory | 0x2bdc06 | fwd |
+| ML-KEM K-PKE decrypt | +0xb03 | jbe | reg/arith | `0x2bdbec: cmp $0xff,%rdx` | memory | 0x2bdb5c | back |
+| ML-KEM K-PKE encrypt (re-encryption / implicit reject) | +0xc3 | jle | reg/arith | `0x2bdccc: test %rbp,%rbp` | memory | 0x2bdd41 | fwd |
+| ML-KEM K-PKE encrypt (re-encryption / implicit reject) | +0x101 | je | reg/arith | `0x2bdd1f: test %eax,%eax` | call | 0x2bdd47 | fwd |
+| ML-KEM K-PKE encrypt (re-encryption / implicit reject) | +0x118 | jg | reg/arith | `0x2bdd36: dec %ebp` | arithmetic/control | 0x2bdd00 | back |
+| ML-KEM K-PKE encrypt (re-encryption / implicit reject) | +0x1e5 | je | reg/arith | `0x2bde03: test %al,%al` | memory | 0x2bdf12 | fwd |
+| ML-KEM K-PKE encrypt (re-encryption / implicit reject) | +0x2eb | jne | reg/arith | `0x2bdf04: cmp $0x200,%rcx` | arithmetic/control | 0x2bdec0 | back |
+| ML-KEM K-PKE encrypt (re-encryption / implicit reject) | +0x32e | jle | reg/arith | `0x2bdf46: test %r12d,%r12d` | memory | 0x2beb39 | fwd |
+| ML-KEM K-PKE encrypt (re-encryption / implicit reject) | +0x57d | jle | reg/arith | `0x2be18e: cmp $0x1,%r13d` | memory | 0x2beaac | fwd |
+| ML-KEM K-PKE encrypt (re-encryption / implicit reject) | +0x624 | je | reg/arith | `0x2be238: test $0x1,%sil` | memory | 0x2be330 | fwd |
+| ML-KEM K-PKE encrypt (re-encryption / implicit reject) | +0x704 | jne | reg/arith | `0x2be31d: cmp $0x100,%rcx` | arithmetic/control | 0x2be250 | back |
+| ML-KEM K-PKE encrypt (re-encryption / implicit reject) | +0x958 | jne | reg/arith | `0x2be571: cmp $0x100,%rdx` | memory | 0x2be340 | back |
+| ML-KEM K-PKE encrypt (re-encryption / implicit reject) | +0x966 | je | reg/arith | `0x2be583: cmp $0x1,%edx` | memory | 0x2be130 | back |
+| ML-KEM K-PKE encrypt (re-encryption / implicit reject) | +0xb04 | jle | reg/arith | `0x2be71e: cmp $0x2,%edx` | arithmetic/control | 0x2be130 | back |
+| ML-KEM K-PKE encrypt (re-encryption / implicit reject) | +0xb0e | je | reg/arith | `0x2be72c: test $0x1,%al` | memory | 0x2be840 | fwd |
+| ML-KEM K-PKE encrypt (re-encryption / implicit reject) | +0xc11 | jne | reg/arith | `0x2be82a: cmp $0x100,%rsi` | arithmetic/control | 0x2be740 | back |
+| ML-KEM K-PKE encrypt (re-encryption / implicit reject) | +0xe81 | jne | reg/arith | `0x2bea9a: cmp $0x100,%rsi` | arithmetic/control | 0x2be840 | back |
+| ML-KEM K-PKE encrypt (re-encryption / implicit reject) | +0xedf | je | reg/arith | `0x2beafd: test %eax,%eax` | memory | 0x2beb12 | fwd |
+| ML-KEM K-PKE encrypt (re-encryption / implicit reject) | +0xeee | jg | reg/arith | `0x2beb0c: dec %ebp` | memory | 0x2beae0 | back |
+| ML-KEM K-PKE encrypt (re-encryption / implicit reject) | +0xfc6 | jne | reg/arith | `0x2bebe4: test %al,%al` | memory | 0x2bfa1e | fwd |
+| ML-KEM K-PKE encrypt (re-encryption / implicit reject) | +0x1032 | je | reg/arith | `0x2bec50: test %al,%al` | memory | 0x2bece0 | fwd |
+| ML-KEM K-PKE encrypt (re-encryption / implicit reject) | +0x10aa | jne | reg/arith | `0x2becc3: cmp $0x101,%r8` | arithmetic/control | 0x2bec60 | back |
+| ML-KEM K-PKE encrypt (re-encryption / implicit reject) | +0x1144 | jne | reg/arith | `0x2bed5d: cmp $0x108,%r9` | arithmetic/control | 0x2becf0 | back |
+| ML-KEM K-PKE encrypt (re-encryption / implicit reject) | +0x1148 | jo | reg/arith | `0x2bed66: dec %edx` | arithmetic/control | 0x2bfb2f | fwd |
+| ML-KEM K-PKE encrypt (re-encryption / implicit reject) | +0x115e | jg | reg/arith | `0x2bed7c: test %edx,%edx` | memory | 0x2bec50 | back |
+| ML-KEM K-PKE encrypt (re-encryption / implicit reject) | +0x117a | ja | reg/arith | `0x2bed8f: cmp $0x1f,%ecx` | memory | 0x2bfb7d | fwd |
+| ML-KEM K-PKE encrypt (re-encryption / implicit reject) | +0x1329 | jne | reg/arith | `0x2bef42: cmp $0x100,%rdx` | arithmetic/control | 0x2bee00 | back |
+| ML-KEM K-PKE encrypt (re-encryption / implicit reject) | +0x1331 | jo | reg/arith | `0x2bef4f: dec %eax` | arithmetic/control | 0x2bfb3c | fwd |
+| ML-KEM K-PKE encrypt (re-encryption / implicit reject) | +0x1340 | jg | reg/arith | `0x2bef5e: test %eax,%eax` | call+memory | 0x2bedf0 | back |
+| ML-KEM K-PKE encrypt (re-encryption / implicit reject) | +0x139a | je | reg/arith | `0x2befb8: test %eax,%eax` | memory | 0x2bfa1e | fwd |
+| ML-KEM K-PKE encrypt (re-encryption / implicit reject) | +0x1430 | jne | reg/arith | `0x2bf04a: cmp $0x100,%rax` | memory | 0x2befd0 | back |
+| ML-KEM K-PKE encrypt (re-encryption / implicit reject) | +0x1bae | jne | reg/arith | `0x2bf7ca: cmp $0x20,%rax` | arithmetic/control | 0x2bf070 | back |
+| ML-KEM K-PKE encrypt (re-encryption / implicit reject) | +0x1bb8 | ja | reg/arith | `0x2bf7d4: cmp $0x1f,%r9d` | arithmetic/control | 0x2bfb7d | fwd |
+| ML-KEM K-PKE encrypt (re-encryption / implicit reject) | +0x1d60 | jne | reg/arith | `0x2bf97a: cmp $0x100,%rax` | memory | 0x2bf830 | back |
+| ML-KEM K-PKE encrypt (re-encryption / implicit reject) | +0x1d92 | je | reg/arith | `0x2bf9ac: cmp $0x200,%rax` | arithmetic/control | 0x2bfa22 | fwd |
+| ML-KEM K-PKE encrypt (re-encryption / implicit reject) | +0x1d99 | jb | reg/arith | `0x2bf9b6: add %r9d,%esi` | memory | 0x2bfb49 | fwd |
+| ML-KEM K-PKE encrypt (re-encryption / implicit reject) | +0x1daa | jb | reg/arith | `0x2bf9c7: cmp $0x40,%esi` | arithmetic/control | 0x2bf9a0 | back |
+| ML-KEM K-PKE encrypt (re-encryption / implicit reject) | +0x1dac | jne | unknown | `?` | arithmetic/control | 0x2bf9f0 | fwd |
+| ML-KEM K-PKE encrypt (re-encryption / implicit reject) | +0x1db1 | jae | reg/arith | `0x2bf9ce: cmp $0x40,%ecx` | memory | 0x2bfb70 | fwd |
+| ML-KEM K-PKE encrypt (re-encryption / implicit reject) | +0x1dd3 | jae | reg/arith | `0x2bf9f0: cmp $0x40,%ecx` | memory | 0x2bfb56 | fwd |
+| ML-KEM K-PKE encrypt (re-encryption / implicit reject) | +0x1de7 | je | reg/arith | `0x2bfa05: test %ecx,%ecx` | arithmetic/control | 0x2bfb63 | fwd |
+| ML-KEM K-PKE encrypt (re-encryption / implicit reject) | +0x1efb | jne | reg/arith | `0x2bfb14: cmp $0x200,%rcx` | arithmetic/control | 0x2bfad0 | back |
+| ML-KEM inverse NTT | +0x56 | jb | reg/arith | `0x2c0b13: add %rsi,%rbx` | memory | 0x2c0ff4 | fwd |
+| ML-KEM inverse NTT | +0x64 | ja | reg/arith | `0x2c0b20: cmp $0x7e,%r8` | memory | 0x2c1001 | fwd |
+| ML-KEM inverse NTT | +0xb8 | jbe | reg/arith | `0x2c0b74: cmp $0x7,%r8` | memory | 0x2c0bcf | fwd |
+| ML-KEM inverse NTT | +0x101 | jae | reg/arith | `0x2c0bbe: cmp %r13,%r14` | memory | 0x2c0be0 | fwd |
+| ML-KEM inverse NTT | +0x10d | jae | reg/arith | `0x2c0bca: cmp %r12,%r15` | arithmetic/control | 0x2c0be0 | fwd |
+| ML-KEM inverse NTT | +0x2fa | jne | reg/arith | `0x2c0db7: cmp %r13,%r8` | memory | 0x2c0c10 | back |
+| ML-KEM inverse NTT | +0x317 | ja | reg/arith | `0x2c0dd0: cmp $0xff,%r8` | arithmetic/control | 0x2c0fdf | fwd |
+| ML-KEM inverse NTT | +0x324 | jae | reg/arith | `0x2c0ddd: cmp $0x100,%rcx` | memory | 0x2c0fca | fwd |
+| ML-KEM inverse NTT | +0x3b4 | jb | reg/arith | `0x2c0e71: cmp %rbx,%r8` | arithmetic/control | 0x2c0dd0 | back |
+| ML-KEM inverse NTT | +0x3c4 | jne | reg/arith | `0x2c0e7d: cmp $0x100,%rcx` | arithmetic/control | 0x2c0b10 | back |
+| ML-KEM inverse NTT | +0x3d4 | jb | reg/arith | `0x2c0e8d: cmp $0x100,%rsi` | memory | 0x2c0b00 | back |
+| ML-KEM inverse NTT | +0x4f5 | jne | reg/arith | `0x2c0faf: cmp $0x100,%rax` | arithmetic/control | 0x2c0eb0 | back |
+| ML-KEM inner product | +0x5b | jne | reg/arith | `0x2bfd58: test %r12b,%r15b` | arithmetic/control | 0x2c000b | fwd |
+| ML-KEM inner product | +0x64 | jne | reg/arith | `0x2bfd61: and %bpl,%r8b` | arithmetic/control | 0x2c000b | fwd |
+| ML-KEM inner product | +0x6d | jne | reg/arith | `0x2bfd6a: and %r14b,%r10b` | memory | 0x2c000b | fwd |
+| ML-KEM inner product | +0x300 | jne | reg/arith | `0x2bfff9: cmp $0x100,%r8` | arithmetic/control | 0x2bfda0 | back |
+| ML-KEM inner product | +0x3fa | jne | reg/arith | `0x2c00f3: cmp $0x100,%r14` | arithmetic/control | 0x2c0020 | back |
+| ML-KEM inner product | +0x406 | jo | reg/arith | `0x2c0103: dec %r8d` | arithmetic/control | 0x2c0594 | fwd |
+| ML-KEM inner product | +0x40f | jle | reg/arith | `0x2c010c: test %r8d,%r8d` | memory | 0x2c0585 | fwd |
+| ML-KEM inner product | +0x4c1 | jle | reg/arith | `0x2c01be: dec %r8d` | arithmetic/control | 0x2c0585 | fwd |
+| ML-KEM inner product | +0x4cc | je | reg/arith | `0x2c01ca: test %cl,%cl` | memory | 0x2c02f0 | fwd |
+| ML-KEM inner product | +0x5dc | jne | reg/arith | `0x2c02d5: cmp $0x100,%r10` | arithmetic/control | 0x2c01e0 | back |
+| ML-KEM inner product | +0x87a | jne | reg/arith | `0x2c0573: cmp $0x100,%r10` | arithmetic/control | 0x2c02f0 | back |
+| ML-KEM matrix transpose-multiply-add | +0x1b | jle | reg/arith | `0x2c1039: test %ecx,%ecx` | memory | 0x2c199c | fwd |
+| ML-KEM matrix transpose-multiply-add | +0x16f | jle | reg/arith | `0x2c1181: cmp $0x1,%eax` | memory | 0x2c199c | fwd |
+| ML-KEM matrix transpose-multiply-add | +0x17f | je | mem | `0x2c119a: cmpb $0x0,-0x62(%rsp)` | memory | 0x2c12a0 | fwd |
+| ML-KEM matrix transpose-multiply-add | +0x26e | jne | reg/arith | `0x2c1287: cmp $0x100,%r11` | arithmetic/control | 0x2c11b0 | back |
+| ML-KEM matrix transpose-multiply-add | +0x510 | jne | reg/arith | `0x2c152a: cmp $0x100,%rax` | memory | 0x2c12b0 | back |
+| ML-KEM matrix transpose-multiply-add | +0x51b | je | mem | `0x2c1536: cmpl $0x1,-0x60(%rsp)` | memory | 0x2c1160 | back |
+| ML-KEM matrix transpose-multiply-add | +0x5c7 | jle | reg/arith | `0x2c15dc: cmp $0x2,%r9d` | memory | 0x2c1160 | back |
+| ML-KEM matrix transpose-multiply-add | +0x5d2 | je | mem | `0x2c15ed: cmpb $0x0,-0x61(%rsp)` | memory | 0x2c1700 | fwd |
+| ML-KEM matrix transpose-multiply-add | +0x6d1 | jne | reg/arith | `0x2c16ea: cmp $0x100,%rbp` | arithmetic/control | 0x2c1600 | back |
+| ML-KEM matrix transpose-multiply-add | +0x971 | jne | reg/arith | `0x2c198a: cmp $0x100,%rbp` | arithmetic/control | 0x2c1710 | back |
+| ML-KEM matrix expansion (public) | +0x3f | jle | reg/arith | `0x2c05ed: test %ecx,%ecx` | memory | 0x2c07b1 | fwd |
+| ML-KEM matrix expansion (public) | +0x6c | je | mem | `0x2c0617: cmp 0x4(%rsp),%r14d` | call+memory | 0x2c07a2 | fwd |
+| ML-KEM matrix expansion (public) | +0x92 | je | reg/arith | `0x2c0640: test %eax,%eax` | memory | 0x2c07d7 | fwd |
+| ML-KEM matrix expansion (public) | +0xad | je | reg/arith | `0x2c065b: test %eax,%eax` | memory | 0x2c07d7 | fwd |
+| ML-KEM matrix expansion (public) | +0x116 | je | reg/arith | `0x2c06c3: test %rax,%rax` | memory | 0x2c07b9 | fwd |
+| ML-KEM matrix expansion (public) | +0x121 | je | mem | `0x2c06cc: cmpq $0x0,0x70(%rax)` | memory | 0x2c07c2 | fwd |
+| ML-KEM matrix expansion (public) | +0x131 | je | reg/arith | `0x2c06de: test %rax,%rax` | memory | 0x2c07cb | fwd |
+| ML-KEM matrix expansion (public) | +0x13e | je | reg/arith | `0x2c06eb: test %rdi,%rdi` | call+memory | 0x2c07d7 | fwd |
+| ML-KEM matrix expansion (public) | +0x160 | je | reg/arith | `0x2c070e: test %eax,%eax` | arithmetic/control | 0x2c07d7 | fwd |
+| ML-KEM matrix expansion (public) | +0x17a | je | reg/arith | `0x2c0724: cmp $0xaa,%rax` | arithmetic/control | 0x2c0790 | fwd |
+| ML-KEM matrix expansion (public) | +0x183 | ja | reg/arith | `0x2c072c: cmp $0xff,%r13` | memory | 0x2c0610 | back |
+| ML-KEM matrix expansion (public) | +0x1a9 | ja | reg/arith | `0x2c0753: cmp $0xd00,%esi` | memory | 0x2c0770 | fwd |
+| ML-KEM matrix expansion (public) | +0x1b7 | je | reg/arith | `0x2c0760: cmp $0xff,%r13` | arithmetic/control | 0x2c0610 | back |
+| ML-KEM matrix expansion (public) | +0x1d4 | ja | reg/arith | `0x2c077e: cmp $0xd00,%ecx` | memory | 0x2c0720 | back |
+| ML-KEM matrix expansion (public) | +0x1e7 | jb | reg/arith | `0x2c0790: cmp $0x100,%r13` | arithmetic/control | 0x2c06bf | back |
+| ML-KEM matrix expansion (public) | +0x1fb | jne | mem | `0x2c07a7: cmp 0x4(%rsp),%ebp` | arithmetic/control | 0x2c05fa | back |
+| ML-KEM vector decode 12-bit | +0x2 | jle | reg/arith | `0x2c08f0: test %edx,%edx` | memory | 0x2c0972 | fwd |
+| ML-KEM vector decode 12-bit | +0x17 | je | reg/arith | `0x2c0900: cmp $0x80,%rcx` | memory | 0x2c0960 | fwd |
+| ML-KEM vector decode 12-bit | +0x54 | ja | reg/arith | `0x2c093d: cmp $0xd00,%r11d` | arithmetic/control | 0x2c0977 | fwd |
+| ML-KEM vector decode 12-bit | +0x68 | jb | reg/arith | `0x2c0951: cmp $0xd01,%r9d` | arithmetic/control | 0x2c0900 | back |
+| ML-KEM vector decode 12-bit | +0x80 | jg | reg/arith | `0x2c096e: dec %edx` | arithmetic/control | 0x2c08f4 | back |
+| ML-KEM vector encode | +0x7 | js | reg/arith | `0x2c0805: test %edx,%edx` | arithmetic/control | 0x2c08e0 | fwd |
+| ML-KEM vector encode | +0x11 | jle | reg/arith | `0x2c080f: test %ecx,%ecx` | arithmetic/control | 0x2c08a6 | fwd |
+| ML-KEM vector encode | +0x2c | jle | reg/arith | `0x2c082a: dec %eax` | arithmetic/control | 0x2c08a6 | fwd |
+| ML-KEM vector encode | +0x53 | je | reg/arith | `0x2c084c: cmp $0x200,%r10` | arithmetic/control | 0x2c0820 | back |
+| ML-KEM vector encode | +0x59 | jb | reg/arith | `0x2c0857: add %edx,%ebx` | memory | 0x2c08ac | fwd |
+| ML-KEM vector encode | +0x63 | jb | reg/arith | `0x2c0860: cmp $0x40,%ebx` | arithmetic/control | 0x2c0840 | back |
+| ML-KEM vector encode | +0x65 | jne | unknown | `?` | arithmetic/control | 0x2c0880 | fwd |
+| ML-KEM vector encode | +0x6a | jae | reg/arith | `0x2c0867: cmp $0x40,%ecx` | memory | 0x2c08d3 | fwd |
+| ML-KEM vector encode | +0x83 | jae | reg/arith | `0x2c0880: cmp $0x40,%ecx` | memory | 0x2c08b9 | fwd |
+| ML-KEM vector encode | +0x93 | je | reg/arith | `0x2c0891: test %ecx,%ecx` | arithmetic/control | 0x2c08c6 | fwd |
+| ML-KEM CBD sampling eta=2 | +0x51 | je | reg/arith | `0x2c1b3f: test %eax,%eax` | memory | 0x2c1c81 | fwd |
+| ML-KEM CBD sampling eta=2 | +0x13a | jne | reg/arith | `0x2c1c24: cmp $0x80,%rax` | memory | 0x2c1b60 | back |
+| ML-KEM CBD sampling eta=2 | +0x181 | jne | reg/arith | `0x2c1c6b: cmp $0x80,%rax` | arithmetic/control | 0x2c1c40 | back |
+| ML-KEM CBD sampling eta=2 | +0x1d2 | jne | reg/arith | `0x2c1cbb: cmp $0x80,%rcx` | arithmetic/control | 0x2c1c90 | back |
+| ML-KEM CBD sampling eta=3 | +0x71 | je | reg/arith | `0x2c1d3f: test %eax,%eax` | memory | 0x2c20d1 | fwd |
+| ML-KEM CBD sampling eta=3 | +0x3aa | jne | reg/arith | `0x2c2076: cmp $0x40,%rcx` | memory | 0x2c1d70 | back |
+| ML-KEM CBD sampling eta=3 | +0x3f1 | jne | reg/arith | `0x2c20bb: cmp $0xc7,%rax` | arithmetic/control | 0x2c2090 | back |
+| ML-KEM CBD sampling eta=3 | +0x441 | jne | reg/arith | `0x2c210b: cmp $0xc7,%rax` | arithmetic/control | 0x2c20e0 | back |
+| ML-KEM CBD vector sampling then NTT | +0x21 | jle | reg/arith | `0x2c099e: test %r8d,%r8d` | memory | 0x2c0a00 | fwd |
+| ML-KEM CBD vector sampling then NTT | +0x60 | je | reg/arith | `0x2c09de: test %eax,%eax` | call | 0x2c09f7 | fwd |
+| ML-KEM CBD vector sampling then NTT | +0x73 | jg | reg/arith | `0x2c09f1: dec %ebx` | arithmetic/control | 0x2c09c0 | back |
+| ML-KEM hash H | +0x2e | je | reg/arith | `0x2c220c: test %eax,%eax` | memory | 0x2c227d | fwd |
+| ML-KEM hash H | +0x49 | je | reg/arith | `0x2c2227: test %eax,%eax` | arithmetic/control | 0x2c2264 | fwd |
+| ML-KEM hash H | +0x4e | je | reg/arith | `0x2c222b: test %rbx,%rbx` | memory | 0x2c223e | fwd |
+| ML-KEM hash H | +0x56 | je | reg/arith | `0x2c2233: test %rax,%rax` | memory | 0x2c223e | fwd |
+| ML-KEM hash H | +0x5c | jne | mem | `0x2c2238: testb $0x2,0x10(%rax)` | memory | 0x2c2269 | fwd |
+| ML-KEM hash G | +0x2e | je | reg/arith | `0x2c214c: test %eax,%eax` | memory | 0x2c21bd | fwd |
+| ML-KEM hash G | +0x49 | je | reg/arith | `0x2c2167: test %eax,%eax` | arithmetic/control | 0x2c21a4 | fwd |
+| ML-KEM hash G | +0x4e | je | reg/arith | `0x2c216b: test %rbx,%rbx` | memory | 0x2c217e | fwd |
+| ML-KEM hash G | +0x56 | je | reg/arith | `0x2c2173: test %rax,%rax` | memory | 0x2c217e | fwd |
+| ML-KEM hash G | +0x5c | jne | mem | `0x2c2178: testb $0x2,0x10(%rax)` | memory | 0x2c21a9 | fwd |
+| ML-KEM public-key hash | +0x59 | je | reg/arith | `0x2bfbe7: test %eax,%eax` | memory | 0x2bfcdb | fwd |
+| ML-KEM public-key hash | +0x96 | je | reg/arith | `0x2bfc1f: cmp $0x200,%rsi` | memory | 0x2bfc70 | fwd |
+| ML-KEM public-key hash | +0xa5 | jbe | reg/arith | `0x2bfc32: cmp $0x33,%eax` | memory | 0x2bfc10 | back |
+| ML-KEM public-key hash | +0xb9 | je | reg/arith | `0x2bfc45: cmp $0x40,%r8d` | arithmetic/control | 0x2bfc61 | fwd |
+| ML-KEM public-key hash | +0xf6 | je | reg/arith | `0x2bfc84: test %eax,%eax` | memory | 0x2bfcdb | fwd |
+| ML-KEM public-key hash | +0x109 | jb | reg/arith | `0x2bfc96: cmp %rax,%rbp` | memory | 0x2bfc00 | back |
+| ML-KEM public-key hash | +0x123 | je | reg/arith | `0x2bfcb1: test %eax,%eax` | memory | 0x2bfcdb | fwd |
+| ML-KEM KDF | +0x2a | je | reg/arith | `0x2c19d8: test %eax,%eax` | memory | 0x2c1a1e | fwd |
+| ML-KEM KDF | +0x3f | je | reg/arith | `0x2c19ed: test %eax,%eax` | memory | 0x2c1a1e | fwd |
+| ML-KEM KDF | +0x52 | je | reg/arith | `0x2c1a00: test %eax,%eax` | memory | 0x2c1a1e | fwd |
+| ML-KEM PRF | +0x2d | je | reg/arith | `0x2c1a5b: test %eax,%eax` | memory | 0x2c1aca | fwd |
+| ML-KEM PRF | +0x46 | je | reg/arith | `0x2c1a74: test %eax,%eax` | arithmetic/control | 0x2c1ab3 | fwd |
+| ML-KEM PRF | +0x4b | je | reg/arith | `0x2c1a78: test %r14,%r14` | memory | 0x2c1a8b | fwd |
+| ML-KEM PRF | +0x53 | je | reg/arith | `0x2c1a80: test %rax,%rax` | memory | 0x2c1a8b | fwd |
+| ML-KEM PRF | +0x59 | jne | mem | `0x2c1a85: testb $0x2,0x10(%rax)` | memory | 0x2c1ab8 | fwd |
+| ML-KEM decapsulation carrier (implicit-rejection comparison + select) | +0xa0 | je | reg/arith | `0x1f806e: test %eax,%eax` | memory | 0x1f8176 | fwd |
+| ML-KEM decapsulation carrier (implicit-rejection comparison + select) | +0xb9 | je | reg/arith | `0x1f8087: test %eax,%eax` | memory | 0x1f8176 | fwd |
+| ML-KEM decapsulation carrier (implicit-rejection comparison + select) | +0xd0 | je | reg/arith | `0x1f809e: test %eax,%eax` | memory | 0x1f8176 | fwd |
+| ML-KEM decapsulation carrier (implicit-rejection comparison + select) | +0xeb | je | reg/arith | `0x1f80b9: test %eax,%eax` | call+memory | 0x1f8176 | fwd |
+| ML-KEM decapsulation carrier (implicit-rejection comparison + select) | +0x155 | je | reg/arith | `0x1f811b: test %eax,%eax` | call+memory | 0x1f8252 | fwd |
+| ML-KEM decapsulation carrier (implicit-rejection comparison + select) | +0x178 | je | reg/arith | `0x1f8146: test %eax,%eax` | memory | 0x1f8252 | fwd |
+| ML-KEM decapsulation carrier (implicit-rejection comparison + select) | +0x185 | je | reg/arith | `0x1f8152: test %rax,%rax` | arithmetic/control | 0x1f8274 | fwd |
+| ML-KEM decapsulation carrier (implicit-rejection comparison + select) | +0x18f | jae | reg/arith | `0x1f815b: cmp $0x4,%rax` | memory | 0x1f8283 | fwd |
+| ML-KEM decapsulation carrier (implicit-rejection comparison + select) | +0x2b7 | jae | reg/arith | `0x1f8283: cmp $0x20,%rax` | memory | 0x1f829a | fwd |
+| ML-KEM decapsulation carrier (implicit-rejection comparison + select) | +0x30e | jne | reg/arith | `0x1f82db: cmp %rdx,%rcx` | arithmetic/control | 0x1f82b0 | back |
+| ML-KEM decapsulation carrier (implicit-rejection comparison + select) | +0x34f | je | reg/arith | `0x1f8314: cmp %rcx,%rax` | arithmetic/control | 0x1f8392 | fwd |
+| ML-KEM decapsulation carrier (implicit-rejection comparison + select) | +0x353 | je | reg/arith | `0x1f8321: test $0x1c,%al` | memory | 0x1f837e | fwd |
+| ML-KEM decapsulation carrier (implicit-rejection comparison + select) | +0x386 | jne | reg/arith | `0x1f8353: cmp %rsi,%rcx` | arithmetic/control | 0x1f8340 | back |
+| ML-KEM decapsulation carrier (implicit-rejection comparison + select) | +0x3c0 | jne | reg/arith | `0x1f838d: cmp %rcx,%rax` | memory | 0x1f837e | back |
+| ML-KEM decapsulation carrier (implicit-rejection comparison + select) | +0x437 | jne | reg/arith | `0x1f8403: cmp $0x20,%rcx` | memory | 0x1f83d0 | back |

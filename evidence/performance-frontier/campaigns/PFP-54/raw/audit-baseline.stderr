@@ -1,0 +1,4 @@
+REFUSED target="Montgomery multiply (SOS kernel; the schedule LADDER_SCHEDULE selects)" symbol="arith::mont_mul_sos_into" reason=missing
+REFUSED target="Constant-time ladder core" symbol="mod_exp_core_consttime_from_parts" resolves_to="mod_exp_core_consttime_from_parts_prepared" reason=inline-producer-absent detail=producer string not in the DSO: 'clang LLVM (rustc version 1.98.1 (48a229cea 2026-09-01))'
+REFUSED target="ML-KEM forward NTT (used by re-encryption on secret-derived data)" symbol="arith::scalar_ntt" reason=llvm-producer-absent detail=producer string not in the DSO: 'clang LLVM (rustc version 1.98.1 (48a229cea 2026-09-01))'
+binary_branch_audit: FAIL-CLOSED: 3 of 31 expected targets were refused; this report is not a gate result.

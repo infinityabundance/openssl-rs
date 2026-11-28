@@ -1,0 +1,1 @@
+binary_branch_audit: 31 expected targets resolved uniquely with complete disassembly; 1 resolved through a verified inline mapping; 1 resolved through a verified LLVM-suffix witness; 1 resolved through a detached-DWARF inlined extent; candidate sha256=a535454753d8857e4c385689ea431b5a47a9686322e6f52b203971188a49359f

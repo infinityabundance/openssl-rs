@@ -1,0 +1,39 @@
+{
+ "campaign": "PFP-54",
+ "shipped_dso": {
+  "path": "evidence/performance-frontier/campaigns/PFP-54/raw/artefacts/libcrypto.so.3",
+  "sha256": "a535454753d8857e4c385689ea431b5a47a9686322e6f52b203971188a49359f",
+  "bytes": 12342512
+ },
+ "debug_file": {
+  "path": "evidence/performance-frontier/campaigns/PFP-54/raw/artefacts/libcrypto.so.3.debug",
+  "sha256": "cd64dd590a597116f8475f6db0c81cc94602d74d540d4b45b4b1bae1a0b7ed9b",
+  "bytes": 27318296
+ },
+ "checks": {
+  "a_text_hash_equals_audited_text_hash": {
+   "shipped_text_sha256": "9bf370d46142f2de2c6f62a7ef028c1203ccc3f24d27de78d8750c76b9a842fa",
+   "reported_text_sha256": "9bf370d46142f2de2c6f62a7ef028c1203ccc3f24d27de78d8750c76b9a842fa",
+   "audited_dso_sha256": "a535454753d8857e4c385689ea431b5a47a9686322e6f52b203971188a49359f",
+   "shipped_dso_sha256": "a535454753d8857e4c385689ea431b5a47a9686322e6f52b203971188a49359f",
+   "pass": true
+  },
+  "b_build_id_present_and_identical": {
+   "shipped_build_id": "83eccb95e79216e5b53b46389df55fda6f9a9dee",
+   "debug_build_id": "83eccb95e79216e5b53b46389df55fda6f9a9dee",
+   "pass": true
+  },
+  "c_debug_file_is_evidence_not_packaged": {
+   "debug_file": "evidence/performance-frontier/campaigns/PFP-54/raw/artefacts/libcrypto.so.3.debug",
+   "debug_sha256": "cd64dd590a597116f8475f6db0c81cc94602d74d540d4b45b4b1bae1a0b7ed9b",
+   "shipped_debug_sections": 0,
+   "debug_debug_sections": 8,
+   "cargo_package_listing": true,
+   "cargo_package_note": "ok",
+   "package_lines_naming_the_artefacts": [],
+   "cargo_toml_excludes_evidence": true,
+   "pass": true
+  }
+ },
+ "all_pass": true
+}

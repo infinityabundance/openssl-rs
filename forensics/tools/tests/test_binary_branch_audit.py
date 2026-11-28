@@ -26,6 +26,7 @@ with `python3 -m unittest discover -s forensics/tools/tests -p 'test_*.py'`.
 
 from __future__ import annotations
 
+import importlib.util
 import json
 import shutil
 import subprocess
@@ -312,6 +313,174 @@ class InlineMappingControls(unittest.TestCase):
         entry = mapping_entry(resolves_to="wrap_body", inlining={"suffix": "_wrong"})
         self.assert_refused(self.run_audit([entry], self.mapped),
                             "inline-witness-inconsistent")
+
+
+#: A C fixture whose body has no out-of-line copy at -O2 and must be resolved
+#: through its DW_TAG_inlined_subroutine ranges in a detached DWARF companion.
+DWARF_FIXTURE_C = r'''
+__attribute__((always_inline)) static inline int body(int x) {
+    int acc = 0;
+    for (int i = 0; i < x; i++) { acc += i * 3; if (acc & 1) acc ^= x; }
+    return acc;
+}
+int caller_body(int x) { return body(x) + 1; }
+int caller_other(int x) { return x * 2 + 7; }
+'''
+
+DWARF_FIXTURE_ALT_C = r'''
+__attribute__((always_inline)) static inline int body(int x) {
+    int acc = 1;
+    for (int i = 0; i < x; i++) { acc ^= (acc << 1) + i; }
+    return acc;
+}
+int caller_body(int x) { return body(x) + 3; }
+int caller_other(int x) { return x * 5 + 1; }
+'''
+
+DWARF_PREREQUISITES = (
+    shutil.which("cc") is not None and shutil.which("objdump") is not None
+    and shutil.which("objcopy") is not None and shutil.which("readelf") is not None
+)
+
+
+def _load_audit_module():
+    spec = importlib.util.spec_from_file_location("binary_branch_audit_under_test", SCRIPT)
+    module = importlib.util.module_from_spec(spec)
+    # dataclasses resolves postponed annotations through sys.modules[__module__].
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def build_dwarf_fixture(directory: Path, name: str, source: str):
+    """Compile a -g C fixture and split its DWARF with objcopy."""
+    path = directory / f"{name}.c"
+    path.write_text(source, encoding="utf-8")
+    shared = directory / f"{name}.so"
+    completed = subprocess.run(
+        ["cc", "-O2", "-g", "-gdwarf-4", "-fPIC", "-shared",
+         "-Wl,--build-id=sha1", "-o", str(shared), str(path)],
+        capture_output=True, text=True, timeout=120,
+    )
+    if completed.returncode != 0:
+        raise unittest.SkipTest(f"cc could not build {name}: {completed.stderr[:200]}")
+    debug = directory / f"{name}.so.debug"
+    subprocess.run(["objcopy", "--only-keep-debug", str(shared), str(debug)],
+                   check=True, capture_output=True, timeout=120)
+    subprocess.run(["objcopy", "--strip-debug", str(shared)],
+                   check=True, capture_output=True, timeout=120)
+    subprocess.run(["objcopy", f"--add-gnu-debuglink={debug}", str(shared)],
+                   check=True, capture_output=True, timeout=120)
+    return shared, debug
+
+
+@unittest.skipUnless(DWARF_PREREQUISITES, "cc, objdump, objcopy and readelf are required")
+class DwarfInlineControls(unittest.TestCase):
+    """Positive resolution and the fail-closed cases PFP-54 requires."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.tmp = tempfile.TemporaryDirectory(prefix="branch-audit-dwarf-")
+        cls.directory = Path(cls.tmp.name)
+        cls.dso, cls.debug = build_dwarf_fixture(
+            cls.directory, "fixture", DWARF_FIXTURE_C)
+        cls._alt, cls.alt_debug = build_dwarf_fixture(
+            cls.directory, "alt", DWARF_FIXTURE_ALT_C)
+
+    @classmethod
+    def tearDownClass(cls) -> None:
+        cls.tmp.cleanup()
+
+    def entry(self, caller: str = "caller_body") -> dict:
+        return {"family": "fixture dwarf", "symbol": "body",
+                "dwarf_inline": {"caller": caller, "check": "fixture"}}
+
+    def run_audit(self, entries: list[dict], debug: Path | None):
+        inventory = self.directory / "targets-dwarf.json"
+        inventory.write_text(json.dumps(entries) + "\n", encoding="utf-8")
+        cmd = [sys.executable, str(SCRIPT), "--no-cpuid-scan",
+               "--targets-file", str(inventory)]
+        if debug is not None:
+            cmd += ["--debug-file", str(debug)]
+        cmd.append(str(self.dso))
+        return subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+
+    # (0) a fully inlined target resolves through the detached DWARF extent.
+    def test_inlined_target_resolves_through_detached_dwarf(self) -> None:
+        completed = self.run_audit([self.entry()], self.debug)
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertIn("Detached-DWARF inlined extents", completed.stdout)
+        self.assertIn("resolved through a detached-DWARF inlined extent",
+                      completed.stderr)
+
+    # (1) a caller other than the one the extent is attributed to is refused.
+    def test_wrong_caller_is_refused(self) -> None:
+        completed = self.run_audit([self.entry(caller="caller_body")], self.debug)
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        wrong = self.run_audit([self.entry(caller="caller_other")], self.debug)
+        self.assertEqual(wrong.returncode, 1, wrong.stderr)
+        self.assertIn("reason=dwarf-inline-caller-mismatch", wrong.stderr)
+
+    # (2) a DWARF companion from another build is refused on the build-id.
+    def test_debug_file_from_another_build_is_refused(self) -> None:
+        completed = self.run_audit([self.entry()], self.alt_debug)
+        self.assertEqual(completed.returncode, 3, completed.stderr)
+        self.assertIn("debug-identity-mismatch", completed.stderr)
+
+    # (3) a dwarf_inline target without --debug-file is a usage refusal.
+    def test_missing_debug_file_is_a_usage_refusal(self) -> None:
+        completed = self.run_audit([self.entry()], None)
+        self.assertEqual(completed.returncode, 2, completed.stderr)
+        self.assertIn("no --debug-file", completed.stderr)
+
+
+class DwarfExtentControls(unittest.TestCase):
+    """Unit controls over the range validation, without a compiled artefact."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.bba = _load_audit_module()
+
+    def context(self, ranges):
+        bba = self.bba
+        abstract = bba.DwarfDie(0x100, 1, "DW_TAG_subprogram",
+                                {"DW_AT_name": "body", "DW_AT_inline": "1"}, None)
+        caller = bba.DwarfDie(0x200, 1, "DW_TAG_subprogram",
+                              {"DW_AT_name": "caller", "DW_AT_linkage_name": "caller",
+                               "DW_AT_low_pc": "0x1000", "DW_AT_high_pc": "0x100"}, None)
+        instance = bba.DwarfDie(0x180, 2, "DW_TAG_inlined_subroutine",
+                                {"DW_AT_abstract_origin": "<0x100>",
+                                 "DW_AT_ranges": "0x300"}, 1)
+        return bba.DwarfContext("fixture.debug", "build", [abstract, caller, instance],
+                                {0x300: ranges})
+
+    def target(self):
+        bba = self.bba
+        return bba.Target("fixture", None, "body",
+                          dwarf_inline=bba.DwarfInline("caller", "fixture"))
+
+    def verify(self, ranges):
+        return self.bba.verify_dwarf_inline(
+            "fixture.so", self.target(), [(0x1000, 0x100, "caller")], 5.0,
+            self.context(ranges))
+
+    def test_whole_extent_is_admitted(self) -> None:
+        extent, witness, failure = self.verify([(0x1000, 0x1010), (0x1080, 0x1090)])
+        self.assertIsNone(failure)
+        self.assertEqual(extent["ranges"], [(0x1000, 0x1010), (0x1080, 0x1090)])
+        self.assertEqual(witness["bytes"], 32)
+
+    def test_range_outside_the_caller_is_a_partial_extent(self) -> None:
+        _extent, _witness, failure = self.verify([(0x1000, 0x1010), (0x1200, 0x1210)])
+        self.assertEqual(failure["failure"], "dwarf-inline-outside-caller")
+
+    def test_instance_without_a_range_list_is_a_partial_extent(self) -> None:
+        _extent, _witness, failure = self.verify(None)
+        self.assertEqual(failure["failure"], "dwarf-inline-partial")
+
+    def test_empty_range_is_a_partial_extent(self) -> None:
+        _extent, _witness, failure = self.verify([(0x1000, 0x1000)])
+        self.assertEqual(failure["failure"], "dwarf-inline-partial")
 
 
 if __name__ == "__main__":

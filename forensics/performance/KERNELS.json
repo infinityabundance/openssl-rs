@@ -1,995 +1,1432 @@
 {
-  "schema": "openssl-rs/performance/kernel-register/v1",
-  "campaign": "PFP-9",
-  "generated_by": "forensics/tools/kernel_verification.py",
-  "correction": {
-    "date": "2026-11-27",
-    "subject": "the p256::Arch attribution",
-    "superseded_fields": [
-      "provenance_decision.decision (the 'mulx/adcx' description and the 'lost to the portable Montgomery kernel' framing)",
-      "provenance_decision.rejected_arms[1].arm (the 'mulx/adcx' label)",
-      "kernels[id=p256-field-arch].label (the 'mulx/adcx' label)"
-    ],
-    "old_text_retained": true,
-    "text": "wide_mul_x86 is a schoolbook loop over _mulx_u64 and _addcarry_u64; it compiles to mulx + adc with zero adcx/adox, no inline assembly and no hand scheduling. The controlled comparison is Arch vs portable Solinas (mul 61.793 vs 82.885 ns, so mulx won 25.4%; ladder 422.821 vs 538.076 ns, 21.4%). The ~3x is Arch vs Mont (61.793 vs 20.662 ns, 2.991x) and belongs to the Solinas reduction, not to carry chains. A call to the out-of-line target-feature callee occurs once per field multiply. Hand-written ADX with paired adcx/adox carry chains has NOT been measured and is NOT_RUN. The mulx-plus-Montgomery-inlined experiment is already answered by PFP-48 (mulq 0, mulx 121, zero adcx/adox, every workload equal or slower); the hand-paired ADCX/ADOX question remains open.",
-    "authority": [
-      "docs/KERNEL-VERIFICATION.md 5.3.1",
-      "evidence/performance-frontier/campaigns/PFP-9/RECEIPT.md 3.1"
-    ]
-  },
-  "hardware": {
-    "machine": "x86_64",
-    "cpu": "13th Gen Intel(R) Core(TM) i9-13900K",
-    "features_present": ["adx", "bmi2", "avx2", "vaes", "vpclmulqdq", "sha_ni"],
-    "features_absent": ["avx512f", "avx512ifma"],
-    "pmu": "NOT_PRESENT: perf_event_paranoid=2 and /sys/bus/event_source/devices exposes no hardware cpu/pmu source; perf stat reports <not supported> for instructions and cycles",
-    "aarch64_target": "NOT_PRESENT: no AArch64 target or cross toolchain on this machine",
-    "consequence": "The AArch64 and AVX-512/IFMA arms are NOT_APPLICABLE_HARDWARE. PFP-9 cannot be fully closed on this hardware."
-  },
-  "provenance_decision": {
-    "id": "PFP9-PROVENANCE-PORTABLE-RUST-1",
-    "decision": "Every performance kernel ships as the first-party portable Rust representation that has its own differential court and binary audit at a named artefact digest. The portable reference is retained as oracle and fallback. No third-party assembly (s2n-bignum, fiat-crypto or CryptOpt output) enters the custodian boundary in this row. The one architecture-specialised arm implemented for P-256 (p256::Arch, mulx/adcx on x86-64) is compiled but not selected because it lost to the portable Montgomery kernel on the admitted venue.",
-    "section_8_route": "docs/PERFORMANCE-FRONTIER.md §8 recommends fiat-crypto Rust as the portable reference and oracle, an s2n-bignum-grade assembly fast path (adopted or written and proved), and constant time as a separate obligation on the built DSO. That recommendation is recorded as the intended direction, not adopted: it is a decision for the project principal and no such code is in the tree.",
-    "rationale": [
-      "The measured alternatives that exist on this hardware lost; selecting one would publish a measured regression (docs/PERFORMANCE-FRONTIER.md §11).",
-      "The portable kernels each have a differential court and a binary audit at a named digest; an architecture arm would require its own differential and audit at its own digest, and none exists.",
-      "Constant time is a separate obligation. No kernel has a mechanised proof; every kernel is NO_PROOF and the audits are review aids, not proofs.",
-      "Third-party assembly would add a new custodian boundary with no per-kernel evidence in this repository."
-    ],
-    "invalidated_by": [
-      "a compiler or toolchain change (the audits and codegen are specific to rustc 1.98.1 (48a229cea) and the recorded flags)",
-      "a target or target-feature change (AArch64, AVX-512/IFMA, AVX2, ADX/BMI2 hand-written): evidence never transfers",
-      "a new measurement at a new digest, or a measured regression of the selected arm",
-      "a source change to a kernel, its Domain, its owner or a precondition it relies on",
-      "a new backend or a change to the FieldKernel, MontSchedule or representation contract",
-      "a change to an evidence instrument (ctgrind, binary branch audit, this checker)"
-    ],
-    "rejected_arms": [
-      {
-        "arm": "P-256 Solinas field kernel",
-        "campaign": "PFP-2",
-        "evidence": "evidence/performance-frontier/campaigns/PFP-2/kernels/summary.json",
-        "result": "mul 82.885 ns vs Mont 20.662 ns; ladder 538.076 ns vs 224.423 ns",
-        "binding": "SOURCE_BOUND",
-        "reason": "slower on mul, sqr, reduce and the end-to-end ladder"
-      },
-      {
-        "arm": "P-256 Arch kernel (mulx/adcx, BMI2+ADX)",
-        "campaign": "PFP-2",
-        "evidence": "evidence/performance-frontier/campaigns/PFP-2/kernels/summary.json",
-        "result": "mul 61.793 ns vs Mont 20.662 ns; ladder 422.821 ns vs 224.423 ns",
-        "binding": "SOURCE_BOUND",
-        "reason": "architecture-specialised multiply is slower than the portable Montgomery kernel; retained as a measured, capability-gated arm, not selected"
-      },
-      {
-        "arm": "dedicated Comba squaring",
-        "campaign": "PFP-6",
-        "evidence": "evidence/performance-frontier/campaigns/PFP-6/REEVALUATION.md",
-        "result": "B/A 1.0822 [1.0766, 1.0831] at 2048 bits, 1.0048 at 8192; D/C 1.2628 and 1.1323",
-        "binding": "ARTEFACT",
-        "reason": "slower than reusing the multiply at the PFP-5 five-bit-window mix; LADDER_DEDICATED_SQUARING remains false"
-      },
-      {
-        "arm": "RSA CRT scalar interleaving",
-        "campaign": "PFP-7",
-        "evidence": "evidence/performance-frontier/campaigns/PFP-7/RECEIPT.md",
-        "result": "fused 1.1132x [1.1102, 1.1151] slower per multiplication; attainable wall change 0.91x",
-        "binding": "TRANSCRIPTION",
-        "reason": "the only positive ceiling needs IPC 6.0; measured slower in every run"
-      },
-      {
-        "arm": "reduced-radix (2^52) deferred-carry arithmetic",
-        "campaign": "M-A2",
-        "evidence": "evidence/performance-frontier/campaigns/M-A2/RESULTS.md",
-        "result": "3.41-3.44x slower at 256 bits, 1.37-1.40x slower at 1024 bits than fixed radix-2^64 CIOS",
-        "binding": "SOURCE_BOUND",
-        "reason": "extra limb products and wide-accumulator traffic dominate the removed carry chain"
-      },
-      {
-        "arm": "Karatsuba product",
-        "campaign": "PFP-6",
-        "evidence": "evidence/performance-frontier/campaigns/PFP-6/CROSSOVER.md",
-        "result": "1.017-1.536x slower at 256-4096 bits; no crossover",
-        "binding": "TRANSCRIPTION",
-        "reason": "schoolbook wins at every measured width; the transcription also branches on data"
-      },
-      {
-        "arm": "DH prepared generator table",
-        "campaign": "PFP-8",
-        "evidence": "evidence/performance-frontier/campaigns/PFP-8/RECEIPT.md",
-        "result": "best prepared window (w=6) is 2.21% faster; shared secret 0%; under the 10% threshold",
-        "binding": "ARTEFACT",
-        "reason": "measured refusal; no source changed"
-      },
-      {
-        "arm": "AVX-512/IFMA radix-2^52 pairing",
-        "campaign": "PFP-7",
-        "evidence": "evidence/performance-frontier/campaigns/PFP-7/BOUND.md",
-        "result": "NOT_APPLICABLE_HARDWARE",
-        "binding": "NOT_APPLICABLE_HARDWARE",
-        "reason": "this CPU reports no avx512f and no avx512ifma; the arm cannot be built or measured here"
-      }
-    ]
-  },
-  "no_inheritance_rule": "Evidence for one target, profile, compiler or artefact never transfers to another. Each kernel's differential court and audit are bound to the exact (target, profile, compiler, source, artefact digest) recorded here. A claim that cites evidence from a different identity is refused. A taint run is not a binary audit; a source-bound reading is not artefact evidence; a digest match is not a source-to-binary refinement claim.",
-  "campaigns": {
-    "PFP-2": {
-      "artefact": {
-        "sha256": "553e1b8ce1eb7e03a0d92a5614b566b88e49e55d2c2a3f7ba28fc6d78eecc4e4",
-        "target": "x86_64-unknown-linux-gnu release",
-        "profile": "release, x86_64-unknown-linux-gnu, rustc 1.98.1",
-        "source": "staging c1d25e10d16bc197e03446619a5330842b411c5c (committed); two independent clean rebuilds reproduce the digest",
-        "binding": "ARTEFACT"
-      }
-    },
-    "PFP-2-kernels": {
-      "artefact": {
-        "sha256": null,
-        "target": "x86_64-unknown-linux-gnu (court venue, i9-13900K)",
-        "profile": "cargo test pfp2_kernel_measurement with PFP2_MEASURE=1, three rotated repetitions; test binary, not a distribution DSO",
-        "source": "PFP-2 campaign engine source; the in-crate measurement binary records no DSO digest",
-        "binding": "SOURCE"
-      }
-    },
-    "PFP-3": {
-      "artefact": {
-        "sha256": "ecbefb7d4ecd05cb08f5ade57e64ce2cd81de24bcd68b0c236a8640a18559053",
-        "target": "x86_64-unknown-linux-gnu release",
-        "profile": "release, x86_64-unknown-linux-gnu, rustc 1.98.1",
-        "source": "staging f8d5c4b33cf751a0dd805fa7cf0d730915e1d073 + uncommitted src/ec/p256/fixed_base.rs branch-free admission",
-        "binding": "ARTEFACT"
-      }
-    },
-    "PFP-4": {
-      "artefact": {
-        "sha256": "4e6ec312313b3f1ef68ec9c0c4fc698a76f334ee9da38a6fcdfa7d8945c53e77",
-        "target": "x86_64-unknown-linux-gnu release",
-        "profile": "release, x86_64-unknown-linux-gnu, rustc 1.98.1",
-        "source": "staging 5ac6fddc53f5ca2a63912f51c07188b9b63f71dd + uncommitted src/ec/lib.rs, src/ec/p256.rs, src/ec/p256/fixed_base.rs, src/ec/p256/tests.rs",
-        "binding": "ARTEFACT"
-      }
-    },
-    "PFP-5": {
-      "artefact": {
-        "sha256": "842efa27197ea8c408d77a8316c1dbb35a06146e0033b7df7d7f9cced88a2f47",
-        "target": "x86_64-unknown-linux-gnu release",
-        "profile": "release, x86_64-unknown-linux-gnu, rustc 1.98.1",
-        "source": "staging a005a33c482f47850a72661a363e7186bde42c5c + uncommitted src/bn/arith.rs (plus test-only src/rsa/ossl.rs)",
-        "binding": "ARTEFACT"
-      }
-    },
-    "PFP-6": {
-      "artefact": {
-        "sha256": "6d002db20c815e252d1672a72b654f40844c2a1b24400cfbdfce5d1eaf828f39",
-        "target": "x86_64 i9-13900K, taskset -c 1, court openssl-rs-court-tools:1, rustc 1.98.1 release",
-        "profile": "release, x86_64-unknown-linux-gnu, rustc 1.98.1 (48a229cea)",
-        "source": "staging dedb67a5fe7d567a046def6402388d043b50d571 + uncommitted one-constant src/bn/arith.rs (arith sha256 3e8127cb1eb816b9db066eb52ce1535620aa9c812bec0b441c627fdb9100aea1); the base arith work is committed at 20972901dc5e1d984d1b391ecc9b69d4bd943701, blob 1ea1965 sha256 06005795079c9957ba2b35c6816c423b507f427705842284aa9c23d0e0759a1c, and the one-constant selection remains a worktree change",
-        "binding": "ARTEFACT"
-      }
-    },
-    "PFP-6-reeval": {
-      "artefact": {
-        "sha256": "661384603e0b661af384997676d8e88843f2b307b6abf73f56d472b03d888630",
-        "target": "x86_64 i9-13900K, taskset -c 1, court openssl-rs-court-tools:1, rustc 1.98.1 release",
-        "profile": "release, x86_64-unknown-linux-gnu, rustc 1.98.1 (48a229cea)",
-        "source": "staging 76652a46dcfb388656d964010268685ca032dff1 + uncommitted documentation correction to src/bn/arith.rs (arith sha256 66bd6c4c7f616f7d8101debf34cc2d4915eff225aba0dec4e119eccb5d682e83; no code change)",
-        "binding": "ARTEFACT"
-      }
-    },
-    "PFP-7": {
-      "artefact": {
-        "sha256": "6d002db20c815e252d1672a72b654f40844c2a1b24400cfbdfce5d1eaf828f39",
-        "target": "x86_64 i9-13900K, taskset -c 1, court openssl-rs-court-tools:1, rustc 1.98.1 release",
-        "profile": "release, x86_64-unknown-linux-gnu, rustc 1.98.1 (48a229cea); build-relevant tree clean at 05ee177a3",
-        "source": "staging 05ee177a3d0d6e7ef7a80e466a1cba5b6ea765c2 (clean build-relevant tree); reproduces the PFP-6 admitted DSO",
-        "binding": "ARTEFACT"
-      }
-    },
-    "M-A1": {
-      "artefact": {
-        "sha256": "88c0c7e04d52a1bf84d665fdd691bddf2bbe700e35505d95bf145bfdc3774d87",
-        "target": "x86_64 i9-13900K, taskset -c 1, court openssl-rs-court-tools:1, rustc 1.98.1 release",
-        "profile": "release, x86_64-unknown-linux-gnu, rustc 1.98.1 (48a229cea)",
-        "source": "staging ff87f8488e206896ffdd82259af2fcf4ba269209 + uncommitted src/bn/arith.rs (arith sha256 b548ee1533f527366099d95b907bd20237bbcc2e8208966eb9a15cf11f09809f)",
-        "binding": "ARTEFACT"
-      }
-    },
-    "PFP-8": {
-      "artefact": {
-        "sha256": "6302e05a14e47b74bd546f03e7509e234a2884511ddec5c3f9a7f4382bd9a25b",
-        "target": "x86_64 i9-13900K, taskset -c 1, court openssl-rs-court-tools:1, rustc 1.98.1 release",
-        "profile": "release, x86_64-unknown-linux-gnu, rustc 1.98.1 (48a229cea); two fresh CARGO_TARGET_DIR builds agree",
-        "source": "staging 20b655ba902e61d7680e30dfcb30feb4225397cc + working-tree src/bn/arith.rs, src/bn/mont.rs, src/dh/key.rs",
-        "binding": "ARTEFACT"
-      }
-    },
-    "PFP-8-preset-priv": {
-      "artefact": {
-        "sha256": "e3ef3d84166a65408e5c89eaa4cc444a2c9208fea5e2acb1c272b6a0b612b187",
-        "target": "x86_64 i9-13900K, taskset -c 1, court openssl-rs-court-tools:1, rustc 1.98.1 release",
-        "profile": "release, x86_64-unknown-linux-gnu, rustc 1.98.1 (48a229cea); two fresh CARGO_TARGET_DIR builds agree",
-        "source": "staging 983437d2a415d493c7f7206c6332723bce591073 + uncommitted src/dh/key.rs, committed as dd05d3f4",
-        "binding": "ARTEFACT"
-      }
-    }
-  },
-  "kernels": [
-    {
-      "id": "bn-cias-mont",
-      "label": "CIOS Montgomery kernel (generic slice kernel)",
-      "ships": "SHIPPED",
-      "proof": "NO_PROOF",
-      "evidence": [
-        {
-          "campaign": "PFP-6",
-          "artefact_sha256": "6d002db20c815e252d1672a72b654f40844c2a1b24400cfbdfce5d1eaf828f39",
-          "target": "x86_64 i9-13900K, taskset -c 1, court openssl-rs-court-tools:1, rustc 1.98.1 release",
-          "profile": "release, x86_64-unknown-linux-gnu, rustc 1.98.1 (48a229cea)",
-          "binding": "MIXED",
-          "differential": {
-            "court": "PFP-6 per-kernel congruence and CIOS-vs-SOS differential + 161-line authority ABI transcript",
-            "result": "PASS",
-            "cases": "CIOS congruence 7,890; CIOS-vs-SOS exhaustive 3,018 plus sampled 7,890; 0 mismatches; 161/161 transcript lines identical to OpenSSL 3.6.4 611e511d",
-            "binding": "MIXED"
-          },
-          "audit": {
-            "kind": "BINARY_BRANCH_AUDIT",
-            "result": "mont_mul_ladder_into 14 jcc (14 public, 0 secret-derived), 18 setcc (3 public geometry, 15 secret carry/borrow consumed arithmetically), 0 cmovcc",
-            "verdict": "PASS",
-            "digest": "6d002db20c815e252d1672a72b654f40844c2a1b24400cfbdfce5d1eaf828f39",
-            "binding": "ARTEFACT"
-          },
-          "ctgrind": {
-            "result": "secret-exponent taint 0 errors / 0 contexts, negative control 4 errors / 1 context; DSO-bound base-taint probe 0 contexts on CIOS",
-            "binding": "MIXED"
-          }
-        }
-      ],
-      "assurance": [
-        {
-          "class": "SOURCE_TAINT_TESTED",
-          "scope": "PFP-6 dedb67a5f + one-constant src/bn/arith.rs: secret-exponent ctgrind 0 errors / 0 contexts with a firing control; the DSO base-taint probe is silent. The branch audit at 6d002db2 is recorded, but the DSO is not tracked so no ARTEFACT_AUDITED claim is made.",
-          "evidence": 0,
-          "subject": {
-            "source": "staging dedb67a5fe7d567a046def6402388d043b50d571 + uncommitted one-constant src/bn/arith.rs (arith sha256 3e8127cb1eb816b9db066eb52ce1535620aa9c812bec0b441c627fdb9100aea1); the base arith work is committed at 20972901dc5e1d984d1b391ecc9b69d4bd943701, blob 1ea1965 sha256 06005795079c9957ba2b35c6816c423b507f427705842284aa9c23d0e0759a1c, and the one-constant selection remains a worktree change",
-            "artefact": null
-          },
-          "assumptions": [
-            "the exponent limb values are the secret",
-            "the DSO base-taint probe exercises the CIOS path"
-          ],
-          "result": "PASS",
-          "instrument": "valgrind memcheck ctgrind (source-bound exponent taint; DSO base probe)",
-          "evidence_path": "evidence/performance-frontier/campaigns/PFP-6/ADMISSION.md",
-          "negative_control": {
-            "fired": true,
-            "detail": "CTGRIND_CONTROL=1 reports 4 errors / 1 context",
-            "evidence_path": "evidence/performance-frontier/campaigns/PFP-6/ADMISSION.md"
-          }
-        }
-      ],
-      "no_evidence_targets": [
-        {"target": "aarch64-unknown-linux-gnu", "status": "NOT_APPLICABLE_HARDWARE", "missing_feature": "aarch64 (no AArch64 target or toolchain on this machine)"},
-        {"target": "x86_64-avx512ifma", "status": "NOT_APPLICABLE_HARDWARE", "missing_feature": "avx512f, avx512ifma (CPU reports neither)"},
-        {"target": "x86_64-avx2", "status": "NOT_RUN", "missing_feature": "no AVX2 backend for this kernel"},
-        {"target": "x86_64-adx-bmi2", "status": "NOT_RUN", "missing_feature": "no hand-written adx/bmi2 backend for this kernel"}
-      ]
-    },
-    {
-      "id": "bn-cias-fixed",
-      "label": "CIOS fixed-width const-generic variants (4/6/9/16/32/48/64/128 limbs)",
-      "ships": "SHIPPED",
-      "proof": "NO_PROOF",
-      "evidence": [
-        {
-          "campaign": "M-A1",
-          "artefact_sha256": "88c0c7e04d52a1bf84d665fdd691bddf2bbe700e35505d95bf145bfdc3774d87",
-          "target": "x86_64 i9-13900K, taskset -c 1, court openssl-rs-court-tools:1, rustc 1.98.1 release",
-          "profile": "release, x86_64-unknown-linux-gnu, rustc 1.98.1 (48a229cea)",
-          "binding": "MIXED",
-          "differential": {
-            "court": "M-A1 per-width differential against the generic slice kernel + 161-line authority ABI transcript",
-            "result": "PASS",
-            "cases": "8,190 per-width pairs and 4,603 fallback pairs, 0 mismatches; defining congruence checked per pair; 161/161 transcript lines identical",
-            "binding": "MIXED"
-          },
-          "audit": {
-            "kind": "BINARY_BRANCH_AUDIT",
-            "result": "all eight kernels inlined into mont_mul_ladder_into: 40 jcc (40 public, 0 secret-derived), 64 setcc (0 public geometry, 64 secret carry/borrow consumed arithmetically), 0 cmovcc",
-            "verdict": "PASS",
-            "digest": "88c0c7e04d52a1bf84d665fdd691bddf2bbe700e35505d95bf145bfdc3774d87",
-            "binding": "ARTEFACT"
-          },
-          "ctgrind": {
-            "result": "secret-exponent taint 0 errors / 0 contexts, control 4/1; DSO-bound base-taint probe 0 contexts; both exercise width 4 only",
-            "binding": "MIXED"
-          }
-        }
-      ],
-      "assurance": [
-        {
-          "class": "SOURCE_TAINT_TESTED",
-          "scope": "M-A1 ff87f848 + uncommitted src/bn/arith.rs: exponent ctgrind 0 errors / 0 contexts with control 4/1. The taint covers width 4 only; widths 6/9/16/32/48/64/128 rest on the structural audit and are not generalised.",
-          "evidence": 0,
-          "subject": {
-            "source": "staging ff87f8488e206896ffdd82259af2fcf4ba269209 + uncommitted src/bn/arith.rs (arith sha256 b548ee1533f527366099d95b907bd20237bbcc2e8208966eb9a15cf11f09809f)",
-            "artefact": null
-          },
-          "assumptions": [
-            "the same CIOS schedule is shared by all eight widths",
-            "the taint run covers width 4 only"
-          ],
-          "result": "PASS",
-          "instrument": "valgrind memcheck ctgrind (width-4 source build) plus a DSO base probe",
-          "evidence_path": "evidence/performance-frontier/campaigns/M-A1/RESULTS.md",
-          "negative_control": {
-            "fired": true,
-            "detail": "CTGRIND_CONTROL=1 reports 4 errors / 1 context",
-            "evidence_path": "evidence/performance-frontier/campaigns/M-A1/RESULTS.md"
-          }
-        }
-      ],
-      "no_evidence_targets": [
-        {"target": "aarch64-unknown-linux-gnu", "status": "NOT_APPLICABLE_HARDWARE", "missing_feature": "aarch64 (no AArch64 target or toolchain on this machine)"},
-        {"target": "x86_64-avx512ifma", "status": "NOT_APPLICABLE_HARDWARE", "missing_feature": "avx512f, avx512ifma (CPU reports neither)"},
-        {"target": "x86_64-avx2", "status": "NOT_RUN", "missing_feature": "no AVX2 backend for this kernel"},
-        {"target": "x86_64-adx-bmi2", "status": "NOT_RUN", "missing_feature": "no hand-written adx/bmi2 backend for this kernel"}
-      ],
-      "notes": "Widths 6/9/16/32/48/64/128 rest on the structural audit; ctgrind and the DSO probe exercise width 4 only. This is recorded, not generalised."
-    },
-    {
-      "id": "bn-mont-sos",
-      "label": "SOS Montgomery reference kernel",
-      "ships": "SHIPPED (reference and fallback)",
-      "proof": "NO_PROOF",
-      "evidence": [
-        {
-          "campaign": "PFP-6",
-          "artefact_sha256": "6d002db20c815e252d1672a72b654f40844c2a1b24400cfbdfce5d1eaf828f39",
-          "target": "x86_64 i9-13900K, taskset -c 1, court openssl-rs-court-tools:1, rustc 1.98.1 release",
-          "profile": "release, x86_64-unknown-linux-gnu, rustc 1.98.1 (48a229cea)",
-          "binding": "MIXED",
-          "differential": {
-            "court": "PFP-6 per-kernel congruence and SQR-vs-SOS differential + 161-line authority ABI transcript",
-            "result": "PASS",
-            "cases": "SOS congruence 7,890; SQR-vs-SOS exhaustive 144 plus sampled 254; 0 mismatches; 161/161 transcript lines identical",
-            "binding": "MIXED"
-          },
-          "audit": null,
-          "ctgrind": {
-            "result": "DSO-bound base-taint probe 0 contexts on SOS at this digest; a base-taint probe is not a binary branch audit",
-            "binding": "ARTEFACT"
-          }
-        },
-        {
-          "campaign": "PFP-5",
-          "artefact_sha256": "842efa27197ea8c408d77a8316c1dbb35a06146e0033b7df7d7f9cced88a2f47",
-          "target": "x86_64-unknown-linux-gnu release",
-          "profile": "release, x86_64-unknown-linux-gnu, rustc 1.98.1",
-          "binding": "MIXED",
-          "differential": {
-            "court": "PFP-5 in-crate window-vs-reference-vs-oracle differential, with SOS retained as the bit-at-a-time reference, plus the 161-line authority ABI transcript",
-            "result": "PASS",
-            "cases": "4,625 in-crate comparisons, 0 mismatches; 161/161 transcript lines identical",
-            "binding": "MIXED"
-          },
-          "audit": {
-            "kind": "BINARY_BRANCH_AUDIT",
-            "result": "mont_mul_sos_into 19 jcc / 0 div / 0 cmov / 10 setcc / 0 cpuid; all conditional transfers public-bound; 0 secret-derived",
-            "verdict": "PASS",
-            "digest": "842efa27197ea8c408d77a8316c1dbb35a06146e0033b7df7d7f9cced88a2f47",
-            "binding": "ARTEFACT"
-          },
-          "ctgrind": {
-            "result": "secret-exponent taint 0 errors / 0 contexts; RSA secret exponents 96,821 errors / 112 contexts with 0 window contexts",
-            "binding": "SOURCE"
-          }
-        }
-      ],
-      "assurance": [
-        {
-          "class": "SOURCE_REVIEWED",
-          "scope": "PFP-6 dedb67a5f: the SOS source review records 19 jcc / 10 setcc, all public-bound. The 6d002db2 base-taint probe is not a branch audit and no firing control is recorded, so only a source review is asserted.",
-          "evidence": 0,
-          "subject": {
-            "source": "staging dedb67a5fe7d567a046def6402388d043b50d571 + uncommitted one-constant src/bn/arith.rs (arith sha256 3e8127cb1eb816b9db066eb52ce1535620aa9c812bec0b441c627fdb9100aea1); the base arith work is committed at 20972901dc5e1d984d1b391ecc9b69d4bd943701, blob 1ea1965 sha256 06005795079c9957ba2b35c6816c423b507f427705842284aa9c23d0e0759a1c, and the one-constant selection remains a worktree change",
-            "artefact": null
-          },
-          "assumptions": [
-            "the SOS REDC mask-select and carry logic are unchanged by PFP-5"
-          ],
-          "result": "PASS",
-          "instrument": "source review of the emitted SOS carrier",
-          "evidence_path": "evidence/performance-frontier/campaigns/PFP-6/RECORD.md"
-        },
-        {
-          "class": "SOURCE_REVIEWED",
-          "scope": "PFP-5 a005a33c4: TAINT.md records the window/scan taint at 0 errors / 0 contexts and an audit at 842efa27. No firing negative control is recorded at this evidence, so only a source review is asserted.",
-          "evidence": 1,
-          "subject": {
-            "source": "staging a005a33c482f47850a72661a363e7186bde42c5c + uncommitted src/bn/arith.rs (plus test-only src/rsa/ossl.rs)",
-            "artefact": null
-          },
-          "assumptions": [
-            "the digit and accumulator are consumed by masks, shifts and bitwise AND/OR"
-          ],
-          "result": "PASS",
-          "instrument": "source review plus a source-bound taint reading",
-          "evidence_path": "evidence/performance-frontier/campaigns/PFP-5/TAINT.md"
-        }
-      ],
-      "no_evidence_targets": [
-        {"target": "aarch64-unknown-linux-gnu", "status": "NOT_APPLICABLE_HARDWARE", "missing_feature": "aarch64 (no AArch64 target or toolchain on this machine)"},
-        {"target": "x86_64-avx512ifma", "status": "NOT_APPLICABLE_HARDWARE", "missing_feature": "avx512f, avx512ifma (CPU reports neither)"},
-        {"target": "x86_64-avx2", "status": "NOT_RUN", "missing_feature": "no AVX2 backend for this kernel"},
-        {"target": "x86_64-adx-bmi2", "status": "NOT_RUN", "missing_feature": "no hand-written adx/bmi2 backend for this kernel"}
-      ],
-      "notes": "The SOS audit is at PFP-5 DSO 842efa27. It does not transfer to PFP-6 DSO 6d002db2: a constant-time claim for SOS at 6d002db2 is refused by control because its only artefact audit is at another digest and the base-taint probe is not an audit."
-    },
-    {
-      "id": "bn-mont-sqr",
-      "label": "dedicated Comba squaring kernel",
-      "ships": "NOT_SHIPPED (LADDER_DEDICATED_SQUARING = false)",
-      "proof": "NO_PROOF",
-      "evidence": [
-        {
-          "campaign": "PFP-6-reeval",
-          "artefact_sha256": "661384603e0b661af384997676d8e88843f2b307b6abf73f56d472b03d888630",
-          "target": "x86_64 i9-13900K, taskset -c 1, court openssl-rs-court-tools:1, rustc 1.98.1 release",
-          "profile": "release, x86_64-unknown-linux-gnu, rustc 1.98.1 (48a229cea)",
-          "binding": "MIXED",
-          "differential": {
-            "court": "PFP-6 SQR congruence and SQR-vs-SOS differential, plus the A/B/C/D 161-line authority transcript",
-            "result": "PASS",
-            "cases": "SQR congruence 254; SQR-vs-SOS exhaustive 144 plus sampled 254; 0 mismatches; 161/161 transcript lines identical for A/B/C/D",
-            "binding": "MIXED"
-          },
-          "audit": null,
-          "ctgrind": {
-            "result": "secret-exponent taint 0 errors / 0 contexts on the window path; the dedicated-squaring carrier was not separately audited",
-            "binding": "SOURCE"
-          }
-        }
-      ],
-      "assurance": [
-        {
-          "class": "UNASSESSED",
-          "scope": "PFP-6-reeval 76652a46d: the dedicated-squaring carrier was not separately audited or tainted; the window-path 0/0 reading is not evidence about this carrier.",
-          "assumptions": [],
-          "result": "NOT_RUN"
-        }
-      ],
-      "no_evidence_targets": [
-        {"target": "aarch64-unknown-linux-gnu", "status": "NOT_APPLICABLE_HARDWARE", "missing_feature": "aarch64 (no AArch64 target or toolchain on this machine)"},
-        {"target": "x86_64-avx512ifma", "status": "NOT_APPLICABLE_HARDWARE", "missing_feature": "avx512f, avx512ifma (CPU reports neither)"},
-        {"target": "x86_64-avx2", "status": "NOT_RUN", "missing_feature": "no AVX2 backend; the kernel is not shipped"},
-        {"target": "x86_64-adx-bmi2", "status": "NOT_RUN", "missing_feature": "no hand-written adx/bmi2 backend; the kernel is not shipped"}
-      ],
-      "notes": "Measured and rejected: 1.0822x [1.0766, 1.0831] slower at 2048 bits and 1.0048x at 8192 than reusing the multiply (PFP-6/REEVALUATION.md). No branch audit of the squaring carrier exists."
-    },
-    {
-      "id": "bn-window-ladder",
-      "label": "fixed-window ladder and full masked table scan",
-      "ships": "SHIPPED",
-      "proof": "NO_PROOF",
-      "evidence": [
-        {
-          "campaign": "PFP-5",
-          "artefact_sha256": "842efa27197ea8c408d77a8316c1dbb35a06146e0033b7df7d7f9cced88a2f47",
-          "target": "x86_64-unknown-linux-gnu release",
-          "profile": "release, x86_64-unknown-linux-gnu, rustc 1.98.1",
-          "binding": "MIXED",
-          "differential": {
-            "court": "PFP-5 window-vs-bit-at-a-time-reference-vs-variable-time-oracle + 161-line authority ABI transcript",
-            "result": "PASS",
-            "cases": "3,420 window-vs-reference + 1,140 reference-vs-oracle + 65 large-modulus comparisons, 0 mismatches; 161/161 transcript lines identical",
-            "binding": "MIXED"
-          },
-          "audit": {
-            "kind": "BINARY_BRANCH_AUDIT",
-            "result": "run_mont_ladder (window and scan inlined) 100 jcc / 0 div / 2 cmov / 18 setcc / 0 cpuid; mont_mul_sos_into 19 / 0 / 0 / 10 / 0; 0 secret-derived",
-            "verdict": "PASS",
-            "digest": "842efa27197ea8c408d77a8316c1dbb35a06146e0033b7df7d7f9cced88a2f47",
-            "binding": "ARTEFACT"
-          },
-          "ctgrind": {
-            "result": "secret-exponent taint 0 errors / 0 contexts; RSA secret exponents 96,821 errors / 112 contexts with 0 window contexts",
-            "binding": "SOURCE"
-          }
-        },
-        {
-          "campaign": "PFP-6-reeval",
-          "artefact_sha256": "661384603e0b661af384997676d8e88843f2b307b6abf73f56d472b03d888630",
-          "target": "x86_64 i9-13900K, taskset -c 1, court openssl-rs-court-tools:1, rustc 1.98.1 release",
-          "profile": "release, x86_64-unknown-linux-gnu, rustc 1.98.1 (48a229cea)",
-          "binding": "MIXED",
-          "differential": {
-            "court": "PFP-6-reeval A/B/C/D authority ABI transcript",
-            "result": "PASS",
-            "cases": "161/161 transcript lines identical for A/B/C/D",
-            "binding": "ARTEFACT"
-          },
-          "audit": {
-            "kind": "BINARY_BRANCH_AUDIT",
-            "result": "run_mont_ladder 100 jcc / 0 div / 2 cmov / 18 setcc / 0 cpuid; mont_mul_sos_into 19 / 0 / 0 / 10 / 0; 0 secret-derived; counts and addresses identical to PFP-5, but the audit is bound to this digest",
-            "verdict": "PASS",
-            "digest": "661384603e0b661af384997676d8e88843f2b307b6abf73f56d472b03d888630",
-            "binding": "ARTEFACT"
-          },
-          "ctgrind": {
-            "result": "secret-exponent taint 0 errors / 0 contexts; source-bound test binary, not a DSO",
-            "binding": "SOURCE"
-          }
-        }
-      ],
-      "assurance": [
-        {
-          "class": "SOURCE_REVIEWED",
-          "scope": "PFP-5 a005a33c4: the window/scan taint is 0 errors / 0 contexts and source-bound; TAINT.md records no firing negative control, so only a source review is asserted.",
-          "evidence": 0,
-          "subject": {
-            "source": "staging a005a33c482f47850a72661a363e7186bde42c5c + uncommitted src/bn/arith.rs (plus test-only src/rsa/ossl.rs)",
-            "artefact": null
-          },
-          "assumptions": [
-            "the window digit and masked scan index are public"
-          ],
-          "result": "PASS",
-          "instrument": "source review plus a source-bound taint reading",
-          "evidence_path": "evidence/performance-frontier/campaigns/PFP-5/TAINT.md"
-        },
-        {
-          "class": "SOURCE_REVIEWED",
-          "scope": "PFP-6-reeval 76652a46d: the taint is source-bound 0/0 with no firing control recorded; the branch audit at 66138460 is a review aid, not a taint result.",
-          "evidence": 1,
-          "subject": {
-            "source": "staging 76652a46dcfb388656d964010268685ca032dff1 + uncommitted documentation correction to src/bn/arith.rs (arith sha256 66bd6c4c7f616f7d8101debf34cc2d4915eff225aba0dec4e119eccb5d682e83; no code change)",
-            "artefact": null
-          },
-          "assumptions": [
-            "the PFP-5 schedule is unchanged by the re-evaluation"
-          ],
-          "result": "PASS",
-          "instrument": "source review plus a source-bound taint reading",
-          "evidence_path": "evidence/performance-frontier/campaigns/PFP-6/REEVALUATION.md"
-        }
-      ],
-      "no_evidence_targets": [
-        {"target": "aarch64-unknown-linux-gnu", "status": "NOT_APPLICABLE_HARDWARE", "missing_feature": "aarch64 (no AArch64 target or toolchain on this machine)"},
-        {"target": "x86_64-avx512ifma", "status": "NOT_APPLICABLE_HARDWARE", "missing_feature": "avx512f, avx512ifma (CPU reports neither)"},
-        {"target": "x86_64-avx2", "status": "NOT_RUN", "missing_feature": "no AVX2 backend for the ladder"},
-        {"target": "x86_64-adx-bmi2", "status": "NOT_RUN", "missing_feature": "no hand-written adx/bmi2 backend for the ladder"}
-      ],
-      "notes": "The PFP-6-reeval audit is at 66138460 and does not transfer to 6d002db2 or 88c0c7e0; the later M-A1 audit covers the inlined mont_mul_ladder_into carrier, not the out-of-line run_mont_ladder."
-    },
-    {
-      "id": "p256-field-mont",
-      "label": "P-256 field engine, Mont kernel (default) over FieldDomain and OrderDomain",
-      "ships": "SHIPPED",
-      "proof": "NO_PROOF",
-      "evidence": [
-        {
-          "campaign": "PFP-2",
-          "artefact_sha256": "553e1b8ce1eb7e03a0d92a5614b566b88e49e55d2c2a3f7ba28fc6d78eecc4e4",
-          "target": "x86_64-unknown-linux-gnu release",
-          "profile": "release, x86_64-unknown-linux-gnu, rustc 1.98.1",
-          "binding": "ARTEFACT",
-          "differential": {
-            "court": "PFP-22 DSO-bound domain differential",
-            "result": "PASS",
-            "cases": "16,434 cases per subject across nine classes (base 4,096+4,096, upper half 4,096+4,096, order boundaries 8+8, exceptional 10, limb occupancy 12+12), 0 mismatches; identity 18/18 rows",
-            "binding": "ARTEFACT"
-          },
-          "audit": {
-            "kind": "CTGRIND_PLUS_BRANCH_AUDIT",
-            "result": "DSO-level ctgrind 0 engine-on-path and 0 engine-origin contexts in 18 tainted runs per DSO; branch audit exit 0 with 9/9 targets resolved; mutation control 2.33x instructions / 2.36x wall",
-            "verdict": "PASS",
-            "digest": "553e1b8ce1eb7e03a0d92a5614b566b88e49e55d2c2a3f7ba28fc6d78eecc4e4",
-            "binding": "ARTEFACT"
-          },
-          "ctgrind": {
-            "result": "0 engine-on-path contexts; the residue is the pre-existing BIGNUM/EC ladder path, kernel-independent",
-            "binding": "ARTEFACT"
-          }
-        }
-      ],
-      "assurance": [
-        {
-          "class": "SOURCE_REVIEWED",
-          "scope": "PFP-2 c1d25e10d: the source audit records DSO-level ctgrind 0 engine-on-path / 0 engine-origin with a firing sensitivity control (4 per repetition) and a 9/9 branch audit. The DSO is not tracked, so the register cannot hash the subject and does not claim ARTEFACT_AUDITED or ARTEFACT_TAINT_TESTED.",
-          "evidence": 0,
-          "subject": {
-            "source": "staging c1d25e10d16bc197e03446619a5330842b411c5c (committed); two independent clean rebuilds reproduce the digest",
-            "artefact": null
-          },
-          "assumptions": [
-            "the residue is the pre-existing BIGNUM/EC ladder path, kernel-independent",
-            "the sensitivity control exercises the P-256 engine path"
-          ],
-          "result": "PASS",
-          "instrument": "source review plus the recorded DSO ctgrind/branch-audit result",
-          "evidence_path": "evidence/performance-frontier/campaigns/PFP-2/RESULTS-553e1b8c.md"
-        }
-      ],
-      "no_evidence_targets": [
-        {"target": "aarch64-unknown-linux-gnu", "status": "NOT_APPLICABLE_HARDWARE", "missing_feature": "aarch64 (no AArch64 target or toolchain on this machine)"},
-        {"target": "x86_64-avx512ifma", "status": "NOT_APPLICABLE_HARDWARE", "missing_feature": "avx512f, avx512ifma (CPU reports neither)"},
-        {"target": "x86_64-avx2", "status": "NOT_RUN", "missing_feature": "no AVX2 field-engine variant"}
-      ],
-      "notes": "The kernel-selection measurement is source-bound (PFP-2 kernel microbenchmark): Mont mul 20.662 ns / ladder 224.423 ns, Solinas 82.885 / 538.076, Arch 61.793 / 422.821."
-    },
-    {
-      "id": "p256-field-arch",
-      "label": "P-256 field engine, Arch kernel (x86-64 mulx/adcx, Solinas reduction)",
-      "ships": "NOT_SHIPPED (compiled, capability-gated, not selected)",
-      "proof": "NO_PROOF",
-      "evidence": [
-        {
-          "campaign": "PFP-2-kernels",
-          "artefact_sha256": null,
-          "target": "x86_64-unknown-linux-gnu (court venue, i9-13900K)",
-          "profile": "cargo test pfp2_kernel_measurement with PFP2_MEASURE=1, three rotated repetitions; test binary, not a distribution DSO",
-          "binding": "SOURCE",
-          "differential": {
-            "court": "PFP-2 source differential over MONT/SOLINAS/ARCH",
-            "result": "PASS",
-            "cases": "48 cases x three kernels (144 comparisons) plus adversarial and pseudorandom field sweeps, 0 disagreements",
-            "binding": "SOURCE"
-          },
-          "audit": null,
-          "ctgrind": null
-        }
-      ],
-      "assurance": [
-        {
-          "class": "UNASSESSED",
-          "scope": "PFP-2-kernels: source-bound test binary only; no audit, no taint, and no tracked artefact.",
-          "assumptions": [],
-          "result": "NOT_RUN"
-        }
-      ],
-      "no_evidence_targets": [
-        {"target": "aarch64-unknown-linux-gnu", "status": "NOT_APPLICABLE_HARDWARE", "missing_feature": "aarch64 (no AArch64 target or toolchain on this machine)"},
-        {"target": "x86_64-avx512ifma", "status": "NOT_APPLICABLE_HARDWARE", "missing_feature": "avx512f, avx512ifma (CPU reports neither)"},
-        {"target": "x86_64-avx2", "status": "NOT_RUN", "missing_feature": "no AVX2 kernel variant"},
-        {"target": "x86_64-adx-bmi2-artefact", "status": "NOT_RUN", "missing_feature": "no artefact-bound differential or audit of the Arch kernel; the only measurement is the source-bound test binary"}
-      ],
-      "notes": "Measured and rejected: mul 61.793 ns and ladder 422.821 ns against Mont 20.662 / 224.423 (PFP-2/kernels/summary.json). Arch remains admissible only when Arch::new verifies BMI2 and ADX, but it is not the default."
-    },
-    {
-      "id": "p256-fixed-comb",
-      "label": "P-256 fixed-base comb and its 16-entry table",
-      "ships": "SHIPPED (standard P-256 group only)",
-      "proof": "NO_PROOF",
-      "evidence": [
-        {
-          "campaign": "PFP-3",
-          "artefact_sha256": "ecbefb7d4ecd05cb08f5ade57e64ce2cd81de24bcd68b0c236a8640a18559053",
-          "target": "x86_64-unknown-linux-gnu release",
-          "profile": "release, x86_64-unknown-linux-gnu, rustc 1.98.1",
-          "binding": "ARTEFACT",
-          "differential": {
-            "court": "PFP-3 DSO-bound k*G / k*P differential and ECDSA cross-verification",
-            "result": "PASS",
-            "cases": "4,096 k*G + 4,096 k*P serialised points, 0 mismatches; 256+256 ECDSA cross-verifications both directions; 4,096 in-crate fixed-vs-variable, 0 mismatches",
-            "binding": "ARTEFACT"
-          },
-          "audit": {
-            "kind": "CTGRIND_PLUS_BRANCH_AUDIT",
-            "result": "mul-g-fixed 0 errors / 0 contexts in three repetitions; shared inventory 31/31 exit 0; six carriers resolved; no admission-mask jcc; mutation control admission-off e4b2cb6e is correct on 4,096 points but costs 2.05x instructions / 1.96x wall",
-            "verdict": "PASS",
-            "digest": "ecbefb7d4ecd05cb08f5ade57e64ce2cd81de24bcd68b0c236a8640a18559053",
-            "binding": "ARTEFACT"
-          },
-          "ctgrind": {
-            "result": "0 errors / 0 contexts on mul-g-fixed; sensitivity control still fires",
-            "binding": "ARTEFACT"
-          }
-        }
-      ],
-      "assurance": [
-        {
-          "class": "SOURCE_REVIEWED",
-          "scope": "PFP-3 f8d5c4b33: ctgrind is 0/0/0 with a firing sensitivity control (4 per repetition) and the branch audit resolves 31/31. The DSO is not tracked, so the register cannot hash the subject and does not claim ARTEFACT_TAINT_TESTED.",
-          "evidence": 0,
-          "subject": {
-            "source": "staging f8d5c4b33cf751a0dd805fa7cf0d730915e1d073 + uncommitted src/ec/p256/fixed_base.rs branch-free admission",
-            "artefact": null
-          },
-          "assumptions": [
-            "the in-range mask is folded into the scalar the comb consumes"
-          ],
-          "result": "PASS",
-          "instrument": "source review plus the recorded DSO ctgrind/branch-audit result",
-          "evidence_path": "evidence/performance-frontier/campaigns/PFP-3/POST-FIX.md"
-        }
-      ],
-      "no_evidence_targets": [
-        {"target": "aarch64-unknown-linux-gnu", "status": "NOT_APPLICABLE_HARDWARE", "missing_feature": "aarch64 (no AArch64 target or toolchain on this machine)"},
-        {"target": "x86_64-avx512ifma", "status": "NOT_APPLICABLE_HARDWARE", "missing_feature": "avx512f, avx512ifma (CPU reports neither)"},
-        {"target": "x86_64-avx2", "status": "NOT_RUN", "missing_feature": "no AVX2 comb variant"},
-        {"target": "x86_64-adx-bmi2", "status": "NOT_RUN", "missing_feature": "no adx/bmi2 comb variant"}
-      ]
-    },
-    {
-      "id": "p256-order-inverse",
-      "label": "constant-time P-256 order inversion (k^(n-2) mod n)",
-      "ships": "SHIPPED (admitted predicate only)",
-      "proof": "NO_PROOF",
-      "evidence": [
-        {
-          "campaign": "PFP-4",
-          "artefact_sha256": "4e6ec312313b3f1ef68ec9c0c4fc698a76f334ee9da38a6fcdfa7d8945c53e77",
-          "target": "x86_64-unknown-linux-gnu release",
-          "profile": "release, x86_64-unknown-linux-gnu, rustc 1.98.1",
-          "binding": "ARTEFACT",
-          "differential": {
-            "court": "PFP-4 DSO-bound ECDSA differential plus in-crate Fermat/BigNum oracles",
-            "result": "PASS",
-            "cases": "4,108 in-crate vs independent Fermat oracle; 4,107 k*k^-1 = 1; 4,096 BigNum vs generic; 4,096 sign-ex + 4,096 sign-rand signatures byte-identical to the authority, 4,096/4,096 cross-verify",
-            "binding": "ARTEFACT"
-          },
-          "audit": {
-            "kind": "CTGRIND_PLUS_BRANCH_AUDIT",
-            "result": "0 engine-on-path and 0 engine-origin contexts with the private scalar and nonce source tainted; branch audit classifies every jcc/setcc/cmov in the carrier as public-bound; invert has exactly two jcc (fixed loop counter, public exponent-bit test); BINSEC -checkct NOT_RUN; dedicated inverse mutation control NOT_RUN",
-            "verdict": "PASS",
-            "digest": "4e6ec312313b3f1ef68ec9c0c4fc698a76f334ee9da38a6fcdfa7d8945c53e77",
-            "binding": "ARTEFACT"
-          },
-          "ctgrind": {
-            "result": "0 engine-on-path / 0 engine-origin contexts; sensitivity control reports 4 engine-on-path contexts per repetition",
-            "binding": "ARTEFACT"
-          }
-        }
-      ],
-      "assurance": [
-        {
-          "class": "SOURCE_REVIEWED",
-          "scope": "PFP-4 5ac6fddc5: DSO-level ctgrind is 0 engine-on-path / 0 engine-origin with the sensitivity control firing (4 per repetition); BINSEC -checkct and the dedicated inverse mutation control are NOT_RUN. The DSO is not tracked, so no ARTEFACT_AUDITED claim is made.",
-          "evidence": 0,
-          "subject": {
-            "source": "staging 5ac6fddc53f5ca2a63912f51c07188b9b63f71dd + uncommitted src/ec/lib.rs, src/ec/p256.rs, src/ec/p256/fixed_base.rs, src/ec/p256/tests.rs",
-            "artefact": null
-          },
-          "assumptions": [
-            "invert has exactly two conditional jumps: the loop counter and the public exponent-bit test"
-          ],
-          "result": "PASS",
-          "instrument": "source review plus the recorded DSO ctgrind/branch-audit result",
-          "evidence_path": "evidence/performance-frontier/campaigns/PFP-4/CTGRIND.md"
-        }
-      ],
-      "no_evidence_targets": [
-        {"target": "aarch64-unknown-linux-gnu", "status": "NOT_APPLICABLE_HARDWARE", "missing_feature": "aarch64 (no AArch64 target or toolchain on this machine)"},
-        {"target": "x86_64-avx512ifma", "status": "NOT_APPLICABLE_HARDWARE", "missing_feature": "avx512f, avx512ifma (CPU reports neither)"},
-        {"target": "x86_64-avx2", "status": "NOT_RUN", "missing_feature": "no AVX2 inverse variant"},
-        {"target": "x86_64-adx-bmi2", "status": "NOT_RUN", "missing_feature": "no adx/bmi2 inverse variant; the 425-operation kernel is portable Mont"}
-      ],
-      "notes": "The timing target was not met (10.28x measured vs the ~9.1x reference / 9.24x ceiling); recorded as a shortfall, not a success."
-    },
-    {
-      "id": "dh-width-policy",
-      "label": "DH width policy path (ladder runs the group's declared private-key bound)",
-      "ships": "SHIPPED",
-      "proof": "NO_PROOF",
-      "evidence": [
-        {
-          "campaign": "PFP-8",
-          "artefact_sha256": "6302e05a14e47b74bd546f03e7509e234a2884511ddec5c3f9a7f4382bd9a25b",
-          "target": "x86_64 i9-13900K, taskset -c 1, court openssl-rs-court-tools:1, rustc 1.98.1 release",
-          "profile": "release, x86_64-unknown-linux-gnu, rustc 1.98.1 (48a229cea); two fresh CARGO_TARGET_DIR builds agree",
-          "binding": "MIXED",
-          "differential": {
-            "court": "PFP-8 width-policy DSO-bound differential",
-            "result": "PASS_WITH_STOP",
-            "cases": "103/103 comparisons across 11 prepared groups, 0 mismatches; 22/22 key-length rows; STOP PFP8-KEYGEN-PRESET-PRIV: 3/3 caller-supplied-private-key keygens diverge at this digest",
-            "binding": "ARTEFACT"
-          },
-          "audit": {
-            "kind": "CTGRIND_PLUS_BRANCH_AUDIT",
-            "result": "mont_mul_ladder_into 40 jcc / 64 setcc / 0 cmov; run_mont_ladder 100 jcc / 18 setcc / 2 cmov; bn_mod_exp_mont_impl 61 / 4 / 3; dh_bn_mod_exp 3; 0 secret-derived; ctgrind source-bound 0 errors / 0 contexts, control 4/1",
-            "verdict": "PASS",
-            "digest": "6302e05a14e47b74bd546f03e7509e234a2884511ddec5c3f9a7f4382bd9a25b",
-            "binding": "ARTEFACT"
-          },
-          "ctgrind": {
-            "result": "0 errors / 0 contexts on the shortened schedule; source-bound",
-            "binding": "SOURCE"
-          }
-        },
-        {
-          "campaign": "PFP-8-preset-priv",
-          "artefact_sha256": "e3ef3d84166a65408e5c89eaa4cc444a2c9208fea5e2acb1c272b6a0b612b187",
-          "target": "x86_64 i9-13900K, taskset -c 1, court openssl-rs-court-tools:1, rustc 1.98.1 release",
-          "profile": "release, x86_64-unknown-linux-gnu, rustc 1.98.1 (48a229cea); two fresh CARGO_TARGET_DIR builds agree",
-          "binding": "MIXED",
-          "differential": {
-            "court": "PFP8-KEYGEN-PRESET-PRIV repair differential",
-            "result": "PASS_WITH_RESIDUAL",
-            "cases": "45/45 comparisons, 0 mismatches, 0 stops; 30-row preset matrix 26 agree / 4 differ (a preset exponent wider than the 2048-bit modulus)",
-            "binding": "ARTEFACT"
-          },
-          "audit": null,
-          "ctgrind": {
-            "result": "not re-run at this digest; the arithmetic source is byte-identical to the width-policy source, so the 6302e05a readings are cited as source-bound context only, not as an artefact audit of e3ef3d84",
-            "binding": "SOURCE"
-          }
-        }
-      ],
-      "assurance": [
-        {
-          "class": "SOURCE_TAINT_TESTED",
-          "scope": "PFP-8 20b655ba9: the shortened schedule is 0 errors / 0 contexts with the policy control firing (4/1). The PFP8-KEYGEN-PRESET-PRIV STOP is a compatibility divergence recorded in the differential, not a taint finding.",
-          "evidence": 0,
-          "subject": {
-            "source": "staging 20b655ba902e61d7680e30dfcb30feb4225397cc + working-tree src/bn/arith.rs, src/bn/mont.rs, src/dh/key.rs",
-            "artefact": null
-          },
-          "assumptions": [
-            "the ladder width is bound to public object configuration, never to the exponent",
-            "the policy taint test exercises the shortened schedule"
-          ],
-          "result": "PASS",
-          "instrument": "valgrind memcheck ctgrind (policy-width source build)",
-          "evidence_path": "evidence/performance-frontier/campaigns/PFP-8/WIDTH-POLICY.md",
-          "negative_control": {
-            "fired": true,
-            "detail": "CTGRIND_POLICY_CONTROL=1 reports 4 errors / 1 context",
-            "evidence_path": "evidence/performance-frontier/campaigns/PFP-8/WIDTH-POLICY.md"
-          }
-        },
-        {
-          "class": "SOURCE_REVIEWED",
-          "scope": "PFP-8-preset-priv 983437d2: ctgrind was not re-run at e3ef3d84; the arithmetic source is byte-identical and the 6302e05a readings are source-bound context only. The branch audit is at 6302e05a and is not regenerated here.",
-          "evidence": 1,
-          "subject": {
-            "source": "staging 983437d2a415d493c7f7206c6332723bce591073 + uncommitted src/dh/key.rs, committed as dd05d3f4",
-            "artefact": null
-          },
-          "assumptions": [
-            "the repair changes whether a preset key reaches an unchanged secret path"
-          ],
-          "result": "PASS",
-          "instrument": "source review of the repair and the unchanged arithmetic path",
-          "evidence_path": "evidence/performance-frontier/campaigns/PFP-8/PRESET-PRIV.md"
-        }
-      ],
-      "no_evidence_targets": [
-        {"target": "aarch64-unknown-linux-gnu", "status": "NOT_APPLICABLE_HARDWARE", "missing_feature": "aarch64 (no AArch64 target or toolchain on this machine)"},
-        {"target": "x86_64-avx512ifma", "status": "NOT_APPLICABLE_HARDWARE", "missing_feature": "avx512f, avx512ifma (CPU reports neither)"},
-        {"target": "x86_64-avx2", "status": "NOT_RUN", "missing_feature": "no AVX2 DH path"},
-        {"target": "x86_64-adx-bmi2", "status": "NOT_RUN", "missing_feature": "no adx/bmi2 DH path"}
-      ],
-      "notes": "A constant-time claim at e3ef3d84 is refused: the differential is artefact-bound there, but the branch audit is bound to 6302e05a and is not regenerated for e3ef3d84. The residual wide-preset divergence is a width-policy admission, not a regression of the repair."
-    },
-    {
-      "id": "rsa-crt",
-      "label": "RSA CRT path (two sequential constant-time exponentiations)",
-      "ships": "SHIPPED (sequential; interleaving refused)",
-      "proof": "NO_PROOF",
-      "evidence": [
-        {
-          "campaign": "PFP-7",
-          "artefact_sha256": "6d002db20c815e252d1672a72b654f40844c2a1b24400cfbdfce5d1eaf828f39",
-          "target": "x86_64 i9-13900K, taskset -c 1, court openssl-rs-court-tools:1, rustc 1.98.1 release",
-          "profile": "release, x86_64-unknown-linux-gnu, rustc 1.98.1 (48a229cea); build-relevant tree clean at 05ee177a3",
-          "binding": "ARTEFACT",
-          "differential": {
-            "court": "PFP-7 deterministic RSA differential and fault-injection matrix",
-            "result": "PASS",
-            "cases": "4,185 transcript lines byte-identical (CRT/non-CRT x blinded/unblinded x NO_PADDING/PKCS#1/OAEP + 4,096 malformed blocks); dmp1+1, dmq1+1 and iqmp+1 each detected with blinding on and off",
-            "binding": "ARTEFACT"
-          },
-          "audit": {
-            "kind": "CTGRIND_PLUS_BRANCH_AUDIT",
-            "result": "ctgrind 96,668 errors / 112 contexts (exponents and primes) and 97,546 / 106 (moduli), inside the recorded band, 0 ladder-carrier sites; CIOS carrier 14 jcc / 18 setcc / 0 cmov, driver 100 / 18 / 2, 0 secret-derived",
-            "verdict": "PASS",
-            "digest": "6d002db20c815e252d1672a72b654f40844c2a1b24400cfbdfce5d1eaf828f39",
-            "binding": "ARTEFACT"
-          },
-          "ctgrind": {
-            "result": "96,668/112 and 97,546/106; control fires",
-            "binding": "ARTEFACT"
-          }
-        }
-      ],
-      "assurance": [
-        {
-          "class": "UNASSESSED",
-          "scope": "PFP-7 05ee177a3: ctgrind reports 96,668 errors / 112 contexts and 97,546 / 106 with findings outside the ladder carriers; the firing control shows the instrument is live, but the CRT path itself is not established clean, so no taint-tested class is claimed.",
-          "assumptions": [],
-          "result": "NOT_RUN"
-        }
-      ],
-      "no_evidence_targets": [
-        {"target": "aarch64-unknown-linux-gnu", "status": "NOT_APPLICABLE_HARDWARE", "missing_feature": "aarch64 (no AArch64 target or toolchain on this machine)"},
-        {"target": "x86_64-avx512ifma", "status": "NOT_APPLICABLE_HARDWARE", "missing_feature": "avx512f, avx512ifma (CPU reports neither); the radix-2^52 IFMA pairing cannot be built"},
-        {"target": "x86_64-avx2", "status": "NOT_RUN", "missing_feature": "no AVX2 CRT backend"},
-        {"target": "x86_64-adx-bmi2", "status": "NOT_RUN", "missing_feature": "no hand-written adx/bmi2 CRT backend; the ADX build measured only the fused transcription"}
-      ],
-      "notes": "Interleaving is refused: the fused scalar transcription is 1.1132x [1.1102, 1.1151] slower per multiplication. The refusal is bound to the transcription, not to the DSO."
-    }
+ "schema": "openssl-rs/performance/kernel-register/v1",
+ "campaign": "PFP-9",
+ "generated_by": "forensics/tools/kernel_verification.py",
+ "correction": {
+  "date": "2026-11-27",
+  "subject": "the p256::Arch attribution",
+  "superseded_fields": [
+   "provenance_decision.decision (the 'mulx/adcx' description and the 'lost to the portable Montgomery kernel' framing)",
+   "provenance_decision.rejected_arms[1].arm (the 'mulx/adcx' label)",
+   "kernels[id=p256-field-arch].label (the 'mulx/adcx' label)"
   ],
-  "claims": [
-    {
-      "id": "PFP-6-CIOS-6d002db2",
-      "assurance": ["SOURCE_TAINT_TESTED"],
-      "target": "x86_64 i9-13900K, taskset -c 1, court openssl-rs-court-tools:1, rustc 1.98.1 release",
-      "profile": "release, x86_64-unknown-linux-gnu, rustc 1.98.1 (48a229cea)",
-      "artefact_sha256": "6d002db20c815e252d1672a72b654f40844c2a1b24400cfbdfce5d1eaf828f39",
-      "kernels": [{"id": "bn-cias-mont", "evidence": 0}]
-    },
-    {
-      "id": "M-A1-FIXED-88c0c7e0",
-      "assurance": ["SOURCE_TAINT_TESTED"],
-      "target": "x86_64 i9-13900K, taskset -c 1, court openssl-rs-court-tools:1, rustc 1.98.1 release",
-      "profile": "release, x86_64-unknown-linux-gnu, rustc 1.98.1 (48a229cea)",
-      "artefact_sha256": "88c0c7e04d52a1bf84d665fdd691bddf2bbe700e35505d95bf145bfdc3774d87",
-      "kernels": [{"id": "bn-cias-fixed", "evidence": 0}]
-    },
-    {
-      "id": "PFP-5-WINDOW-842efa27",
-      "assurance": ["SOURCE_REVIEWED"],
-      "target": "x86_64-unknown-linux-gnu release",
-      "profile": "release, x86_64-unknown-linux-gnu, rustc 1.98.1",
-      "artefact_sha256": "842efa27197ea8c408d77a8316c1dbb35a06146e0033b7df7d7f9cced88a2f47",
-      "kernels": [{"id": "bn-window-ladder", "evidence": 0}]
-    },
-    {
-      "id": "PFP-5-SOS-842efa27",
-      "assurance": ["SOURCE_REVIEWED"],
-      "target": "x86_64-unknown-linux-gnu release",
-      "profile": "release, x86_64-unknown-linux-gnu, rustc 1.98.1",
-      "artefact_sha256": "842efa27197ea8c408d77a8316c1dbb35a06146e0033b7df7d7f9cced88a2f47",
-      "kernels": [{"id": "bn-mont-sos", "evidence": 1}]
-    },
-    {
-      "id": "PFP-2-FIELD-553e1b8c",
-      "assurance": ["SOURCE_REVIEWED"],
-      "target": "x86_64-unknown-linux-gnu release",
-      "profile": "release, x86_64-unknown-linux-gnu, rustc 1.98.1",
-      "artefact_sha256": "553e1b8ce1eb7e03a0d92a5614b566b88e49e55d2c2a3f7ba28fc6d78eecc4e4",
-      "kernels": [{"id": "p256-field-mont", "evidence": 0}]
-    },
-    {
-      "id": "PFP-3-COMB-ecbefb7d",
-      "assurance": ["SOURCE_REVIEWED"],
-      "target": "x86_64-unknown-linux-gnu release",
-      "profile": "release, x86_64-unknown-linux-gnu, rustc 1.98.1",
-      "artefact_sha256": "ecbefb7d4ecd05cb08f5ade57e64ce2cd81de24bcd68b0c236a8640a18559053",
-      "kernels": [{"id": "p256-fixed-comb", "evidence": 0}]
-    },
-    {
-      "id": "PFP-4-INVERSE-4e6ec312",
-      "assurance": ["SOURCE_REVIEWED"],
-      "target": "x86_64-unknown-linux-gnu release",
-      "profile": "release, x86_64-unknown-linux-gnu, rustc 1.98.1",
-      "artefact_sha256": "4e6ec312313b3f1ef68ec9c0c4fc698a76f334ee9da38a6fcdfa7d8945c53e77",
-      "kernels": [{"id": "p256-order-inverse", "evidence": 0}]
-    },
-    {
-      "id": "PFP-8-WIDTH-6302e05a",
-      "assurance": ["SOURCE_TAINT_TESTED"],
-      "target": "x86_64 i9-13900K, taskset -c 1, court openssl-rs-court-tools:1, rustc 1.98.1 release",
-      "profile": "release, x86_64-unknown-linux-gnu, rustc 1.98.1 (48a229cea); two fresh CARGO_TARGET_DIR builds agree",
-      "artefact_sha256": "6302e05a14e47b74bd546f03e7509e234a2884511ddec5c3f9a7f4382bd9a25b",
-      "kernels": [{"id": "dh-width-policy", "evidence": 0}]
-    },
-    {
-      "id": "PFP-8-PRESET-e3ef3d84-DIFFERENTIAL-ONLY",
-      "assurance": [],
-      "target": "x86_64 i9-13900K, taskset -c 1, court openssl-rs-court-tools:1, rustc 1.98.1 release",
-      "profile": "release, x86_64-unknown-linux-gnu, rustc 1.98.1 (48a229cea); two fresh CARGO_TARGET_DIR builds agree",
-      "artefact_sha256": "e3ef3d84166a65408e5c89eaa4cc444a2c9208fea5e2acb1c272b6a0b612b187",
-      "kernels": [{"id": "dh-width-policy", "evidence": 1}]
-    },
-    {
-      "id": "PFP-7-RSA-6d002db2",
-      "assurance": [],
-      "target": "x86_64 i9-13900K, taskset -c 1, court openssl-rs-court-tools:1, rustc 1.98.1 release",
-      "profile": "release, x86_64-unknown-linux-gnu, rustc 1.98.1 (48a229cea); build-relevant tree clean at 05ee177a3",
-      "artefact_sha256": "6d002db20c815e252d1672a72b654f40844c2a1b24400cfbdfce5d1eaf828f39",
-      "kernels": [{"id": "rsa-crt", "evidence": 0}]
-    }
+  "old_text_retained": true,
+  "text": "wide_mul_x86 is a schoolbook loop over _mulx_u64 and _addcarry_u64; it compiles to mulx + adc with zero adcx/adox, no inline assembly and no hand scheduling. The controlled comparison is Arch vs portable Solinas (mul 61.793 vs 82.885 ns, so mulx won 25.4%; ladder 422.821 vs 538.076 ns, 21.4%). The ~3x is Arch vs Mont (61.793 vs 20.662 ns, 2.991x) and belongs to the Solinas reduction, not to carry chains. A call to the out-of-line target-feature callee occurs once per field multiply. Hand-written ADX with paired adcx/adox carry chains has NOT been measured and is NOT_RUN. The mulx-plus-Montgomery-inlined experiment is already answered by PFP-48 (mulq 0, mulx 121, zero adcx/adox, every workload equal or slower); the hand-paired ADCX/ADOX question remains open.",
+  "authority": [
+   "docs/KERNEL-VERIFICATION.md 5.3.1",
+   "evidence/performance-frontier/campaigns/PFP-9/RECEIPT.md 3.1"
   ]
+ },
+ "hardware": {
+  "machine": "x86_64",
+  "cpu": "13th Gen Intel(R) Core(TM) i9-13900K",
+  "features_present": [
+   "adx",
+   "bmi2",
+   "avx2",
+   "vaes",
+   "vpclmulqdq",
+   "sha_ni"
+  ],
+  "features_absent": [
+   "avx512f",
+   "avx512ifma"
+  ],
+  "pmu": "NOT_PRESENT: perf_event_paranoid=2 and /sys/bus/event_source/devices exposes no hardware cpu/pmu source; perf stat reports <not supported> for instructions and cycles",
+  "aarch64_target": "NOT_PRESENT: no AArch64 target or cross toolchain on this machine",
+  "consequence": "The AArch64 and AVX-512/IFMA arms are NOT_APPLICABLE_HARDWARE. PFP-9 cannot be fully closed on this hardware."
+ },
+ "provenance_decision": {
+  "id": "PFP9-PROVENANCE-PORTABLE-RUST-1",
+  "decision": "Every performance kernel ships as the first-party portable Rust representation that has its own differential court and binary audit at a named artefact digest. The portable reference is retained as oracle and fallback. No third-party assembly (s2n-bignum, fiat-crypto or CryptOpt output) enters the custodian boundary in this row. The one architecture-specialised arm implemented for P-256 (p256::Arch, mulx/adcx on x86-64) is compiled but not selected because it lost to the portable Montgomery kernel on the admitted venue.",
+  "section_8_route": "docs/PERFORMANCE-FRONTIER.md \u00a78 recommends fiat-crypto Rust as the portable reference and oracle, an s2n-bignum-grade assembly fast path (adopted or written and proved), and constant time as a separate obligation on the built DSO. That recommendation is recorded as the intended direction, not adopted: it is a decision for the project principal and no such code is in the tree.",
+  "rationale": [
+   "The measured alternatives that exist on this hardware lost; selecting one would publish a measured regression (docs/PERFORMANCE-FRONTIER.md \u00a711).",
+   "The portable kernels each have a differential court and a binary audit at a named digest; an architecture arm would require its own differential and audit at its own digest, and none exists.",
+   "Constant time is a separate obligation. No kernel has a mechanised proof; every kernel is NO_PROOF and the audits are review aids, not proofs.",
+   "Third-party assembly would add a new custodian boundary with no per-kernel evidence in this repository."
+  ],
+  "invalidated_by": [
+   "a compiler or toolchain change (the audits and codegen are specific to rustc 1.98.1 (48a229cea) and the recorded flags)",
+   "a target or target-feature change (AArch64, AVX-512/IFMA, AVX2, ADX/BMI2 hand-written): evidence never transfers",
+   "a new measurement at a new digest, or a measured regression of the selected arm",
+   "a source change to a kernel, its Domain, its owner or a precondition it relies on",
+   "a new backend or a change to the FieldKernel, MontSchedule or representation contract",
+   "a change to an evidence instrument (ctgrind, binary branch audit, this checker)"
+  ],
+  "rejected_arms": [
+   {
+    "arm": "P-256 Solinas field kernel",
+    "campaign": "PFP-2",
+    "evidence": "evidence/performance-frontier/campaigns/PFP-2/kernels/summary.json",
+    "result": "mul 82.885 ns vs Mont 20.662 ns; ladder 538.076 ns vs 224.423 ns",
+    "binding": "SOURCE_BOUND",
+    "reason": "slower on mul, sqr, reduce and the end-to-end ladder"
+   },
+   {
+    "arm": "P-256 Arch kernel (mulx/adcx, BMI2+ADX)",
+    "campaign": "PFP-2",
+    "evidence": "evidence/performance-frontier/campaigns/PFP-2/kernels/summary.json",
+    "result": "mul 61.793 ns vs Mont 20.662 ns; ladder 422.821 ns vs 224.423 ns",
+    "binding": "SOURCE_BOUND",
+    "reason": "architecture-specialised multiply is slower than the portable Montgomery kernel; retained as a measured, capability-gated arm, not selected"
+   },
+   {
+    "arm": "dedicated Comba squaring",
+    "campaign": "PFP-6",
+    "evidence": "evidence/performance-frontier/campaigns/PFP-6/REEVALUATION.md",
+    "result": "B/A 1.0822 [1.0766, 1.0831] at 2048 bits, 1.0048 at 8192; D/C 1.2628 and 1.1323",
+    "binding": "ARTEFACT",
+    "reason": "slower than reusing the multiply at the PFP-5 five-bit-window mix; LADDER_DEDICATED_SQUARING remains false"
+   },
+   {
+    "arm": "RSA CRT scalar interleaving",
+    "campaign": "PFP-7",
+    "evidence": "evidence/performance-frontier/campaigns/PFP-7/RECEIPT.md",
+    "result": "fused 1.1132x [1.1102, 1.1151] slower per multiplication; attainable wall change 0.91x",
+    "binding": "TRANSCRIPTION",
+    "reason": "the only positive ceiling needs IPC 6.0; measured slower in every run"
+   },
+   {
+    "arm": "reduced-radix (2^52) deferred-carry arithmetic",
+    "campaign": "M-A2",
+    "evidence": "evidence/performance-frontier/campaigns/M-A2/RESULTS.md",
+    "result": "3.41-3.44x slower at 256 bits, 1.37-1.40x slower at 1024 bits than fixed radix-2^64 CIOS",
+    "binding": "SOURCE_BOUND",
+    "reason": "extra limb products and wide-accumulator traffic dominate the removed carry chain"
+   },
+   {
+    "arm": "Karatsuba product",
+    "campaign": "PFP-6",
+    "evidence": "evidence/performance-frontier/campaigns/PFP-6/CROSSOVER.md",
+    "result": "1.017-1.536x slower at 256-4096 bits; no crossover",
+    "binding": "TRANSCRIPTION",
+    "reason": "schoolbook wins at every measured width; the transcription also branches on data"
+   },
+   {
+    "arm": "DH prepared generator table",
+    "campaign": "PFP-8",
+    "evidence": "evidence/performance-frontier/campaigns/PFP-8/RECEIPT.md",
+    "result": "best prepared window (w=6) is 2.21% faster; shared secret 0%; under the 10% threshold",
+    "binding": "ARTEFACT",
+    "reason": "measured refusal; no source changed"
+   },
+   {
+    "arm": "AVX-512/IFMA radix-2^52 pairing",
+    "campaign": "PFP-7",
+    "evidence": "evidence/performance-frontier/campaigns/PFP-7/BOUND.md",
+    "result": "NOT_APPLICABLE_HARDWARE",
+    "binding": "NOT_APPLICABLE_HARDWARE",
+    "reason": "this CPU reports no avx512f and no avx512ifma; the arm cannot be built or measured here"
+   }
+  ]
+ },
+ "no_inheritance_rule": "Evidence for one target, profile, compiler or artefact never transfers to another. Each kernel's differential court and audit are bound to the exact (target, profile, compiler, source, artefact digest) recorded here. A claim that cites evidence from a different identity is refused. A taint run is not a binary audit; a source-bound reading is not artefact evidence; a digest match is not a source-to-binary refinement claim.",
+ "campaigns": {
+  "PFP-2": {
+   "artefact": {
+    "sha256": "553e1b8ce1eb7e03a0d92a5614b566b88e49e55d2c2a3f7ba28fc6d78eecc4e4",
+    "target": "x86_64-unknown-linux-gnu release",
+    "profile": "release, x86_64-unknown-linux-gnu, rustc 1.98.1",
+    "source": "staging c1d25e10d16bc197e03446619a5330842b411c5c (committed); two independent clean rebuilds reproduce the digest",
+    "binding": "ARTEFACT"
+   }
+  },
+  "PFP-2-kernels": {
+   "artefact": {
+    "sha256": null,
+    "target": "x86_64-unknown-linux-gnu (court venue, i9-13900K)",
+    "profile": "cargo test pfp2_kernel_measurement with PFP2_MEASURE=1, three rotated repetitions; test binary, not a distribution DSO",
+    "source": "PFP-2 campaign engine source; the in-crate measurement binary records no DSO digest",
+    "binding": "SOURCE"
+   }
+  },
+  "PFP-3": {
+   "artefact": {
+    "sha256": "ecbefb7d4ecd05cb08f5ade57e64ce2cd81de24bcd68b0c236a8640a18559053",
+    "target": "x86_64-unknown-linux-gnu release",
+    "profile": "release, x86_64-unknown-linux-gnu, rustc 1.98.1",
+    "source": "staging f8d5c4b33cf751a0dd805fa7cf0d730915e1d073 + uncommitted src/ec/p256/fixed_base.rs branch-free admission",
+    "binding": "ARTEFACT"
+   }
+  },
+  "PFP-4": {
+   "artefact": {
+    "sha256": "4e6ec312313b3f1ef68ec9c0c4fc698a76f334ee9da38a6fcdfa7d8945c53e77",
+    "target": "x86_64-unknown-linux-gnu release",
+    "profile": "release, x86_64-unknown-linux-gnu, rustc 1.98.1",
+    "source": "staging 5ac6fddc53f5ca2a63912f51c07188b9b63f71dd + uncommitted src/ec/lib.rs, src/ec/p256.rs, src/ec/p256/fixed_base.rs, src/ec/p256/tests.rs",
+    "binding": "ARTEFACT"
+   }
+  },
+  "PFP-5": {
+   "artefact": {
+    "sha256": "842efa27197ea8c408d77a8316c1dbb35a06146e0033b7df7d7f9cced88a2f47",
+    "target": "x86_64-unknown-linux-gnu release",
+    "profile": "release, x86_64-unknown-linux-gnu, rustc 1.98.1",
+    "source": "staging a005a33c482f47850a72661a363e7186bde42c5c + uncommitted src/bn/arith.rs (plus test-only src/rsa/ossl.rs)",
+    "binding": "ARTEFACT"
+   }
+  },
+  "PFP-6": {
+   "artefact": {
+    "sha256": "6d002db20c815e252d1672a72b654f40844c2a1b24400cfbdfce5d1eaf828f39",
+    "target": "x86_64 i9-13900K, taskset -c 1, court openssl-rs-court-tools:1, rustc 1.98.1 release",
+    "profile": "release, x86_64-unknown-linux-gnu, rustc 1.98.1 (48a229cea)",
+    "source": "staging dedb67a5fe7d567a046def6402388d043b50d571 + uncommitted one-constant src/bn/arith.rs (arith sha256 3e8127cb1eb816b9db066eb52ce1535620aa9c812bec0b441c627fdb9100aea1); the base arith work is committed at 20972901dc5e1d984d1b391ecc9b69d4bd943701, blob 1ea1965 sha256 06005795079c9957ba2b35c6816c423b507f427705842284aa9c23d0e0759a1c, and the one-constant selection remains a worktree change",
+    "binding": "ARTEFACT"
+   }
+  },
+  "PFP-6-reeval": {
+   "artefact": {
+    "sha256": "661384603e0b661af384997676d8e88843f2b307b6abf73f56d472b03d888630",
+    "target": "x86_64 i9-13900K, taskset -c 1, court openssl-rs-court-tools:1, rustc 1.98.1 release",
+    "profile": "release, x86_64-unknown-linux-gnu, rustc 1.98.1 (48a229cea)",
+    "source": "staging 76652a46dcfb388656d964010268685ca032dff1 + uncommitted documentation correction to src/bn/arith.rs (arith sha256 66bd6c4c7f616f7d8101debf34cc2d4915eff225aba0dec4e119eccb5d682e83; no code change)",
+    "binding": "ARTEFACT"
+   }
+  },
+  "PFP-7": {
+   "artefact": {
+    "sha256": "6d002db20c815e252d1672a72b654f40844c2a1b24400cfbdfce5d1eaf828f39",
+    "target": "x86_64 i9-13900K, taskset -c 1, court openssl-rs-court-tools:1, rustc 1.98.1 release",
+    "profile": "release, x86_64-unknown-linux-gnu, rustc 1.98.1 (48a229cea); build-relevant tree clean at 05ee177a3",
+    "source": "staging 05ee177a3d0d6e7ef7a80e466a1cba5b6ea765c2 (clean build-relevant tree); reproduces the PFP-6 admitted DSO",
+    "binding": "ARTEFACT"
+   }
+  },
+  "M-A1": {
+   "artefact": {
+    "sha256": "88c0c7e04d52a1bf84d665fdd691bddf2bbe700e35505d95bf145bfdc3774d87",
+    "target": "x86_64 i9-13900K, taskset -c 1, court openssl-rs-court-tools:1, rustc 1.98.1 release",
+    "profile": "release, x86_64-unknown-linux-gnu, rustc 1.98.1 (48a229cea)",
+    "source": "staging ff87f8488e206896ffdd82259af2fcf4ba269209 + uncommitted src/bn/arith.rs (arith sha256 b548ee1533f527366099d95b907bd20237bbcc2e8208966eb9a15cf11f09809f)",
+    "binding": "ARTEFACT"
+   }
+  },
+  "PFP-8": {
+   "artefact": {
+    "sha256": "6302e05a14e47b74bd546f03e7509e234a2884511ddec5c3f9a7f4382bd9a25b",
+    "target": "x86_64 i9-13900K, taskset -c 1, court openssl-rs-court-tools:1, rustc 1.98.1 release",
+    "profile": "release, x86_64-unknown-linux-gnu, rustc 1.98.1 (48a229cea); two fresh CARGO_TARGET_DIR builds agree",
+    "source": "staging 20b655ba902e61d7680e30dfcb30feb4225397cc + working-tree src/bn/arith.rs, src/bn/mont.rs, src/dh/key.rs",
+    "binding": "ARTEFACT"
+   }
+  },
+  "PFP-8-preset-priv": {
+   "artefact": {
+    "sha256": "e3ef3d84166a65408e5c89eaa4cc444a2c9208fea5e2acb1c272b6a0b612b187",
+    "target": "x86_64 i9-13900K, taskset -c 1, court openssl-rs-court-tools:1, rustc 1.98.1 release",
+    "profile": "release, x86_64-unknown-linux-gnu, rustc 1.98.1 (48a229cea); two fresh CARGO_TARGET_DIR builds agree",
+    "source": "staging 983437d2a415d493c7f7206c6332723bce591073 + uncommitted src/dh/key.rs, committed as dd05d3f4",
+    "binding": "ARTEFACT"
+   }
+  },
+  "PFP-54": {
+   "artefact": {
+    "binding": "ARTEFACT",
+    "sha256": "a535454753d8857e4c385689ea431b5a47a9686322e6f52b203971188a49359f",
+    "target": "x86_64-unknown-linux-gnu release, court openssl-rs-court:1, rustc 1.98.1 (48a229cea)",
+    "profile": "release, x86_64-unknown-linux-gnu, rustc 1.98.1 (48a229cea 2026-09-01); CARGO_PROFILE_RELEASE_DEBUG=1; objcopy --only-keep-debug/--strip-debug/--add-gnu-debuglink; build-id 83eccb95e79216e5b53b46389df55fda6f9a9dee",
+    "source": "staging f536fd63913073bab76f839d41e89617da4fa74c, tree 4fef3b02666120f261bc00c43e2e6e04c50cd013; one release compilation; detached DWARF companion sha256 cd64dd590a597116f8475f6db0c81cc94602d74d540d4b45b4b1bae1a0b7ed9b"
+   }
+  }
+ },
+ "kernels": [
+  {
+   "id": "bn-cias-mont",
+   "label": "CIOS Montgomery kernel (generic slice kernel)",
+   "ships": "SHIPPED",
+   "proof": "NO_PROOF",
+   "evidence": [
+    {
+     "campaign": "PFP-6",
+     "artefact_sha256": "6d002db20c815e252d1672a72b654f40844c2a1b24400cfbdfce5d1eaf828f39",
+     "target": "x86_64 i9-13900K, taskset -c 1, court openssl-rs-court-tools:1, rustc 1.98.1 release",
+     "profile": "release, x86_64-unknown-linux-gnu, rustc 1.98.1 (48a229cea)",
+     "binding": "MIXED",
+     "differential": {
+      "court": "PFP-6 per-kernel congruence and CIOS-vs-SOS differential + 161-line authority ABI transcript",
+      "result": "PASS",
+      "cases": "CIOS congruence 7,890; CIOS-vs-SOS exhaustive 3,018 plus sampled 7,890; 0 mismatches; 161/161 transcript lines identical to OpenSSL 3.6.4 611e511d",
+      "binding": "MIXED"
+     },
+     "audit": {
+      "kind": "BINARY_BRANCH_AUDIT",
+      "result": "mont_mul_ladder_into 14 jcc (14 public, 0 secret-derived), 18 setcc (3 public geometry, 15 secret carry/borrow consumed arithmetically), 0 cmovcc",
+      "verdict": "PASS",
+      "digest": "6d002db20c815e252d1672a72b654f40844c2a1b24400cfbdfce5d1eaf828f39",
+      "binding": "ARTEFACT"
+     },
+     "ctgrind": {
+      "result": "secret-exponent taint 0 errors / 0 contexts, negative control 4 errors / 1 context; DSO-bound base-taint probe 0 contexts on CIOS",
+      "binding": "MIXED"
+     }
+    }
+   ],
+   "assurance": [
+    {
+     "class": "SOURCE_TAINT_TESTED",
+     "scope": "PFP-6 dedb67a5f + one-constant src/bn/arith.rs: secret-exponent ctgrind 0 errors / 0 contexts with a firing control; the DSO base-taint probe is silent. The branch audit at 6d002db2 is recorded, but the DSO is not tracked so no ARTEFACT_AUDITED claim is made.",
+     "evidence": 0,
+     "subject": {
+      "source": "staging dedb67a5fe7d567a046def6402388d043b50d571 + uncommitted one-constant src/bn/arith.rs (arith sha256 3e8127cb1eb816b9db066eb52ce1535620aa9c812bec0b441c627fdb9100aea1); the base arith work is committed at 20972901dc5e1d984d1b391ecc9b69d4bd943701, blob 1ea1965 sha256 06005795079c9957ba2b35c6816c423b507f427705842284aa9c23d0e0759a1c, and the one-constant selection remains a worktree change",
+      "artefact": null
+     },
+     "assumptions": [
+      "the exponent limb values are the secret",
+      "the DSO base-taint probe exercises the CIOS path"
+     ],
+     "result": "PASS",
+     "instrument": "valgrind memcheck ctgrind (source-bound exponent taint; DSO base probe)",
+     "evidence_path": "evidence/performance-frontier/campaigns/PFP-6/ADMISSION.md",
+     "negative_control": {
+      "fired": true,
+      "detail": "CTGRIND_CONTROL=1 reports 4 errors / 1 context",
+      "evidence_path": "evidence/performance-frontier/campaigns/PFP-6/ADMISSION.md"
+     }
+    }
+   ],
+   "no_evidence_targets": [
+    {
+     "target": "aarch64-unknown-linux-gnu",
+     "status": "NOT_APPLICABLE_HARDWARE",
+     "missing_feature": "aarch64 (no AArch64 target or toolchain on this machine)"
+    },
+    {
+     "target": "x86_64-avx512ifma",
+     "status": "NOT_APPLICABLE_HARDWARE",
+     "missing_feature": "avx512f, avx512ifma (CPU reports neither)"
+    },
+    {
+     "target": "x86_64-avx2",
+     "status": "NOT_RUN",
+     "missing_feature": "no AVX2 backend for this kernel"
+    },
+    {
+     "target": "x86_64-adx-bmi2",
+     "status": "NOT_RUN",
+     "missing_feature": "no hand-written adx/bmi2 backend for this kernel"
+    }
+   ]
+  },
+  {
+   "id": "bn-cias-fixed",
+   "label": "CIOS fixed-width const-generic variants (4/6/9/16/32/48/64/128 limbs)",
+   "ships": "SHIPPED",
+   "proof": "NO_PROOF",
+   "evidence": [
+    {
+     "campaign": "M-A1",
+     "artefact_sha256": "88c0c7e04d52a1bf84d665fdd691bddf2bbe700e35505d95bf145bfdc3774d87",
+     "target": "x86_64 i9-13900K, taskset -c 1, court openssl-rs-court-tools:1, rustc 1.98.1 release",
+     "profile": "release, x86_64-unknown-linux-gnu, rustc 1.98.1 (48a229cea)",
+     "binding": "MIXED",
+     "differential": {
+      "court": "M-A1 per-width differential against the generic slice kernel + 161-line authority ABI transcript",
+      "result": "PASS",
+      "cases": "8,190 per-width pairs and 4,603 fallback pairs, 0 mismatches; defining congruence checked per pair; 161/161 transcript lines identical",
+      "binding": "MIXED"
+     },
+     "audit": {
+      "kind": "BINARY_BRANCH_AUDIT",
+      "result": "all eight kernels inlined into mont_mul_ladder_into: 40 jcc (40 public, 0 secret-derived), 64 setcc (0 public geometry, 64 secret carry/borrow consumed arithmetically), 0 cmovcc",
+      "verdict": "PASS",
+      "digest": "88c0c7e04d52a1bf84d665fdd691bddf2bbe700e35505d95bf145bfdc3774d87",
+      "binding": "ARTEFACT"
+     },
+     "ctgrind": {
+      "result": "secret-exponent taint 0 errors / 0 contexts, control 4/1; DSO-bound base-taint probe 0 contexts; both exercise width 4 only",
+      "binding": "MIXED"
+     }
+    }
+   ],
+   "assurance": [
+    {
+     "class": "SOURCE_TAINT_TESTED",
+     "scope": "M-A1 ff87f848 + uncommitted src/bn/arith.rs: exponent ctgrind 0 errors / 0 contexts with control 4/1. The taint covers width 4 only; widths 6/9/16/32/48/64/128 rest on the structural audit and are not generalised.",
+     "evidence": 0,
+     "subject": {
+      "source": "staging ff87f8488e206896ffdd82259af2fcf4ba269209 + uncommitted src/bn/arith.rs (arith sha256 b548ee1533f527366099d95b907bd20237bbcc2e8208966eb9a15cf11f09809f)",
+      "artefact": null
+     },
+     "assumptions": [
+      "the same CIOS schedule is shared by all eight widths",
+      "the taint run covers width 4 only"
+     ],
+     "result": "PASS",
+     "instrument": "valgrind memcheck ctgrind (width-4 source build) plus a DSO base probe",
+     "evidence_path": "evidence/performance-frontier/campaigns/M-A1/RESULTS.md",
+     "negative_control": {
+      "fired": true,
+      "detail": "CTGRIND_CONTROL=1 reports 4 errors / 1 context",
+      "evidence_path": "evidence/performance-frontier/campaigns/M-A1/RESULTS.md"
+     }
+    }
+   ],
+   "no_evidence_targets": [
+    {
+     "target": "aarch64-unknown-linux-gnu",
+     "status": "NOT_APPLICABLE_HARDWARE",
+     "missing_feature": "aarch64 (no AArch64 target or toolchain on this machine)"
+    },
+    {
+     "target": "x86_64-avx512ifma",
+     "status": "NOT_APPLICABLE_HARDWARE",
+     "missing_feature": "avx512f, avx512ifma (CPU reports neither)"
+    },
+    {
+     "target": "x86_64-avx2",
+     "status": "NOT_RUN",
+     "missing_feature": "no AVX2 backend for this kernel"
+    },
+    {
+     "target": "x86_64-adx-bmi2",
+     "status": "NOT_RUN",
+     "missing_feature": "no hand-written adx/bmi2 backend for this kernel"
+    }
+   ],
+   "notes": "Widths 6/9/16/32/48/64/128 rest on the structural audit; ctgrind and the DSO probe exercise width 4 only. This is recorded, not generalised."
+  },
+  {
+   "id": "bn-mont-sos",
+   "label": "SOS Montgomery reference kernel",
+   "ships": "SHIPPED (reference and fallback)",
+   "proof": "NO_PROOF",
+   "evidence": [
+    {
+     "campaign": "PFP-6",
+     "artefact_sha256": "6d002db20c815e252d1672a72b654f40844c2a1b24400cfbdfce5d1eaf828f39",
+     "target": "x86_64 i9-13900K, taskset -c 1, court openssl-rs-court-tools:1, rustc 1.98.1 release",
+     "profile": "release, x86_64-unknown-linux-gnu, rustc 1.98.1 (48a229cea)",
+     "binding": "MIXED",
+     "differential": {
+      "court": "PFP-6 per-kernel congruence and SQR-vs-SOS differential + 161-line authority ABI transcript",
+      "result": "PASS",
+      "cases": "SOS congruence 7,890; SQR-vs-SOS exhaustive 144 plus sampled 254; 0 mismatches; 161/161 transcript lines identical",
+      "binding": "MIXED"
+     },
+     "audit": null,
+     "ctgrind": {
+      "result": "DSO-bound base-taint probe 0 contexts on SOS at this digest; a base-taint probe is not a binary branch audit",
+      "binding": "ARTEFACT"
+     }
+    },
+    {
+     "campaign": "PFP-5",
+     "artefact_sha256": "842efa27197ea8c408d77a8316c1dbb35a06146e0033b7df7d7f9cced88a2f47",
+     "target": "x86_64-unknown-linux-gnu release",
+     "profile": "release, x86_64-unknown-linux-gnu, rustc 1.98.1",
+     "binding": "MIXED",
+     "differential": {
+      "court": "PFP-5 in-crate window-vs-reference-vs-oracle differential, with SOS retained as the bit-at-a-time reference, plus the 161-line authority ABI transcript",
+      "result": "PASS",
+      "cases": "4,625 in-crate comparisons, 0 mismatches; 161/161 transcript lines identical",
+      "binding": "MIXED"
+     },
+     "audit": {
+      "kind": "BINARY_BRANCH_AUDIT",
+      "result": "mont_mul_sos_into 19 jcc / 0 div / 0 cmov / 10 setcc / 0 cpuid; all conditional transfers public-bound; 0 secret-derived",
+      "verdict": "PASS",
+      "digest": "842efa27197ea8c408d77a8316c1dbb35a06146e0033b7df7d7f9cced88a2f47",
+      "binding": "ARTEFACT"
+     },
+     "ctgrind": {
+      "result": "secret-exponent taint 0 errors / 0 contexts; RSA secret exponents 96,821 errors / 112 contexts with 0 window contexts",
+      "binding": "SOURCE"
+     }
+    },
+    {
+     "campaign": "PFP-54",
+     "artefact_sha256": "a535454753d8857e4c385689ea431b5a47a9686322e6f52b203971188a49359f",
+     "target": "x86_64-unknown-linux-gnu release, court openssl-rs-court:1, rustc 1.98.1 (48a229cea)",
+     "profile": "release, x86_64-unknown-linux-gnu, rustc 1.98.1 (48a229cea 2026-09-01); CARGO_PROFILE_RELEASE_DEBUG=1; objcopy --only-keep-debug/--strip-debug/--add-gnu-debuglink; build-id 83eccb95e79216e5b53b46389df55fda6f9a9dee",
+     "binding": "ARTEFACT",
+     "differential": null,
+     "audit": {
+      "kind": "BINARY_BRANCH_AUDIT",
+      "result": "detached-DWARF binary branch audit at DSO a535454753d8 resolved 31/31 targets; mont_mul_sos_into 18 jcc / 0 cmov / 10 setcc; mont_mul_fallible 31 jcc / 0 cmov / 10 setcc; 0 secret-derived jcc; 0 secret-derived address",
+      "verdict": "PASS",
+      "digest": "a535454753d8857e4c385689ea431b5a47a9686322e6f52b203971188a49359f",
+      "binding": "ARTEFACT"
+     },
+     "ctgrind": null
+    }
+   ],
+   "assurance": [
+    {
+     "class": "SOURCE_REVIEWED",
+     "scope": "PFP-6 dedb67a5f: the SOS source review records 19 jcc / 10 setcc, all public-bound. The 6d002db2 base-taint probe is not a branch audit and no firing control is recorded, so only a source review is asserted.",
+     "evidence": 0,
+     "subject": {
+      "source": "staging dedb67a5fe7d567a046def6402388d043b50d571 + uncommitted one-constant src/bn/arith.rs (arith sha256 3e8127cb1eb816b9db066eb52ce1535620aa9c812bec0b441c627fdb9100aea1); the base arith work is committed at 20972901dc5e1d984d1b391ecc9b69d4bd943701, blob 1ea1965 sha256 06005795079c9957ba2b35c6816c423b507f427705842284aa9c23d0e0759a1c, and the one-constant selection remains a worktree change",
+      "artefact": null
+     },
+     "assumptions": [
+      "the SOS REDC mask-select and carry logic are unchanged by PFP-5"
+     ],
+     "result": "PASS",
+     "instrument": "source review of the emitted SOS carrier",
+     "evidence_path": "evidence/performance-frontier/campaigns/PFP-6/RECORD.md"
+    },
+    {
+     "class": "SOURCE_REVIEWED",
+     "scope": "PFP-5 a005a33c4: TAINT.md records the window/scan taint at 0 errors / 0 contexts and an audit at 842efa27. No firing negative control is recorded at this evidence, so only a source review is asserted.",
+     "evidence": 1,
+     "subject": {
+      "source": "staging a005a33c482f47850a72661a363e7186bde42c5c + uncommitted src/bn/arith.rs (plus test-only src/rsa/ossl.rs)",
+      "artefact": null
+     },
+     "assumptions": [
+      "the digit and accumulator are consumed by masks, shifts and bitwise AND/OR"
+     ],
+     "result": "PASS",
+     "instrument": "source review plus a source-bound taint reading",
+     "evidence_path": "evidence/performance-frontier/campaigns/PFP-5/TAINT.md"
+    },
+    {
+     "class": "ARTEFACT_AUDITED",
+     "scope": "PFP-54 f536fd639130 / DSO a535454753d88: the branch audit resolves 31/31 targets and covers mont_mul_sos_into, mont_mul_fallible (mont_mul_sos_into 18 jcc / 0 cmov / 10 setcc; mont_mul_fallible 31 jcc / 0 cmov / 10 setcc). One secret-derived setcc (key::decap, consumed arithmetically) and zero secret-derived conditional transfers or memory addresses were observed. A binary branch audit is not a constant-time proof; the historical ['SOURCE_REVIEWED', 'SOURCE_REVIEWED'] entries remain as the evidence they record.",
+     "evidence": 2,
+     "subject": {
+      "source": "staging f536fd63913073bab76f839d41e89617da4fa74c, tree 4fef3b02666120f261bc00c43e2e6e04c50cd013; one release compilation; detached DWARF companion sha256 cd64dd590a597116f8475f6db0c81cc94602d74d540d4b45b4b1bae1a0b7ed9b",
+      "artefact": {
+       "path": "evidence/performance-frontier/campaigns/PFP-54/raw/artefacts/libcrypto.so.3",
+       "sha256": "a535454753d8857e4c385689ea431b5a47a9686322e6f52b203971188a49359f"
+      }
+     },
+     "assumptions": [
+      "the shipped DSO is debug-stripped; the DWARF it was audited through is the detached companion artefacts/libcrypto.so.3.debug, bound by build-id 83eccb95e79216e5b53b46389df55fda6f9a9dee",
+      "only key::decap carries a mechanised secret-dependence contract; for every other target the audit prints branch provenance and instruction counts, not taint, so this class records what the audit observed and does not assert constant time",
+      "the audit covers the 31-target inventory; optimised, duplicated or partially inlined functions outside it, and any artefact other than the DSO digest named here, are not covered"
+     ],
+     "result": "PASS",
+     "instrument": "courts/phase18/timing/binary_branch_audit.py sha256 8b07f7e91dac28d8a2e9752efa929a541ed115e81e060d275979d4210dec0edc; GNU objdump/readelf 2.40; detached DWARF companion sha256 cd64dd590a597116f8475f6db0c81cc94602d74d540d4b45b4b1bae1a0b7ed9b",
+     "evidence_path": "evidence/performance-frontier/campaigns/PFP-54/raw/audit-a5354547.md"
+    }
+   ],
+   "no_evidence_targets": [
+    {
+     "target": "aarch64-unknown-linux-gnu",
+     "status": "NOT_APPLICABLE_HARDWARE",
+     "missing_feature": "aarch64 (no AArch64 target or toolchain on this machine)"
+    },
+    {
+     "target": "x86_64-avx512ifma",
+     "status": "NOT_APPLICABLE_HARDWARE",
+     "missing_feature": "avx512f, avx512ifma (CPU reports neither)"
+    },
+    {
+     "target": "x86_64-avx2",
+     "status": "NOT_RUN",
+     "missing_feature": "no AVX2 backend for this kernel"
+    },
+    {
+     "target": "x86_64-adx-bmi2",
+     "status": "NOT_RUN",
+     "missing_feature": "no hand-written adx/bmi2 backend for this kernel"
+    }
+   ],
+   "notes": "The SOS audit is at PFP-5 DSO 842efa27. It does not transfer to PFP-6 DSO 6d002db2: a constant-time claim for SOS at 6d002db2 is refused by control because its only artefact audit is at another digest and the base-taint probe is not an audit."
+  },
+  {
+   "id": "bn-mont-sqr",
+   "label": "dedicated Comba squaring kernel",
+   "ships": "NOT_SHIPPED (LADDER_DEDICATED_SQUARING = false)",
+   "proof": "NO_PROOF",
+   "evidence": [
+    {
+     "campaign": "PFP-6-reeval",
+     "artefact_sha256": "661384603e0b661af384997676d8e88843f2b307b6abf73f56d472b03d888630",
+     "target": "x86_64 i9-13900K, taskset -c 1, court openssl-rs-court-tools:1, rustc 1.98.1 release",
+     "profile": "release, x86_64-unknown-linux-gnu, rustc 1.98.1 (48a229cea)",
+     "binding": "MIXED",
+     "differential": {
+      "court": "PFP-6 SQR congruence and SQR-vs-SOS differential, plus the A/B/C/D 161-line authority transcript",
+      "result": "PASS",
+      "cases": "SQR congruence 254; SQR-vs-SOS exhaustive 144 plus sampled 254; 0 mismatches; 161/161 transcript lines identical for A/B/C/D",
+      "binding": "MIXED"
+     },
+     "audit": null,
+     "ctgrind": {
+      "result": "secret-exponent taint 0 errors / 0 contexts on the window path; the dedicated-squaring carrier was not separately audited",
+      "binding": "SOURCE"
+     }
+    }
+   ],
+   "assurance": [
+    {
+     "class": "UNASSESSED",
+     "scope": "PFP-6-reeval 76652a46d: the dedicated-squaring carrier was not separately audited or tainted; the window-path 0/0 reading is not evidence about this carrier.",
+     "assumptions": [],
+     "result": "NOT_RUN"
+    }
+   ],
+   "no_evidence_targets": [
+    {
+     "target": "aarch64-unknown-linux-gnu",
+     "status": "NOT_APPLICABLE_HARDWARE",
+     "missing_feature": "aarch64 (no AArch64 target or toolchain on this machine)"
+    },
+    {
+     "target": "x86_64-avx512ifma",
+     "status": "NOT_APPLICABLE_HARDWARE",
+     "missing_feature": "avx512f, avx512ifma (CPU reports neither)"
+    },
+    {
+     "target": "x86_64-avx2",
+     "status": "NOT_RUN",
+     "missing_feature": "no AVX2 backend; the kernel is not shipped"
+    },
+    {
+     "target": "x86_64-adx-bmi2",
+     "status": "NOT_RUN",
+     "missing_feature": "no hand-written adx/bmi2 backend; the kernel is not shipped"
+    }
+   ],
+   "notes": "Measured and rejected: 1.0822x [1.0766, 1.0831] slower at 2048 bits and 1.0048x at 8192 than reusing the multiply (PFP-6/REEVALUATION.md). No branch audit of the squaring carrier exists."
+  },
+  {
+   "id": "bn-window-ladder",
+   "label": "fixed-window ladder and full masked table scan",
+   "ships": "SHIPPED",
+   "proof": "NO_PROOF",
+   "evidence": [
+    {
+     "campaign": "PFP-5",
+     "artefact_sha256": "842efa27197ea8c408d77a8316c1dbb35a06146e0033b7df7d7f9cced88a2f47",
+     "target": "x86_64-unknown-linux-gnu release",
+     "profile": "release, x86_64-unknown-linux-gnu, rustc 1.98.1",
+     "binding": "MIXED",
+     "differential": {
+      "court": "PFP-5 window-vs-bit-at-a-time-reference-vs-variable-time-oracle + 161-line authority ABI transcript",
+      "result": "PASS",
+      "cases": "3,420 window-vs-reference + 1,140 reference-vs-oracle + 65 large-modulus comparisons, 0 mismatches; 161/161 transcript lines identical",
+      "binding": "MIXED"
+     },
+     "audit": {
+      "kind": "BINARY_BRANCH_AUDIT",
+      "result": "run_mont_ladder (window and scan inlined) 100 jcc / 0 div / 2 cmov / 18 setcc / 0 cpuid; mont_mul_sos_into 19 / 0 / 0 / 10 / 0; 0 secret-derived",
+      "verdict": "PASS",
+      "digest": "842efa27197ea8c408d77a8316c1dbb35a06146e0033b7df7d7f9cced88a2f47",
+      "binding": "ARTEFACT"
+     },
+     "ctgrind": {
+      "result": "secret-exponent taint 0 errors / 0 contexts; RSA secret exponents 96,821 errors / 112 contexts with 0 window contexts",
+      "binding": "SOURCE"
+     }
+    },
+    {
+     "campaign": "PFP-6-reeval",
+     "artefact_sha256": "661384603e0b661af384997676d8e88843f2b307b6abf73f56d472b03d888630",
+     "target": "x86_64 i9-13900K, taskset -c 1, court openssl-rs-court-tools:1, rustc 1.98.1 release",
+     "profile": "release, x86_64-unknown-linux-gnu, rustc 1.98.1 (48a229cea)",
+     "binding": "MIXED",
+     "differential": {
+      "court": "PFP-6-reeval A/B/C/D authority ABI transcript",
+      "result": "PASS",
+      "cases": "161/161 transcript lines identical for A/B/C/D",
+      "binding": "ARTEFACT"
+     },
+     "audit": {
+      "kind": "BINARY_BRANCH_AUDIT",
+      "result": "run_mont_ladder 100 jcc / 0 div / 2 cmov / 18 setcc / 0 cpuid; mont_mul_sos_into 19 / 0 / 0 / 10 / 0; 0 secret-derived; counts and addresses identical to PFP-5, but the audit is bound to this digest",
+      "verdict": "PASS",
+      "digest": "661384603e0b661af384997676d8e88843f2b307b6abf73f56d472b03d888630",
+      "binding": "ARTEFACT"
+     },
+     "ctgrind": {
+      "result": "secret-exponent taint 0 errors / 0 contexts; source-bound test binary, not a DSO",
+      "binding": "SOURCE"
+     }
+    },
+    {
+     "campaign": "PFP-54",
+     "artefact_sha256": "a535454753d8857e4c385689ea431b5a47a9686322e6f52b203971188a49359f",
+     "target": "x86_64-unknown-linux-gnu release, court openssl-rs-court:1, rustc 1.98.1 (48a229cea)",
+     "profile": "release, x86_64-unknown-linux-gnu, rustc 1.98.1 (48a229cea 2026-09-01); CARGO_PROFILE_RELEASE_DEBUG=1; objcopy --only-keep-debug/--strip-debug/--add-gnu-debuglink; build-id 83eccb95e79216e5b53b46389df55fda6f9a9dee",
+     "binding": "ARTEFACT",
+     "differential": null,
+     "audit": {
+      "kind": "BINARY_BRANCH_AUDIT",
+      "result": "detached-DWARF binary branch audit at DSO a535454753d8 resolved 31/31 targets; run_mont_ladder 97 jcc / 3 cmov / 18 setcc; mod_exp_core_consttime_from_parts 27 jcc / 2 cmov / 0 setcc; mod_inverse_consttime 217 jcc / 3 cmov / 24 setcc; 0 secret-derived jcc; 0 secret-derived address",
+      "verdict": "PASS",
+      "digest": "a535454753d8857e4c385689ea431b5a47a9686322e6f52b203971188a49359f",
+      "binding": "ARTEFACT"
+     },
+     "ctgrind": null
+    }
+   ],
+   "assurance": [
+    {
+     "class": "SOURCE_REVIEWED",
+     "scope": "PFP-5 a005a33c4: the window/scan taint is 0 errors / 0 contexts and source-bound; TAINT.md records no firing negative control, so only a source review is asserted.",
+     "evidence": 0,
+     "subject": {
+      "source": "staging a005a33c482f47850a72661a363e7186bde42c5c + uncommitted src/bn/arith.rs (plus test-only src/rsa/ossl.rs)",
+      "artefact": null
+     },
+     "assumptions": [
+      "the window digit and masked scan index are public"
+     ],
+     "result": "PASS",
+     "instrument": "source review plus a source-bound taint reading",
+     "evidence_path": "evidence/performance-frontier/campaigns/PFP-5/TAINT.md"
+    },
+    {
+     "class": "SOURCE_REVIEWED",
+     "scope": "PFP-6-reeval 76652a46d: the taint is source-bound 0/0 with no firing control recorded; the branch audit at 66138460 is a review aid, not a taint result.",
+     "evidence": 1,
+     "subject": {
+      "source": "staging 76652a46dcfb388656d964010268685ca032dff1 + uncommitted documentation correction to src/bn/arith.rs (arith sha256 66bd6c4c7f616f7d8101debf34cc2d4915eff225aba0dec4e119eccb5d682e83; no code change)",
+      "artefact": null
+     },
+     "assumptions": [
+      "the PFP-5 schedule is unchanged by the re-evaluation"
+     ],
+     "result": "PASS",
+     "instrument": "source review plus a source-bound taint reading",
+     "evidence_path": "evidence/performance-frontier/campaigns/PFP-6/REEVALUATION.md"
+    },
+    {
+     "class": "ARTEFACT_AUDITED",
+     "scope": "PFP-54 f536fd639130 / DSO a535454753d88: the branch audit resolves 31/31 targets and covers run_mont_ladder, mod_exp_core_consttime_from_parts, mod_inverse_consttime (run_mont_ladder 97 jcc / 3 cmov / 18 setcc; mod_exp_core_consttime_from_parts 27 jcc / 2 cmov / 0 setcc; mod_inverse_consttime 217 jcc / 3 cmov / 24 setcc). One secret-derived setcc (key::decap, consumed arithmetically) and zero secret-derived conditional transfers or memory addresses were observed. A binary branch audit is not a constant-time proof; the historical ['SOURCE_REVIEWED', 'SOURCE_REVIEWED'] entries remain as the evidence they record.",
+     "evidence": 2,
+     "subject": {
+      "source": "staging f536fd63913073bab76f839d41e89617da4fa74c, tree 4fef3b02666120f261bc00c43e2e6e04c50cd013; one release compilation; detached DWARF companion sha256 cd64dd590a597116f8475f6db0c81cc94602d74d540d4b45b4b1bae1a0b7ed9b",
+      "artefact": {
+       "path": "evidence/performance-frontier/campaigns/PFP-54/raw/artefacts/libcrypto.so.3",
+       "sha256": "a535454753d8857e4c385689ea431b5a47a9686322e6f52b203971188a49359f"
+      }
+     },
+     "assumptions": [
+      "the shipped DSO is debug-stripped; the DWARF it was audited through is the detached companion artefacts/libcrypto.so.3.debug, bound by build-id 83eccb95e79216e5b53b46389df55fda6f9a9dee",
+      "only key::decap carries a mechanised secret-dependence contract; for every other target the audit prints branch provenance and instruction counts, not taint, so this class records what the audit observed and does not assert constant time",
+      "the audit covers the 31-target inventory; optimised, duplicated or partially inlined functions outside it, and any artefact other than the DSO digest named here, are not covered"
+     ],
+     "result": "PASS",
+     "instrument": "courts/phase18/timing/binary_branch_audit.py sha256 8b07f7e91dac28d8a2e9752efa929a541ed115e81e060d275979d4210dec0edc; GNU objdump/readelf 2.40; detached DWARF companion sha256 cd64dd590a597116f8475f6db0c81cc94602d74d540d4b45b4b1bae1a0b7ed9b",
+     "evidence_path": "evidence/performance-frontier/campaigns/PFP-54/raw/audit-a5354547.md"
+    }
+   ],
+   "no_evidence_targets": [
+    {
+     "target": "aarch64-unknown-linux-gnu",
+     "status": "NOT_APPLICABLE_HARDWARE",
+     "missing_feature": "aarch64 (no AArch64 target or toolchain on this machine)"
+    },
+    {
+     "target": "x86_64-avx512ifma",
+     "status": "NOT_APPLICABLE_HARDWARE",
+     "missing_feature": "avx512f, avx512ifma (CPU reports neither)"
+    },
+    {
+     "target": "x86_64-avx2",
+     "status": "NOT_RUN",
+     "missing_feature": "no AVX2 backend for the ladder"
+    },
+    {
+     "target": "x86_64-adx-bmi2",
+     "status": "NOT_RUN",
+     "missing_feature": "no hand-written adx/bmi2 backend for the ladder"
+    }
+   ],
+   "notes": "The PFP-6-reeval audit is at 66138460 and does not transfer to 6d002db2 or 88c0c7e0; the later M-A1 audit covers the inlined mont_mul_ladder_into carrier, not the out-of-line run_mont_ladder."
+  },
+  {
+   "id": "p256-field-mont",
+   "label": "P-256 field engine, Mont kernel (default) over FieldDomain and OrderDomain",
+   "ships": "SHIPPED",
+   "proof": "NO_PROOF",
+   "evidence": [
+    {
+     "campaign": "PFP-2",
+     "artefact_sha256": "553e1b8ce1eb7e03a0d92a5614b566b88e49e55d2c2a3f7ba28fc6d78eecc4e4",
+     "target": "x86_64-unknown-linux-gnu release",
+     "profile": "release, x86_64-unknown-linux-gnu, rustc 1.98.1",
+     "binding": "ARTEFACT",
+     "differential": {
+      "court": "PFP-22 DSO-bound domain differential",
+      "result": "PASS",
+      "cases": "16,434 cases per subject across nine classes (base 4,096+4,096, upper half 4,096+4,096, order boundaries 8+8, exceptional 10, limb occupancy 12+12), 0 mismatches; identity 18/18 rows",
+      "binding": "ARTEFACT"
+     },
+     "audit": {
+      "kind": "CTGRIND_PLUS_BRANCH_AUDIT",
+      "result": "DSO-level ctgrind 0 engine-on-path and 0 engine-origin contexts in 18 tainted runs per DSO; branch audit exit 0 with 9/9 targets resolved; mutation control 2.33x instructions / 2.36x wall",
+      "verdict": "PASS",
+      "digest": "553e1b8ce1eb7e03a0d92a5614b566b88e49e55d2c2a3f7ba28fc6d78eecc4e4",
+      "binding": "ARTEFACT"
+     },
+     "ctgrind": {
+      "result": "0 engine-on-path contexts; the residue is the pre-existing BIGNUM/EC ladder path, kernel-independent",
+      "binding": "ARTEFACT"
+     }
+    },
+    {
+     "campaign": "PFP-54",
+     "artefact_sha256": "a535454753d8857e4c385689ea431b5a47a9686322e6f52b203971188a49359f",
+     "target": "x86_64-unknown-linux-gnu release, court openssl-rs-court:1, rustc 1.98.1 (48a229cea)",
+     "profile": "release, x86_64-unknown-linux-gnu, rustc 1.98.1 (48a229cea 2026-09-01); CARGO_PROFILE_RELEASE_DEBUG=1; objcopy --only-keep-debug/--strip-debug/--add-gnu-debuglink; build-id 83eccb95e79216e5b53b46389df55fda6f9a9dee",
+     "binding": "ARTEFACT",
+     "differential": null,
+     "audit": {
+      "kind": "BINARY_BRANCH_AUDIT",
+      "result": "detached-DWARF binary branch audit at DSO a535454753d8 resolved 31/31 targets; p256::mont_reduce_into 2 jcc / 0 cmov / 2 setcc; p256::wide_mul_x86 0 jcc / 0 cmov / 9 setcc; 0 secret-derived jcc; 0 secret-derived address",
+      "verdict": "PASS",
+      "digest": "a535454753d8857e4c385689ea431b5a47a9686322e6f52b203971188a49359f",
+      "binding": "ARTEFACT"
+     },
+     "ctgrind": null
+    }
+   ],
+   "assurance": [
+    {
+     "class": "SOURCE_REVIEWED",
+     "scope": "PFP-2 c1d25e10d: the source audit records DSO-level ctgrind 0 engine-on-path / 0 engine-origin with a firing sensitivity control (4 per repetition) and a 9/9 branch audit. The DSO is not tracked, so the register cannot hash the subject and does not claim ARTEFACT_AUDITED or ARTEFACT_TAINT_TESTED.",
+     "evidence": 0,
+     "subject": {
+      "source": "staging c1d25e10d16bc197e03446619a5330842b411c5c (committed); two independent clean rebuilds reproduce the digest",
+      "artefact": null
+     },
+     "assumptions": [
+      "the residue is the pre-existing BIGNUM/EC ladder path, kernel-independent",
+      "the sensitivity control exercises the P-256 engine path"
+     ],
+     "result": "PASS",
+     "instrument": "source review plus the recorded DSO ctgrind/branch-audit result",
+     "evidence_path": "evidence/performance-frontier/campaigns/PFP-2/RESULTS-553e1b8c.md"
+    },
+    {
+     "class": "ARTEFACT_AUDITED",
+     "scope": "PFP-54 f536fd639130 / DSO a535454753d88: the branch audit resolves 31/31 targets and covers p256::mont_reduce_into, p256::wide_mul_x86 (p256::mont_reduce_into 2 jcc / 0 cmov / 2 setcc; p256::wide_mul_x86 0 jcc / 0 cmov / 9 setcc). One secret-derived setcc (key::decap, consumed arithmetically) and zero secret-derived conditional transfers or memory addresses were observed. A binary branch audit is not a constant-time proof; the historical ['SOURCE_REVIEWED'] entries remain as the evidence they record.",
+     "evidence": 1,
+     "subject": {
+      "source": "staging f536fd63913073bab76f839d41e89617da4fa74c, tree 4fef3b02666120f261bc00c43e2e6e04c50cd013; one release compilation; detached DWARF companion sha256 cd64dd590a597116f8475f6db0c81cc94602d74d540d4b45b4b1bae1a0b7ed9b",
+      "artefact": {
+       "path": "evidence/performance-frontier/campaigns/PFP-54/raw/artefacts/libcrypto.so.3",
+       "sha256": "a535454753d8857e4c385689ea431b5a47a9686322e6f52b203971188a49359f"
+      }
+     },
+     "assumptions": [
+      "the shipped DSO is debug-stripped; the DWARF it was audited through is the detached companion artefacts/libcrypto.so.3.debug, bound by build-id 83eccb95e79216e5b53b46389df55fda6f9a9dee",
+      "only key::decap carries a mechanised secret-dependence contract; for every other target the audit prints branch provenance and instruction counts, not taint, so this class records what the audit observed and does not assert constant time",
+      "the audit covers the 31-target inventory; optimised, duplicated or partially inlined functions outside it, and any artefact other than the DSO digest named here, are not covered"
+     ],
+     "result": "PASS",
+     "instrument": "courts/phase18/timing/binary_branch_audit.py sha256 8b07f7e91dac28d8a2e9752efa929a541ed115e81e060d275979d4210dec0edc; GNU objdump/readelf 2.40; detached DWARF companion sha256 cd64dd590a597116f8475f6db0c81cc94602d74d540d4b45b4b1bae1a0b7ed9b",
+     "evidence_path": "evidence/performance-frontier/campaigns/PFP-54/raw/audit-a5354547.md"
+    }
+   ],
+   "no_evidence_targets": [
+    {
+     "target": "aarch64-unknown-linux-gnu",
+     "status": "NOT_APPLICABLE_HARDWARE",
+     "missing_feature": "aarch64 (no AArch64 target or toolchain on this machine)"
+    },
+    {
+     "target": "x86_64-avx512ifma",
+     "status": "NOT_APPLICABLE_HARDWARE",
+     "missing_feature": "avx512f, avx512ifma (CPU reports neither)"
+    },
+    {
+     "target": "x86_64-avx2",
+     "status": "NOT_RUN",
+     "missing_feature": "no AVX2 field-engine variant"
+    }
+   ],
+   "notes": "The kernel-selection measurement is source-bound (PFP-2 kernel microbenchmark): Mont mul 20.662 ns / ladder 224.423 ns, Solinas 82.885 / 538.076, Arch 61.793 / 422.821."
+  },
+  {
+   "id": "p256-field-arch",
+   "label": "P-256 field engine, Arch kernel (x86-64 mulx/adcx, Solinas reduction)",
+   "ships": "NOT_SHIPPED (compiled, capability-gated, not selected)",
+   "proof": "NO_PROOF",
+   "evidence": [
+    {
+     "campaign": "PFP-2-kernels",
+     "artefact_sha256": null,
+     "target": "x86_64-unknown-linux-gnu (court venue, i9-13900K)",
+     "profile": "cargo test pfp2_kernel_measurement with PFP2_MEASURE=1, three rotated repetitions; test binary, not a distribution DSO",
+     "binding": "SOURCE",
+     "differential": {
+      "court": "PFP-2 source differential over MONT/SOLINAS/ARCH",
+      "result": "PASS",
+      "cases": "48 cases x three kernels (144 comparisons) plus adversarial and pseudorandom field sweeps, 0 disagreements",
+      "binding": "SOURCE"
+     },
+     "audit": null,
+     "ctgrind": null
+    }
+   ],
+   "assurance": [
+    {
+     "class": "UNASSESSED",
+     "scope": "PFP-2-kernels: source-bound test binary only; no audit, no taint, and no tracked artefact.",
+     "assumptions": [],
+     "result": "NOT_RUN"
+    }
+   ],
+   "no_evidence_targets": [
+    {
+     "target": "aarch64-unknown-linux-gnu",
+     "status": "NOT_APPLICABLE_HARDWARE",
+     "missing_feature": "aarch64 (no AArch64 target or toolchain on this machine)"
+    },
+    {
+     "target": "x86_64-avx512ifma",
+     "status": "NOT_APPLICABLE_HARDWARE",
+     "missing_feature": "avx512f, avx512ifma (CPU reports neither)"
+    },
+    {
+     "target": "x86_64-avx2",
+     "status": "NOT_RUN",
+     "missing_feature": "no AVX2 kernel variant"
+    },
+    {
+     "target": "x86_64-adx-bmi2-artefact",
+     "status": "NOT_RUN",
+     "missing_feature": "no artefact-bound differential or audit of the Arch kernel; the only measurement is the source-bound test binary"
+    }
+   ],
+   "notes": "Measured and rejected: mul 61.793 ns and ladder 422.821 ns against Mont 20.662 / 224.423 (PFP-2/kernels/summary.json). Arch remains admissible only when Arch::new verifies BMI2 and ADX, but it is not the default."
+  },
+  {
+   "id": "p256-fixed-comb",
+   "label": "P-256 fixed-base comb and its 16-entry table",
+   "ships": "SHIPPED (standard P-256 group only)",
+   "proof": "NO_PROOF",
+   "evidence": [
+    {
+     "campaign": "PFP-3",
+     "artefact_sha256": "ecbefb7d4ecd05cb08f5ade57e64ce2cd81de24bcd68b0c236a8640a18559053",
+     "target": "x86_64-unknown-linux-gnu release",
+     "profile": "release, x86_64-unknown-linux-gnu, rustc 1.98.1",
+     "binding": "ARTEFACT",
+     "differential": {
+      "court": "PFP-3 DSO-bound k*G / k*P differential and ECDSA cross-verification",
+      "result": "PASS",
+      "cases": "4,096 k*G + 4,096 k*P serialised points, 0 mismatches; 256+256 ECDSA cross-verifications both directions; 4,096 in-crate fixed-vs-variable, 0 mismatches",
+      "binding": "ARTEFACT"
+     },
+     "audit": {
+      "kind": "CTGRIND_PLUS_BRANCH_AUDIT",
+      "result": "mul-g-fixed 0 errors / 0 contexts in three repetitions; shared inventory 31/31 exit 0; six carriers resolved; no admission-mask jcc; mutation control admission-off e4b2cb6e is correct on 4,096 points but costs 2.05x instructions / 1.96x wall",
+      "verdict": "PASS",
+      "digest": "ecbefb7d4ecd05cb08f5ade57e64ce2cd81de24bcd68b0c236a8640a18559053",
+      "binding": "ARTEFACT"
+     },
+     "ctgrind": {
+      "result": "0 errors / 0 contexts on mul-g-fixed; sensitivity control still fires",
+      "binding": "ARTEFACT"
+     }
+    }
+   ],
+   "assurance": [
+    {
+     "class": "SOURCE_REVIEWED",
+     "scope": "PFP-3 f8d5c4b33: ctgrind is 0/0/0 with a firing sensitivity control (4 per repetition) and the branch audit resolves 31/31. The DSO is not tracked, so the register cannot hash the subject and does not claim ARTEFACT_TAINT_TESTED.",
+     "evidence": 0,
+     "subject": {
+      "source": "staging f8d5c4b33cf751a0dd805fa7cf0d730915e1d073 + uncommitted src/ec/p256/fixed_base.rs branch-free admission",
+      "artefact": null
+     },
+     "assumptions": [
+      "the in-range mask is folded into the scalar the comb consumes"
+     ],
+     "result": "PASS",
+     "instrument": "source review plus the recorded DSO ctgrind/branch-audit result",
+     "evidence_path": "evidence/performance-frontier/campaigns/PFP-3/POST-FIX.md"
+    }
+   ],
+   "no_evidence_targets": [
+    {
+     "target": "aarch64-unknown-linux-gnu",
+     "status": "NOT_APPLICABLE_HARDWARE",
+     "missing_feature": "aarch64 (no AArch64 target or toolchain on this machine)"
+    },
+    {
+     "target": "x86_64-avx512ifma",
+     "status": "NOT_APPLICABLE_HARDWARE",
+     "missing_feature": "avx512f, avx512ifma (CPU reports neither)"
+    },
+    {
+     "target": "x86_64-avx2",
+     "status": "NOT_RUN",
+     "missing_feature": "no AVX2 comb variant"
+    },
+    {
+     "target": "x86_64-adx-bmi2",
+     "status": "NOT_RUN",
+     "missing_feature": "no adx/bmi2 comb variant"
+    }
+   ]
+  },
+  {
+   "id": "p256-order-inverse",
+   "label": "constant-time P-256 order inversion (k^(n-2) mod n)",
+   "ships": "SHIPPED (admitted predicate only)",
+   "proof": "NO_PROOF",
+   "evidence": [
+    {
+     "campaign": "PFP-4",
+     "artefact_sha256": "4e6ec312313b3f1ef68ec9c0c4fc698a76f334ee9da38a6fcdfa7d8945c53e77",
+     "target": "x86_64-unknown-linux-gnu release",
+     "profile": "release, x86_64-unknown-linux-gnu, rustc 1.98.1",
+     "binding": "ARTEFACT",
+     "differential": {
+      "court": "PFP-4 DSO-bound ECDSA differential plus in-crate Fermat/BigNum oracles",
+      "result": "PASS",
+      "cases": "4,108 in-crate vs independent Fermat oracle; 4,107 k*k^-1 = 1; 4,096 BigNum vs generic; 4,096 sign-ex + 4,096 sign-rand signatures byte-identical to the authority, 4,096/4,096 cross-verify",
+      "binding": "ARTEFACT"
+     },
+     "audit": {
+      "kind": "CTGRIND_PLUS_BRANCH_AUDIT",
+      "result": "0 engine-on-path and 0 engine-origin contexts with the private scalar and nonce source tainted; branch audit classifies every jcc/setcc/cmov in the carrier as public-bound; invert has exactly two jcc (fixed loop counter, public exponent-bit test); BINSEC -checkct NOT_RUN; dedicated inverse mutation control NOT_RUN",
+      "verdict": "PASS",
+      "digest": "4e6ec312313b3f1ef68ec9c0c4fc698a76f334ee9da38a6fcdfa7d8945c53e77",
+      "binding": "ARTEFACT"
+     },
+     "ctgrind": {
+      "result": "0 engine-on-path / 0 engine-origin contexts; sensitivity control reports 4 engine-on-path contexts per repetition",
+      "binding": "ARTEFACT"
+     }
+    },
+    {
+     "campaign": "PFP-54",
+     "artefact_sha256": "a535454753d8857e4c385689ea431b5a47a9686322e6f52b203971188a49359f",
+     "target": "x86_64-unknown-linux-gnu release, court openssl-rs-court:1, rustc 1.98.1 (48a229cea)",
+     "profile": "release, x86_64-unknown-linux-gnu, rustc 1.98.1 (48a229cea 2026-09-01); CARGO_PROFILE_RELEASE_DEBUG=1; objcopy --only-keep-debug/--strip-debug/--add-gnu-debuglink; build-id 83eccb95e79216e5b53b46389df55fda6f9a9dee",
+     "binding": "ARTEFACT",
+     "differential": null,
+     "audit": {
+      "kind": "BINARY_BRANCH_AUDIT",
+      "result": "detached-DWARF binary branch audit at DSO a535454753d8 resolved 31/31 targets; mod_inverse_consttime 217 jcc / 3 cmov / 24 setcc; 0 secret-derived jcc; 0 secret-derived address",
+      "verdict": "PASS",
+      "digest": "a535454753d8857e4c385689ea431b5a47a9686322e6f52b203971188a49359f",
+      "binding": "ARTEFACT"
+     },
+     "ctgrind": null
+    }
+   ],
+   "assurance": [
+    {
+     "class": "SOURCE_REVIEWED",
+     "scope": "PFP-4 5ac6fddc5: DSO-level ctgrind is 0 engine-on-path / 0 engine-origin with the sensitivity control firing (4 per repetition); BINSEC -checkct and the dedicated inverse mutation control are NOT_RUN. The DSO is not tracked, so no ARTEFACT_AUDITED claim is made.",
+     "evidence": 0,
+     "subject": {
+      "source": "staging 5ac6fddc53f5ca2a63912f51c07188b9b63f71dd + uncommitted src/ec/lib.rs, src/ec/p256.rs, src/ec/p256/fixed_base.rs, src/ec/p256/tests.rs",
+      "artefact": null
+     },
+     "assumptions": [
+      "invert has exactly two conditional jumps: the loop counter and the public exponent-bit test"
+     ],
+     "result": "PASS",
+     "instrument": "source review plus the recorded DSO ctgrind/branch-audit result",
+     "evidence_path": "evidence/performance-frontier/campaigns/PFP-4/CTGRIND.md"
+    },
+    {
+     "class": "ARTEFACT_AUDITED",
+     "scope": "PFP-54 f536fd639130 / DSO a535454753d88: the branch audit resolves 31/31 targets and covers mod_inverse_consttime (mod_inverse_consttime 217 jcc / 3 cmov / 24 setcc). One secret-derived setcc (key::decap, consumed arithmetically) and zero secret-derived conditional transfers or memory addresses were observed. A binary branch audit is not a constant-time proof; the historical ['SOURCE_REVIEWED'] entries remain as the evidence they record.",
+     "evidence": 1,
+     "subject": {
+      "source": "staging f536fd63913073bab76f839d41e89617da4fa74c, tree 4fef3b02666120f261bc00c43e2e6e04c50cd013; one release compilation; detached DWARF companion sha256 cd64dd590a597116f8475f6db0c81cc94602d74d540d4b45b4b1bae1a0b7ed9b",
+      "artefact": {
+       "path": "evidence/performance-frontier/campaigns/PFP-54/raw/artefacts/libcrypto.so.3",
+       "sha256": "a535454753d8857e4c385689ea431b5a47a9686322e6f52b203971188a49359f"
+      }
+     },
+     "assumptions": [
+      "the shipped DSO is debug-stripped; the DWARF it was audited through is the detached companion artefacts/libcrypto.so.3.debug, bound by build-id 83eccb95e79216e5b53b46389df55fda6f9a9dee",
+      "only key::decap carries a mechanised secret-dependence contract; for every other target the audit prints branch provenance and instruction counts, not taint, so this class records what the audit observed and does not assert constant time",
+      "the audit covers the 31-target inventory; optimised, duplicated or partially inlined functions outside it, and any artefact other than the DSO digest named here, are not covered"
+     ],
+     "result": "PASS",
+     "instrument": "courts/phase18/timing/binary_branch_audit.py sha256 8b07f7e91dac28d8a2e9752efa929a541ed115e81e060d275979d4210dec0edc; GNU objdump/readelf 2.40; detached DWARF companion sha256 cd64dd590a597116f8475f6db0c81cc94602d74d540d4b45b4b1bae1a0b7ed9b",
+     "evidence_path": "evidence/performance-frontier/campaigns/PFP-54/raw/audit-a5354547.md"
+    }
+   ],
+   "no_evidence_targets": [
+    {
+     "target": "aarch64-unknown-linux-gnu",
+     "status": "NOT_APPLICABLE_HARDWARE",
+     "missing_feature": "aarch64 (no AArch64 target or toolchain on this machine)"
+    },
+    {
+     "target": "x86_64-avx512ifma",
+     "status": "NOT_APPLICABLE_HARDWARE",
+     "missing_feature": "avx512f, avx512ifma (CPU reports neither)"
+    },
+    {
+     "target": "x86_64-avx2",
+     "status": "NOT_RUN",
+     "missing_feature": "no AVX2 inverse variant"
+    },
+    {
+     "target": "x86_64-adx-bmi2",
+     "status": "NOT_RUN",
+     "missing_feature": "no adx/bmi2 inverse variant; the 425-operation kernel is portable Mont"
+    }
+   ],
+   "notes": "The timing target was not met (10.28x measured vs the ~9.1x reference / 9.24x ceiling); recorded as a shortfall, not a success."
+  },
+  {
+   "id": "dh-width-policy",
+   "label": "DH width policy path (ladder runs the group's declared private-key bound)",
+   "ships": "SHIPPED",
+   "proof": "NO_PROOF",
+   "evidence": [
+    {
+     "campaign": "PFP-8",
+     "artefact_sha256": "6302e05a14e47b74bd546f03e7509e234a2884511ddec5c3f9a7f4382bd9a25b",
+     "target": "x86_64 i9-13900K, taskset -c 1, court openssl-rs-court-tools:1, rustc 1.98.1 release",
+     "profile": "release, x86_64-unknown-linux-gnu, rustc 1.98.1 (48a229cea); two fresh CARGO_TARGET_DIR builds agree",
+     "binding": "MIXED",
+     "differential": {
+      "court": "PFP-8 width-policy DSO-bound differential",
+      "result": "PASS_WITH_STOP",
+      "cases": "103/103 comparisons across 11 prepared groups, 0 mismatches; 22/22 key-length rows; STOP PFP8-KEYGEN-PRESET-PRIV: 3/3 caller-supplied-private-key keygens diverge at this digest",
+      "binding": "ARTEFACT"
+     },
+     "audit": {
+      "kind": "CTGRIND_PLUS_BRANCH_AUDIT",
+      "result": "mont_mul_ladder_into 40 jcc / 64 setcc / 0 cmov; run_mont_ladder 100 jcc / 18 setcc / 2 cmov; bn_mod_exp_mont_impl 61 / 4 / 3; dh_bn_mod_exp 3; 0 secret-derived; ctgrind source-bound 0 errors / 0 contexts, control 4/1",
+      "verdict": "PASS",
+      "digest": "6302e05a14e47b74bd546f03e7509e234a2884511ddec5c3f9a7f4382bd9a25b",
+      "binding": "ARTEFACT"
+     },
+     "ctgrind": {
+      "result": "0 errors / 0 contexts on the shortened schedule; source-bound",
+      "binding": "SOURCE"
+     }
+    },
+    {
+     "campaign": "PFP-8-preset-priv",
+     "artefact_sha256": "e3ef3d84166a65408e5c89eaa4cc444a2c9208fea5e2acb1c272b6a0b612b187",
+     "target": "x86_64 i9-13900K, taskset -c 1, court openssl-rs-court-tools:1, rustc 1.98.1 release",
+     "profile": "release, x86_64-unknown-linux-gnu, rustc 1.98.1 (48a229cea); two fresh CARGO_TARGET_DIR builds agree",
+     "binding": "MIXED",
+     "differential": {
+      "court": "PFP8-KEYGEN-PRESET-PRIV repair differential",
+      "result": "PASS_WITH_RESIDUAL",
+      "cases": "45/45 comparisons, 0 mismatches, 0 stops; 30-row preset matrix 26 agree / 4 differ (a preset exponent wider than the 2048-bit modulus)",
+      "binding": "ARTEFACT"
+     },
+     "audit": null,
+     "ctgrind": {
+      "result": "not re-run at this digest; the arithmetic source is byte-identical to the width-policy source, so the 6302e05a readings are cited as source-bound context only, not as an artefact audit of e3ef3d84",
+      "binding": "SOURCE"
+     }
+    },
+    {
+     "campaign": "PFP-54",
+     "artefact_sha256": "a535454753d8857e4c385689ea431b5a47a9686322e6f52b203971188a49359f",
+     "target": "x86_64-unknown-linux-gnu release, court openssl-rs-court:1, rustc 1.98.1 (48a229cea)",
+     "profile": "release, x86_64-unknown-linux-gnu, rustc 1.98.1 (48a229cea 2026-09-01); CARGO_PROFILE_RELEASE_DEBUG=1; objcopy --only-keep-debug/--strip-debug/--add-gnu-debuglink; build-id 83eccb95e79216e5b53b46389df55fda6f9a9dee",
+     "binding": "ARTEFACT",
+     "differential": null,
+     "audit": {
+      "kind": "BINARY_BRANCH_AUDIT",
+      "result": "detached-DWARF binary branch audit at DSO a535454753d8 resolved 31/31 targets; ossl_dh_compute_key 37 jcc / 1 cmov / 0 setcc; run_mont_ladder 97 jcc / 3 cmov / 18 setcc; mont_mul_sos_into 18 jcc / 0 cmov / 10 setcc; mont_mul_fallible 31 jcc / 0 cmov / 10 setcc; 0 secret-derived jcc; 0 secret-derived address",
+      "verdict": "PASS",
+      "digest": "a535454753d8857e4c385689ea431b5a47a9686322e6f52b203971188a49359f",
+      "binding": "ARTEFACT"
+     },
+     "ctgrind": null
+    }
+   ],
+   "assurance": [
+    {
+     "class": "SOURCE_TAINT_TESTED",
+     "scope": "PFP-8 20b655ba9: the shortened schedule is 0 errors / 0 contexts with the policy control firing (4/1). The PFP8-KEYGEN-PRESET-PRIV STOP is a compatibility divergence recorded in the differential, not a taint finding.",
+     "evidence": 0,
+     "subject": {
+      "source": "staging 20b655ba902e61d7680e30dfcb30feb4225397cc + working-tree src/bn/arith.rs, src/bn/mont.rs, src/dh/key.rs",
+      "artefact": null
+     },
+     "assumptions": [
+      "the ladder width is bound to public object configuration, never to the exponent",
+      "the policy taint test exercises the shortened schedule"
+     ],
+     "result": "PASS",
+     "instrument": "valgrind memcheck ctgrind (policy-width source build)",
+     "evidence_path": "evidence/performance-frontier/campaigns/PFP-8/WIDTH-POLICY.md",
+     "negative_control": {
+      "fired": true,
+      "detail": "CTGRIND_POLICY_CONTROL=1 reports 4 errors / 1 context",
+      "evidence_path": "evidence/performance-frontier/campaigns/PFP-8/WIDTH-POLICY.md"
+     }
+    },
+    {
+     "class": "SOURCE_REVIEWED",
+     "scope": "PFP-8-preset-priv 983437d2: ctgrind was not re-run at e3ef3d84; the arithmetic source is byte-identical and the 6302e05a readings are source-bound context only. The branch audit is at 6302e05a and is not regenerated here.",
+     "evidence": 1,
+     "subject": {
+      "source": "staging 983437d2a415d493c7f7206c6332723bce591073 + uncommitted src/dh/key.rs, committed as dd05d3f4",
+      "artefact": null
+     },
+     "assumptions": [
+      "the repair changes whether a preset key reaches an unchanged secret path"
+     ],
+     "result": "PASS",
+     "instrument": "source review of the repair and the unchanged arithmetic path",
+     "evidence_path": "evidence/performance-frontier/campaigns/PFP-8/PRESET-PRIV.md"
+    },
+    {
+     "class": "ARTEFACT_AUDITED",
+     "scope": "PFP-54 f536fd639130 / DSO a535454753d88: the branch audit resolves 31/31 targets and covers ossl_dh_compute_key, run_mont_ladder, mont_mul_sos_into, mont_mul_fallible (ossl_dh_compute_key 37 jcc / 1 cmov / 0 setcc; run_mont_ladder 97 jcc / 3 cmov / 18 setcc; mont_mul_sos_into 18 jcc / 0 cmov / 10 setcc; mont_mul_fallible 31 jcc / 0 cmov / 10 setcc). One secret-derived setcc (key::decap, consumed arithmetically) and zero secret-derived conditional transfers or memory addresses were observed. A binary branch audit is not a constant-time proof; the historical ['SOURCE_TAINT_TESTED', 'SOURCE_REVIEWED'] entries remain as the evidence they record.",
+     "evidence": 2,
+     "subject": {
+      "source": "staging f536fd63913073bab76f839d41e89617da4fa74c, tree 4fef3b02666120f261bc00c43e2e6e04c50cd013; one release compilation; detached DWARF companion sha256 cd64dd590a597116f8475f6db0c81cc94602d74d540d4b45b4b1bae1a0b7ed9b",
+      "artefact": {
+       "path": "evidence/performance-frontier/campaigns/PFP-54/raw/artefacts/libcrypto.so.3",
+       "sha256": "a535454753d8857e4c385689ea431b5a47a9686322e6f52b203971188a49359f"
+      }
+     },
+     "assumptions": [
+      "the shipped DSO is debug-stripped; the DWARF it was audited through is the detached companion artefacts/libcrypto.so.3.debug, bound by build-id 83eccb95e79216e5b53b46389df55fda6f9a9dee",
+      "only key::decap carries a mechanised secret-dependence contract; for every other target the audit prints branch provenance and instruction counts, not taint, so this class records what the audit observed and does not assert constant time",
+      "the audit covers the 31-target inventory; optimised, duplicated or partially inlined functions outside it, and any artefact other than the DSO digest named here, are not covered"
+     ],
+     "result": "PASS",
+     "instrument": "courts/phase18/timing/binary_branch_audit.py sha256 8b07f7e91dac28d8a2e9752efa929a541ed115e81e060d275979d4210dec0edc; GNU objdump/readelf 2.40; detached DWARF companion sha256 cd64dd590a597116f8475f6db0c81cc94602d74d540d4b45b4b1bae1a0b7ed9b",
+     "evidence_path": "evidence/performance-frontier/campaigns/PFP-54/raw/audit-a5354547.md"
+    }
+   ],
+   "no_evidence_targets": [
+    {
+     "target": "aarch64-unknown-linux-gnu",
+     "status": "NOT_APPLICABLE_HARDWARE",
+     "missing_feature": "aarch64 (no AArch64 target or toolchain on this machine)"
+    },
+    {
+     "target": "x86_64-avx512ifma",
+     "status": "NOT_APPLICABLE_HARDWARE",
+     "missing_feature": "avx512f, avx512ifma (CPU reports neither)"
+    },
+    {
+     "target": "x86_64-avx2",
+     "status": "NOT_RUN",
+     "missing_feature": "no AVX2 DH path"
+    },
+    {
+     "target": "x86_64-adx-bmi2",
+     "status": "NOT_RUN",
+     "missing_feature": "no adx/bmi2 DH path"
+    }
+   ],
+   "notes": "A constant-time claim at e3ef3d84 is refused: the differential is artefact-bound there, but the branch audit is bound to 6302e05a and is not regenerated for e3ef3d84. The residual wide-preset divergence is a width-policy admission, not a regression of the repair."
+  },
+  {
+   "id": "rsa-crt",
+   "label": "RSA CRT path (two sequential constant-time exponentiations)",
+   "ships": "SHIPPED (sequential; interleaving refused)",
+   "proof": "NO_PROOF",
+   "evidence": [
+    {
+     "campaign": "PFP-7",
+     "artefact_sha256": "6d002db20c815e252d1672a72b654f40844c2a1b24400cfbdfce5d1eaf828f39",
+     "target": "x86_64 i9-13900K, taskset -c 1, court openssl-rs-court-tools:1, rustc 1.98.1 release",
+     "profile": "release, x86_64-unknown-linux-gnu, rustc 1.98.1 (48a229cea); build-relevant tree clean at 05ee177a3",
+     "binding": "ARTEFACT",
+     "differential": {
+      "court": "PFP-7 deterministic RSA differential and fault-injection matrix",
+      "result": "PASS",
+      "cases": "4,185 transcript lines byte-identical (CRT/non-CRT x blinded/unblinded x NO_PADDING/PKCS#1/OAEP + 4,096 malformed blocks); dmp1+1, dmq1+1 and iqmp+1 each detected with blinding on and off",
+      "binding": "ARTEFACT"
+     },
+     "audit": {
+      "kind": "CTGRIND_PLUS_BRANCH_AUDIT",
+      "result": "ctgrind 96,668 errors / 112 contexts (exponents and primes) and 97,546 / 106 (moduli), inside the recorded band, 0 ladder-carrier sites; CIOS carrier 14 jcc / 18 setcc / 0 cmov, driver 100 / 18 / 2, 0 secret-derived",
+      "verdict": "PASS",
+      "digest": "6d002db20c815e252d1672a72b654f40844c2a1b24400cfbdfce5d1eaf828f39",
+      "binding": "ARTEFACT"
+     },
+     "ctgrind": {
+      "result": "96,668/112 and 97,546/106; control fires",
+      "binding": "ARTEFACT"
+     }
+    }
+   ],
+   "assurance": [
+    {
+     "class": "UNASSESSED",
+     "scope": "PFP-7 05ee177a3: ctgrind reports 96,668 errors / 112 contexts and 97,546 / 106 with findings outside the ladder carriers; the firing control shows the instrument is live, but the CRT path itself is not established clean, so no taint-tested class is claimed.",
+     "assumptions": [],
+     "result": "NOT_RUN"
+    }
+   ],
+   "no_evidence_targets": [
+    {
+     "target": "aarch64-unknown-linux-gnu",
+     "status": "NOT_APPLICABLE_HARDWARE",
+     "missing_feature": "aarch64 (no AArch64 target or toolchain on this machine)"
+    },
+    {
+     "target": "x86_64-avx512ifma",
+     "status": "NOT_APPLICABLE_HARDWARE",
+     "missing_feature": "avx512f, avx512ifma (CPU reports neither); the radix-2^52 IFMA pairing cannot be built"
+    },
+    {
+     "target": "x86_64-avx2",
+     "status": "NOT_RUN",
+     "missing_feature": "no AVX2 CRT backend"
+    },
+    {
+     "target": "x86_64-adx-bmi2",
+     "status": "NOT_RUN",
+     "missing_feature": "no hand-written adx/bmi2 CRT backend; the ADX build measured only the fused transcription"
+    }
+   ],
+   "notes": "Interleaving is refused: the fused scalar transcription is 1.1132x [1.1102, 1.1151] slower per multiplication. The refusal is bound to the transcription, not to the DSO."
+  }
+ ],
+ "claims": [
+  {
+   "id": "PFP-6-CIOS-6d002db2",
+   "assurance": [
+    "SOURCE_TAINT_TESTED"
+   ],
+   "target": "x86_64 i9-13900K, taskset -c 1, court openssl-rs-court-tools:1, rustc 1.98.1 release",
+   "profile": "release, x86_64-unknown-linux-gnu, rustc 1.98.1 (48a229cea)",
+   "artefact_sha256": "6d002db20c815e252d1672a72b654f40844c2a1b24400cfbdfce5d1eaf828f39",
+   "kernels": [
+    {
+     "id": "bn-cias-mont",
+     "evidence": 0
+    }
+   ]
+  },
+  {
+   "id": "M-A1-FIXED-88c0c7e0",
+   "assurance": [
+    "SOURCE_TAINT_TESTED"
+   ],
+   "target": "x86_64 i9-13900K, taskset -c 1, court openssl-rs-court-tools:1, rustc 1.98.1 release",
+   "profile": "release, x86_64-unknown-linux-gnu, rustc 1.98.1 (48a229cea)",
+   "artefact_sha256": "88c0c7e04d52a1bf84d665fdd691bddf2bbe700e35505d95bf145bfdc3774d87",
+   "kernels": [
+    {
+     "id": "bn-cias-fixed",
+     "evidence": 0
+    }
+   ]
+  },
+  {
+   "id": "PFP-5-WINDOW-842efa27",
+   "assurance": [
+    "SOURCE_REVIEWED"
+   ],
+   "target": "x86_64-unknown-linux-gnu release",
+   "profile": "release, x86_64-unknown-linux-gnu, rustc 1.98.1",
+   "artefact_sha256": "842efa27197ea8c408d77a8316c1dbb35a06146e0033b7df7d7f9cced88a2f47",
+   "kernels": [
+    {
+     "id": "bn-window-ladder",
+     "evidence": 0
+    }
+   ]
+  },
+  {
+   "id": "PFP-5-SOS-842efa27",
+   "assurance": [
+    "SOURCE_REVIEWED"
+   ],
+   "target": "x86_64-unknown-linux-gnu release",
+   "profile": "release, x86_64-unknown-linux-gnu, rustc 1.98.1",
+   "artefact_sha256": "842efa27197ea8c408d77a8316c1dbb35a06146e0033b7df7d7f9cced88a2f47",
+   "kernels": [
+    {
+     "id": "bn-mont-sos",
+     "evidence": 1
+    }
+   ]
+  },
+  {
+   "id": "PFP-2-FIELD-553e1b8c",
+   "assurance": [
+    "SOURCE_REVIEWED"
+   ],
+   "target": "x86_64-unknown-linux-gnu release",
+   "profile": "release, x86_64-unknown-linux-gnu, rustc 1.98.1",
+   "artefact_sha256": "553e1b8ce1eb7e03a0d92a5614b566b88e49e55d2c2a3f7ba28fc6d78eecc4e4",
+   "kernels": [
+    {
+     "id": "p256-field-mont",
+     "evidence": 0
+    }
+   ]
+  },
+  {
+   "id": "PFP-3-COMB-ecbefb7d",
+   "assurance": [
+    "SOURCE_REVIEWED"
+   ],
+   "target": "x86_64-unknown-linux-gnu release",
+   "profile": "release, x86_64-unknown-linux-gnu, rustc 1.98.1",
+   "artefact_sha256": "ecbefb7d4ecd05cb08f5ade57e64ce2cd81de24bcd68b0c236a8640a18559053",
+   "kernels": [
+    {
+     "id": "p256-fixed-comb",
+     "evidence": 0
+    }
+   ]
+  },
+  {
+   "id": "PFP-4-INVERSE-4e6ec312",
+   "assurance": [
+    "SOURCE_REVIEWED"
+   ],
+   "target": "x86_64-unknown-linux-gnu release",
+   "profile": "release, x86_64-unknown-linux-gnu, rustc 1.98.1",
+   "artefact_sha256": "4e6ec312313b3f1ef68ec9c0c4fc698a76f334ee9da38a6fcdfa7d8945c53e77",
+   "kernels": [
+    {
+     "id": "p256-order-inverse",
+     "evidence": 0
+    }
+   ]
+  },
+  {
+   "id": "PFP-8-WIDTH-6302e05a",
+   "assurance": [
+    "SOURCE_TAINT_TESTED"
+   ],
+   "target": "x86_64 i9-13900K, taskset -c 1, court openssl-rs-court-tools:1, rustc 1.98.1 release",
+   "profile": "release, x86_64-unknown-linux-gnu, rustc 1.98.1 (48a229cea); two fresh CARGO_TARGET_DIR builds agree",
+   "artefact_sha256": "6302e05a14e47b74bd546f03e7509e234a2884511ddec5c3f9a7f4382bd9a25b",
+   "kernels": [
+    {
+     "id": "dh-width-policy",
+     "evidence": 0
+    }
+   ]
+  },
+  {
+   "id": "PFP-8-PRESET-e3ef3d84-DIFFERENTIAL-ONLY",
+   "assurance": [],
+   "target": "x86_64 i9-13900K, taskset -c 1, court openssl-rs-court-tools:1, rustc 1.98.1 release",
+   "profile": "release, x86_64-unknown-linux-gnu, rustc 1.98.1 (48a229cea); two fresh CARGO_TARGET_DIR builds agree",
+   "artefact_sha256": "e3ef3d84166a65408e5c89eaa4cc444a2c9208fea5e2acb1c272b6a0b612b187",
+   "kernels": [
+    {
+     "id": "dh-width-policy",
+     "evidence": 1
+    }
+   ]
+  },
+  {
+   "id": "PFP-7-RSA-6d002db2",
+   "assurance": [],
+   "target": "x86_64 i9-13900K, taskset -c 1, court openssl-rs-court-tools:1, rustc 1.98.1 release",
+   "profile": "release, x86_64-unknown-linux-gnu, rustc 1.98.1 (48a229cea); build-relevant tree clean at 05ee177a3",
+   "artefact_sha256": "6d002db20c815e252d1672a72b654f40844c2a1b24400cfbdfce5d1eaf828f39",
+   "kernels": [
+    {
+     "id": "rsa-crt",
+     "evidence": 0
+    }
+   ]
+  }
+ ]
 }
