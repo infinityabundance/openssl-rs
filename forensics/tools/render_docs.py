@@ -50,6 +50,11 @@ SWEEP_GLOB = "boundary-sweep-*.json"
 PUBLISH_GLOB = "publish-*.json"
 BUILD_GLOB = "build-*.json"
 
+# The build-input identity manifest (``PFP-85``) shares the ``build-*.json``
+# prefix but is not a build receipt: it carries per-input digests, not the
+# library artefacts.  Skip it by schema so the two identities stay separate.
+BUILD_INPUT_SCHEMA = "openssl-rs.build-input-identity/v1"
+
 # Display names used in the rendered blocks (repo-relative, short).
 ATLAS_S = "forensics/downstream/runtime-functional-atlas.json"
 BUILD_LINK_S = "forensics/downstream/build-link-atlas.json"
@@ -122,6 +127,8 @@ def build_identity(refresh: Path, version: str) -> dict:
     matches = []
     for path in sorted(refresh.glob(BUILD_GLOB)):
         data = load_json(path)
+        if data.get("schema") == BUILD_INPUT_SCHEMA:
+            continue
         if str(data.get("version")) == version:
             matches.append((path, data))
     if not matches:
