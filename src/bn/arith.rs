@@ -5405,3 +5405,160 @@ mod tests {
         assert!(cases > 0);
     }
 }
+
+// ---------------------------------------------------------------------------
+// Kani proof harnesses for the 4-limb CIOS Montgomery multiply (PFP-53).
+//
+// Compiled only under Kani (`--cfg kani`); a normal `cargo build` or
+// `cargo test` never sees this module, so the `kani` crate is not a build
+// dependency of the ordinary build. These reach the private
+// `mont_mul_cios_fixed::<4, 6>` kernel, so they live inside the crate rather
+// than in `tests/kani_proofs.rs`, which can only see the public surface. Run:
+//
+//     cargo kani --harness cios4_equiv_full_width
+//
+// The harness is a bounded model check, not an exhaustive proof: it quantifies
+// over the 4-limb symbolic operands with fixed, compile-time loop bounds, and
+// the oracle is an independent multi-precision computation that shares no code
+// path with the kernel.
+// ---------------------------------------------------------------------------
+#[cfg(kani)]
+mod kani_proofs {
+    use core::cmp::Ordering;
+
+    /// Compare two little-endian 4-limb values, most-significant limb first.
+    fn cmp4(a: &[u64; 4], b: &[u64; 4]) -> Ordering {
+        for i in (0..4).rev() {
+            if a[i] != b[i] {
+                return if a[i] > b[i] {
+                    Ordering::Greater
+                } else {
+                    Ordering::Less
+                };
+            }
+        }
+        Ordering::Equal
+    }
+
+    /// 512-bit schoolbook product `a * b` into 8 little-endian limbs.
+    fn mul4(a: &[u64; 4], b: &[u64; 4]) -> [u64; 8] {
+        let mut out = [0u64; 8];
+        for i in 0..4 {
+            let mut carry = 0u128;
+            for j in 0..4 {
+                let v = (a[i] as u128) * (b[j] as u128) + (out[i + j] as u128) + carry;
+                out[i + j] = v as u64;
+                carry = v >> 64;
+            }
+            out[i + 4] = carry as u64;
+        }
+        out
+    }
+
+    /// `m << s` for `s < 256`, as 8 little-endian limbs.
+    fn shl4(m: &[u64; 4], s: usize) -> [u64; 8] {
+        let mut out = [0u64; 8];
+        let word = s / 64;
+        let bit = s % 64;
+        for j in 0..4 {
+            let dst = word + j;
+            out[dst] |= m[j] << bit;
+            if bit != 0 {
+                out[dst + 1] |= m[j] >> (64 - bit);
+            }
+        }
+        out
+    }
+
+    /// Compare two little-endian 8-limb values, most-significant limb first.
+    fn cmp8(a: &[u64; 8], b: &[u64; 8]) -> Ordering {
+        for i in (0..8).rev() {
+            if a[i] != b[i] {
+                return if a[i] > b[i] {
+                    Ordering::Greater
+                } else {
+                    Ordering::Less
+                };
+            }
+        }
+        Ordering::Equal
+    }
+
+    /// `a - b` for 8 limbs, assuming `a >= b`.
+    fn sub8(a: &[u64; 8], b: &[u64; 8]) -> [u64; 8] {
+        let mut out = [0u64; 8];
+        let mut borrow = 0u64;
+        for i in 0..8 {
+            let (d1, b1) = a[i].overflowing_sub(b[i]);
+            let (d2, b2) = d1.overflowing_sub(borrow);
+            out[i] = d2;
+            borrow = u64::from(b1) | u64::from(b2);
+        }
+        out
+    }
+
+    /// `t mod m` for a 512-bit `t` and a 256-bit odd `m` (top limb non-zero),
+    /// by binary long division with a fixed 256-iteration loop (no data-
+    /// dependent trip count). Both values this harness reduces are `< m * 2^256`,
+    /// so their quotient by `m` is `< 2^256` and 256 iterations suffice.
+    fn reduce_512(t: &[u64; 8], m: &[u64; 4]) -> [u64; 4] {
+        let mut acc = *t;
+        for i in (0..256).rev() {
+            let cand = shl4(m, i);
+            if cmp8(&acc, &cand) != Ordering::Less {
+                acc = sub8(&acc, &cand);
+            }
+        }
+        [acc[0], acc[1], acc[2], acc[3]]
+    }
+
+    /// `-m0^-1 mod 2^64`, independent of `super::mont_n0` so the harness's n0
+    /// does not come from the implementation under test. The formula is the
+    /// standard Newton iteration; the code is not shared.
+    fn n0_of(m0: u64) -> u64 {
+        let mut inv = m0;
+        for _ in 0..6 {
+            inv = inv.wrapping_mul(2u64.wrapping_sub(m0.wrapping_mul(inv)));
+        }
+        inv.wrapping_neg()
+    }
+
+    /// The 4-limb CIOS kernel equals `(a * b * 2^-256) mod m`, for arbitrary
+    /// 4-limb `a`, `b` and odd modulus `m` with `2^192 <= m < 2^256` (non-zero
+    /// top limb) and `a, b < m`. The postcondition is checked inverse-free: the
+    /// oracle asserts `0 <= r < m` and `r * 2^256 ≡ a * b (mod m)`, both
+    /// computed from limb vectors with the helpers above (no crate helper is
+    /// called for the oracle).
+    #[kani::proof]
+    #[kani::unwind(256)]
+    fn cios4_equiv_full_width() {
+        let a: [u64; 4] = kani::any();
+        let b: [u64; 4] = kani::any();
+        let m: [u64; 4] = kani::any();
+
+        kani::assume(m[0] & 1 == 1); // odd modulus
+        kani::assume(m[3] != 0); // non-zero top limb: 2^192 <= m < 2^256
+        kani::assume(cmp4(&a, &m) == Ordering::Less); // a < m
+        kani::assume(cmp4(&b, &m) == Ordering::Less); // b < m
+
+        let n0 = n0_of(m[0]);
+
+        let mut out = [0u64; 4];
+        let mut t = [0u64; 6];
+        let mut diff = [0u64; 4];
+        let ok = super::mont_mul_cios_fixed::<4, 6>(&a, &b, &mut out, &m, n0, &mut t, &mut diff);
+        assert!(
+            ok,
+            "the width contract must accept a well-formed 4-limb call"
+        );
+
+        // Independent oracle, inverse-free: r * 2^256 ≡ a * b (mod m), r < m.
+        let prod = mul4(&a, &b);
+        let prod_mod = reduce_512(&prod, &m);
+        let r_r = [0u64, 0, 0, 0, out[0], out[1], out[2], out[3]]; // out * 2^256
+        let r_r_mod = reduce_512(&r_r, &m);
+
+        assert!(cmp4(&out, &m) == Ordering::Less, "range: 0 <= r < m");
+        assert_eq!(r_r_mod, prod_mod, "r * 2^256 ≡ a * b (mod m)");
+    }
+}
